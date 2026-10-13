@@ -92,3 +92,11 @@ def test_a_low_yield_note_names_the_generator_not_always_the_teacher():
     report = {"strategies": {"student_tipped": {"yield": 0.14, "n_kept": 34, "n_prompts": 240}}}
     note = DC.yields(report)["student_tipped"]["note"]
     assert "generator" in note and "teacher" not in note
+
+
+def test_student_subsample_is_reproducible_and_bounded():
+    pairs = _pairs(40)
+    a = DC.subsample(pairs, 10, seed=3)
+    b = DC.subsample(pairs, 10, seed=3)
+    assert len(a) == 10 and a["pair_id"].tolist() == b["pair_id"].tolist()
+    assert len(DC.subsample(pairs, 100, seed=3)) == 40

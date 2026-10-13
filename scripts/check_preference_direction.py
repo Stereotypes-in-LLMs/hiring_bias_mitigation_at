@@ -66,6 +66,9 @@ def main() -> None:
                         help="also measure the base model with the adapter disabled")
     parser.add_argument("--batch-size", type=int, default=4)
     parser.add_argument("--limit", type=int, help="check only the first N pairs (smoke)")
+    parser.add_argument("--student-sample", type=int,
+                        help="run D4 on a random subsample of this many pairs (the GPU-free "
+                             "checks still cover every pair)")
     parser.add_argument("--seed", type=int, default=42)
     parser.add_argument("--no-model", action="store_true",
                         help="explicitly skip D4 even if --student is given")
@@ -79,7 +82,9 @@ def main() -> None:
     report = DC.surface_report(frame, seed=args.seed, generation_report=generation_report)
     student = None
     if args.student and not args.no_model:
-        scored, student = DC.student_report(frame, args.base_model, args.student,
+        d4_frame = (DC.subsample(frame, args.student_sample, args.seed)
+                    if args.student_sample else frame)
+        scored, student = DC.student_report(d4_frame, args.base_model, args.student,
                                             batch_size=args.batch_size, also_base=args.also_base)
         scored.to_parquet(out_dir / "direction_student_scores.parquet", index=False)
         report["D4_student"] = student

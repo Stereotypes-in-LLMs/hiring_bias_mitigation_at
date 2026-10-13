@@ -50,20 +50,6 @@ def _json(obj) -> str:
     return json.dumps(obj, indent=2, ensure_ascii=False, default=N._json_default)
 
 
-def merged_student(cfg: dict) -> Path:
-    """The published adapter folded into its base, under outputs/merged/<adapter name>."""
-    from hiring_bias_mitigation.mitigation import merge as M
-    from hiring_bias_mitigation.mitigation import training_common as C
-
-    snapshot = Path(C.resolve_sft_checkpoint(cfg["student_adapter"]))
-    name = cfg["student_adapter"].rstrip("/").split("/")[-1]
-    link = Path(resolve_output_path(f"outputs/sft/{name}"))
-    if not link.exists():
-        link.parent.mkdir(parents=True, exist_ok=True)
-        link.symlink_to(snapshot, target_is_directory=True)
-    return M.merge(f"outputs/sft/{name}")
-
-
 def _cached_samples(path: Path, prompts: list[str], n: int, backend) -> list[list[str]]:
     """k samples per prompt, reused only when the dump holds these prompts and this k."""
     if path.exists():
@@ -97,7 +83,7 @@ def stage_sample(cfg: dict, base: Path, out: Path, dry_run: bool) -> None:
               f"{out / 'prompts_student.parquet'}")
         return
 
-    model = merged_student(cfg)
+    model = OP.merged_student(cfg)
     spec = {"model": str(model), "backend": "vllm",
             "generation": cfg.get("student_generation", {}), **cfg.get("student_vllm", {})}
     backend = BK.build_backend(spec)

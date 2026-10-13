@@ -26,6 +26,9 @@ covert mistakes, not the most extreme one (cf. "Finding the Sweet Spot", 2025).
 
 from __future__ import annotations
 
+import os
+from pathlib import Path
+
 import pandas as pd
 
 from ..data.injection import ATTR_FREE
@@ -130,3 +133,98 @@ def select_negatives(
     log.info("on-policy negatives: %s from %d wrong samples over %d rows",
              report["selected"], len(raw), len(rows))
     return kept.drop(columns=["_row"]), report
+
+
+# ---------------------------------------------------------------------------------------
+# Full-pool sampling: the pool, chunks spread over GPUs, and resumable chunk files
+# ---------------------------------------------------------------------------------------
+
+def pool_rows(invariant_raw: pd.DataFrame, lang: str = "en") -> tuple[pd.DataFrame, dict]:
+    """Every row of v1's pool with its `chosen` side, rebuilt by v1's own invariant filter."""
+    from .filters import filter_invariant
+
+    raw = invariant_raw["raw_output"].tolist()
+    rows, report = filter_invariant(raw, invariant_raw.drop(columns=["raw_output"]), lang)
+    return rows.reset_index(drop=True), report
+
+
+def pair_free_prompts(rows: pd.DataFrame) -> pd.DataFrame:
+    """One attribute-free prompt per pair. Every variant of a pair shares its job and CV, so the
+    attribute-free prompt is the same for all of them and is sampled once."""
+    first = rows.drop_duplicates("pair_id").reset_index(drop=True)
+    return pd.DataFrame({"pair_id": first["pair_id"], "prompt": attr_free_prompts(first)})
+
+
+def expand_free(rows: pd.DataFrame, free_by_pair: dict[str, list[str]]) -> list[list[str]]:
+    """The pair-level attribute-free samples, repeated for each of the pair's rows."""
+    return [free_by_pair[pid] for pid in rows["pair_id"]]
+
+
+def chunk_plan(n_items: int, chunk_size: int, shards: int) -> list[list[tuple[int, int, int]]]:
+    """(chunk id, start, end) per shard. Chunks go round-robin, so shards finish together."""
+    chunks = [(cid, start, min(start + chunk_size, n_items))
+              for cid, start in enumerate(range(0, n_items, chunk_size))]
+    return [chunks[shard::shards] for shard in range(shards)]
+
+
+def chunk_path(directory: str | Path, chunk_id: int) -> Path:
+    return Path(directory) / f"chunk-{chunk_id:05d}.parquet"
+
+
+def chunk_done(path: Path, prompts: list[str], k: int) -> bool:
+    """A chunk file counts only if it holds exactly these prompts, k samples each."""
+    if not Path(path).exists():
+        return False
+    frame = pd.read_parquet(path, columns=["item", "sample_index", "prompt"])
+    per_item = frame.sort_values(["item", "sample_index"]).groupby("item", sort=True)
+    return (per_item["prompt"].first().tolist() == list(prompts)
+            and bool(per_item.size().eq(k).all()))
+
+
+def write_chunk(path: Path, start: int, prompts: list[str], samples: list[list[str]]) -> None:
+    """Writes atomically, so a job killed mid-write leaves no half chunk to be trusted."""
+    rows = [{"item": start + i, "sample_index": j, "prompt": prompt, "raw_output": text}
+            for i, (prompt, outs) in enumerate(zip(prompts, samples))
+            for j, text in enumerate(outs)]
+    path = Path(path)
+    path.parent.mkdir(parents=True, exist_ok=True)
+    tmp = path.with_name(path.name + ".tmp")
+    pd.DataFrame(rows).to_parquet(tmp, index=False)
+    os.replace(tmp, path)
+
+
+def read_samples(directory: str | Path, prompts: list[str], chunk_size: int,
+                 k: int) -> list[list[str]]:
+    """All samples in prompt order; refuses to return anything while a chunk is missing."""
+    out: list[list[str]] = []
+    missing = []
+    for chunk_id, start in enumerate(range(0, len(prompts), chunk_size)):
+        end = min(start + chunk_size, len(prompts))
+        path = chunk_path(directory, chunk_id)
+        if not chunk_done(path, prompts[start:end], k):
+            missing.append(chunk_id)
+            continue
+        frame = pd.read_parquet(path).sort_values(["item", "sample_index"])
+        out.extend(group["raw_output"].tolist() for _, group in frame.groupby("item", sort=True))
+    if missing:
+        raise FileNotFoundError(f"{len(missing)} chunk(s) not sampled yet: {missing[:10]}")
+    return out
+
+
+def merged_student(cfg: dict) -> Path:
+    """The published SFT adapter folded into its base, under outputs/merged/<adapter name>.
+
+    vLLM's LoRA path does not reproduce these adapters, so the student is always served as a
+    merged checkpoint. Merging is skipped when an up-to-date merge already exists.
+    """
+    from ..mitigation import merge as M
+    from ..mitigation import training_common as C
+    from ..utils.config import resolve_output_path
+
+    snapshot = Path(C.resolve_sft_checkpoint(cfg["student_adapter"]))
+    name = cfg["student_adapter"].rstrip("/").split("/")[-1]
+    link = Path(resolve_output_path(f"outputs/sft/{name}"))
+    if not link.exists():
+        link.parent.mkdir(parents=True, exist_ok=True)
+        link.symlink_to(snapshot, target_is_directory=True)
+    return M.merge(f"outputs/sft/{name}")

@@ -170,6 +170,13 @@ def yields(generation_report: dict | None, thresholds: dict = THRESHOLDS) -> dic
     return out
 
 
+def subsample(pairs: pd.DataFrame, n: int, seed: int = 42) -> pd.DataFrame:
+    """A reproducible random subset for D4, which runs two 9B models over every pair it gets."""
+    if len(pairs) <= n:
+        return pairs.reset_index(drop=True)
+    return pairs.sample(n=n, random_state=seed).reset_index(drop=True)
+
+
 def _checks(pairs: pd.DataFrame, thresholds: dict, seed: int) -> dict:
     return {
         "n_pairs": len(pairs),

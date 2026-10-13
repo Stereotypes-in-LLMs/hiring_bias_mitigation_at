@@ -79,3 +79,45 @@ def test_select_on_a_batch_with_no_mistakes_is_empty_not_an_error():
     kept, report = OP.select_negatives(_batch(), attributed, free)
     assert kept.empty
     assert report["rows_with_a_wrong_sample"] == 0
+
+
+# ---- full-pool sampling: chunks, shards, resume ----------------------------------------------
+
+def test_chunk_plan_gives_every_item_to_exactly_one_shard():
+    plan = OP.chunk_plan(n_items=10, chunk_size=3, shards=2)
+    covered = sorted(i for shard in plan for _, start, end in shard for i in range(start, end))
+    assert covered == list(range(10))
+    assert [cid for cid, _, _ in plan[0]] == [0, 2]
+    assert [cid for cid, _, _ in plan[1]] == [1, 3]
+    assert plan[1][-1] == (3, 9, 10)
+
+
+def test_a_finished_chunk_is_skipped_only_for_identical_prompts(tmp_path):
+    path = OP.chunk_path(tmp_path, 0)
+    assert not OP.chunk_done(path, ["a", "b"], k=2)
+    OP.write_chunk(path, start=0, prompts=["a", "b"], samples=[["a1", "a2"], ["b1", "b2"]])
+    assert OP.chunk_done(path, ["a", "b"], k=2)
+    assert not OP.chunk_done(path, ["a", "c"], k=2)   # different prompts: redo
+    assert not OP.chunk_done(path, ["a", "b"], k=3)   # different k: redo
+
+
+def test_read_samples_reassembles_in_order_and_refuses_a_missing_chunk(tmp_path):
+    prompts = ["p0", "p1", "p2", "p3", "p4"]
+    OP.write_chunk(OP.chunk_path(tmp_path, 1), 2, prompts[2:4], [["c", "c"], ["d", "d"]])
+    OP.write_chunk(OP.chunk_path(tmp_path, 0), 0, prompts[0:2], [["a", "a"], ["b", "b"]])
+    import pytest
+
+    with pytest.raises(FileNotFoundError, match="1 chunk"):
+        OP.read_samples(tmp_path, prompts, chunk_size=2, k=2)
+    OP.write_chunk(OP.chunk_path(tmp_path, 2), 4, prompts[4:], [["e", "e"]])
+    assert OP.read_samples(tmp_path, prompts, chunk_size=2, k=2) == [
+        ["a", "a"], ["b", "b"], ["c", "c"], ["d", "d"], ["e", "e"]]
+
+
+def test_attribute_free_prompts_are_one_per_pair_and_expand_back_to_rows():
+    rows = pd.concat([_batch(), _batch().assign(protected_attr="Civilian")], ignore_index=True)
+    pairs = OP.pair_free_prompts(rows)
+    assert list(pairs["pair_id"]) == ["p0", "p1", "p2"]
+    free = {pid: [f"s-{pid}"] for pid in pairs["pair_id"]}
+    expanded = OP.expand_free(rows, free)
+    assert expanded == [["s-p0"], ["s-p1"], ["s-p2"], ["s-p0"], ["s-p1"], ["s-p2"]]
