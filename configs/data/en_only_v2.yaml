@@ -1,0 +1,12 @@
+# Hand-written -- NOT produced by generate_experiment_configs.py.
+# Training-data view over the v2 negatives. Points at the first small batch so a DPO smoke run
+# can be launched on it; repoint `artifacts_dir` at the full v2 run once it exists.
+name: en_only_v2
+artifacts_dir: artifacts/semisynthetic-v2/batch-01
+seed: 42
+protected_groups:
+- military_status
+- gender
+- religion
+languages:
+- en

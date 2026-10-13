@@ -1,0 +1,86 @@
+"""The GPU-free half of the preference-direction check (D1-D3, D5-D7)."""
+
+import json
+
+import pandas as pd
+
+from hiring_bias_mitigation.generation import direction_check as DC
+from hiring_bias_mitigation.generation import negatives_v2 as N
+
+
+def _pairs(n: int = 40, covert: bool = True) -> pd.DataFrame:
+    rows = []
+    for i in range(n):
+        decision = "hire" if i % 2 == 0 else "reject"
+        # Two rationale templates, swapped between the sides on alternate rows, so that no
+        # template predicts the side; the v1-style negative always carries the attribute.
+        a = f"Evidence on requirement {i} supports the verdict given here."
+        b = f"Scope of ownership for item {i} is unverified in the profile."
+        chosen, rejected = (a, b) if i % 4 < 2 else (b, a)
+        if not covert:
+            rejected = f"We cannot hire candidates of the Sikh faith for role {i}."
+        rows.append({
+            "prompt": "p", "lang": "en",
+            "chosen": json.dumps({"decision": decision, "feedback": chosen}),
+            "rejected": json.dumps({"decision": N.flip(decision), "feedback": rejected}),
+            "reference_decision": decision, "chosen_decision": decision,
+            "rejected_decision": N.flip(decision), "rejected_strategy": "covert_flip",
+            "protected_group": "religion", "protected_attr": "Sikh", "condition": "explicit",
+            "candidate_id": f"c{i}", "job_id": f"j{i}", "pair_id": f"c{i}__j{i}",
+            "rejected_mentions_attribute": not covert, "rejected_mentions_group": not covert,
+            "judge_alludes": not covert, "token_overlap": 0.2,
+            "chosen_words": 9, "rejected_words": 9, "length_delta": 0,
+        })
+    return pd.DataFrame(rows)
+
+
+def test_valid_covert_balanced_pairs_pass_every_surface_check():
+    report = DC.surface_report(_pairs())
+    overall = report["overall"]
+    assert overall["D1_validity"]["pass"] is True
+    assert overall["D2_covertness"]["pass"] is True
+    assert overall["D3_separability"]["pass"] is True
+    assert overall["D5_overlap"]["flag"] is False
+    assert overall["D6_balance"]["pass"] is True
+    assert set(report["by_strategy"]) == {"covert_flip"}
+
+
+def test_v1_style_pairs_fail_covertness_and_separability():
+    report = DC.surface_report(_pairs(covert=False))["overall"]
+    assert report["D2_covertness"]["pass"] is False
+    assert report["D2_covertness"]["lexical_rate"] == 1.0
+    assert report["D3_separability"]["pass"] is False
+
+
+def test_validity_catches_a_pair_whose_rejected_side_did_not_flip():
+    pairs = _pairs(4)
+    pairs.loc[0, "rejected"] = json.dumps({"decision": "hire", "feedback": "x"})
+    pairs.loc[0, "reference_decision"] = "hire"
+    pairs.loc[0, "chosen"] = json.dumps({"decision": "hire", "feedback": "y"})
+    result = DC.validity(pairs)
+    assert result["pass"] is False
+    assert result["n_rejected_not_flipped"] == 1
+
+
+def test_markdown_rendering_names_every_check_and_its_verdict():
+    text = DC.render_markdown(DC.surface_report(_pairs()))
+    for label in ("D1", "D2", "D3", "D5", "D6"):
+        assert label in text
+    assert "PASS" in text
+
+
+def test_validity_reads_ukrainian_decision_words_as_their_canonical_verdict():
+    """v1's Ukrainian targets say `найняти`/`відхилити` (lesson 5); the check must compare
+    canonical verdicts, not surface strings, or every Ukrainian pair reads as invalid."""
+    pairs = pd.DataFrame([{
+        "prompt": "p", "lang": "uk", "reference_decision": "hire",
+        "chosen": json.dumps({"decision": "найняти", "feedback": "Досвід відповідає вимогам."},
+                             ensure_ascii=False),
+        "rejected": json.dumps({"decision": "відхилити", "feedback": "Бракує досвіду."},
+                               ensure_ascii=False),
+        "protected_group": "gender", "protected_attr": "Жінка", "condition": "explicit",
+        "candidate_id": "c1", "job_id": "j1", "pair_id": "c1__j1",
+    }])
+    result = DC.validity(pairs)
+    assert result["pass"] is True
+    assert DC.balance(pairs)["chosen_hire_share"] == 1.0

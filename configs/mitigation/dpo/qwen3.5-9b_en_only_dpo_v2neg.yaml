@@ -1,0 +1,57 @@
+# Hand-written -- NOT produced by generate_experiment_configs.py, so it survives a regeneration.
+#
+# SFT -> DPO on the v2 covert negatives, continuing from the *published* 9B English SFT adapter.
+# Everything that differs from the generated qwen3.5-9b_en_only_dpo.yaml, and why:
+#
+#   sft_checkpoint         the Hub adapter id. Fetched into the HF cache and merged into the base
+#                          at load time, so the DPO reference model IS the SFT model.
+#   data_kind: dpo_v2      reads dpo_v2_{train,validation}.parquet from the data view.
+#   loss_type/loss_weights DPO + an NLL term on the chosen response (TRL's MPO-style
+#                          combination; rpo_alpha is gone in TRL 1.x). The v2 pairs are closely
+#                          matched by design, which is where likelihood displacement bites.
+#   fixed schedule         max_steps with early stopping OFF -- the v1 probes' early stopping
+#                          was too strict, and a loss that can collapse never stops improving
+#                          by threshold. eval every 50 steps on 200 validation pairs.
+#   learning_rate 5e-5     LoRA rate the repo's probes used; 5e-6 is a full-fine-tune rate.
+#
+# Audit afterwards: serve base + SFT adapter + this adapter, merged in that order. merge.py
+# merges one adapter onto the base named in its adapter_config.json, so merging this adapter
+# alone would drop the SFT delta (spec §7). Do not audit until that path exists.
+stage: dpo
+objective: dpo
+data_kind: dpo_v2
+base_model: Qwen/Qwen3.5-9B
+sft_checkpoint: Stereotypes-in-LLMs/qwen3.5-9b-hiring-debias-sft-en
+data_config: configs/data/en_only_v2.yaml
+output_dir: outputs/dpo/qwen3.5-9b_en_only_dpo_v2neg
+use_lora: true
+lora_r: 32
+lora_alpha: 64
+lora_dropout: 0.05
+beta: 0.1
+loss_type:
+- sigmoid
+- sft
+loss_weights:
+- 1.0
+- 0.2
+precompute_ref_log_probs: true
+max_seq_len: 2048
+max_prompt_len: 1792
+num_train_epochs: 1
+max_steps: 300
+warmup_steps: 10
+learning_rate: 5.0e-05
+per_device_train_batch_size: 1
+per_device_eval_batch_size: 1
+gradient_accumulation_steps: 16
+gradient_checkpointing: true
+weight_decay: 0.01
+dtype: bfloat16
+seed: 42
+eval_steps: 50
+eval_limit_rows: 200
+early_stopping_patience: 0
+memory_floor_gb: 12
+wandb_project: hiring-bias-mitigation
+wandb_run_name: dpo-qwen3.5-9b_en_only_dpo_v2neg

@@ -36,9 +36,8 @@ Run:
 from __future__ import annotations
 
 import argparse
-from pathlib import Path
 
-from ..utils.config import load_config, resolve_output_path
+from ..utils.config import load_config
 from ..utils.logging import get_logger
 from ..utils.seed import set_seed
 from . import training_common as C
@@ -47,6 +46,33 @@ log = get_logger(__name__)
 
 #: Config field `objective`. Each names both the trainer and the data split it reads.
 OBJECTIVES = ("dpo", "kto")
+
+#: DPOConfig fields a config may set and that reach TRL unchanged when present. Absent keys
+#: are not passed, so TRL's own defaults apply and a config describes exactly what differs.
+#:
+#: `loss_type: [sigmoid, sft]` with `loss_weights` adds an NLL term on the chosen response to
+#: the DPO loss -- the guard against likelihood displacement on closely matched pairs (Razin
+#: et al. 2025; Pal et al. 2024), which the v2 covert negatives are. TRL 1.x removed
+#: `rpo_alpha`; this combination is its replacement. `ld_alpha` is LD-DPO's length
+#: desensitisation, for when the two sides still differ in length.
+DPO_CONFIG_PASSTHROUGH = (
+    "loss_type", "loss_weights", "ld_alpha", "label_smoothing", "precompute_ref_log_probs",
+    "sync_ref_model",
+)
+
+
+def dpo_config_candidates(cfg: dict) -> dict:
+    """Everything a config can say about the DPO objective, before version filtering."""
+    candidates = {
+        "beta": float(cfg.get("beta", 0.1)),
+        "max_length": cfg.get("max_seq_len", 2048),
+        # Removed in TRL 1.x, which truncates through max_length and truncation_mode instead.
+        "max_prompt_length": cfg.get("max_prompt_len", 1792),
+    }
+    for key in DPO_CONFIG_PASSTHROUGH:
+        if key in cfg:
+            candidates[key] = cfg[key]
+    return candidates
 
 
 def _to_conversational(dataset, tokenizer, chat_template_kwargs: dict | None = None):
@@ -129,17 +155,7 @@ def train(cfg: dict) -> C.TrainArtifacts:
 
         args = DPOConfig(
             **base_args,
-            **C.supported_kwargs(
-                DPOConfig,
-                {
-                    "beta": float(cfg.get("beta", 0.1)),
-                    "max_length": cfg.get("max_seq_len", 2048),
-                    # Removed in TRL 1.x, which truncates through max_length and
-                    # truncation_mode instead.
-                    "max_prompt_length": cfg.get("max_prompt_len", 1792),
-                },
-                "DPOConfig",
-            ),
+            **C.supported_kwargs(DPOConfig, dpo_config_candidates(cfg), "DPOConfig"),
         )
         trainer = DPOTrainer(
             model=model,
@@ -215,17 +231,11 @@ def main() -> None:
     cfg = load_config(args.config)
     cfg.setdefault("stage", "dpo")
 
-    # A DPO config may point base_model at an SFT run's output directory. Resolve it against
-    # the model drive so the config keeps a short relative path.
+    # A DPO config may point base_model at an SFT run's output directory -- or at a published
+    # adapter on the Hub. Either resolves to a local adapter directory that the loader merges
+    # into its base model before a fresh LoRA is fitted on top.
     if cfg.get("sft_checkpoint"):
-        resolved = Path(resolve_output_path(cfg["sft_checkpoint"]))
-        if not resolved.exists():
-            raise FileNotFoundError(
-                f"SFT checkpoint {resolved} not found -- run the matching "
-                "configs/mitigation/sft/ config first, or clear `sft_checkpoint` to run "
-                "preference optimisation directly on the base model."
-            )
-        cfg["base_model"] = str(resolved)
+        cfg["base_model"] = C.resolve_sft_checkpoint(cfg["sft_checkpoint"])
 
     artifacts = train(cfg)
     log.info("preference optimisation complete -> %s", artifacts.output_dir)

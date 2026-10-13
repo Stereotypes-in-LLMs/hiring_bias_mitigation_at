@@ -15,7 +15,8 @@ COMPOSE = docker compose
         build shell down status watch progress \
         enable-none enable-smoke enable-stage1 enable-core enable-full \
         local-setup local-benchmark local-audit local-generate local-prompt local-scrub \
-        local-embedding local-sft local-dpo local-report local-analyze local-plan local-test lint
+        local-embedding local-sft local-dpo local-report local-analyze local-plan local-test lint \
+        local-negatives-v2 local-direction-check
 
 help:
 	@echo "Pipeline (run in this order):"
@@ -148,6 +149,15 @@ local-dpo:
 
 local-report:
 	$(DOTENV) uv run python scripts/make_report.py
+
+# v2 negatives (covert, decision-flipped `rejected` on v1's prompts) -- the small batch, then
+# the preference-direction check. Pass ARGS="--dry-run" to write the prompts without a model,
+# or ARGS="--student Stereotypes-in-LLMs/qwen3.5-9b-hiring-debias-sft-en" to run D4.
+local-negatives-v2:
+	$(DOTENV) uv run python scripts/generate_negatives_v2.py --config configs/generation/negatives_v2_small.yaml $(ARGS)
+
+local-direction-check:
+	$(DOTENV) uv run python scripts/check_preference_direction.py --batch artifacts/semisynthetic-v2/batch-01 $(ARGS)
 
 # Reads only; safe to run while a sweep is in flight.
 local-analyze:

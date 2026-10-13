@@ -153,6 +153,44 @@ def load_model_and_tokenizer(cfg: dict, for_training: bool = True):
     return model, tokenizer
 
 
+def resolve_sft_checkpoint(spec: str) -> str:
+    """A local run directory under $HBM_OUTPUT_ROOT, or a Hub adapter repo id, as a local path.
+
+    The published adapters (`Stereotypes-in-LLMs/qwen3.5-9b-hiring-debias-sft-en`, ...) are the
+    final SFT artefacts, and a DPO run that continues from one should name it directly rather
+    than depend on a copy someone placed on the drive. A Hub id is fetched into the HF cache
+    (adapter files only, never the base weights) and handed to the same local-directory logic
+    `_resolve_adapter` already applies, so the adapter is merged into its base at load time.
+    """
+    import re
+
+    local = Path(resolve_output_path(spec))
+    if local.exists():
+        return str(local)
+    if re.fullmatch(r"[\w.-]+/[\w.-]+", spec):
+        import huggingface_hub
+
+        try:
+            snapshot = huggingface_hub.snapshot_download(
+                spec, allow_patterns=["adapter_config.json", "adapter_model*", "README.md",
+                                      "run_config.json"],
+            )
+        except Exception as exc:  # the hub raises a dozen types; none is recoverable here
+            raise FileNotFoundError(
+                f"sft_checkpoint {spec!r} is neither a directory under the output root nor a "
+                f"Hub adapter that could be fetched ({exc})"
+            ) from exc
+        if (Path(snapshot) / "adapter_config.json").is_file():
+            log.info("sft_checkpoint %s fetched from the Hub into %s", spec, snapshot)
+            return snapshot
+        raise FileNotFoundError(f"sft_checkpoint {spec!r}: the Hub repo has no adapter_config.json")
+    raise FileNotFoundError(
+        f"sft_checkpoint {local} not found -- run the matching configs/mitigation/sft/ config "
+        "first, name a Hub adapter repo, or clear `sft_checkpoint` to run preference "
+        "optimisation directly on the base model."
+    )
+
+
 def _resolve_adapter(base_model: str) -> tuple[str, str | None]:
     """Splits a path into (weights to load, adapter to merge).
 
