@@ -194,6 +194,28 @@ class VLLMBackend:
         outputs = self._llm.generate(wrapped, params, **kwargs)
         return [o.outputs[0].text for o in outputs]
 
+    def generate_samples(self, prompts: list[str], n: int) -> list[list[str]]:
+        """`n` samples per prompt from one request each, at the configured temperature.
+
+        Repeating a prompt n times under a fixed per-request seed returns n copies of one
+        answer; asking for n samples in one request draws n different ones, reproducibly.
+        On-policy negatives need exactly that: several of the student's own answers per prompt.
+        """
+        self._load()
+        from vllm import SamplingParams
+
+        params = SamplingParams(
+            max_tokens=self.generation.max_new_tokens,
+            temperature=self.generation.temperature,
+            top_p=self.generation.top_p,
+            seed=self.generation.seed if self.generation.temperature > 0 else None,
+            n=int(n),
+        )
+        wrapped = [_chat_wrap(self._tokenizer, p, self.chat_template_kwargs) for p in prompts]
+        kwargs = {"lora_request": self._lora_request} if self._lora_request else {}
+        outputs = self._llm.generate(wrapped, params, **kwargs)
+        return [[c.text for c in o.outputs] for o in outputs]
+
     def close(self) -> None:
         self._llm = None
         self._lora_request = None

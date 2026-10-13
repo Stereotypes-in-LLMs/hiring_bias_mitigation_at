@@ -1,0 +1,54 @@
+# Hand-written -- NOT produced by generate_experiment_configs.py, so it survives a regeneration.
+#
+# On-policy v2 negatives on batch-01's 240 rows: the SFT student's own attribute-tipped
+# mistakes as `rejected`, compared side by side with the teacher's covert_flip negatives on the
+# identical prompts and identical `chosen` texts. Why: batch-01's teacher negatives are covert
+# but separable from chosen at AUC 0.88 (a rationale argued for the wrong verdict is weaker),
+# while the student's own wrong-verdict rationales are not separable from its right ones (0.47).
+# Run through scripts/cscs/onpolicy.sbatch (stages sample, judge, check), never on a login node.
+base_batch_dir: artifacts/semisynthetic-v2/batch-01
+artifacts_dir: artifacts/semisynthetic-v2/batch-01-onpolicy
+lang: en
+seed: 42
+
+# The student: the published SFT adapter, merged into its base for vLLM.
+student_base: Qwen/Qwen3.5-9B
+student_adapter: Stereotypes-in-LLMs/qwen3.5-9b-hiring-debias-sft-en
+samples_per_prompt: 8
+# A row is attribute-tipped when the student is right on more than this share of its
+# attribute-free samples, so its wrong answers with the attribute are the attribute's doing.
+min_free_right: 0.5
+student_vllm:
+  gpu_memory_utilization: 0.70      # of 95.6 GiB usable; anything near 96 GB OOMs
+  max_model_len: 8192
+  max_num_seqs: 64
+  engine_kwargs:
+    gdn_prefill_backend: triton     # no CUDA toolkit on Daint for FlashInfer's JIT
+student_generation:                 # the student's own distribution: no top-p truncation
+  max_new_tokens: 200
+  temperature: 1.0
+  top_p: 1.0
+  seed: 42
+
+# Same filters as the teacher's negatives.
+max_length_delta_words: 10
+min_plausibility: 3
+n_samples: 20
+
+# The teacher, as judge only -- identical settings to batch-01's.
+teacher_model: Qwen/Qwen3.5-122B-A10B-GPTQ-Int4
+backend: vllm
+dtype: auto
+max_model_len: 8192
+tensor_parallel_size: 4
+gpu_memory_utilization: 0.80
+max_num_seqs: 128
+engine_kwargs:
+  gdn_prefill_backend: triton
+judge_generation:
+  max_new_tokens: 160
+  temperature: 0.0
+  top_p: 1.0
+
+compare_with:
+- covert_flip

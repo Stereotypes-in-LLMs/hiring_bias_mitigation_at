@@ -165,7 +165,7 @@ def yields(generation_report: dict | None, thresholds: dict = THRESHOLDS) -> dic
             "covertness_of_raw": entry.get("covertness"),
             "note": (None if y is None or y >= thresholds["yield_note_below"]
                      else f"yield {y:.0%} is below {thresholds['yield_note_below']:.0%}: a "
-                          "finding about the teacher, to be reported"),
+                          "finding about the generator, to be reported"),
         }
     return out
 

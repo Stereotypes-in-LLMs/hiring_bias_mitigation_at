@@ -611,3 +611,52 @@ def test_vllm_backend_passes_engine_kwargs_to_the_engine(monkeypatch):
     seen.clear()
     BK.build_backend({"model": "m", "backend": "vllm"})._load()
     assert "gdn_prefill_backend" not in seen
+
+
+def test_vllm_backend_draws_n_distinct_samples_per_prompt(monkeypatch):
+    """On-policy negatives need k samples of the student per prompt. Repeating the prompt k
+    times under one fixed seed would return k copies of the same answer; asking vLLM for n
+    samples in one request draws k different ones, still reproducibly."""
+    import sys
+    import types
+
+    import transformers
+
+    from hiring_bias_mitigation.eval import backends as BK
+
+    seen = {}
+
+    class FakeParams:
+        def __init__(self, **kwargs):
+            seen["params"] = kwargs
+
+    class Completion:
+        def __init__(self, text):
+            self.text = text
+
+    class Request:
+        def __init__(self, prompt, n):
+            self.outputs = [Completion(f"{prompt}#{i}") for i in range(n)]
+
+    class FakeLLM:
+        def __init__(self, **kwargs):
+            pass
+
+        def generate(self, prompts, params, **kwargs):
+            return [Request(p, seen["params"]["n"]) for p in prompts]
+
+    fake_vllm = types.ModuleType("vllm")
+    fake_vllm.LLM = FakeLLM
+    fake_vllm.SamplingParams = FakeParams
+    monkeypatch.setitem(sys.modules, "vllm", fake_vllm)
+
+    class Tok:
+        chat_template = None
+
+    monkeypatch.setattr(transformers.AutoTokenizer, "from_pretrained",
+                        staticmethod(lambda *args, **kwargs: Tok()))
+    backend = BK.build_backend({"model": "m", "backend": "vllm",
+                                "generation": {"temperature": 1.0, "seed": 7}})
+    out = backend.generate_samples(["a", "b"], n=3)
+    assert out == [["a#0", "a#1", "a#2"], ["b#0", "b#1", "b#2"]]
+    assert seen["params"]["n"] == 3 and seen["params"]["seed"] == 7
