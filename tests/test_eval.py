@@ -577,3 +577,37 @@ def test_audit_generation_resumes_from_its_chunk_cache(monkeypatch, tmp_path):
     third = Backend()
     third.generate = lambda batch: ["fresh"] * len(batch)
     assert R._generate_resumable(third, ["x", "y"], "run", chunk=4) == ["fresh", "fresh"]
+
+
+def test_vllm_backend_passes_engine_kwargs_to_the_engine(monkeypatch):
+    """Daint GH200 nodes have no system CUDA toolkit, so FlashInfer cannot JIT-compile its
+    GDN prefill kernel there and the teacher must start with gdn_prefill_backend="triton".
+    Whatever a config puts in engine_kwargs has to reach vllm.LLM unchanged."""
+    import sys
+    import types
+
+    import transformers
+
+    from hiring_bias_mitigation.eval import backends as BK
+
+    seen = {}
+
+    class FakeLLM:
+        def __init__(self, **kwargs):
+            seen.update(kwargs)
+
+    fake_vllm = types.ModuleType("vllm")
+    fake_vllm.LLM = FakeLLM
+    monkeypatch.setitem(sys.modules, "vllm", fake_vllm)
+    monkeypatch.setattr(transformers.AutoTokenizer, "from_pretrained",
+                        staticmethod(lambda *args, **kwargs: object()))
+
+    backend = BK.build_backend({"model": "m", "backend": "vllm",
+                                "engine_kwargs": {"gdn_prefill_backend": "triton"}})
+    backend._load()
+    assert seen["gdn_prefill_backend"] == "triton"
+    assert seen["model"] == "m"
+
+    seen.clear()
+    BK.build_backend({"model": "m", "backend": "vllm"})._load()
+    assert "gdn_prefill_backend" not in seen

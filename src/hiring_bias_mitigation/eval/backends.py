@@ -141,6 +141,11 @@ class VLLMBackend:
     #: makes the run robust to however much memory happens to be free at launch.
     max_num_seqs: int | None = None
     chat_template_kwargs: dict | None = None
+    #: Extra `vllm.EngineArgs` fields, passed to `LLM(...)` as given. Exists for platform
+    #: switches the repo has no reason to model one by one -- e.g. `gdn_prefill_backend:
+    #: triton` on CSCS GH200 nodes, which have no system CUDA toolkit for FlashInfer to
+    #: JIT-compile its Qwen3.5 linear-attention prefill kernel with.
+    engine_kwargs: dict | None = None
     _llm: object = None
     _tokenizer: object = None
     _lora_request: object = None
@@ -166,6 +171,7 @@ class VLLMBackend:
             max_lora_rank=64,
             seed=self.generation.seed,
             **({"max_num_seqs": self.max_num_seqs} if self.max_num_seqs else {}),
+            **(self.engine_kwargs or {}),
         )
         if self.lora_path:
             from vllm.lora.request import LoRARequest
@@ -327,6 +333,7 @@ def build_backend(cfg: dict, activation_editor=None) -> Backend:
             max_model_len=cfg.get("max_model_len", 8192),
             dtype=cfg.get("dtype", "auto"),
             max_num_seqs=cfg.get("max_num_seqs"),
+            engine_kwargs=cfg.get("engine_kwargs"),
         )
     if kind == "transformers":
         return TransformersBackend(

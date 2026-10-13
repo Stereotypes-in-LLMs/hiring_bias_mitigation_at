@@ -74,3 +74,29 @@ def test_dpo_loss_options_reach_the_trainer_only_when_configured():
     assert kept["loss_weights"] == [1.0, 0.2]
     assert kept["ld_alpha"] == 0.5
     assert kept["precompute_ref_log_probs"] is True
+
+
+def test_hub_adapter_fetch_includes_the_tokenizer_the_loader_reads(tmp_path, monkeypatch):
+    """dpo.main sets base_model to the fetched adapter folder, and load_model_and_tokenizer
+    reads the tokenizer from there. Fetching only the adapter weights crashes on a fresh cache."""
+    import fnmatch
+
+    from hiring_bias_mitigation.mitigation import training_common as C
+
+    snapshot = tmp_path / "snapshot"
+    snapshot.mkdir()
+    (snapshot / "adapter_config.json").write_text(
+        json.dumps({"base_model_name_or_path": "Qwen/Qwen3.5-9B"}), encoding="utf-8")
+    seen = {}
+
+    def fake_snapshot_download(repo_id, **kwargs):
+        seen["allow_patterns"] = kwargs.get("allow_patterns") or ["*"]
+        return str(snapshot)
+
+    monkeypatch.setenv("HBM_OUTPUT_ROOT", str(tmp_path))
+    monkeypatch.setattr("huggingface_hub.snapshot_download", fake_snapshot_download)
+    C.resolve_sft_checkpoint("Stereotypes-in-LLMs/qwen3.5-9b-hiring-debias-sft-en")
+    needed = ["adapter_config.json", "adapter_model.safetensors", "tokenizer.json",
+              "tokenizer_config.json", "chat_template.jinja"]
+    for name in needed:
+        assert any(fnmatch.fnmatch(name, pat) for pat in seen["allow_patterns"]), name

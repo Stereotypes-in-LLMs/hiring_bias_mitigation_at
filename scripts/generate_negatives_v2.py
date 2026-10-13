@@ -112,15 +112,7 @@ def main() -> None:
             print(f"  {cell}: {n}")
         return
 
-    backend = BK.build_backend({
-        "model": cfg["teacher_model"],
-        "backend": cfg.get("backend", "vllm"),
-        "generation": cfg.get("generation", {}),
-        "max_model_len": cfg.get("max_model_len", 8192),
-        "gpu_memory_utilization": cfg.get("gpu_memory_utilization", 0.90),
-        "max_num_seqs": cfg.get("max_num_seqs"),
-        "dtype": cfg.get("dtype", "auto"),
-    })
+    backend = BK.build_backend(N.teacher_backend_config(cfg))
     try:
         report = N.run_batch(cfg, invariant_raw, backend, out_dir, source_label,
                              v1_val_ids=v1_val_ids)

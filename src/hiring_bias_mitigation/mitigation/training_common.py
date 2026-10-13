@@ -171,9 +171,12 @@ def resolve_sft_checkpoint(spec: str) -> str:
         import huggingface_hub
 
         try:
+            # The tokenizer files too: dpo.main hands this folder to load_model_and_tokenizer
+            # as base_model, which reads the tokenizer from it.
             snapshot = huggingface_hub.snapshot_download(
-                spec, allow_patterns=["adapter_config.json", "adapter_model*", "README.md",
-                                      "run_config.json"],
+                spec, allow_patterns=["adapter_config.json", "adapter_model*", "tokenizer*",
+                                      "special_tokens_map.json", "chat_template.jinja",
+                                      "README.md", "run_config.json"],
             )
         except Exception as exc:  # the hub raises a dozen types; none is recoverable here
             raise FileNotFoundError(

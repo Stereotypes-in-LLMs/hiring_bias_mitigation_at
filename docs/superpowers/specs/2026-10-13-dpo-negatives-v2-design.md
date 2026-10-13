@@ -171,7 +171,7 @@ student.
 |---|---|---|---|
 | D1 | Validity: `chosen.decision == reference` and `rejected.decision == ¬reference` on 100% of rows | 100% | the pair's direction is the one the audit measures |
 | D2 | Covertness: attribute-stem or group-lexicon hit rate on `rejected`; judge allusion rate | ≤ 5% lexical; ≤ 10% judge | v1 was 91%; the student's own rate is ~1–2% |
-| D3 | No wording shortcut: 5-fold AUC of a TF-IDF logistic regression told chosen from rejected on the rationale text only (decision field removed), on a **reference-decision-balanced resample** so the rationale's polarity cancels and only a wording or style shortcut remains. The within-decision AUC is reported too and is high by design (chosen always carries the reference verdict) | balanced AUC ≤ 0.65 | v1 pairs are separable at ≈1.0; a covert batch should sit near 0.5 |
+| D3 | No wording shortcut: 5-fold AUC of a TF-IDF logistic regression told chosen from rejected on the rationale text only (decision field removed), on a **reference-decision-balanced resample** so the rationale's polarity cancels and only a wording or style shortcut remains, with **folds grouped by pair** so a pair's two texts, and every strategy's copy of its chosen text, never straddle a split (ungrouped folds hid a marked near-copy shortcut at 0.49 and inflated stacked strategies to 0.94 in the pre-GPU review) The within-decision AUC is reported too and is high by design (chosen always carries the reference verdict) | balanced AUC ≤ 0.65 | v1 pairs are separable at ≈1.0; a covert batch should sit near 0.5 |
 | D4 | Student direction, under HF + PEFT (never vLLM's LoRA path): share of pairs where the SFT student assigns `chosen` a higher sequence log-prob than `rejected` (sum and per-token), and the sign of its hire-vs-reject decision-token margin on the prompt | 50%–90% already prefer chosen | below 50% the pairs fight what SFT installed; above 90% the batch carries no gradient. The remainder is the signal. |
 | D5 | Displacement risk: Jaccard overlap between chosen and rejected rationale word sets | report; flag > 0.8 | Razin et al.: near-identical pairs displace mass. Expected high for `minimal_edit` |
 | D6 | Decision balance of the kept pairs | hire share in [0.40, 0.60] for the small batch | balanced so D3 is meaningful and both flip directions are tested |
@@ -180,7 +180,7 @@ student.
 **Control (run 2026-10-13, no model):** on v1's published `dpo_validation` split (1,647 pairs,
 both languages) the GPU-free checks fail exactly where Finding 8 says they should: D1 1,325
 rejected responses not flipped (80%), D2 lexical attribute-or-group mention 94.9%, D3 balanced
-AUC 1.000, D6 chosen hire share 0.196. A v2 batch that passes is therefore measurably
+AUC 1.000 (unchanged with pair-grouped folds), D6 chosen hire share 0.196. A v2 batch that passes is therefore measurably
 different from v1 on the axes that broke the v1 DPO run, not merely different by construction.
 
 The decision rule after the batch: pick the strategy (or mixture) that passes D1–D3 and D6 with

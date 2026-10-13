@@ -1,0 +1,62 @@
+# Hand-written -- NOT produced by generate_experiment_configs.py, so it survives a regeneration.
+#
+# GH200 (CSCS Daint) variant of negatives_v2_small.yaml -- identical batch, seeds and filters;
+# only the vLLM placement differs. A Daint node has four 96 GB GH200 GPUs and is billed whole,
+# so the 73.5 GiB Int4 teacher is split over all four (tensor parallel) instead of squeezed onto
+# one card.
+#
+# The first small batch of v2 negatives: 240 of v1's English prompts (20 per protected group x
+# condition x reference decision, one row per pair), each given three candidate `rejected`
+# responses by the teacher, judged, filtered and written for the preference-direction check.
+# Design and acceptance criteria: docs/superpowers/specs/2026-10-13-dpo-negatives-v2-design.md
+#
+# Run through scripts/cscs/small_batch.sbatch, never on a login node.
+teacher_model: Qwen/Qwen3.5-122B-A10B-GPTQ-Int4
+backend: vllm
+dtype: auto
+max_model_len: 8192
+tensor_parallel_size: 4
+# Fraction of 95.6 GiB usable per GPU (anything near 96 GB OOMs): ~76 GiB, of which the
+# teacher's weights take ~18.4 GiB per GPU at TP 4. The rest is KV cache and headroom for the
+# tensor-parallel communication buffers, which live outside vLLM's budget.
+gpu_memory_utilization: 0.80
+max_num_seqs: 128
+# No system CUDA toolkit on Daint compute nodes, so no FlashInfer JIT: the Qwen3.5
+# linear-attention prefill runs on vLLM's Triton kernel (see scripts/cscs/env.sh).
+engine_kwargs:
+  gdn_prefill_backend: triton
+
+# v1 inputs: the raw invariant pass is the prompt side plus the chosen side (re-filtered with
+# v1's own filter). Read from the drive, or fetched from the public dataset with --from-hub.
+source_artifacts_dir: artifacts/semisynthetic-v1
+source_hub_repo: Stereotypes-in-LLMs/hiring-bias-mitigation-synthetic-data
+lang: en
+
+artifacts_dir: artifacts/semisynthetic-v2/batch-01
+
+# 20 x (3 groups x 2 conditions x 2 reference decisions) = 240 prompts, one per pair.
+rows_per_cell: 20
+strategies:
+- covert_flip
+- minimal_edit
+- proxy_cue
+
+# Filters. Length is matched to the chosen rationale; the judge threshold is on a 1-5 scale.
+max_length_delta_words: 10
+min_plausibility: 3
+
+# Split: v1's candidate-level rule, plus every candidate v1 already held out.
+val_fraction: 0.05
+seed: 42
+n_samples: 20
+
+# Negatives run at v1's warm settings so rationales vary; the judge runs greedily.
+generation:
+  max_new_tokens: 200
+  temperature: 0.7
+  top_p: 0.9
+  seed: 42
+judge_generation:
+  max_new_tokens: 160
+  temperature: 0.0
+  top_p: 1.0

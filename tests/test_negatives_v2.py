@@ -478,3 +478,106 @@ def test_covertness_of_raw_measures_the_teacher_before_any_filter():
         "raw_attribute_mention_rate": pytest.approx(1 / 3),
         "raw_group_mention_rate": pytest.approx(2 / 3),
     }
+
+
+# ---- teacher backend settings ------------------------------------------------------------
+
+def test_teacher_backend_config_passes_tensor_parallelism_through():
+    """On a 4 x GH200 node the 73.5 GiB teacher should be split over the GPUs the job already
+    pays for, instead of being squeezed onto one 96 GB card."""
+    spec = N.teacher_backend_config({
+        "teacher_model": "Qwen/Qwen3.5-122B-A10B-GPTQ-Int4", "tensor_parallel_size": 4,
+        "gpu_memory_utilization": 0.85, "max_num_seqs": 128, "generation": {"temperature": 0.7},
+    })
+    assert spec["model"] == "Qwen/Qwen3.5-122B-A10B-GPTQ-Int4"
+    assert spec["tensor_parallel_size"] == 4
+    assert spec["gpu_memory_utilization"] == 0.85
+    assert spec["max_num_seqs"] == 128
+    assert spec["generation"] == {"temperature": 0.7}
+
+
+def test_teacher_backend_config_defaults_to_one_gpu():
+    spec = N.teacher_backend_config({"teacher_model": "t"})
+    assert spec["tensor_parallel_size"] == 1
+    assert spec["backend"] == "vllm"
+    assert spec["max_model_len"] == 8192
+
+
+def test_teacher_backend_config_carries_engine_kwargs():
+    spec = N.teacher_backend_config({"teacher_model": "t",
+                                     "engine_kwargs": {"gdn_prefill_backend": "triton"}})
+    assert spec["engine_kwargs"] == {"gdn_prefill_backend": "triton"}
+    assert N.teacher_backend_config({"teacher_model": "t"})["engine_kwargs"] is None
+
+
+# ---- review fixes (pre-GPU adversarial review, 2026-10-13) -----------------------------------
+
+class _EchoBackend:
+    """Answers every prompt with a string derived from it, and counts calls."""
+
+    def __init__(self):
+        self.calls = 0
+
+    def generate(self, prompts):
+        self.calls += 1
+        return [f"out:{p}" for p in prompts]
+
+
+def test_a_cached_pass_is_reused_only_for_the_identical_prompts(tmp_path):
+    """Row count alone is not identity: two batches of 240 rows with the same cell order are
+    the same length. Reusing one's dump for the other pairs prompts with rationales written
+    for different CVs, and no downstream filter can see it."""
+    path = tmp_path / "raw" / "pass.parquet"
+    frame = pd.DataFrame({"pair_id": ["a", "b"]})
+    teacher = _EchoBackend()
+
+    first = N._generate_cached(path, ["p1", "p2"], teacher, None, frame)
+    again = N._generate_cached(path, ["p1", "p2"], teacher, None, frame)
+    assert teacher.calls == 1 and again == first
+
+    other = N._generate_cached(path, ["q1", "q2"], teacher, None, frame)
+    assert teacher.calls == 2
+    assert other == ["out:q1", "out:q2"]
+
+
+def _texts_frame(rows):
+    return pd.DataFrame([{
+        "chosen": json.dumps({"decision": d, "feedback": c}),
+        "rejected": json.dumps({"decision": N.flip(d), "feedback": r}),
+        "reference_decision": d, "pair_id": pid,
+    } for c, r, d, pid in rows])
+
+
+def test_separability_sees_a_style_marker_on_near_copy_pairs():
+    """minimal_edit-style pairs: rejected is chosen with two words swapped, and 60% of rejected
+    texts carry a marker word. Folds that split a pair score the near-copy as 'chosen' and hide
+    the marker; folds grouped by pair must expose it."""
+    import random
+
+    rng = random.Random(1)
+    vocab = [f"w{i}" for i in range(400)]
+    rows = []
+    for i in range(240):
+        base = rng.sample(vocab, 12)
+        edited = base.copy()
+        edited[3], edited[7] = rng.choice(vocab), rng.choice(vocab)
+        marker = " regrettably" if i % 5 < 3 else ""
+        rows.append((" ".join(base), " ".join(edited) + marker,
+                     "hire" if i % 2 == 0 else "reject", f"p{i}"))
+    assert N.separability(_texts_frame(rows))["auc_balanced"] > 0.65
+
+
+def test_separability_is_not_inflated_by_one_chosen_text_repeated_across_strategies():
+    """The overall D3 block stacks every strategy, so each pair's chosen text appears up to
+    three times. Copies on both sides of a fold are memorised, not a wording shortcut."""
+    import random
+
+    rng = random.Random(2)
+    vocab = [f"w{i}" for i in range(200)]
+    rows = []
+    for i in range(120):
+        chosen = " ".join(rng.sample(vocab, 10))
+        decision = "hire" if i % 2 == 0 else "reject"
+        for _strategy in range(3):
+            rows.append((chosen, " ".join(rng.sample(vocab, 10)), decision, f"p{i}"))
+    assert N.separability(_texts_frame(rows))["auc_balanced"] < 0.65

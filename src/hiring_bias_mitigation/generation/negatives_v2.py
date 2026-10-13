@@ -551,23 +551,33 @@ def _feedback_of(completion: str) -> str:
         return ""
 
 
-def _auc(texts: list[str], labels: list[int], seed: int) -> float | None:
-    """5-fold AUC of a TF-IDF logistic regression; None when a class is too thin to fold."""
+def _auc(texts: list[str], labels: list[int], groups: list[str], seed: int) -> float | None:
+    """5-fold AUC of a TF-IDF logistic regression, folds grouped by pair; None when too thin.
+
+    Grouping is what makes the number mean "a wording shortcut". Ungrouped folds put a pair's
+    chosen and rejected texts on opposite sides of a split: a near-copy pair then scores the
+    rejected text as 'chosen' and drags the AUC below 0.5, hiding a real marker, and a chosen
+    text repeated across strategies is memorised and pushes the AUC toward 1.0. Both were
+    measured by the pre-GPU review (0.49 vs 0.80 on a marked near-copy batch; 0.94 vs ~0.5 on
+    stacked strategies).
+    """
     import numpy as np
     from sklearn.feature_extraction.text import TfidfVectorizer
     from sklearn.linear_model import LogisticRegression
-    from sklearn.model_selection import StratifiedKFold, cross_val_score
+    from sklearn.model_selection import StratifiedGroupKFold, cross_val_score
     from sklearn.pipeline import make_pipeline
 
     labels_arr = np.asarray(labels)
-    if len(labels_arr) < 10 or min(labels_arr.sum(), (1 - labels_arr).sum()) < 5:
+    if (len(labels_arr) < 10 or min(labels_arr.sum(), (1 - labels_arr).sum()) < 5
+            or len(set(groups)) < 5):
         return None
     model = make_pipeline(
         TfidfVectorizer(ngram_range=(1, 2), min_df=2, sublinear_tf=True),
         LogisticRegression(max_iter=1000),
     )
-    folds = StratifiedKFold(n_splits=5, shuffle=True, random_state=seed)
-    scores = cross_val_score(model, texts, labels_arr, cv=folds, scoring="roc_auc")
+    folds = StratifiedGroupKFold(n_splits=5, shuffle=True, random_state=seed)
+    scores = cross_val_score(model, texts, labels_arr, groups=groups, cv=folds,
+                             scoring="roc_auc")
     return float(scores.mean())
 
 
@@ -583,15 +593,20 @@ def separability(pairs: pd.DataFrame, seed: int = 42) -> dict:
     if pairs.empty:
         return {"auc_balanced": None, "auc_overall": None, "auc_within_decision": None,
                 "per_decision": {}, "n_pairs": 0, "n_balanced_pairs": 0}
-    frame = pairs.copy()
+    frame = pairs.copy().reset_index(drop=True)
     frame["_chosen_text"] = frame["chosen"].map(_feedback_of)
     frame["_rejected_text"] = frame["rejected"].map(_feedback_of)
     if "reference_decision" not in frame.columns:
         frame["reference_decision"] = "unknown"
+    # One group per pair: both texts of a pair, and every strategy's copy of its chosen text,
+    # stay in the same fold. Frames without a pair id group by row.
+    frame["_group"] = (frame["pair_id"].astype(str) if "pair_id" in frame.columns
+                       else frame.index.astype(str))
 
-    def docs(sub: pd.DataFrame) -> tuple[list[str], list[int]]:
+    def docs(sub: pd.DataFrame) -> tuple[list[str], list[int], list[str]]:
         texts = sub["_chosen_text"].tolist() + sub["_rejected_text"].tolist()
-        return texts, [1] * len(sub) + [0] * len(sub)
+        groups = sub["_group"].tolist() * 2
+        return texts, [1] * len(sub) + [0] * len(sub), groups
 
     overall = _auc(*docs(frame), seed=seed)
 
@@ -664,6 +679,26 @@ def covertness_of_raw(raw: list[str], rows: pd.DataFrame) -> dict:
 # The batch driver
 # ---------------------------------------------------------------------------------------
 
+def teacher_backend_config(cfg: dict) -> dict:
+    """The `eval.backends.build_backend` spec for the teacher, read from a generation config.
+
+    `tensor_parallel_size` is what lets the 73.5 GiB Int4 teacher run on the GPUs a node
+    already provides: a CSCS GH200 node has four 96 GB GPUs and is billed whole, so splitting
+    the teacher over all four costs nothing extra and leaves room for a large KV cache.
+    """
+    return {
+        "model": cfg["teacher_model"],
+        "backend": cfg.get("backend", "vllm"),
+        "generation": cfg.get("generation", {}),
+        "max_model_len": cfg.get("max_model_len", 8192),
+        "gpu_memory_utilization": cfg.get("gpu_memory_utilization", 0.90),
+        "max_num_seqs": cfg.get("max_num_seqs"),
+        "dtype": cfg.get("dtype", "auto"),
+        "tensor_parallel_size": int(cfg.get("tensor_parallel_size", 1)),
+        "engine_kwargs": cfg.get("engine_kwargs"),
+    }
+
+
 from contextlib import contextmanager  # noqa: E402
 from dataclasses import fields, replace  # noqa: E402
 from pathlib import Path  # noqa: E402
@@ -690,16 +725,18 @@ def _generate_cached(path: Path, prompts: list[str], backend, overrides: dict | 
     """One teacher pass, dumped with its frame and resumed from the dump if it already ran.
 
     The dump is written only when the pass completes, so an interrupted pass leaves no file
-    and is redone in full (v1 policy). A dump of the wrong length belongs to a different batch
-    and is regenerated rather than trusted.
+    and is redone in full (v1 policy). It is reused only if it holds exactly these prompts, in
+    this order: row count alone is not identity -- two batches with a different seed or
+    exclusion list have the same size and cell order, and reusing one's outputs for the other
+    pairs every prompt with a rationale written for a different CV, which no filter can see.
     """
     if path.exists():
-        cached = pd.read_parquet(path, columns=["raw_output"])
-        if len(cached) == len(prompts):
+        cached = pd.read_parquet(path)
+        if "prompt" in cached.columns and cached["prompt"].tolist() == list(prompts):
             log.info("resuming: %s already generated (%d rows) -- skipping", path.name, len(cached))
             return cached["raw_output"].tolist()
-        log.warning("%s holds %d rows but %d are needed -- regenerating", path, len(cached),
-                    len(prompts))
+        log.warning("%s was generated for different prompts (%d cached, %d needed) -- "
+                    "regenerating", path, len(cached), len(prompts))
     with _generation(backend, overrides):
         raw = backend.generate(prompts)
     path.parent.mkdir(parents=True, exist_ok=True)
