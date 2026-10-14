@@ -1,0 +1,22 @@
+{
+  "run": "Qwen3.5-9B--en--sft--adapter--en_only_cscs",
+  "prompts": 31050,
+  "grid": 0.0009765625,
+  "hire_rate_base": 0.1443478260869565,
+  "hire_rate_adapter": 0.27278582930756845,
+  "unstable_base_at_own_threshold": 0.08037037037037037,
+  "unstable_adapter_at_own_threshold": 0.0362962962962963,
+  "base_threshold_matched_to_adapter_hire_rate": -1.125,
+  "base_tie_weight": 0.386046511627907,
+  "base_tied_prompts": 430,
+  "hire_rate_base_matched": 0.27278582930756845,
+  "unstable_base_at_matched_hire_rate": 0.1286356589147287,
+  "gain_explained_by_shift_pct": -109.50947820988866,
+  "floor_check": "unverified",
+  "floor_uncertain_prompts": {
+    "base": null,
+    "adapter": null
+  },
+  "floor_uncertain_sets": null,
+  "floor_bound_pp": null
+}

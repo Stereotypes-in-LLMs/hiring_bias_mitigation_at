@@ -1,0 +1,28 @@
+{
+  "run": "Qwen3.5-9B--en--dpo--adapter--en_only_v2neg_r1_step100",
+  "against": "Qwen3.5-9B--en--sft--adapter--en_only_cscs",
+  "prompts": 31050,
+  "sets": 2700,
+  "grid": 0.0009765625,
+  "hire_rate_ref": 0.27278582930756845,
+  "unstable_ref": 0.0362962962962963,
+  "hire_rate_run": 0.18972624798711754,
+  "unstable_run": 0.032962962962962965,
+  "ref_threshold_matched": 1.375,
+  "ref_tie_weight": 0.48058252427184467,
+  "ref_tied_prompts": 206,
+  "hire_rate_ref_matched": 0.18972624798711754,
+  "unstable_ref_matched": 0.027143113987774182,
+  "unstable_ref_bin_excluded": 0.025185185185185185,
+  "unstable_ref_bin_included": 0.02925925925925926,
+  "delta_matched_pp": 0.5819848975188783,
+  "ci_low": -0.4966693635382956,
+  "ci_high": 1.6397698669543328,
+  "floor_check": "unverified",
+  "floor_uncertain_prompts": {
+    "ref": null,
+    "run": null
+  },
+  "floor_uncertain_sets": null,
+  "floor_bound_pp": null
+}
