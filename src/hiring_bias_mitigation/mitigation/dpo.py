@@ -138,6 +138,9 @@ def train(cfg: dict) -> C.TrainArtifacts:
     set_seed(cfg.get("seed", 42))
     C.wandb_init(cfg)
     output_dir = C.resolve_run_dir(cfg)
+    # Rank 0 is the only process that logs to W&B.
+    if C.is_main_process():
+        C.wandb_resume(cfg, output_dir)
 
     # KTO reads its own split: same responses as DPO, one row per response.
     # `data_kind` lets a variant arm read a different preference split -- e.g. decision-only

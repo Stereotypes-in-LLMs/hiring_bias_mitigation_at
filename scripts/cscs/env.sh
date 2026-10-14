@@ -36,6 +36,14 @@ export VLLM_USE_FLASHINFER_SAMPLER=0
 # Job 5045685 tried it, failed fast and fell back; job 5051986 hung 20+ minutes inside the
 # fallback at CUDA-graph capture. Off, tensor parallel uses the custom all-reduce and NCCL.
 export VLLM_ALLREDUCE_USE_FLASHINFER=0
+# W&B: the key sits in a file only this account can read (mode 600), not in ~/.netrc, which
+# every user of the shared account would inherit. Without it, training logs offline under
+# $WANDB_DIR, and train_dpo.sbatch uploads those runs at the start of the next segment.
+export WANDB_DIR=$XW/wandb
+if [ -r "$XW/wandb/wandb/wandb_apikey" ]; then
+  WANDB_API_KEY=$(tr -d '\n\r ' < "$XW/wandb/wandb/wandb_apikey")
+  export WANDB_API_KEY
+fi
 
 # Usable GPU memory is 95.6 GiB (97,871 MiB) per GH200, despite "120GB" in the device name;
 # vLLM's gpu_memory_utilization is a fraction of that, and anything near 96 GB OOMs.

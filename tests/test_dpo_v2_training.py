@@ -178,6 +178,7 @@ def test_dpo_resumes_from_its_last_checkpoint_and_names_its_parent_before_traini
             pass
 
     monkeypatch.setattr("trl.DPOTrainer", Trainer)
+    monkeypatch.setattr(C, "wandb_resume", lambda cfg, path: seen.setdefault("wandb_dir", path))
     dpo.train({"objective": "dpo", "output_dir": str(out), "use_wandb": False,
                "dtype": "float32", "use_lora": False, "memory_floor_gb": 0, "resume": True,
                "base_model": "/cache/sft-snapshot", "data": {},
@@ -187,6 +188,7 @@ def test_dpo_resumes_from_its_last_checkpoint_and_names_its_parent_before_traini
         "Stereotypes-in-LLMs/qwen3.5-9b-hiring-debias-sft-en"
     assert seen["manifest"]["status"] == "training"
     assert json.loads((out / "run_config.json").read_text())["status"] == "done"
+    assert seen["wandb_dir"] == out
 
 
 def test_precomputed_reference_logps_under_torchrun_are_refused_before_the_model_loads(

@@ -294,7 +294,9 @@ def wandb_init(cfg: dict) -> None:
     model was loaded and the dataset tokenised.
 
     The entity is probed here, before training starts, so the fallback is chosen while it is
-    still cheap and is visible in the log rather than discovered in a traceback.
+    still cheap and is visible in the log rather than discovered in a traceback. So is the
+    connection itself: a server that cannot be reached (a compute node without a route out)
+    means offline logging, kept on disk for `wandb sync`, not no logging.
     """
     import os
 
@@ -315,12 +317,12 @@ def wandb_init(cfg: dict) -> None:
         return
 
     entity = os.environ.get("WANDB_ENTITY")
-    if not entity:
-        return
     try:
         import wandb
 
         viewer = wandb.Api(timeout=20).viewer
+        if not entity:
+            return
         available = {viewer.entity, *(viewer.teams or [])}
         if entity not in available:
             log.warning(
@@ -330,8 +332,33 @@ def wandb_init(cfg: dict) -> None:
             )
             _disable_wandb()
     except Exception as exc:
-        log.warning("W&B unreachable (%s) -- disabling W&B for this run", exc)
-        _disable_wandb()
+        # Offline alone still resolved the entity at on_train_begin (see _disable_wandb), so
+        # the entity goes too; the curves stay on disk for `wandb sync`.
+        log.warning("W&B unreachable (%s) -- logging offline for this run", exc)
+        os.environ["WANDB_MODE"] = "offline"
+        os.environ.pop("WANDB_ENTITY", None)
+
+
+def wandb_resume(cfg: dict, output_dir: Path) -> None:
+    """One W&B run per output directory for a run that resumes, so a schedule split into
+    time-limited segments is one curve rather than one W&B run per segment.
+
+    The id lives in `output_dir/wandb_run_id`. When the file does not exist yet, an id already
+    in the environment (an earlier segment's offline run) is adopted, otherwise a new one.
+    """
+    import os
+    import secrets
+
+    if not cfg.get("use_wandb", True) or not cfg.get("resume"):
+        return
+    path = Path(output_dir) / "wandb_run_id"
+    if path.is_file():
+        run_id = path.read_text().strip()
+    else:
+        run_id = os.environ.get("WANDB_RUN_ID") or secrets.token_hex(4)
+        path.write_text(run_id + "\n")
+    os.environ["WANDB_RUN_ID"] = run_id
+    os.environ["WANDB_RESUME"] = "allow"
 
 
 def _disable_wandb() -> None:

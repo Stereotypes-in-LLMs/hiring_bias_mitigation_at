@@ -595,6 +595,18 @@ def test_weights_are_never_uploaded_to_wandb(monkeypatch):
     monkeypatch.delenv("WANDB_ENTITY", raising=False)
     monkeypatch.delenv("WANDB_MODE", raising=False)
 
+    class _Viewer:
+        entity = "me"
+        teams: typing.ClassVar[list] = []
+
+    class _Api:
+        def __init__(self, *a, **k):
+            pass
+
+        viewer = _Viewer()
+
+    monkeypatch.setitem(__import__("sys").modules, "wandb", type("W", (), {"Api": _Api}))
+
     C.wandb_init({"wandb_project": "p"})
 
     import os
@@ -809,3 +821,78 @@ def test_dpo_rendering_splits_each_response_exactly_at_the_prompt():
         )
         assert row["prompt"] + row[side] == full
     assert row["chosen"] != row["rejected"]
+
+
+def _unreachable_wandb(monkeypatch):
+    class _Api:
+        def __init__(self, *a, **k):
+            raise ConnectionError("no route to api.wandb.ai")
+
+    monkeypatch.setitem(__import__("sys").modules, "wandb", type("W", (), {"Api": _Api}))
+
+
+def test_an_unreachable_wandb_logs_offline_for_a_later_sync(monkeypatch):
+    """A compute node may have no route to W&B. Disabling would lose the curves; offline keeps
+    them for `wandb sync`, and dropping the entity leaves the client nothing to resolve."""
+    import os
+
+    from hiring_bias_mitigation.mitigation import training_common as C
+
+    monkeypatch.setenv("WANDB_API_KEY", "k" * 86)
+    monkeypatch.setenv("WANDB_ENTITY", "real-entity")
+    monkeypatch.delenv("WANDB_MODE", raising=False)
+    _unreachable_wandb(monkeypatch)
+
+    C.wandb_init({"wandb_project": "p"})
+
+    assert os.environ["WANDB_MODE"] == "offline"
+    assert "WANDB_ENTITY" not in os.environ
+
+
+def test_reachability_is_probed_without_an_entity_too(monkeypatch):
+    import os
+
+    from hiring_bias_mitigation.mitigation import training_common as C
+
+    monkeypatch.setenv("WANDB_API_KEY", "k" * 86)
+    monkeypatch.delenv("WANDB_ENTITY", raising=False)
+    monkeypatch.delenv("WANDB_MODE", raising=False)
+    _unreachable_wandb(monkeypatch)
+
+    C.wandb_init({"wandb_project": "p"})
+
+    assert os.environ["WANDB_MODE"] == "offline"
+
+
+def test_a_resumed_run_keeps_logging_to_one_wandb_run(tmp_path, monkeypatch):
+    """A run split into time-limited segments is one curve, not one W&B run per segment."""
+    import os
+
+    from hiring_bias_mitigation.mitigation import training_common as C
+
+    monkeypatch.delenv("WANDB_RUN_ID", raising=False)
+    monkeypatch.delenv("WANDB_RESUME", raising=False)
+    C.wandb_resume({"resume": True}, tmp_path)
+    first = os.environ["WANDB_RUN_ID"]
+    assert (tmp_path / "wandb_run_id").read_text().strip() == first
+    assert os.environ["WANDB_RESUME"] == "allow"
+
+    monkeypatch.delenv("WANDB_RUN_ID")
+    C.wandb_resume({"resume": True}, tmp_path)
+    assert os.environ["WANDB_RUN_ID"] == first
+
+    (tmp_path / "wandb_run_id").write_text("mc7j4yp4\n")  # an earlier segment's offline run
+    C.wandb_resume({"resume": True}, tmp_path)
+    assert os.environ["WANDB_RUN_ID"] == "mc7j4yp4"
+
+
+def test_a_run_that_does_not_resume_gets_a_fresh_wandb_run(tmp_path, monkeypatch):
+    import os
+
+    from hiring_bias_mitigation.mitigation import training_common as C
+
+    monkeypatch.delenv("WANDB_RUN_ID", raising=False)
+    C.wandb_resume({}, tmp_path)
+    C.wandb_resume({"resume": True, "use_wandb": False}, tmp_path)
+    assert "WANDB_RUN_ID" not in os.environ
+    assert not (tmp_path / "wandb_run_id").exists()
