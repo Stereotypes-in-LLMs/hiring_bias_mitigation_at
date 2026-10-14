@@ -191,6 +191,51 @@ def balance_by_reference(pairs: pd.DataFrame, seed: int = 42,
     return balanced.reset_index(drop=True), info
 
 
+def balance_by_margin(pairs: pd.DataFrame, column: str, bins: int = 10, seed: int = 42,
+                      by: str = "protected_group") -> tuple[pd.DataFrame, dict]:
+    """Equal hire and reject reference verdicts with the same distribution of `column`, the
+    SFT model's log-prob margin log p(chosen) - log p(rejected), within each `by` group.
+
+    Balancing counts was not enough in round 1. On reject-reference pairs the rejected answer
+    is the SFT model's usual one (greedy hires 18% of them), on hire-reference pairs a rare
+    sample (greedy hires all of them); the SFT model preferred chosen on 43% vs 82%. DPO then
+    changed behaviour mostly on the reject side, and the model became stricter (hire rate
+    28% -> 19% on the benchmark) with no gain in invariance at matched hire rate. Matching the
+    margin distribution makes each side ask for the same amount of change.
+
+    Bins are quantiles of the hire side's margins, bounded by its range: reject pairs with a
+    margin outside it (the most negative ones, where the rejected answer is the model's usual
+    one) are left out rather than lumped into an edge bin. Each bin keeps min(hire, reject)
+    pairs of both sides, a seeded draw.
+    """
+    import numpy as np
+
+    parts, groups = [], {}
+    for name, part in pairs.groupby(by, sort=True):
+        hire = part[part["reference_decision"] == "hire"]
+        reject = part[part["reference_decision"] == "reject"]
+        if hire.empty or reject.empty:
+            groups[str(name)] = {"hire": 0, "reject": 0, "dropped": len(part)}
+            continue
+        edges = np.unique(np.quantile(hire[column], np.linspace(0, 1, bins + 1)))
+        hire_bin = pd.cut(hire[column], edges, labels=False, include_lowest=True)
+        reject_bin = pd.cut(reject[column], edges, labels=False, include_lowest=True)
+        kept = 0
+        for b in sorted(set(hire_bin.dropna())):
+            h, r = hire[hire_bin == b], reject[reject_bin == b]
+            k = min(len(h), len(r))
+            parts += [h.sample(n=k, random_state=seed), r.sample(n=k, random_state=seed)]
+            kept += k
+        groups[str(name)] = {"hire": kept, "reject": kept, "dropped": len(part) - 2 * kept}
+    balanced = pd.concat(parts).sort_index() if parts else pairs.iloc[:0]
+    info = {"n_input": len(pairs), "n_kept": len(balanced), "by": by, "column": column,
+            "bins": bins, "seed": seed, "groups": groups}
+    if len(balanced):
+        info["mean_margin"] = {d: float(m) for d, m in
+                               balanced.groupby("reference_decision")[column].mean().items()}
+    return balanced.reset_index(drop=True), info
+
+
 # ---------------------------------------------------------------------------------------
 # Full-pool sampling: the pool, chunks spread over GPUs, and resumable chunk files
 # ---------------------------------------------------------------------------------------

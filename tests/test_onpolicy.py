@@ -177,3 +177,43 @@ def test_topup_adds_only_rows_the_base_run_lacks_and_base_wins_a_tie():
         ("p0", "explicit", "base"), ("p1", "explicit", "base"),
         ("p1", "implicit", "topup"), ("p2", "explicit", "topup")]
     assert info == {"n_base": 2, "n_topup": 3, "n_new": 2, "n_already_in_base": 1}
+
+
+
+def _margin_pairs(seed: int = 0) -> pd.DataFrame:
+    """Hire-reference pairs mostly already preferred by the SFT model (positive margin),
+    reject-reference pairs mostly not: the asymmetry round 1 trained on."""
+    import numpy as np
+
+    rng = np.random.default_rng(seed)
+    rows = []
+    for group in ("gender", "religion"):
+        for i in range(60):
+            rows.append({"pair_id": f"{group}-h{i}", "protected_attr": "a", "condition": "explicit",
+                         "protected_group": group, "reference_decision": "hire",
+                         "margin": rng.normal(3.0, 2.0)})
+        for i in range(200):
+            rows.append({"pair_id": f"{group}-r{i}", "protected_attr": "a", "condition": "explicit",
+                         "protected_group": group, "reference_decision": "reject",
+                         "margin": rng.normal(-1.0, 3.0)})
+    return pd.DataFrame(rows)
+
+
+def test_margin_balance_gives_both_sides_the_same_margin_distribution_per_group():
+    pairs = _margin_pairs()
+    balanced, info = OP.balance_by_margin(pairs, "margin", bins=5, seed=0)
+    for group, part in balanced.groupby("protected_group"):
+        hire = part[part.reference_decision == "hire"]["margin"]
+        reject = part[part.reference_decision == "reject"]["margin"]
+        assert len(hire) == len(reject) > 0
+        assert abs(hire.mean() - reject.mean()) < 0.5  # the raw gap was 4
+        assert info["groups"][group]["hire"] == len(hire)
+    raw = pairs.groupby("reference_decision")["margin"].mean()
+    assert raw["hire"] - raw["reject"] > 3
+
+
+def test_margin_balance_is_reproducible():
+    pairs = _margin_pairs(1)
+    first, _ = OP.balance_by_margin(pairs, "margin", bins=5, seed=3)
+    second, _ = OP.balance_by_margin(pairs, "margin", bins=5, seed=3)
+    assert first["pair_id"].tolist() == second["pair_id"].tolist()
