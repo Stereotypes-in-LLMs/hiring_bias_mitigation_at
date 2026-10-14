@@ -1,5 +1,5 @@
 # Hand-written -- NOT produced by generate_experiment_configs.py.
-# Round-1 v2 DPO, checkpoint-50 (lowest eval loss, highest decision agreement 0.962).
+# Round-2 v2 DPO (margin-balanced pairs, beta 0.3, one epoch), checkpoint-50.
 # CSCS Daint: scripts/cscs/run_audits.sbatch (one config per GPU).
 backend: vllm
 max_model_len: 8192
