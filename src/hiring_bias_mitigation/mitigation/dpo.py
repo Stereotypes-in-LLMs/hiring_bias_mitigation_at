@@ -36,6 +36,7 @@ Run:
 from __future__ import annotations
 
 import argparse
+import os
 
 from ..utils.config import load_config
 from ..utils.logging import get_logger
@@ -127,6 +128,12 @@ def train(cfg: dict) -> C.TrainArtifacts:
     objective = cfg.get("objective", "dpo")
     if objective not in OBJECTIVES:
         raise ValueError(f"unknown objective {objective!r}; expected one of {OBJECTIVES}")
+    if cfg.get("precompute_ref_log_probs") and int(os.environ.get("WORLD_SIZE", "1")) > 1:
+        # TRL writes the precomputed cache on rank 0 into the dataset's cache dir, which for
+        # these in-memory datasets is a per-process temp dir the other ranks cannot read: job
+        # 5054142 died there after 6 minutes. Refuse before anything is loaded.
+        raise ValueError("precompute_ref_log_probs does not work under torchrun with in-memory "
+                         "datasets; set it false (the reference pass then runs every step)")
 
     set_seed(cfg.get("seed", 42))
     C.wandb_init(cfg)

@@ -187,3 +187,23 @@ def test_dpo_resumes_from_its_last_checkpoint_and_names_its_parent_before_traini
         "Stereotypes-in-LLMs/qwen3.5-9b-hiring-debias-sft-en"
     assert seen["manifest"]["status"] == "training"
     assert json.loads((out / "run_config.json").read_text())["status"] == "done"
+
+
+def test_precomputed_reference_logps_under_torchrun_are_refused_before_the_model_loads(
+        monkeypatch):
+    """TRL's precompute writes its cache on rank 0 into the dataset's cache dir, which for an
+    in-memory dataset is a per-process temp dir the other ranks cannot read (job 5054142 died
+    there after 6 minutes)."""
+    import pytest
+
+    from hiring_bias_mitigation.mitigation import dpo
+    from hiring_bias_mitigation.mitigation import training_common as C
+
+    def never(*args, **kwargs):
+        raise AssertionError("must refuse before loading anything")
+
+    monkeypatch.setenv("WORLD_SIZE", "4")
+    monkeypatch.setattr(C, "load_generated_dataset", never)
+    monkeypatch.setattr(C, "load_model_and_tokenizer", never)
+    with pytest.raises(ValueError, match="precompute_ref_log_probs"):
+        dpo.train({"objective": "dpo", "precompute_ref_log_probs": True, "output_dir": "x"})

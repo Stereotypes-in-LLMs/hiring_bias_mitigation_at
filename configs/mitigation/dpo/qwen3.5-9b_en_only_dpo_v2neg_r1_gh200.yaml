@@ -24,7 +24,9 @@ loss_type:
 loss_weights:
 - 1.0
 - 0.2
-precompute_ref_log_probs: true
+# false under torchrun: TRL's precompute cache is per-process for in-memory datasets
+# (job 5054142). The reference pass runs every step instead.
+precompute_ref_log_probs: false
 max_seq_len: 2048
 max_prompt_len: 1792
 num_train_epochs: 1
