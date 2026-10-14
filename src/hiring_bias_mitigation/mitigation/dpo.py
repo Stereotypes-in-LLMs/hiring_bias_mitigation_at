@@ -206,20 +206,29 @@ def train(cfg: dict) -> C.TrainArtifacts:
         objective.upper(), cfg["base_model"], len(train_ds),
         "preference pairs" if objective == "dpo" else "labelled responses",
     )
-    trainer.train()
+    manifest = {
+        "mitigation_family": "dpo",
+        "objective": objective,
+        "beta": cfg.get("beta", 0.1),
+        "n_train": len(train_ds),
+        "n_eval": len(eval_ds) if eval_ds else 0,
+        "sft_checkpoint": cfg.get("sft_checkpoint"),
+    }
+    # Written before training as well: a run cut by a time limit never reaches the final
+    # write, and without `sft_checkpoint` on disk its checkpoint-N adapters would be merged
+    # without their SFT parent (merge.adapter_chain).
+    if C.is_main_process():
+        C.write_run_manifest(cfg, output_dir, {**manifest, "status": "training"})
+    # `resume: true` continues from the newest finished checkpoint in output_dir, so a run
+    # longer than the partition's time limit is the same job submitted again.
+    resume = C.last_checkpoint(output_dir) if cfg.get("resume") else None
+    if resume:
+        log.info("resuming from %s", resume)
+    trainer.train(resume_from_checkpoint=resume)
     trainer.save_model(str(output_dir))
-    tokenizer.save_pretrained(str(output_dir))
-    C.write_run_manifest(
-        cfg, output_dir,
-        {
-            "mitigation_family": "dpo",
-            "objective": objective,
-            "beta": cfg.get("beta", 0.1),
-            "n_train": len(train_ds),
-            "n_eval": len(eval_ds) if eval_ds else 0,
-            "sft_checkpoint": cfg.get("sft_checkpoint"),
-        },
-    )
+    if C.is_main_process():
+        tokenizer.save_pretrained(str(output_dir))
+        C.write_run_manifest(cfg, output_dir, {**manifest, "status": "done"})
     return C.TrainArtifacts(output_dir, len(train_ds), len(eval_ds) if eval_ds else 0)
 
 

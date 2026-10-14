@@ -1,0 +1,56 @@
+# Hand-written -- NOT produced by generate_experiment_configs.py, so it survives a regeneration.
+#
+# Round 1 of SFT -> DPO on the v2 on-policy negatives, on one GH200 node (4 GPUs, DDP):
+# qwen3.5-9b_en_only_dpo_v2neg.yaml with the batch split over 4 GPUs and the run segmented
+# for debug's 30-minute limit. Data: en_only_v2 = onpolicy-hire32/balanced, 2,278 train /
+# 292 validation pairs, hire 0.50 (e6b48a5). 300 steps x 16 pairs is ~2.1 epochs.
+#   scripts/cscs/submit.sh -p debug -t 00:30:00 scripts/cscs/train_dpo.sbatch
+# Audit any checkpoint through merge.py, which merges the SFT adapter first (264c7a6).
+stage: dpo
+objective: dpo
+data_kind: dpo_v2
+base_model: Qwen/Qwen3.5-9B
+sft_checkpoint: Stereotypes-in-LLMs/qwen3.5-9b-hiring-debias-sft-en
+data_config: configs/data/en_only_v2.yaml
+output_dir: outputs/dpo/qwen3.5-9b_en_only_dpo_v2neg_r1
+use_lora: true
+lora_r: 32
+lora_alpha: 64
+lora_dropout: 0.05
+beta: 0.1
+loss_type:
+- sigmoid
+- sft
+loss_weights:
+- 1.0
+- 0.2
+precompute_ref_log_probs: true
+max_seq_len: 2048
+max_prompt_len: 1792
+num_train_epochs: 1
+max_steps: 300
+warmup_steps: 10
+learning_rate: 5.0e-05
+per_device_train_batch_size: 1
+per_device_eval_batch_size: 1
+gradient_accumulation_steps: 4        # x 4 GPUs x batch 1 = 16, as the single-GPU config
+gradient_checkpointing: true
+weight_decay: 0.01
+dtype: bfloat16
+seed: 42
+eval_steps: 50
+eval_limit_rows: 200
+early_stopping_patience: 0
+memory_floor_gb: 12
+wandb_project: hiring-bias-mitigation
+wandb_run_name: dpo-qwen3.5-9b_en_only_dpo_v2neg_r1
+# Segmented on debug (30 min): resume from the newest finished checkpoint, save every 25
+# steps and keep them all (12 x LoRA + optimizer state), so checkpoints between evals
+# can be audited too; best-model selection off, the audit picks the checkpoint.
+resume: true
+save_steps: 25
+save_total_limit: 20
+load_best_model_at_end: false
+ddp_find_unused_parameters: false
+gradient_checkpointing_kwargs:
+  use_reentrant: false

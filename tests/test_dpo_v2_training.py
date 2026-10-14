@@ -100,3 +100,90 @@ def test_hub_adapter_fetch_includes_the_tokenizer_the_loader_reads(tmp_path, mon
               "tokenizer_config.json", "chat_template.jinja"]
     for name in needed:
         assert any(fnmatch.fnmatch(name, pat) for pat in seen["allow_patterns"]), name
+
+
+def test_training_arguments_take_save_and_ddp_overrides(tmp_path):
+    """Segmented runs on a 30-minute partition save more often than they evaluate, which
+    load_best_model_at_end forbids; DDP with LoRA needs non-reentrant checkpointing."""
+    from hiring_bias_mitigation.mitigation import training_common as C
+
+    base = {"eval_steps": 50, "dtype": "float32", "use_wandb": False}
+    args = C.training_arguments(
+        {**base, "save_steps": 25, "save_total_limit": 20, "load_best_model_at_end": False,
+         "ddp_find_unused_parameters": False,
+         "gradient_checkpointing_kwargs": {"use_reentrant": False}},
+        tmp_path, has_eval=True, n_train=100)
+    assert (args.save_steps, args.eval_steps, args.save_total_limit) == (25, 50, 20)
+    assert args.load_best_model_at_end is False
+    assert args.ddp_find_unused_parameters is False
+    assert args.gradient_checkpointing_kwargs == {"use_reentrant": False}
+
+    default = C.training_arguments(base, tmp_path, has_eval=True, n_train=100)
+    assert default.save_steps == 50 and default.load_best_model_at_end is True
+
+
+def test_last_checkpoint_is_the_highest_one_the_trainer_finished_writing(tmp_path):
+    from hiring_bias_mitigation.mitigation import training_common as C
+
+    assert C.last_checkpoint(tmp_path / "missing") is None
+    assert C.last_checkpoint(tmp_path) is None
+    for step, finished in ((25, True), (50, True), (75, False), (100, True)):
+        d = tmp_path / f"checkpoint-{step}"
+        d.mkdir()
+        if finished:
+            (d / "trainer_state.json").write_text("{}")
+    (tmp_path / "checkpoint-100" / "trainer_state.json").unlink()  # cut mid-save
+    assert C.last_checkpoint(tmp_path) == str(tmp_path / "checkpoint-50")
+
+
+def test_dpo_resumes_from_its_last_checkpoint_and_names_its_parent_before_training(
+        tmp_path, monkeypatch):
+    """A run cut by the time limit never reaches the final manifest, and without it a
+    checkpoint-N adapter would be merged without its SFT parent (merge.adapter_chain)."""
+    from datasets import Dataset
+
+    from hiring_bias_mitigation.mitigation import dpo
+    from hiring_bias_mitigation.mitigation import training_common as C
+
+    monkeypatch.setenv("HBM_ALLOW_LOCAL_OUTPUT", "1")
+    monkeypatch.setenv("WANDB_MODE", "disabled")
+    out = tmp_path / "run"
+    (out / "checkpoint-25").mkdir(parents=True)
+    (out / "checkpoint-25" / "trainer_state.json").write_text("{}")
+    rows = {"prompt": ["p"], "chosen": ["c"], "rejected": ["r"]}
+    monkeypatch.setattr(C, "load_generated_dataset",
+                        lambda cfg, kind: {"train": Dataset.from_dict(rows)})
+
+    class Tokenizer:
+        def apply_chat_template(self, messages, tokenize=False, add_generation_prompt=False,
+                                **kwargs):
+            text = "".join(f"<{m['role']}>{m['content']}" for m in messages)
+            return text + ("<assistant>" if add_generation_prompt else "")
+
+        def save_pretrained(self, path):
+            pass
+
+    monkeypatch.setattr(C, "load_model_and_tokenizer", lambda cfg: (object(), Tokenizer()))
+    seen = {}
+
+    class Trainer:
+        def __init__(self, **kwargs):
+            pass
+
+        def train(self, resume_from_checkpoint=None):
+            seen["resume"] = resume_from_checkpoint
+            seen["manifest"] = json.loads((out / "run_config.json").read_text())
+
+        def save_model(self, path):
+            pass
+
+    monkeypatch.setattr("trl.DPOTrainer", Trainer)
+    dpo.train({"objective": "dpo", "output_dir": str(out), "use_wandb": False,
+               "dtype": "float32", "use_lora": False, "memory_floor_gb": 0, "resume": True,
+               "base_model": "/cache/sft-snapshot", "data": {},
+               "sft_checkpoint": "Stereotypes-in-LLMs/qwen3.5-9b-hiring-debias-sft-en"})
+    assert seen["resume"] == str(out / "checkpoint-25")
+    assert seen["manifest"]["sft_checkpoint"] == \
+        "Stereotypes-in-LLMs/qwen3.5-9b-hiring-debias-sft-en"
+    assert seen["manifest"]["status"] == "training"
+    assert json.loads((out / "run_config.json").read_text())["status"] == "done"

@@ -239,6 +239,30 @@ def resolve_run_dir(cfg: dict) -> Path:
     return path
 
 
+def last_checkpoint(output_dir: str | Path) -> str | None:
+    """The newest checkpoint-N the trainer finished writing, or None.
+
+    transformers writes trainer_state.json after the weights, optimizer and RNG state, so a
+    checkpoint cut mid-save by a time limit lacks it and is skipped instead of resumed into.
+    """
+    import re
+
+    root = Path(output_dir)
+    if not root.is_dir():
+        return None
+    done = [(int(m.group(1)), d) for d in root.iterdir()
+            if (m := re.fullmatch(r"checkpoint-(\d+)", d.name))
+            and (d / "trainer_state.json").is_file()]
+    return str(max(done)[1]) if done else None
+
+
+def is_main_process() -> bool:
+    """Rank 0 under torchrun, or the only process."""
+    import os
+
+    return int(os.environ.get("RANK", "0")) == 0
+
+
 def write_run_manifest(cfg: dict, output_dir: Path, extra: dict | None = None) -> Path:
     """Records what produced a checkpoint, next to the checkpoint.
 
@@ -537,6 +561,10 @@ def training_arguments(cfg: dict, output_dir: Path, has_eval: bool, n_train: int
 
     strategy = "steps" if has_eval else "no"
     kwargs = _warmup_kwargs(cfg, n_train)
+    # DDP with LoRA: unused-parameter search off, non-reentrant checkpointing. Passed only when
+    # a config sets them, so single-GPU configs keep transformers' defaults.
+    kwargs.update({key: cfg[key] for key in ("ddp_find_unused_parameters",
+                                              "gradient_checkpointing_kwargs") if key in cfg})
     return TrainingArguments(
         output_dir=str(output_dir),
         num_train_epochs=cfg.get("num_train_epochs", 2),
@@ -552,9 +580,11 @@ def training_arguments(cfg: dict, output_dir: Path, has_eval: bool, n_train: int
         eval_strategy=strategy,
         eval_steps=cfg.get("eval_steps", 100),
         save_strategy=strategy,
-        save_steps=cfg.get("eval_steps", 100),
+        # A run segmented by a time limit saves more often than it evaluates; transformers only
+        # allows that without load_best_model_at_end, which such a config turns off.
+        save_steps=cfg.get("save_steps", cfg.get("eval_steps", 100)),
         save_total_limit=cfg.get("save_total_limit", 2),
-        load_best_model_at_end=has_eval,
+        load_best_model_at_end=has_eval and bool(cfg.get("load_best_model_at_end", True)),
         metric_for_best_model="eval_loss",
         greater_is_better=False,
         bf16=cfg.get("dtype", "bfloat16") == "bfloat16",
