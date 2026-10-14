@@ -1,0 +1,13 @@
+# Hand-written -- NOT produced by generate_experiment_configs.py.
+# Round-2 DPO data balanced by error mass (scripts/build_balanced_dpo.py, data_kind dpo_round2):
+# round 1's pairs, the reject-side pairs its count balance dropped, and the semisynthetic-v1
+# pairs the LLM judge found covert; equal counts and equal SFT error mass on both sides.
+name: en_only_v2_r2em
+artifacts_dir: artifacts/semisynthetic-v2/round2-error-mass
+seed: 42
+protected_groups:
+- military_status
+- gender
+- religion
+languages:
+- en

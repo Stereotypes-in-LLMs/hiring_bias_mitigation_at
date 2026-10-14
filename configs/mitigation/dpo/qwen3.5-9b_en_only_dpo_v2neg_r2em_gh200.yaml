@@ -1,0 +1,62 @@
+# Hand-written -- NOT produced by generate_experiment_configs.py, so it survives a regeneration.
+#
+# Round 2 of SFT -> DPO on data balanced by error mass (en_only_v2_r2em,
+# scripts/build_balanced_dpo.py) instead of by the log-prob margin (r2). Both sides have 1,181
+# pairs and the same summed SFT p(wrong decision); the reject side keeps no pair the SFT model
+# gets wrong. Training settings as r2, so the data is the only change. 148 steps, about 26
+# minutes of training: on debug, expect a second segment (resume: true).
+#   CONFIG=configs/mitigation/dpo/qwen3.5-9b_en_only_dpo_v2neg_r2em_gh200.yaml \
+#     scripts/cscs/submit.sh -p debug -t 00:30:00 scripts/cscs/train_dpo.sbatch
+stage: dpo
+objective: dpo
+data_kind: dpo_round2
+base_model: Qwen/Qwen3.5-9B
+sft_checkpoint: Stereotypes-in-LLMs/qwen3.5-9b-hiring-debias-sft-en
+data_config: configs/data/en_only_v2_r2em.yaml
+output_dir: outputs/dpo/qwen3.5-9b_en_only_dpo_v2neg_r2em
+use_lora: true
+lora_r: 32
+lora_alpha: 64
+lora_dropout: 0.05
+beta: 0.3                      # as r2
+loss_type:
+- sigmoid
+- sft
+loss_weights:
+- 1.0
+- 0.2
+# false under torchrun: TRL's precompute cache is per-process for in-memory datasets
+# (job 5054142). The reference pass runs every step instead.
+precompute_ref_log_probs: false
+max_seq_len: 2048
+max_prompt_len: 1792
+num_train_epochs: 1
+max_steps: -1                  # one epoch
+warmup_steps: 10
+learning_rate: 5.0e-05
+per_device_train_batch_size: 1
+per_device_eval_batch_size: 1
+gradient_accumulation_steps: 4        # x 4 GPUs x batch 1 = 16, as the single-GPU config
+gradient_checkpointing: true
+weight_decay: 0.01
+dtype: bfloat16
+seed: 42
+eval_steps: 25
+eval_limit_rows: 200
+early_stopping_patience: 0
+memory_floor_gb: 12
+wandb_project: hiring-bias-mitigation
+wandb_run_name: dpo-qwen3.5-9b_en_only_dpo_v2neg_r2em
+# Greedy decisions on 64 validation prompts after every eval: the hire rate on
+# reference-hire prompts is what fell in round 1.
+decision_eval_rows: 64
+# Segmented on debug (30 min): resume from the newest finished checkpoint, save every 25
+# steps and keep them all (12 x LoRA + optimizer state), so checkpoints between evals
+# can be audited too; best-model selection off, the audit picks the checkpoint.
+resume: true
+save_steps: 25
+save_total_limit: 20
+load_best_model_at_end: false
+ddp_find_unused_parameters: false
+gradient_checkpointing_kwargs:
+  use_reentrant: false
