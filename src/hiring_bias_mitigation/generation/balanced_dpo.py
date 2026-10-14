@@ -539,6 +539,10 @@ def assemble(
     report["validation_pairs"] = len(validation)
     report["train_pairs"] = len(train)
     report["steps_per_epoch_at_effective_batch_16"] = math.ceil(len(train) / 16)
+    # The chosen decision is the attribute-free reference: one per CV and job after the anchor
+    # check. The trainer's decision eval (mitigation/decision_eval.py) reads it by this name.
+    train, validation = (part.assign(reference_decision=part["decision"])
+                         for part in (train, validation))
     drop = ["needs_judge", "wrong_logit"]
     return (train.drop(columns=[c for c in drop if c in train.columns]),
             validation.drop(columns=[c for c in drop if c in validation.columns]), report)

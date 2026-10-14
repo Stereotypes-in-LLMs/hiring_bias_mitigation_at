@@ -269,6 +269,9 @@ def test_assemble_judges_scores_and_balances():
     assert list(validation["candidate_id"]) == ["cand-v"]
     assert {"prompt", "chosen", "rejected", "lang", "protected_group", "condition",
             "student_margin", "p_wrong"} <= set(train.columns)
+    # The trainer's decision eval samples and scores validation rows by reference_decision.
+    for part in (train, validation):
+        assert (part["reference_decision"] == part["decision"]).all()
 
 
 def test_assemble_refuses_legacy_pairs_without_a_verdict():
@@ -423,7 +426,8 @@ def test_judge_verdicts_line_up_with_their_own_pair_and_side(tmp_path, monkeypat
 
     monkeypatch.setattr(BK, "build_backend", lambda cfg: Judge())
     args = argparse.Namespace(all_sources=False, judge_model="stub", force=False, seed=42,
-                              gpu_memory_utilization=0.5, max_model_len=4096, max_num_seqs=None)
+                              gpu_memory_utilization=0.5, max_model_len=4096, max_num_seqs=None,
+                              tensor_parallel_size=1, gdn_prefill_backend=None)
     S.cmd_judge(args, paths)
 
     verdicts = pd.read_parquet(paths["judge"]).set_index("pair_sha1")

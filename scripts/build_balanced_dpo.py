@@ -172,6 +172,9 @@ def cmd_judge(args, paths: dict[str, Path]) -> None:
         "backend": "vllm", "model": args.judge_model,
         "gpu_memory_utilization": args.gpu_memory_utilization,
         "max_model_len": args.max_model_len, "max_num_seqs": args.max_num_seqs,
+        "tensor_parallel_size": args.tensor_parallel_size,
+        "engine_kwargs": ({"gdn_prefill_backend": args.gdn_prefill_backend}
+                          if args.gdn_prefill_backend else None),
         "chat_template_kwargs": {"enable_thinking": False},
         "generation": {"max_new_tokens": 32, "temperature": 0.0, "top_p": 1.0,
                        "seed": args.seed},
@@ -333,6 +336,11 @@ def main() -> None:
                    default=float(teacher.get("gpu_memory_utilization", 0.8)))
     j.add_argument("--max-model-len", type=int, default=4096)
     j.add_argument("--max-num-seqs", type=int, default=teacher.get("max_num_seqs"))
+    j.add_argument("--tensor-parallel-size", type=int,
+                   default=int(teacher.get("tensor_parallel_size", 1)))
+    j.add_argument("--gdn-prefill-backend",
+                   help="vLLM's Qwen3.5 linear-attention prefill kernel; `triton` on nodes "
+                        "without a CUDA toolkit (Daint), where FlashInfer cannot JIT-compile")
     j.add_argument("--all-sources", action="store_true",
                    help="judge every pool, not only the legacy pairs")
     j.add_argument("--force", action="store_true")
