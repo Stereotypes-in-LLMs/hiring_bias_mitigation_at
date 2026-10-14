@@ -471,3 +471,53 @@ def render_markdown(report: dict, student: dict | None = None) -> str:
                     f"{_fmt(s['informative_share'])} | {_verdict(s['pass'])} |")
             lines.append("")
     return "\n".join(lines)
+
+
+
+# ---------------------------------------------------------------------------------------
+# W&B: a direction report as summary keys and as one table row per verdict
+# ---------------------------------------------------------------------------------------
+
+#: The number each check's verdict is read from.
+HEADLINE = {"D1_validity": "n_rejected_not_flipped", "D2_covertness": "lexical_rate",
+            "D3_separability": "auc_balanced", "D5_overlap": "token_overlap_mean",
+            "D6_balance": "chosen_hire_share"}
+
+
+def flatten_report(report: dict, prefix: str = "") -> dict:
+    """Numeric and boolean leaves as 'a/b/c' keys. Strings (model names, notes) are
+    configuration, not metrics, and are left out."""
+    flat: dict = {}
+    for key, value in report.items():
+        name = f"{prefix}{key}"
+        if isinstance(value, dict):
+            flat.update(flatten_report(value, f"{name}/"))
+        elif isinstance(value, (bool, int, float)):
+            flat[name] = value
+    return flat
+
+
+def check_rows(report: dict) -> list[tuple]:
+    """(scope, check, metric, value, verdict) for D1-D3, D5, D6 per scope (overall and each
+    strategy), each D4 slice of the student and the base model, and D7 per strategy."""
+    rows: list[tuple] = []
+    scopes = [("overall", report.get("overall", {})), *report.get("by_strategy", {}).items()]
+    for scope, checks in scopes:
+        for check, metric in HEADLINE.items():
+            entry = checks.get(check)
+            if isinstance(entry, dict):
+                rows.append((scope, check, metric, entry.get(metric),
+                             entry.get("pass", entry.get("flag"))))
+    for tag in ("student", "base"):
+        model = report.get("D4_student", {}).get(tag) or {}
+        slices = [("overall", model.get("overall"))]
+        for family in ("by_strategy", "by_group", "by_reference_decision"):
+            slices += list((model.get(family) or {}).items())
+        for name, entry in slices:
+            if isinstance(entry, dict):
+                rows.append((f"D4 {tag}", name, "prefers_chosen_share",
+                             entry.get("prefers_chosen_share"), entry.get("pass")))
+    for strategy, entry in (report.get("D7_yield") or {}).items():
+        if isinstance(entry, dict):
+            rows.append(("D7", strategy, "yield", entry.get("yield"), None))
+    return rows

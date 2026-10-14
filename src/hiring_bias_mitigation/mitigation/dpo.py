@@ -124,6 +124,20 @@ def _to_conversational(dataset, tokenizer, chat_template_kwargs: dict | None = N
     )
 
 
+def decision_callbacks(cfg: dict, splits: dict, tokenizer, output_dir) -> list:
+    """The decision-level eval (mitigation/decision_eval.py) after every evaluation, on
+    `decision_eval_rows` validation prompts, when a config asks for it."""
+    n = int(cfg.get("decision_eval_rows") or 0)
+    if not n or "validation" not in splits:
+        return []
+    from .decision_eval import DecisionEvalCallback, eval_rows
+
+    rows = eval_rows(splits["validation"].to_pandas(), n, int(cfg.get("seed", 42)))
+    return [DecisionEvalCallback(
+        rows, tokenizer, output_dir, template_kwargs=cfg.get("chat_template_kwargs"),
+        max_new_tokens=int(cfg.get("decision_eval_max_new_tokens", 96)))]
+
+
 def train(cfg: dict) -> C.TrainArtifacts:
     objective = cfg.get("objective", "dpo")
     if objective not in OBJECTIVES:
@@ -179,7 +193,8 @@ def train(cfg: dict) -> C.TrainArtifacts:
             processing_class=tokenizer,
             peft_config=peft,
             callbacks=C.early_stopping_callbacks(cfg, eval_ds is not None)
-            + C.memory_guard_callbacks(cfg),
+            + C.memory_guard_callbacks(cfg)
+            + decision_callbacks(cfg, splits, tokenizer, output_dir),
         )
     else:
         # KTO, not ORPO. TRL 1.x removed ORPOConfig/ORPOTrainer entirely; KTO is the second

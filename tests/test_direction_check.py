@@ -100,3 +100,36 @@ def test_student_subsample_is_reproducible_and_bounded():
     b = DC.subsample(pairs, 10, seed=3)
     assert len(a) == 10 and a["pair_id"].tolist() == b["pair_id"].tolist()
     assert len(DC.subsample(pairs, 100, seed=3)) == 40
+
+
+
+def _report() -> dict:
+    checks = {"n_pairs": 10,
+              "D1_validity": {"n_rejected_not_flipped": 0, "pass": True},
+              "D2_covertness": {"lexical_rate": 0.0, "judge_allusion_rate": 0.0, "pass": True},
+              "D3_separability": {"auc_balanced": 0.68, "per_decision": {"hire": 1.0},
+                                  "pass": False},
+              "D5_overlap": {"token_overlap_mean": 0.12, "flag": False},
+              "D6_balance": {"chosen_hire_share": 0.5, "pass": True}}
+    return {"thresholds": {"auc_balanced_max": 0.65}, "overall": checks,
+            "by_strategy": {"student_tipped": checks},
+            "D4_student": {"base_model": "Qwen/Qwen3.5-9B", "student": {
+                "overall": {"n": 600, "prefers_chosen_share": 0.62, "pass": True},
+                "by_reference_decision": {"reject": {"n": 309, "prefers_chosen_share": 0.43,
+                                                     "pass": False}}}}}
+
+
+def test_a_direction_report_flattens_to_numeric_summary_keys():
+    flat = DC.flatten_report(_report())
+    assert flat["overall/D3_separability/auc_balanced"] == 0.68
+    assert flat["overall/D3_separability/pass"] is False
+    assert flat["overall/D3_separability/per_decision/hire"] == 1.0
+    assert flat["D4_student/student/by_reference_decision/reject/prefers_chosen_share"] == 0.43
+    assert "D4_student/base_model" not in flat  # strings are config, not summary metrics
+
+
+def test_check_rows_name_each_verdict_with_its_headline_number():
+    rows = DC.check_rows(_report())
+    assert ("overall", "D3_separability", "auc_balanced", 0.68, False) in rows
+    assert ("student_tipped", "D6_balance", "chosen_hire_share", 0.5, True) in rows
+    assert ("D4 student", "reject", "prefers_chosen_share", 0.43, False) in rows

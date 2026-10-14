@@ -19,7 +19,6 @@ export TRITON_CACHE_DIR=$XW/.cache/triton
 export VLLM_CACHE_ROOT=$XW/.cache/vllm
 export TORCHINDUCTOR_CACHE_DIR=$XW/.cache/inductor
 export WANDB_DIR=$XW/wandb
-export WANDB_MODE=${WANDB_MODE:-offline}
 
 export HF_HUB_DISABLE_TELEMETRY=1
 export TOKENIZERS_PARALLELISM=false
@@ -44,6 +43,25 @@ if [ -r "$XW/wandb/wandb/wandb_apikey" ]; then
   WANDB_API_KEY=$(tr -d '\n\r ' < "$XW/wandb/wandb/wandb_apikey")
   export WANDB_API_KEY
 fi
+[ -n "${WANDB_API_KEY:-}" ] || export WANDB_MODE=${WANDB_MODE:-offline}
+# Uploads offline W&B runs that were never synced; wandb sync takes a resumed run's files in
+# start order, so earlier segments land before the next one continues online. No route out of
+# the node: says so and leaves them for the next job.
+wandb_upload_offline() {
+  if [ -z "${WANDB_API_KEY:-}" ] || [ "${WANDB_MODE:-online}" = offline ]; then
+    echo "W&B upload skipped: no key or WANDB_MODE=offline"
+    return 0
+  fi
+  local offline
+  shopt -s nullglob; offline=("$WANDB_DIR"/wandb/offline-run-*); shopt -u nullglob
+  [ ${#offline[@]} -gt 0 ] || return 0
+  if ! curl -s -m 10 -o /dev/null https://api.wandb.ai; then
+    echo "no route to api.wandb.ai from $(hostname): offline runs wait for a later job"
+    return 0
+  fi
+  timeout 300 "$XW/venv/bin/wandb" sync --yes "${offline[@]}" \
+    || echo "wandb sync failed; the runs stay offline for the next job"
+}
 
 # Usable GPU memory is 95.6 GiB (97,871 MiB) per GH200, despite "120GB" in the device name;
 # vLLM's gpu_memory_utilization is a fraction of that, and anything near 96 GB OOMs.

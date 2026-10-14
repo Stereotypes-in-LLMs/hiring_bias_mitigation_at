@@ -21,6 +21,7 @@ The configs encode that: `qwen3.5-4b` full fine-tunes, the two 12B models are Lo
 from __future__ import annotations
 
 import json
+import sys
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -337,6 +338,13 @@ def wandb_init(cfg: dict) -> None:
         log.warning("W&B unreachable (%s) -- logging offline for this run", exc)
         os.environ["WANDB_MODE"] = "offline"
         os.environ.pop("WANDB_ENTITY", None)
+    finally:
+        # wandb.Api() loads wandb's process-wide settings from the environment once, and the
+        # trainer's wandb.init copies them: without a teardown, the fallback above and the run
+        # id set later by wandb_resume would be ignored.
+        teardown = getattr(sys.modules.get("wandb"), "teardown", None)
+        if teardown is not None:
+            teardown()
 
 
 def wandb_resume(cfg: dict, output_dir: Path) -> None:

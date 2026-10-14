@@ -25,18 +25,9 @@ CONFIG=${CONFIG:-configs/mitigation/dpo/qwen3.5-9b_en_only_dpo_v2neg_r1_gh200.ya
 cd "$REPO"
 echo "host $(hostname) | job ${SLURM_JOB_ID:-none} | config $CONFIG | commit $(git rev-parse --short HEAD 2>/dev/null || echo n/a)"
 
-# Offline runs from earlier segments go up first, oldest first, so the resumed online run
-# continues one curve. No route out of the node: skip, the trainer then logs offline too.
-if [ -n "${WANDB_API_KEY:-}" ] && [ "${WANDB_MODE:-online}" != offline ]; then
-  step "W&B: upload offline runs not synced yet"
-  shopt -s nullglob; offline=("$WANDB_DIR"/wandb/offline-run-*); shopt -u nullglob
-  if ! curl -s -m 10 -o /dev/null https://api.wandb.ai; then
-    echo "no route to api.wandb.ai from $(hostname): this segment logs offline"
-  elif [ ${#offline[@]} -gt 0 ]; then
-    timeout 300 "$XW/venv/bin/wandb" sync --yes "${offline[@]}" \
-      || echo "wandb sync failed; the runs stay offline and the next segment tries again"
-  fi
-fi
+# Earlier segments' offline runs go up first, so the resumed online run continues one curve.
+step "W&B: upload offline runs not synced yet"
+wandb_upload_offline
 
 step "DPO on 4 GPUs (DDP); resumes from the newest finished checkpoint if there is one"
 $PY -m torch.distributed.run --standalone --nproc_per_node=4 \

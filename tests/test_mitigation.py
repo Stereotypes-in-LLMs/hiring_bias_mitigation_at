@@ -896,3 +896,39 @@ def test_a_run_that_does_not_resume_gets_a_fresh_wandb_run(tmp_path, monkeypatch
     C.wandb_resume({"resume": True, "use_wandb": False}, tmp_path)
     assert "WANDB_RUN_ID" not in os.environ
     assert not (tmp_path / "wandb_run_id").exists()
+
+
+def test_the_probe_does_not_freeze_wandb_settings_before_the_trainer_starts(tmp_path, monkeypatch):
+    """wandb.Api() loads wandb's process-wide settings from the environment once; wandb.init
+    later copies them. The run id, resume flag and offline fallback set after the probe must
+    still reach the run the trainer starts (review of 16f3f16)."""
+    import os
+
+    import wandb
+    from wandb.sdk import wandb_setup
+
+    from hiring_bias_mitigation.mitigation import training_common as C
+
+    monkeypatch.setenv("WANDB_API_KEY", "k" * 86)
+    monkeypatch.setenv("WANDB_DIR", str(tmp_path))
+    monkeypatch.delenv("WANDB_MODE", raising=False)
+    monkeypatch.delenv("WANDB_ENTITY", raising=False)
+    monkeypatch.delenv("WANDB_RUN_ID", raising=False)
+    monkeypatch.delenv("WANDB_RESUME", raising=False)
+
+    class _Api:
+        def __init__(self, *a, **k):
+            _ = wandb_setup.singleton().settings  # what the real Api does first
+            raise ConnectionError("no route to api.wandb.ai")
+
+    monkeypatch.setattr(wandb, "Api", _Api)
+    C.wandb_init({"wandb_project": "p"})
+    C.wandb_resume({"resume": True}, tmp_path)
+    run = wandb.init(project="p")
+    try:
+        assert run.settings.mode == "offline"
+        assert run.id == (tmp_path / "wandb_run_id").read_text().strip()
+    finally:
+        run.finish()
+        wandb.teardown()
+    assert os.environ["WANDB_MODE"] == "offline"
