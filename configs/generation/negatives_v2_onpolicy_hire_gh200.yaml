@@ -1,0 +1,56 @@
+# Hand-written -- NOT produced by generate_experiment_configs.py, so it survives a regeneration.
+#
+# Hire-side top-up of onpolicy-full. v1's English pool is 86% reject, so the full run kept only
+# 584 hire-reference pairs against 3,683 reject ones (D6 hire share 0.137). This run samples the
+# 5,072 hire rows (424 pairs) again at k=32, both prompts; a beta-binomial fit to the full run's
+# k=8 counts puts the rows with a wrong sample at ~1,900 (vs 940). Its split follows the full
+# run's rows and its balance stage merges the full run's pairs first (generate_onpolicy_full.py).
+#   CONFIG=configs/generation/negatives_v2_onpolicy_hire_gh200.yaml \
+#     scripts/cscs/submit.sh -p debug -t 00:30:00 scripts/cscs/onpolicy_full.sbatch sample
+source_artifacts_dir: artifacts/semisynthetic-v1
+artifacts_dir: artifacts/semisynthetic-v2/onpolicy-hire32
+topup_of: artifacts/semisynthetic-v2/onpolicy-full
+row_filter:
+  reference_decision: hire
+lang: en
+seed: 42
+val_fraction: 0.05
+
+student_base: Qwen/Qwen3.5-9B
+student_adapter: Stereotypes-in-LLMs/qwen3.5-9b-hiring-debias-sft-en
+samples_per_prompt: 32
+min_free_right: 0.5
+# 128 prompts x 32 samples: the same samples per chunk as the full run's 512 x 8.
+chunk_size: 128
+student_vllm:
+  gpu_memory_utilization: 0.70      # of 95.6 GiB usable; anything near 96 GB OOMs
+  max_model_len: 8192
+  max_num_seqs: 256                 # 8 prompts x 32 samples in flight
+  engine_kwargs:
+    gdn_prefill_backend: triton     # no CUDA toolkit on Daint for FlashInfer's JIT
+student_generation:
+  max_new_tokens: 200
+  temperature: 1.0
+  top_p: 1.0
+  seed: 42
+
+judge_strategies:
+- student_tipped
+max_length_delta_words: 10
+min_plausibility: 3
+n_samples: 20
+
+# The teacher, as judge only -- the same settings as batch-01.
+teacher_model: Qwen/Qwen3.5-122B-A10B-GPTQ-Int4
+backend: vllm
+dtype: auto
+max_model_len: 8192
+tensor_parallel_size: 4
+gpu_memory_utilization: 0.80
+max_num_seqs: 128
+engine_kwargs:
+  gdn_prefill_backend: triton
+judge_generation:
+  max_new_tokens: 160
+  temperature: 0.0
+  top_p: 1.0

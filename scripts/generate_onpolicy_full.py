@@ -5,6 +5,7 @@
     # then scripts/sample_student.py once per GPU (scripts/cscs/onpolicy_full.sbatch does both)
     python scripts/generate_onpolicy_full.py --config $CFG --stage collect
     python scripts/generate_onpolicy_full.py --config $CFG --stage judge
+    python scripts/generate_onpolicy_full.py --config $CFG --stage balance
 
   prepare  every pool row with v1's chosen side (v1's own filter), one attribute-free prompt per
            pair and one attribute-bearing prompt per row in prompts.parquet, and the merged
@@ -14,6 +15,14 @@
   judge    the teacher judges the selected negatives and their chosen side; the survivors
            become candidates, a candidate-level train/validation split (v1's held-out
            candidates stay held out), report.json and samples.md
+  balance  equal hire and reject reference verdicts per protected group inside each split,
+           written to balanced/ with balance.json (the pool is 86% reject; spec D6). The DPO
+           data config reads balanced/
+
+A top-up run (`row_filter` + `topup_of` in its config) samples one slice of the pool again
+with more samples per prompt, e.g. the hire rows at k=32 because the pool is 86% reject. Its
+train/validation split comes from the base run's rows, so a candidate is on the same side in
+both runs, and its balance stage merges the base run's pairs with its own before balancing.
 
 Only `judge_strategies` (default: student_tipped) are judged and kept. Rows the student also
 gets wrong without the attribute are counted in sample_report.json but are not
@@ -55,10 +64,15 @@ def _source(cfg: dict) -> Path:
     return Path(resolve_output_path(cfg["source_artifacts_dir"]))
 
 
+def _topup_base(cfg: dict) -> Path | None:
+    return Path(resolve_output_path(cfg["topup_of"])) if cfg.get("topup_of") else None
+
+
 def stage_prepare(cfg: dict, out: Path) -> None:
     lang = str(cfg.get("lang", "en"))
     invariant = pd.read_parquet(_source(cfg) / "raw" / f"{lang}_invariant.parquet")
     rows, invariant_report = OP.pool_rows(invariant, lang)
+    rows = OP.filter_rows(rows, cfg.get("row_filter"))
     free = OP.pair_free_prompts(rows)
     prompts = pd.DataFrame({
         "kind": ["attr_free"] * len(free) + ["attributed"] * len(rows),
@@ -72,7 +86,8 @@ def stage_prepare(cfg: dict, out: Path) -> None:
     if not unchanged:
         prompts.to_parquet(existing, index=False)
     model = OP.merged_student(cfg)
-    info = {"merged_checkpoint": str(model), "rows": len(rows), "pairs": len(free),
+    info = {"merged_checkpoint": str(model), "row_filter": cfg.get("row_filter"),
+            "rows": len(rows), "pairs": len(free),
             "prompts": len(prompts), "invariant_filter": invariant_report}
     (out / "prepare.json").write_text(_json(info), encoding="utf-8")
     log.info("prepared %d rows over %d pairs: %d prompts", len(rows), len(free), len(prompts))
@@ -160,7 +175,9 @@ def stage_judge(cfg: dict, out: Path) -> None:
 
     candidates = pd.concat(all_pairs, ignore_index=True)
     candidates.to_parquet(out / "dpo_v2_candidates.parquet", index=False)
-    val_ids = N.validation_candidates(rows, v1_validation_candidates(_source(cfg)),
+    base = _topup_base(cfg)
+    split_rows = pd.read_parquet(base / "rows.parquet") if base else rows
+    val_ids = N.validation_candidates(split_rows, v1_validation_candidates(_source(cfg)),
                                       float(cfg.get("val_fraction", 0.05)),
                                       int(cfg.get("seed", 42)))
     is_val = candidates["candidate_id"].astype(str).isin(val_ids)
@@ -177,17 +194,45 @@ def stage_judge(cfg: dict, out: Path) -> None:
     print(f"  splits: {report['splits']}")
 
 
+def stage_balance(cfg: dict, out: Path) -> None:
+    target = out / "balanced"
+    target.mkdir(exist_ok=True)
+    seed = int(cfg.get("seed", 42))
+    base = _topup_base(cfg)
+    info, parts = {}, []
+    for split in ("train", "validation"):
+        frame = pd.read_parquet(out / f"dpo_v2_{split}.parquet")
+        merged = None
+        if base:
+            frame, merged = OP.merge_topup(pd.read_parquet(base / f"dpo_v2_{split}.parquet"),
+                                           frame)
+        balanced, info[split] = OP.balance_by_reference(frame, seed)
+        if merged:
+            info[split]["topup"] = merged
+        balanced.to_parquet(target / f"dpo_v2_{split}.parquet", index=False)
+        parts.append(balanced)
+    candidates = pd.concat(parts, ignore_index=True)
+    candidates.to_parquet(target / "dpo_v2_candidates.parquet", index=False)
+    info["candidates"] = {"n": len(candidates),
+                          "hire_share": float((candidates["reference_decision"] == "hire").mean())}
+    (target / "balance.json").write_text(_json(info), encoding="utf-8")
+    print(_json(info))
+
+
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__,
                                      formatter_class=argparse.RawDescriptionHelpFormatter)
     parser.add_argument("--config", required=True)
-    parser.add_argument("--stage", choices=("prepare", "collect", "judge"), required=True)
+    parser.add_argument("--stage", choices=("prepare", "collect", "judge", "balance"),
+                        required=True)
     args = parser.parse_args()
     cfg = load_config(args.config)
     require_output_root()
     out = Path(resolve_output_path(cfg["artifacts_dir"]))
     (out / "raw").mkdir(parents=True, exist_ok=True)
-    {"prepare": stage_prepare, "collect": stage_collect, "judge": stage_judge}[args.stage](cfg, out)
+    stages = {"prepare": stage_prepare, "collect": stage_collect, "judge": stage_judge,
+              "balance": stage_balance}
+    stages[args.stage](cfg, out)
 
 
 if __name__ == "__main__":

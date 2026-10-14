@@ -121,3 +121,59 @@ def test_attribute_free_prompts_are_one_per_pair_and_expand_back_to_rows():
     free = {pid: [f"s-{pid}"] for pid in pairs["pair_id"]}
     expanded = OP.expand_free(rows, free)
     assert expanded == [["s-p0"], ["s-p1"], ["s-p2"], ["s-p0"], ["s-p1"], ["s-p2"]]
+
+
+def _pairs(counts: dict[tuple[str, str], int]) -> pd.DataFrame:
+    rows = []
+    for (group, ref), n in counts.items():
+        for i in range(n):
+            rows.append({"pair_id": f"{group}-{ref}-{i}", "protected_group": group,
+                         "reference_decision": ref, "chosen": ref, "rejected": "x"})
+    return pd.DataFrame(rows)
+
+
+def test_balance_keeps_every_scarce_verdict_and_matches_it_within_each_group():
+    pairs = _pairs({("gender", "hire"): 2, ("gender", "reject"): 7,
+                    ("religion", "hire"): 3, ("religion", "reject"): 9})
+    balanced, info = OP.balance_by_reference(pairs, seed=0)
+    counts = balanced.groupby(["protected_group", "reference_decision"]).size().to_dict()
+    assert counts == {("gender", "hire"): 2, ("gender", "reject"): 2,
+                      ("religion", "hire"): 3, ("religion", "reject"): 3}
+    hire_ids = set(pairs.loc[pairs.reference_decision == "hire", "pair_id"])
+    assert hire_ids <= set(balanced["pair_id"])
+    assert info["n_input"] == 21 and info["n_kept"] == 10
+    assert info["groups"]["gender"] == {"hire": 2, "reject": 2, "dropped": 5}
+
+
+def test_balance_is_reproducible_and_a_group_without_one_verdict_drops_out():
+    pairs = _pairs({("gender", "hire"): 2, ("gender", "reject"): 7,
+                    ("religion", "reject"): 4})
+    first, info = OP.balance_by_reference(pairs, seed=1)
+    second, _ = OP.balance_by_reference(pairs, seed=1)
+    assert first["pair_id"].tolist() == second["pair_id"].tolist()
+    assert set(first["protected_group"]) == {"gender"}
+    assert info["groups"]["religion"] == {"hire": 0, "reject": 0, "dropped": 4}
+
+
+def test_row_filter_keeps_matching_rows_and_none_keeps_all():
+    rows = _batch()
+    hire = OP.filter_rows(rows, {"reference_decision": "hire"})
+    assert hire["pair_id"].tolist() == ["p0", "p1"]
+    assert hire.index.tolist() == [0, 1]
+    assert OP.filter_rows(rows, None) is rows
+
+
+def _cands(keys: list[tuple[str, str, str]], tag: str) -> pd.DataFrame:
+    return pd.DataFrame([{"pair_id": p, "protected_attr": a, "condition": c, "rejected": tag}
+                         for p, a, c in keys])
+
+
+def test_topup_adds_only_rows_the_base_run_lacks_and_base_wins_a_tie():
+    base = _cands([("p0", "veteran", "explicit"), ("p1", "veteran", "explicit")], "base")
+    topup = _cands([("p1", "veteran", "explicit"), ("p1", "veteran", "implicit"),
+                    ("p2", "Muslim", "explicit")], "topup")
+    merged, info = OP.merge_topup(base, topup)
+    assert list(zip(merged["pair_id"], merged["condition"], merged["rejected"])) == [
+        ("p0", "explicit", "base"), ("p1", "explicit", "base"),
+        ("p1", "implicit", "topup"), ("p2", "explicit", "topup")]
+    assert info == {"n_base": 2, "n_topup": 3, "n_new": 2, "n_already_in_base": 1}

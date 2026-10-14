@@ -32,6 +32,10 @@ export VLLM_WORKER_MULTIPROC_METHOD=spawn
 # prefill kernel (switched to Triton per config: engine_kwargs.gdn_prefill_backend).
 # Found by the first build_env run (job 5043998): "Could not find nvcc".
 export VLLM_USE_FLASHINFER_SAMPLER=0
+# FlashInfer all-reduce cannot work here either (no nvcc for its JIT, no NVSwitch multicast).
+# Job 5045685 tried it, failed fast and fell back; job 5051986 hung 20+ minutes inside the
+# fallback at CUDA-graph capture. Off, tensor parallel uses the custom all-reduce and NCCL.
+export VLLM_ALLREDUCE_USE_FLASHINFER=0
 
 # Usable GPU memory is 95.6 GiB (97,871 MiB) per GH200, despite "120GB" in the device name;
 # vLLM's gpu_memory_utilization is a fraction of that, and anything near 96 GB OOMs.

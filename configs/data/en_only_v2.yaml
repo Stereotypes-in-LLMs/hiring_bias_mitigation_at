@@ -1,8 +1,10 @@
 # Hand-written -- NOT produced by generate_experiment_configs.py.
-# Training-data view over the v2 negatives. Points at the first small batch so a DPO smoke run
-# can be launched on it; repoint `artifacts_dir` at the full v2 run once it exists.
+# Training-data view over the v2 negatives: the full-pool on-policy pairs plus the hire-side
+# top-up, balanced to equal hire and reject reference verdicts per protected group
+# (generate_onpolicy_full.py --stage balance with the hire config). onpolicy-full/balanced is
+# the same without the top-up (1,168 pairs).
 name: en_only_v2
-artifacts_dir: artifacts/semisynthetic-v2/batch-01
+artifacts_dir: artifacts/semisynthetic-v2/onpolicy-hire32/balanced
 seed: 42
 protected_groups:
 - military_status

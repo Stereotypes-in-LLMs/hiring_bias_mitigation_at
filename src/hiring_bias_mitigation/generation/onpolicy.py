@@ -41,6 +41,8 @@ from .negatives_v2 import covertness_of_raw, filter_negatives, flip, mentions_gr
 log = get_logger(__name__)
 
 TIPPED, UNTIPPED = "student_tipped", "student_untipped"
+# One pool row: a pair's CV and job with one attribute in one condition.
+ROW_KEY = ("pair_id", "protected_attr", "condition")
 
 
 def attr_free_prompts(batch: pd.DataFrame) -> list[str]:
@@ -133,6 +135,60 @@ def select_negatives(
     log.info("on-policy negatives: %s from %d wrong samples over %d rows",
              report["selected"], len(raw), len(rows))
     return kept.drop(columns=["_row"]), report
+
+
+def filter_rows(rows: pd.DataFrame, row_filter: dict | None) -> pd.DataFrame:
+    """The rows matching every `column: value` of `row_filter`, re-indexed; None keeps all.
+
+    A top-up run samples one slice of the pool harder (the hire rows at k=32). Its prompt keys
+    are positions in the filtered rows, which is why the index is reset.
+    """
+    if not row_filter:
+        return rows
+    mask = pd.Series(True, index=rows.index)
+    for column, value in row_filter.items():
+        mask &= rows[column] == value
+    return rows[mask].reset_index(drop=True)
+
+
+def merge_topup(base: pd.DataFrame, topup: pd.DataFrame,
+                key: tuple[str, ...] = ROW_KEY) -> tuple[pd.DataFrame, dict]:
+    """The base run's pairs, then the top-up run's pairs for rows the base run lacks.
+
+    When both runs kept a pair for the same row, the base run's stays: a row is never counted
+    twice, and pairs that were already judged and checked do not change.
+    """
+    def keys(frame: pd.DataFrame) -> list[tuple]:
+        return list(frame[list(key)].astype(str).itertuples(index=False, name=None))
+
+    seen = set(keys(base))
+    new = topup[[k not in seen for k in keys(topup)]]
+    merged = pd.concat([base, new], ignore_index=True)
+    return merged, {"n_base": len(base), "n_topup": len(topup), "n_new": len(new),
+                    "n_already_in_base": len(topup) - len(new)}
+
+
+def balance_by_reference(pairs: pd.DataFrame, seed: int = 42,
+                         by: str = "protected_group") -> tuple[pd.DataFrame, dict]:
+    """Equal hire and reject reference verdicts within each `by` group: every pair of the
+    scarcer verdict, and a seeded sample of the same size from the other.
+
+    v1's English pool is 86% reject, so the full-pool pairs are too: 86% of them teach "reject
+    beats hire". DPO can follow that by lowering the hire rate overall, which also shrinks the
+    audit's group gaps without teaching invariance (spec, D6). Balancing inside each group keeps
+    the group mix the same on both sides. A group lacking one verdict drops out.
+    """
+    parts, groups = [], {}
+    for name, part in pairs.groupby(by, sort=True):
+        hire = part[part["reference_decision"] == "hire"]
+        reject = part[part["reference_decision"] == "reject"]
+        n = min(len(hire), len(reject))
+        parts += [hire.sample(n=n, random_state=seed), reject.sample(n=n, random_state=seed)]
+        groups[str(name)] = {"hire": n, "reject": n, "dropped": len(part) - 2 * n}
+    balanced = pd.concat(parts).sort_index() if parts else pairs.iloc[:0]
+    info = {"n_input": len(pairs), "n_kept": len(balanced), "by": by, "seed": seed,
+            "groups": groups}
+    return balanced.reset_index(drop=True), info
 
 
 # ---------------------------------------------------------------------------------------
