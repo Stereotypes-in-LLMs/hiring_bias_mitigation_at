@@ -16,6 +16,11 @@ models are then compared **at equal hire rate**, which the audit itself cannot d
     python scripts/operating_point_control.py margins --config configs/audit/qwen3.5-9b_en_sft_en_only.yaml --which base
     python scripts/operating_point_control.py margins --config configs/audit/qwen3.5-9b_en_sft_en_only.yaml --which adapter
     python scripts/operating_point_control.py compare --config configs/audit/qwen3.5-9b_en_sft_en_only.yaml
+
+Two fine-tuned arms against each other (e.g. DPO continued from SFT), each after its own
+`margins --which adapter` pass: the reference arm is moved to the compared arm's hire rate.
+
+    python scripts/operating_point_control.py compare-arms --config <dpo audit cfg> --against <sft audit cfg>
 """
 
 from __future__ import annotations
@@ -72,6 +77,16 @@ def decision_words(run_name: str, lang: str) -> tuple[str, str]:
     return picked
 
 
+def llm_kwargs(cfg: dict, model_path: str) -> dict:
+    """vLLM arguments for the one-token pass. The config's engine_kwargs pass through: on
+    Daint the GDN prefill must be Triton, as FlashInfer's JIT needs a CUDA toolkit."""
+    return {"model": model_path,
+            "gpu_memory_utilization": cfg.get("op_control_gpu_memory_utilization", 0.55),
+            "max_model_len": cfg.get("max_model_len", 8192), "trust_remote_code": True,
+            "seed": 42, "max_num_seqs": cfg.get("op_control_max_num_seqs", 64),
+            **(cfg.get("engine_kwargs") or {})}
+
+
 def decision_token_ids(tokenizer, words: tuple[str, str]) -> tuple[int, int]:
     base = tokenizer(PREFIX, add_special_tokens=False)["input_ids"]
     ids = []
@@ -111,10 +126,7 @@ def cmd_margins(cfg: dict, which: str, chunk: int = 2000) -> None:
     # than an audit. Holding every RequestOutput for 31k prompts is what made the 12B pass run
     # the machine out of memory, so the prompts go through in chunks and only the margin is
     # kept -- the outputs are dropped as soon as each chunk is read.
-    llm = LLM(model=model_path,
-              gpu_memory_utilization=cfg.get("op_control_gpu_memory_utilization", 0.55),
-              max_model_len=cfg.get("max_model_len", 8192), trust_remote_code=True, seed=42,
-              max_num_seqs=cfg.get("op_control_max_num_seqs", 64))
+    llm = LLM(**llm_kwargs(cfg, model_path))
     params = SamplingParams(max_tokens=1, temperature=0.0, logprobs=20)
 
     margins, missing = [], 0
@@ -145,6 +157,53 @@ def unstable_share(frame: pd.DataFrame, column: str, threshold: float) -> tuple[
     sets = decided[decided["condition"] != "attr_free"].groupby(
         ["pair_id", "protected_group", "condition"])["hire"]
     return float(decided["hire"].mean()), float((sets.nunique() > 1).mean())
+
+
+def _set_flags(frame: pd.DataFrame, column: str, threshold: float) -> pd.Series:
+    decided = frame[frame["condition"] != "attr_free"].assign(hire=lambda f: f[column] > threshold)
+    return decided.groupby(["pair_id", "protected_group", "condition"])["hire"].nunique() > 1
+
+
+def matched_comparison(ref: pd.DataFrame, run: pd.DataFrame, n_boot: int = 1000,
+                       seed: int = 42) -> dict:
+    """`run` at its own greedy threshold against `ref` moved to the same hire rate.
+
+    The interval resamples candidates (a CV appears in several sets) with both thresholds
+    held fixed, the same clustering as analysis.stability.compare.
+    """
+    both = ref.merge(run, on=KEY, suffixes=("_ref", "_run"))
+    hire_ref, unstable_ref = unstable_share(both, "margin_ref", 0.0)
+    hire_run, unstable_run = unstable_share(both, "margin_run", 0.0)
+    threshold = float(both["margin_ref"].quantile(1 - hire_run))
+    hire_ref_matched, unstable_ref_matched = unstable_share(both, "margin_ref", threshold)
+    flags = pd.DataFrame({"run": _set_flags(both, "margin_run", 0.0),
+                          "ref": _set_flags(both, "margin_ref", threshold)})
+    candidate = flags.index.get_level_values("pair_id").str.split("__").str[0]
+    per = (flags["run"].astype(float) - flags["ref"].astype(float)).groupby(candidate).agg(
+        ["sum", "count"])
+    rng = np.random.default_rng(seed)
+    idx = rng.integers(0, len(per), size=(n_boot, len(per)))
+    boots = 100 * per["sum"].to_numpy()[idx].sum(axis=1) / per["count"].to_numpy()[idx].sum(axis=1)
+    return {
+        "prompts": len(both), "sets": len(flags),
+        "hire_rate_ref": hire_ref, "unstable_ref": unstable_ref,
+        "hire_rate_run": hire_run, "unstable_run": unstable_run,
+        "ref_threshold_matched": threshold, "hire_rate_ref_matched": hire_ref_matched,
+        "unstable_ref_matched": unstable_ref_matched,
+        "delta_matched_pp": 100 * (unstable_run - unstable_ref_matched),
+        "ci_low": float(np.percentile(boots, 2.5)), "ci_high": float(np.percentile(boots, 97.5)),
+    }
+
+
+def cmd_compare_arms(cfg: dict, against: dict) -> None:
+    run_name, ref_name = R.build_run_name(cfg), R.build_run_name(against)
+    run = pd.read_parquet(out_dir() / f"{run_name}--adapter.parquet")
+    ref = pd.read_parquet(out_dir() / f"{ref_name}--adapter.parquet")
+    summary = {"run": run_name, "against": ref_name, **matched_comparison(ref, run)}
+    report = REPO_ROOT / "reports" / "operating_point"
+    report.mkdir(parents=True, exist_ok=True)
+    (report / f"{run_name}--vs--{ref_name}.json").write_text(json.dumps(summary, indent=2))
+    print(json.dumps(summary, indent=2))
 
 
 def cmd_compare(cfg: dict) -> None:
@@ -201,6 +260,9 @@ def main() -> None:
                    help="prompts per vLLM call; lower it if the machine is tight on memory")
     c = sub.add_parser("compare")
     c.add_argument("--config", required=True)
+    a = sub.add_parser("compare-arms")
+    a.add_argument("--config", required=True, help="the arm compared (e.g. DPO)")
+    a.add_argument("--against", required=True, help="the reference arm (e.g. SFT)")
     args = parser.parse_args()
     cfg = load_config(args.config)
     # A config listed in reports/operating_point/skip.txt is skipped (exit 0): the control
@@ -212,6 +274,8 @@ def main() -> None:
         return
     if args.cmd == "margins":
         cmd_margins(cfg, args.which, args.chunk)
+    elif args.cmd == "compare-arms":
+        cmd_compare_arms(cfg, load_config(args.against))
     else:
         cmd_compare(cfg)
 
