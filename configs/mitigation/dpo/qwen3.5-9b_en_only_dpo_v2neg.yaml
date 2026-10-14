@@ -14,9 +14,10 @@
 #                          by threshold. eval every 50 steps on 200 validation pairs.
 #   learning_rate 5e-5     LoRA rate the repo's probes used; 5e-6 is a full-fine-tune rate.
 #
-# Audit afterwards: serve base + SFT adapter + this adapter, merged in that order. merge.py
-# merges one adapter onto the base named in its adapter_config.json, so merging this adapter
-# alone would drop the SFT delta (spec §7). Do not audit until that path exists.
+# Audit afterwards: base + SFT adapter + this adapter, merged in that order. PEFT records the
+# plain base in this adapter's adapter_config.json, so merging it alone would drop the SFT
+# delta; merge.adapter_chain finds the SFT adapter through this run's run_config.json
+# (`sft_checkpoint`) and merges it first, for vLLM and transformers audits alike.
 stage: dpo
 objective: dpo
 data_kind: dpo_v2

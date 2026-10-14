@@ -533,6 +533,44 @@ def test_vllm_audit_serves_adapter_as_merged_weights(monkeypatch, tmp_path):
     assert R.build_run_name(cfg).startswith("Qwen3.5-9B--en--sft")
 
 
+
+def test_transformers_audit_of_a_dpo_adapter_on_sft_serves_merged_weights(monkeypatch,
+                                                                          tmp_path):
+    """PEFT on top of the base alone would drop the SFT weights the DPO adapter was fitted on."""
+    import json
+    from pathlib import Path
+
+    import hiring_bias_mitigation.mitigation.merge as MG
+    from hiring_bias_mitigation.eval import backends as BK
+    from hiring_bias_mitigation.eval import runner as R
+
+    sft = tmp_path / "sft_adapter"
+    dpo = tmp_path / "dpo_adapter"
+    for adapter in (sft, dpo):
+        adapter.mkdir()
+        (adapter / "adapter_config.json").write_text(
+            json.dumps({"base_model_name_or_path": "Qwen/Qwen3.5-9B"}))
+    (dpo / "run_config.json").write_text(json.dumps({"sft_checkpoint": str(sft)}))
+    monkeypatch.setattr(MG, "merge", lambda a: tmp_path / "merged" / Path(a).name)
+    seen = {}
+
+    class Stop(Exception):
+        pass
+
+    def fake_build(cfg, activation_editor=None):
+        seen.update(cfg)
+        raise Stop
+
+    monkeypatch.setattr(BK, "build_backend", fake_build)
+    cfg = {"model": "Qwen/Qwen3.5-9B", "lang": "en", "backend": "transformers",
+           "protected_groups": ["gender"],
+           "mitigation": {"family": "dpo", "lora_path": str(dpo)}}
+    with pytest.raises(Stop):
+        R.run_audit(cfg)
+    assert seen["model"] == str(tmp_path / "merged" / "dpo_adapter")
+    assert not seen.get("lora_path")
+
+
 def test_report_excludes_adapters_served_through_vllm_lora():
     from hiring_bias_mitigation.eval import report as RP
 

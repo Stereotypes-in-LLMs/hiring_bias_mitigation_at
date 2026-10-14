@@ -234,12 +234,14 @@ def run_audit(cfg: dict) -> tuple[pd.DataFrame, dict]:
     backend_cfg = dict(cfg)
     if family in ("sft", "dpo") and mitigation.get("lora_path"):
         adapter = _require_adapter(mitigation["lora_path"])
-        if backend_cfg.get("backend", "vllm") == "vllm":
-            # vLLM's LoRA path does not reproduce Qwen3.5 adapters; serve merged weights.
-            # `cfg["model"]` is untouched, so the run name still names the base model.
-            from hiring_bias_mitigation.mitigation.merge import merge
+        from hiring_bias_mitigation.mitigation import merge as MG
 
-            backend_cfg["model"] = str(merge(adapter))
+        # vLLM's LoRA path does not reproduce Qwen3.5 adapters, and an adapter fitted on top of
+        # another (DPO on SFT) loses its parent when PEFT puts it on the bare base: serve
+        # merged weights for both. `cfg["model"]` is untouched, so the run name still names
+        # the base model.
+        if backend_cfg.get("backend", "vllm") == "vllm" or len(MG.adapter_chain(adapter)) > 1:
+            backend_cfg["model"] = str(MG.merge(adapter))
         else:
             backend_cfg["lora_path"] = adapter
 

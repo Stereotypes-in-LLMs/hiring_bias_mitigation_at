@@ -5,6 +5,9 @@ the base model's decisions agree 98.9% between HuggingFace and vLLM, an SFT adap
 82.5%. The adapter changed 17.5% of decisions under HF + PEFT, the framework it was trained
 in, and 0.3% under the vLLM audit. Audits therefore serve adapters as merged checkpoints,
 which vLLM loads with no LoRA code involved (`eval/runner.py`).
+
+A DPO adapter fitted on top of an SFT adapter is merged together with it, SFT first: see
+`adapter_chain`.
 """
 
 from __future__ import annotations
@@ -26,6 +29,46 @@ def merged_dir_for(adapter: str | Path) -> Path:
     if name.startswith("checkpoint-"):
         name = f"{adapter.parent.name}--{name}"
     return Path(resolve_output_path("outputs/merged")) / name
+
+
+def adapter_chain(adapter: str | Path) -> list[Path]:
+    """The adapters that make up a trained model, parents first: [sft, dpo] for a DPO run that
+    continued from an SFT run, [adapter] otherwise.
+
+    DPO on top of SFT merges the SFT adapter into the base in memory and fits a fresh LoRA on
+    that (`training_common.load_model_and_tokenizer`). PEFT then records the plain base as the
+    new adapter's `base_model_name_or_path`, so applying the DPO adapter alone rebuilds base +
+    DPO and silently drops SFT. The run's `run_config.json` names the `sft_checkpoint` it
+    started from; a `checkpoint-N` directory reads its run's file.
+    """
+    chain = [Path(adapter)]
+    while (parent := _parent_adapter(chain[0])) is not None:
+        if parent in chain:
+            raise ValueError(f"adapter chain loops back to {parent}: {chain}")
+        chain.insert(0, parent)
+    return chain
+
+
+def _parent_adapter(adapter: Path) -> Path | None:
+    run_dir = adapter.parent if adapter.name.startswith("checkpoint-") else adapter
+    manifest = run_dir / "run_config.json"
+    if not manifest.is_file():
+        return None
+    spec = json.loads(manifest.read_text()).get("sft_checkpoint")
+    if not spec:
+        return None
+    from .training_common import resolve_sft_checkpoint
+
+    return Path(resolve_sft_checkpoint(spec))
+
+
+def merge_chain(model, chain: list[Path]):
+    """Applies and merges each adapter of `chain` in order, parents first."""
+    from peft import PeftModel
+
+    for adapter in chain:
+        model = PeftModel.from_pretrained(model, str(adapter)).merge_and_unload()
+    return model
 
 
 def conform_to_base(out: Path, base_name: str, base_dir: Path) -> None:
@@ -82,25 +125,30 @@ def merge(adapter: str | Path, force: bool = False) -> Path:
     """Merges `adapter` into its base once and returns the merged directory."""
     import torch
     from huggingface_hub import snapshot_download
-    from peft import PeftModel
     from transformers import AutoModelForCausalLM, AutoTokenizer
 
     adapter = Path(resolve_output_path(str(adapter)))
+    chain = adapter_chain(adapter)
+    mtime = _chain_mtime(chain)
     out = merged_dir_for(adapter)
     marker = out / "merged_from.json"
     if marker.exists() and not force:
         recorded = json.loads(marker.read_text())
         # Retraining writes a new adapter to the same path; a stale merge must not be reused.
-        if recorded.get("adapter_mtime") == _adapter_mtime(adapter):
+        if recorded.get("adapter_mtime") == mtime:
             log.info("%s already merged", out)
             return out
         log.info("adapter %s changed since it was merged; re-merging", adapter)
 
-    base_name = json.loads((adapter / "adapter_config.json").read_text())["base_model_name_or_path"]
-    log.info("merging %s into %s", adapter, base_name)
+    bases = [json.loads((a / "adapter_config.json").read_text())["base_model_name_or_path"]
+             for a in chain]
+    base_name = bases[0]
+    if len(set(bases)) > 1:
+        log.warning("adapters record different bases %s; loading %s", bases, base_name)
+    log.info("merging %s into %s", " then ".join(map(str, chain)), base_name)
     model = AutoModelForCausalLM.from_pretrained(base_name, dtype=torch.bfloat16,
                                                  device_map="cpu", trust_remote_code=True)
-    model = PeftModel.from_pretrained(model, str(adapter)).merge_and_unload()
+    model = merge_chain(model, chain)
     if out.exists():
         shutil.rmtree(out)  # never mix shards from an earlier, interrupted merge
     out.mkdir(parents=True)
@@ -118,10 +166,17 @@ def merge(adapter: str | Path, force: bool = False) -> Path:
             shutil.copy2(f, out / f.name)
     conform_to_base(out, base_name, base_dir)
     marker.write_text(json.dumps({"base_model": base_name, "adapter": str(adapter),
-                                  "adapter_mtime": _adapter_mtime(adapter)}, indent=2))
+                                  "adapters": [str(a) for a in chain],
+                                  "adapter_mtime": mtime}, indent=2))
     log.info("wrote %s", out)
     return out
 
 
 def _adapter_mtime(adapter: Path) -> float:
     return max(f.stat().st_mtime for f in adapter.glob("adapter_model*"))
+
+
+def _chain_mtime(chain: list[Path]) -> float | list[float]:
+    # A single adapter keeps the plain number, so merges recorded before chains stay valid.
+    mtimes = [_adapter_mtime(a) for a in chain]
+    return mtimes[0] if len(mtimes) == 1 else mtimes
