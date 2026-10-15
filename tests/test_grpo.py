@@ -231,3 +231,33 @@ def test_projected_hire_rate_moves_sfts_benchmark_rate_by_the_reweighted_change(
     assert out["hire_rate_projected"] == pytest.approx(0.28 + 0.33 * -0.30 + 0.67 * -0.05)
     assert grpo.projected_hire_rate(sft, sft, 0.28, 0.33)["hire_rate_projected"] == \
         pytest.approx(0.28)
+
+
+def test_merged_into_base_runs_the_pushed_weights_and_restores_the_base_bit_for_bit():
+    torch = pytest.importorskip("torch")
+    model = _tiny_peft()
+    before = {n: p.detach().clone() for n, p in model.named_parameters()}
+    pushed = dict(grpo.merged_named_params(model))
+    with grpo.merged_into_base(model), model.disable_adapter():
+        for name, module in grpo.lora_layers(model):
+            clean = name.removeprefix("base_model.model.") + ".weight"
+            assert torch.equal(module.base_layer.weight, pushed[clean])
+    for name, param in model.named_parameters():
+        assert torch.equal(param, before[name]), f"{name} not restored"
+
+
+def test_merge_retention_sees_a_delta_too_small_for_bf16():
+    torch = pytest.importorskip("torch")
+    model = _tiny_peft()
+    assert grpo.merge_retention(model)["kept_fraction"] == pytest.approx(1.0, abs=0.05)
+    with torch.no_grad():
+        for name, param in model.named_parameters():
+            if "lora_B" in name:
+                param.mul_(1e-5)  # far below half a bf16 unit of the base weights
+    tiny = grpo.merge_retention(model)
+    assert tiny["kept_fraction"] < 0.2 and tiny["unchanged"] > 0.9
+    with torch.no_grad():
+        for name, param in model.named_parameters():
+            if "lora_B" in name:
+                param.zero_()
+    assert grpo.merge_retention(model) == {"kept_fraction": 1.0, "unchanged": 1.0}

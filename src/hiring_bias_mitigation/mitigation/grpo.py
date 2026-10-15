@@ -28,7 +28,9 @@ defaults, each checked by a test or by `SyncValidationCallback` before a run tra
     that is a rounding round trip on the frozen weights every step, and those weights are
     also the KL reference. `merged_named_params` adds the LoRA delta in fp32 into a copy.
     vLLM's LoRA path, which does not reproduce Qwen3.5 adapters (mitigation/merge.py), is
-    never involved.
+    never involved. A merged bf16 model still drops the parts of a young adapter's delta
+    below half a bf16 unit of its weight (smoke run 5065791: 8-16% kept at step 10), so
+    rollouts and the audit see the merged model, and `merge_retention` says how far it lags.
   * Names. The policy is the text model (`model.layers.N...`); vLLM serves the checkpoint's
     Qwen3_5ForConditionalGeneration, whose loader maps `model.language_model.` names, the
     names the checkpoint itself uses. `vllm_param_name` translates.
@@ -136,31 +138,106 @@ def vllm_param_name(name: str, multimodal: bool) -> str:
     return name
 
 
+def lora_layers(model):
+    """(name, module) for every layer that carries the active LoRA adapter."""
+    adapter = getattr(model, "active_adapter", "default")
+    for name, module in model.named_modules():
+        if adapter in getattr(module, "lora_A", {}) and hasattr(module, "base_layer"):
+            yield name, module
+
+
+def merged_weight(module, adapter: str = "default"):
+    """The layer's base weight with its LoRA delta added in fp32, cast once to the base dtype:
+    the closest the base dtype can come to what HF + PEFT computes unmerged."""
+    weight = module.base_layer.weight.detach()
+    a = module.lora_A[adapter].weight.detach().float()
+    b = module.lora_B[adapter].weight.detach().float()
+    delta = b @ a
+    if getattr(module, "fan_in_fan_out", False):
+        delta = delta.T
+    return (weight.float() + delta * module.scaling[adapter]).to(weight.dtype)
+
+
 def merged_named_params(model, multimodal: bool = False):
     """(vLLM name, merged weight) for every parameter the served model holds.
 
-    A LoRA layer yields base + B @ A * scaling, computed in fp32 and cast to the base dtype; the
-    base weight itself is never written. LoRA's own parameters are skipped, they exist only
-    inside the merged weight.
+    A LoRA layer yields `merged_weight`; the base weight itself is never written. LoRA's own
+    parameters are skipped, they exist only inside the merged weight.
     """
-    modules = dict(model.named_modules())
     adapter = getattr(model, "active_adapter", "default")
+    layers = dict(lora_layers(model))
     prefix = getattr(model, "prefix", "lora_")
     for name, param in model.named_parameters():
         if prefix in name:
             continue
         clean = name.removeprefix("base_model.model.").replace(".base_layer.", ".")
         weight = param.data
-        if name.endswith(".base_layer.weight"):
-            owner = modules[name[: -len(".base_layer.weight")]]
-            if adapter in getattr(owner, "lora_A", {}):
-                a = owner.lora_A[adapter].weight.detach().float()
-                b = owner.lora_B[adapter].weight.detach().float()
-                delta = b @ a
-                if getattr(owner, "fan_in_fan_out", False):
-                    delta = delta.T
-                weight = (weight.float() + delta * owner.scaling[adapter]).to(param.dtype)
+        if name.endswith(".base_layer.weight") and name[: -len(".base_layer.weight")] in layers:
+            weight = merged_weight(layers[name[: -len(".base_layer.weight")]], adapter)
         yield vllm_param_name(clean, multimodal), weight
+
+
+def merge_retention(model) -> dict:
+    """How much of the LoRA delta survives a merge into the base dtype.
+
+    bf16 has 8 significant bits: a delta element below half a unit in the last place of its
+    base weight rounds away. With |W| ~ 1e-2 that unit is ~6e-5, and a GRPO adapter at lr 1e-5
+    moves its delta by ~2e-6 per element in 10 steps, so a merged (served, audited) model can
+    lag the HF + PEFT policy by most of the update early in a run. `kept_fraction` is the
+    projection of what survives onto the delta (1.0: all of it); `unchanged` the share of
+    weights the merge leaves bit-identical.
+    """
+    import torch
+
+    adapter = getattr(model, "active_adapter", "default")
+    kept = total = unchanged = count = 0.0
+    with torch.no_grad():
+        for _, module in lora_layers(model):
+            base = module.base_layer.weight.detach().float()
+            delta = merged_weight(module, adapter).float() - base
+            a = module.lora_A[adapter].weight.detach().float()
+            b = module.lora_B[adapter].weight.detach().float()
+            exact = b @ a
+            if getattr(module, "fan_in_fan_out", False):
+                exact = exact.T
+            exact = exact * module.scaling[adapter]
+            kept += float((delta * exact).sum())
+            total += float((exact * exact).sum())
+            unchanged += float((delta == 0).sum())
+            count += delta.numel()
+    return {"kept_fraction": kept / total if total else 1.0,
+            "unchanged": unchanged / count if count else 1.0}
+
+
+class merged_into_base:
+    """Context manager: the merged weights written into the base layers, the originals kept on
+    the CPU and copied back bit for bit on exit. Inside it, with the adapter disabled, HF runs
+    exactly the weights vLLM is sent."""
+
+    def __init__(self, model):
+        self.model = model
+        self.saved = []
+
+    def __enter__(self):
+        import torch
+
+        adapter = getattr(self.model, "active_adapter", "default")
+        with torch.no_grad():
+            for _, module in lora_layers(self.model):
+                weight = module.base_layer.weight
+                merged = merged_weight(module, adapter)
+                self.saved.append((weight, weight.detach().to("cpu", copy=True)))
+                weight.copy_(merged)
+        return self.model
+
+    def __exit__(self, *exc):
+        import torch
+
+        with torch.no_grad():
+            for weight, original in self.saved:
+                weight.copy_(original.to(weight.device))
+        self.saved = []
+        return False
 
 
 def vllm_model(vllm_generation):
@@ -231,14 +308,17 @@ def _sync_validation_class():
     from transformers import TrainerCallback
 
     class SyncValidationCallback(TrainerCallback):
-        """Does the vLLM engine serve the policy? Checked on every rank's own engine when a
-        segment starts (step 0: base weights replaced by SFT + a zero adapter) and every
-        `every` steps after (a trained adapter), against HuggingFace + PEFT on the same rows.
+        """Does the vLLM engine serve the policy's merged weights? Checked on every rank's own
+        engine when a segment starts and every `every` steps after.
 
-        vLLM margins come from `logprob_token_ids` after the forced decision prefix, the
-        op-margin-v2 scorer; HF margins from eval/margins.py. The checks and thresholds are
-        operating_point_control's `validate`. A failure stops the run before it trains on
-        rollouts from the wrong model.
+        Three margin passes on the same held-out rows: vLLM (`logprob_token_ids` after the
+        forced decision prefix, the op-margin-v2 scorer), HF on the merged weights (written into
+        the base layers, adapter off, restored after), and HF + PEFT unmerged (eval/margins.py).
+        The check is vLLM against HF-merged, with operating_point_control's `validate`
+        thresholds: the same weights in two engines. HF-merged against HF + PEFT is recorded
+        beside it with `merge_retention`, since a bf16 merge drops the smallest parts of a young
+        adapter (see merge_retention) -- the merged model is the one the audit serves. A failed
+        check stops the run before it trains on rollouts from the wrong weights.
         """
 
         def __init__(self, trainer, prompts: list[str], output_dir, every: int,
@@ -256,8 +336,9 @@ def _sync_validation_class():
             from ..eval.backends import _chat_wrap
             from ..eval.margins import PREFIX, WORDS, decision_margins, decision_token_ids
 
-            validation_summary = _op_control().validation_summary
+            summary = _op_control().validation_summary
             trainer, tokenizer = self.trainer, self.trainer.processing_class
+            policy = trainer.accelerator.unwrap_model(trainer.model)
             trainer.vllm_generation.sync_weights()
             ids = decision_token_ids(tokenizer, WORDS[self.lang])
             texts = [_chat_wrap(tokenizer, p, self.template_kwargs) + PREFIX
@@ -267,12 +348,20 @@ def _sync_validation_class():
             lp = [o.outputs[0].logprobs[0] for o in outs]
             vllm_margin = [d[ids[0]].logprob - d[ids[1]].logprob for d in lp]
             decided = sum(o.outputs[0].token_ids[0] in ids for o in outs) / len(outs)
-            hf_margin = decision_margins(trainer.accelerator.unwrap_model(trainer.model),
-                                         tokenizer, self.prompts, lang=self.lang,
-                                         batch_size=4, chat_template_kwargs=self.template_kwargs)
-            summary = validation_summary(vllm_margin, hf_margin)
+
+            def hf(model):
+                return decision_margins(model, tokenizer, self.prompts, lang=self.lang,
+                                        batch_size=4, chat_template_kwargs=self.template_kwargs)
+
+            with merged_into_base(policy), policy.disable_adapter():
+                merged_margin = hf(policy)
+            peft_margin = hf(policy)
+            sync = summary(vllm_margin, merged_margin)
+            merge = summary(merged_margin, peft_margin)
+            merge.pop("passed")
             return {"step": step, "n": len(texts), "vllm_decision_token_share": decided,
-                    **summary}
+                    "passed": sync["passed"], "vllm_vs_hf_merged": sync,
+                    "hf_merged_vs_hf_peft": merge, "merge_retention": merge_retention(policy)}
 
         def _run(self, state, control, when: str):
             result = self.validate(state.global_step)
@@ -280,10 +369,14 @@ def _sync_validation_class():
             if state.is_world_process_zero:
                 with (self.output_dir / "sync_validation.jsonl").open("a") as fh:
                     fh.write(json.dumps({**result, "when": when}) + "\n")
-            log.info("vLLM sync %s at step %d: agreement %.4f, rank correlation %.4f, max |diff| "
-                     "%.3f", "PASSED" if passed else "FAILED", state.global_step,
-                     result["decision_agreement_hf"], result["rank_correlation_hf"],
-                     result["abs_diff_hf"]["max"])
+            sync, merge = result["vllm_vs_hf_merged"], result["hf_merged_vs_hf_peft"]
+            log.info("vLLM sync %s at step %d: vLLM vs HF on the merged weights: agreement %.4f, "
+                     "rank correlation %.4f, max |diff| %.3f; merged vs HF + PEFT: agreement "
+                     "%.4f, median |diff| %.3f; merge keeps %.2f of the delta",
+                     "PASSED" if passed else "FAILED", state.global_step,
+                     sync["decision_agreement_hf"], sync["rank_correlation_hf"],
+                     sync["abs_diff_hf"]["max"], merge["decision_agreement_hf"],
+                     merge["abs_diff_hf"]["median"], result["merge_retention"]["kept_fraction"])
             # Every rank checks its own engine; one bad engine stops all of them.
             import torch
             import torch.distributed as dist
@@ -293,8 +386,8 @@ def _sync_validation_class():
                 dist.all_reduce(flag)
                 passed = int(flag.item()) == 0
             if not passed:
-                raise RuntimeError(f"vLLM does not serve the policy ({when}, step "
-                                   f"{state.global_step}): see sync_validation.jsonl")
+                raise RuntimeError(f"vLLM does not serve the policy's merged weights ({when}, "
+                                   f"step {state.global_step}): see sync_validation.jsonl")
 
         def on_train_begin(self, args, state, control, **kwargs):
             self._run(state, control, "segment start")
@@ -330,13 +423,17 @@ def _decision_monitor_class():
         generate and metrics, rank 0), logged to W&B and decision_eval.jsonl; stops the run,
         saving first, when the projected hire rate leaves `band`.
 
-        The SFT baseline is the same model with the adapter disabled, scored once per run.
+        The SFT baseline is the same model with the adapter disabled, scored once per run. The
+        same rows also go through rank 0's vLLM engine after a sync (decision_served_eval.jsonl):
+        the merged weights, the model the audit will serve, which lags HF + PEFT while the
+        adapter is young (merge_retention). The band is checked on HF + PEFT, the leading one.
         """
 
         def __init__(self, rows, tokenizer, output_dir, every: int, band: tuple[float, float],
                      anchor: float, ref_share: float, template_kwargs: dict | None,
-                     max_new_tokens: int = 96, lang: str = "en"):
+                     max_new_tokens: int = 96, lang: str = "en", vllm_generation=None):
             self.rows = rows.reset_index(drop=True)
+            self.vllm_generation = vllm_generation
             self.tokenizer = tokenizer
             self.output_dir = Path(output_dir)
             self.every = every
@@ -358,6 +455,20 @@ def _decision_monitor_class():
             outputs = generate(model, self.tokenizer, self.rows["prompt"].tolist(),
                                max_new_tokens=self.max_new_tokens,
                                template_kwargs=self.template_kwargs)
+            return outputs, decision_metrics(self.rows, outputs, self.lang)
+
+        def _evaluate_served(self) -> tuple[list[str], dict]:
+            from vllm import SamplingParams
+
+            from ..eval.backends import _chat_wrap
+            from .decision_eval import decision_metrics
+
+            self.vllm_generation.sync_weights()
+            texts = [_chat_wrap(self.tokenizer, p, self.template_kwargs)
+                     for p in self.rows["prompt"]]
+            params = SamplingParams(max_tokens=self.max_new_tokens, temperature=0.0)
+            outs = self.vllm_generation.llm.generate(texts, params, use_tqdm=False)
+            outputs = [o.outputs[0].text for o in outs]
             return outputs, decision_metrics(self.rows, outputs, self.lang)
 
         def on_train_begin(self, args, state, control, model=None, **kwargs):
@@ -393,6 +504,15 @@ def _decision_monitor_class():
                          "(band %.2f-%.2f), invalid %.3f", state.global_step,
                          metrics["agree_reference"], metrics["hire_rate_projected"], low, high,
                          metrics["invalid_rate"])
+                if self.vllm_generation is not None:
+                    served_out, served = self._evaluate_served()
+                    served.update(projected_hire_rate(served, self.baseline, self.anchor,
+                                                      self.ref_share))
+                    record(self.output_dir, state.global_step, self.rows, served_out, served,
+                           prefix="decision_served")
+                    log.info("served (merged) at step %d: agree %.3f, projected hire rate %.3f, "
+                             "invalid %.3f", state.global_step, served["agree_reference"],
+                             served["hire_rate_projected"], served["invalid_rate"])
             if _broadcast(stop):
                 log.error("projected hire rate left the band at step %d: saving and stopping",
                           state.global_step)
@@ -463,7 +583,8 @@ def train(cfg: dict) -> C.TrainArtifacts:
             output_dir, int(cfg.get("decision_eval_steps", 25)), (float(band[0]), float(band[1])),
             float(cfg.get("hire_rate_anchor", 0.28)),
             float(cfg.get("benchmark_reference_hire_share", 0.33)), chat_kwargs,
-            int(cfg.get("decision_eval_max_new_tokens", 96)))
+            int(cfg.get("decision_eval_max_new_tokens", 96)),
+            vllm_generation=trainer.vllm_generation)
         trainer.add_callback(monitor)
     else:
         log.warning("no validation split: the vLLM sync is NOT validated and no hire-rate "
