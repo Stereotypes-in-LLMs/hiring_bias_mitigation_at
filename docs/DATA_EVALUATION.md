@@ -107,6 +107,10 @@ Three things are still open:
 2. **The reference verdict.** The reference is a single teacher sample at temperature 0.7, so some "wrong" student answers on borderline candidates may be defensible. The judge's decision-support question catches some of these, not all.
 3. **Self-judging.** The teacher judges the `chosen` texts it wrote itself. The lexical filters and the student-based D4 do not depend on it, but an independent judge, or a 50-item human calibration, would make the judge's numbers more trustworthy.
 
+## On-policy negatives from a DPO model
+
+The same construction with the round-1 DPO model as the student (r2em checkpoint-100) found 409 tipped rows on the full pool instead of SFT's 5,614. The judge kept 305 pairs, and they fail D6 with a `chosen` hire share of 0.013. `docs/ITERATIVE_DPO.md` explains why and why that round was not trained.
+
 ## Running the checks
 
 From a Daint login node, with one node per submission:

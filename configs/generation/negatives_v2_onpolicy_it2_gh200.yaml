@@ -6,6 +6,8 @@
 # onpolicy-full's construction: the whole English pool at k=8 with and without the attribute,
 # attribute-tipped rows only, the covert filters, the teacher judging both sides, the same
 # held-out candidates. pi1 is merged with its SFT parent (merge.adapter_chain) for vLLM.
+# Ran as jobs 5063103 (sample) and 5063248 (judge): 409 tipped rows, 305 judged pairs, 301 of
+# them reject-reference. Round 2 was not trained; docs/ITERATIVE_DPO.md has the analysis.
 #   CONFIG=configs/generation/negatives_v2_onpolicy_it2_gh200.yaml \
 #     scripts/cscs/submit.sh -p debug -t 00:30:00 -J xw-it2 scripts/cscs/onpolicy_full.sbatch sample
 source_artifacts_dir: artifacts/semisynthetic-v1
