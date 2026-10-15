@@ -313,7 +313,13 @@ def read_samples(directory: str | Path, prompts: list[str], chunk_size: int,
 
 
 def merged_student(cfg: dict) -> Path:
-    """The published SFT adapter folded into its base, under outputs/merged/<adapter name>.
+    """The student folded into its base, under outputs/merged/<adapter name>.
+
+    `student_adapter` is the published SFT adapter (a Hub id), or a run or checkpoint under the
+    output root, e.g. a DPO checkpoint whose own mistakes make the next round's negatives.
+    A local adapter is merged together with the adapters it was trained on top of, SFT first
+    (merge.adapter_chain): linked into outputs/sft/ like a Hub snapshot, a DPO checkpoint would
+    lose its run's run_config.json and be merged without SFT.
 
     vLLM's LoRA path does not reproduce these adapters, so the student is always served as a
     merged checkpoint. Merging is skipped when an up-to-date merge already exists.
@@ -322,6 +328,8 @@ def merged_student(cfg: dict) -> Path:
     from ..mitigation import training_common as C
     from ..utils.config import resolve_output_path
 
+    if resolve_output_path(cfg["student_adapter"]).exists():
+        return M.merge(cfg["student_adapter"])
     snapshot = Path(C.resolve_sft_checkpoint(cfg["student_adapter"]))
     name = cfg["student_adapter"].rstrip("/").split("/")[-1]
     link = Path(resolve_output_path(f"outputs/sft/{name}"))

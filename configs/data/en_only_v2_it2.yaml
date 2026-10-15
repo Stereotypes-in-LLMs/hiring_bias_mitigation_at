@@ -1,0 +1,15 @@
+# Hand-written -- NOT produced by generate_experiment_configs.py.
+# Iterative DPO round 2: pi1's (r2em checkpoint-100's) own covert, attribute-tipped mistakes
+# over the English pool plus the k=32 hire top-up, balanced to equal hire and reject reference
+# verdicts per protected group (generate_onpolicy_full.py --stage balance with
+# configs/generation/negatives_v2_onpolicy_it2_hire_gh200.yaml). Same construction as
+# en_only_v2, only the student changed.
+name: en_only_v2_it2
+artifacts_dir: artifacts/semisynthetic-v2/onpolicy-it2-hire32/balanced
+seed: 42
+protected_groups:
+- military_status
+- gender
+- religion
+languages:
+- en

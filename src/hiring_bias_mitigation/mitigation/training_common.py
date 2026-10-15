@@ -121,7 +121,7 @@ def apply_data_filters(frame, data_cfg: dict):
 
 def load_model_and_tokenizer(cfg: dict, for_training: bool = True):
     import torch
-    from transformers import AutoModelForCausalLM, AutoTokenizer
+    from transformers import AutoTokenizer
 
     dtype = getattr(torch, cfg.get("dtype", "bfloat16"))
     tokenizer = AutoTokenizer.from_pretrained(cfg["base_model"], trust_remote_code=True)
@@ -138,20 +138,36 @@ def load_model_and_tokenizer(cfg: dict, for_training: bool = True):
             bnb_4bit_quant_type="nf4",
             bnb_4bit_use_double_quant=True,
         )
-    source, adapter = _resolve_adapter(cfg["base_model"])
-    model = AutoModelForCausalLM.from_pretrained(source, **kwargs)
-    if adapter is not None:
-        # A LoRA run saves only the adapter, so `from_pretrained` on that directory has no
-        # weights to read. DPO continuing from an SFT run has to load the base, apply the
-        # adapter and merge it down -- the SFT behaviour becomes the starting point, and the
-        # DPO stage is then free to fit a fresh adapter on top of it.
-        from peft import PeftModel
-
-        log.info("merging adapter %s into %s", adapter, source)
-        model = PeftModel.from_pretrained(model, adapter).merge_and_unload()
+    model = load_merged(cfg["base_model"], **kwargs)
     if for_training:
         model.config.use_cache = False
     return model, tokenizer
+
+
+def load_merged(base_model: str, **kwargs):
+    """`base_model` as weights: a plain model as it is, an adapter merged into its base.
+
+    A LoRA run saves only the adapter, so `from_pretrained` on that directory has no weights to
+    read. DPO continuing from an SFT run has to load the base, apply the adapter and merge it
+    down -- the SFT behaviour becomes the starting point, and the DPO stage is then free to fit
+    a fresh adapter on top of it.
+
+    The adapter is merged with every adapter it was itself trained on top of, parents first
+    (merge.adapter_chain), as the audits merge it. An iterative DPO round continues from a DPO
+    checkpoint, whose adapter_config names the plain base: merging that adapter alone would
+    start the round from base + DPO, without SFT.
+    """
+    from transformers import AutoModelForCausalLM
+
+    from .merge import adapter_chain, merge_chain
+
+    _, adapter = _resolve_adapter(base_model)
+    if adapter is None:
+        return AutoModelForCausalLM.from_pretrained(base_model, **kwargs)
+    chain = adapter_chain(Path(adapter))
+    source, _ = _resolve_adapter(str(chain[0]))
+    log.info("merging %s into %s", " then ".join(map(str, chain)), source)
+    return merge_chain(AutoModelForCausalLM.from_pretrained(source, **kwargs), chain)
 
 
 def resolve_sft_checkpoint(spec: str) -> str:

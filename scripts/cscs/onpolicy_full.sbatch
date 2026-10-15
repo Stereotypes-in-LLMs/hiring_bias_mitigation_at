@@ -8,7 +8,8 @@
 #           side on all four GPUs, candidates + train/validation split, GPU-free checks
 #   check   balance hire/reject per group inside each split (balanced/, CPU only), then the
 #           direction check on the balanced pairs: D1-D6 on all, D4 on a 600-pair subsample
-#           (SFT student and base model, HF + PEFT)
+#           (the config's student and the model it was trained from, HF + PEFT: SFT and the
+#           base, or a DPO checkpoint and SFT for an iterative round)
 #
 #   scripts/cscs/submit.sh -p debug -t 00:30:00 scripts/cscs/onpolicy_full.sbatch sample
 #   scripts/cscs/submit.sh -p debug -t 00:30:00 scripts/cscs/onpolicy_full.sbatch judge
@@ -33,10 +34,10 @@ source /ritom/scratch/cscs/zhang/xw/hiring_bias_mitigation_at/scripts/cscs/env.s
 export HF_HUB_OFFLINE=1
 STAGE=${1:?stage: sample | judge | check}
 CONFIG=${CONFIG:-configs/generation/negatives_v2_onpolicy_full_gh200.yaml}
-STUDENT=Stereotypes-in-LLMs/qwen3.5-9b-hiring-debias-sft-en
 cd "$REPO"
 OUT=$($PY -c "import sys, yaml; print(yaml.safe_load(open(sys.argv[1]))['artifacts_dir'])" "$CONFIG")
-echo "config $CONFIG | out $OUT"
+STUDENT=$($PY -c "import sys, yaml; print(yaml.safe_load(open(sys.argv[1]))['student_adapter'])" "$CONFIG")
+echo "config $CONFIG | out $OUT | student $STUDENT"
 echo "host $(hostname) | job ${SLURM_JOB_ID:-none} | stage $STAGE | commit $(git rev-parse --short HEAD 2>/dev/null || echo n/a)"
 
 case "$STAGE" in

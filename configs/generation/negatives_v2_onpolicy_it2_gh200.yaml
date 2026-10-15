@@ -1,0 +1,55 @@
+# Hand-written -- NOT produced by generate_experiment_configs.py, so it survives a regeneration.
+#
+# Iterative DPO, round 2 (it2): the negatives are the mistakes of the round-1 DPO model, not
+# of SFT. pi1 is r2em checkpoint-100 (SFT -> DPO on the error-mass-balanced pairs; benchmark
+# hire 28.4%, unstable sets 2.81%, chosen by the user on 2026-10-15). Everything else is
+# onpolicy-full's construction: the whole English pool at k=8 with and without the attribute,
+# attribute-tipped rows only, the covert filters, the teacher judging both sides, the same
+# held-out candidates. pi1 is merged with its SFT parent (merge.adapter_chain) for vLLM.
+#   CONFIG=configs/generation/negatives_v2_onpolicy_it2_gh200.yaml \
+#     scripts/cscs/submit.sh -p debug -t 00:30:00 -J xw-it2 scripts/cscs/onpolicy_full.sbatch sample
+source_artifacts_dir: artifacts/semisynthetic-v1
+artifacts_dir: artifacts/semisynthetic-v2/onpolicy-it2
+lang: en
+seed: 42
+val_fraction: 0.05
+
+student_base: Qwen/Qwen3.5-9B
+student_adapter: outputs/dpo/qwen3.5-9b_en_only_dpo_v2neg_r2em/checkpoint-100
+samples_per_prompt: 8
+min_free_right: 0.5
+# 512 prompts x 8 samples is about a minute and a half per GPU: the most a job cut by the
+# time limit can lose.
+chunk_size: 512
+student_vllm:
+  gpu_memory_utilization: 0.70      # of 95.6 GiB usable; anything near 96 GB OOMs
+  max_model_len: 8192
+  max_num_seqs: 256                 # 32 prompts x 8 samples in flight; batch-01 used 64
+  engine_kwargs:
+    gdn_prefill_backend: triton     # no CUDA toolkit on Daint for FlashInfer's JIT
+student_generation:
+  max_new_tokens: 200
+  temperature: 1.0
+  top_p: 1.0
+  seed: 42
+
+judge_strategies:
+- student_tipped
+max_length_delta_words: 10
+min_plausibility: 3
+n_samples: 20
+
+# The teacher, as judge only -- the same settings as batch-01.
+teacher_model: Qwen/Qwen3.5-122B-A10B-GPTQ-Int4
+backend: vllm
+dtype: auto
+max_model_len: 8192
+tensor_parallel_size: 4
+gpu_memory_utilization: 0.80
+max_num_seqs: 128
+engine_kwargs:
+  gdn_prefill_backend: triton
+judge_generation:
+  max_new_tokens: 160
+  temperature: 0.0
+  top_p: 1.0

@@ -304,6 +304,31 @@ def decision_margins(model, tokenizer, prompts: list[str], lang: str = "en",
     return out
 
 
+def scored_model(base_model: str, adapter: str | None, **kwargs):
+    """The model D4 reads, and the adapters merged into it under the live `adapter`.
+
+    `adapter` stays a live PEFT adapter, so `disable_adapter()` gives the model it was trained
+    from. The adapters it was itself fitted on top of are merged first, parents first
+    (merge.adapter_chain): SFT for a DPO checkpoint, nothing for SFT. Applied alone, a DPO
+    adapter would be scored on the plain base, without SFT.
+    """
+    from pathlib import Path
+
+    from transformers import AutoModelForCausalLM
+
+    model = AutoModelForCausalLM.from_pretrained(base_model, **kwargs)
+    if not adapter:
+        return model, []
+    from peft import PeftModel
+
+    from ..mitigation.merge import adapter_chain, merge_chain
+    from ..mitigation.training_common import resolve_sft_checkpoint
+
+    chain = adapter_chain(Path(resolve_sft_checkpoint(adapter)))
+    model = merge_chain(model, chain[:-1])
+    return PeftModel.from_pretrained(model, str(chain[-1])), chain[:-1]
+
+
 def student_report(
     pairs: pd.DataFrame,
     base_model: str,
@@ -315,22 +340,19 @@ def student_report(
     """D4. Returns the pairs with per-row student columns, and the summary by strategy.
 
     `adapter` is a local adapter directory or a Hub adapter repo id; None measures the base
-    model alone. `also_base` additionally measures the base with the adapter disabled, which
-    says how far SFT already moved the direction.
+    model alone. `also_base` additionally measures the model with the adapter disabled, i.e.
+    the model it was trained from (`scored_model`): the base for SFT, which says how far SFT
+    already moved the direction, and SFT for a DPO checkpoint.
     """
     import numpy as np
     import torch
-    from transformers import AutoModelForCausalLM, AutoTokenizer
+    from transformers import AutoTokenizer
 
     tokenizer = AutoTokenizer.from_pretrained(base_model, trust_remote_code=True)
     if tokenizer.pad_token is None:
         tokenizer.pad_token = tokenizer.eos_token
-    model = AutoModelForCausalLM.from_pretrained(base_model, dtype=torch.bfloat16,
-                                                 device_map="cuda", trust_remote_code=True)
-    if adapter:
-        from peft import PeftModel
-
-        model = PeftModel.from_pretrained(model, adapter)
+    model, merged = scored_model(base_model, adapter, dtype=torch.bfloat16, device_map="cuda",
+                                 trust_remote_code=True)
     model.eval()
 
     frame = pairs.reset_index(drop=True).copy()
@@ -350,11 +372,12 @@ def student_report(
         frame[f"{tag}_decision_margin"] = decision_margins(model, tokenizer, prompts, lang,
                                                            batch_size)
 
-    log.info("student (%s + %s): %d pairs", base_model, adapter, len(frame))
+    log.info("student (%s): %d pairs", " + ".join(map(str, [base_model, *merged, adapter])),
+             len(frame))
     measure("student")
     if also_base and adapter:
         with model.disable_adapter():
-            log.info("base model (adapter disabled)")
+            log.info("adapter disabled: %s", " + ".join(map(str, [base_model, *merged])))
             measure("base")
 
     def summarise(sub: pd.DataFrame, tag: str) -> dict:
@@ -375,7 +398,8 @@ def student_report(
         }
 
     tags = ["student"] + (["base"] if also_base and adapter else [])
-    summary: dict = {"base_model": base_model, "adapter": adapter}
+    summary: dict = {"base_model": base_model, "adapter": adapter,
+                     "merged": [str(p) for p in merged]}
     for tag in tags:
         summary[tag] = {"overall": summarise(frame, tag), "by_strategy": {}, "by_group": {},
                         "by_reference_decision": {}}
@@ -452,9 +476,10 @@ def render_markdown(report: dict, student: dict | None = None) -> str:
         for tag in ("student", "base"):
             if tag not in student:
                 continue
-            model_label = student["base_model"]
+            parts = [student["base_model"], *student.get("merged", [])]
             if tag == "student" and student.get("adapter"):
-                model_label += f" + {student['adapter']}"
+                parts.append(student["adapter"])
+            model_label = " + ".join(parts)
             lines += [f"### D4 {tag} preference ({model_label})", "",
                       "| Slice | n | Prefers chosen | Per-token | Decides reference | "
                       "Informative | Verdict |",

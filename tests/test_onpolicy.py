@@ -217,3 +217,17 @@ def test_margin_balance_is_reproducible():
     first, _ = OP.balance_by_margin(pairs, "margin", bins=5, seed=3)
     second, _ = OP.balance_by_margin(pairs, "margin", bins=5, seed=3)
     assert first["pair_id"].tolist() == second["pair_id"].tolist()
+
+
+def test_a_local_student_is_merged_with_its_parents_not_linked_as_sft(tmp_path, monkeypatch):
+    from hiring_bias_mitigation.mitigation import merge as M
+
+    monkeypatch.setenv("HBM_OUTPUT_ROOT", str(tmp_path))
+    (tmp_path / "outputs" / "dpo" / "r2em" / "checkpoint-100").mkdir(parents=True)
+    calls = []
+    monkeypatch.setattr(M, "merge",
+                        lambda adapter, force=False: calls.append(adapter) or tmp_path / "m")
+    merged = OP.merged_student({"student_adapter": "outputs/dpo/r2em/checkpoint-100"})
+    assert merged == tmp_path / "m"
+    assert calls == ["outputs/dpo/r2em/checkpoint-100"]
+    assert not (tmp_path / "outputs" / "sft").exists()
