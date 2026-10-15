@@ -156,9 +156,10 @@ def attach_sft_rates(rows: pd.DataFrame, *counts: dict) -> pd.DataFrame:
     return rows.assign(sft_hire_rate=rate, sft_samples=n, pull=np.sqrt(wrong * (1 - wrong)))
 
 
-def signal_balanced_train(rows: pd.DataFrame, n: int, seed: int = 42) -> tuple[pd.DataFrame, dict]:
+def signal_balanced_train(rows: pd.DataFrame, n: int, seed: int = 42,
+                          column: str = "pull") -> tuple[pd.DataFrame, dict]:
     """`n` prompts, exactly half per reference verdict, the two halves carrying the same summed
-    `pull` as nearly as the rows allow.
+    `column` (by default GRPO's `pull`) as nearly as the rows allow.
 
     Within a side, tipped and untipped rows are each shuffled once (seeded); the half is the
     first k tipped and the first half-k untipped. Every side's largest pull (k as large as the
@@ -176,12 +177,12 @@ def signal_balanced_train(rows: pd.DataFrame, n: int, seed: int = 42) -> tuple[p
         low, high = max(0, half - len(rest)), min(half, len(tipped))
         if low > high:
             raise ValueError(f"only {len(pool)} {side}-reference rows for a half of {half}")
-        a = np.concatenate([[0.0], np.cumsum(tipped["pull"].to_numpy())])
-        b = np.concatenate([[0.0], np.cumsum(rest["pull"].to_numpy())])
+        a = np.concatenate([[0.0], np.cumsum(tipped[column].to_numpy())])
+        b = np.concatenate([[0.0], np.cumsum(rest[column].to_numpy())])
         ks = np.arange(low, high + 1)
         options[side] = (tipped, rest, ks, a[ks] + b[half - ks])
     target = min(pulls.max() for *_, pulls in options.values())
-    parts, plan = [], {"target_pull": round(float(target), 2)}
+    parts, plan = [], {f"target_{column}": round(float(target), 2)}
     for side, (tipped, rest, ks, pulls) in options.items():
         i = int(np.argmin(np.abs(pulls - target)))
         k = int(ks[i])
@@ -189,7 +190,7 @@ def signal_balanced_train(rows: pd.DataFrame, n: int, seed: int = 42) -> tuple[p
         parts.append(chosen)
         plan[side] = {"available": len(tipped) + len(rest), "available_tipped": len(tipped),
                       "drawn_tipped": k, "drawn_untipped": half - k,
-                      "pull": round(float(pulls[i]), 2),
+                      column: round(float(pulls[i]), 2),
                       "error_mass": round(float(np.where(side == "hire",
                                                          1 - chosen["sft_hire_rate"],
                                                          chosen["sft_hire_rate"]).sum()), 2)}

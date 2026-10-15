@@ -1,0 +1,48 @@
+# Hand-written -- NOT produced by generate_experiment_configs.py, so it survives a regeneration.
+#
+# Rejection-sampling SFT control: a second SFT stage, from the published SFT adapter, on the
+# student's own right samples (configs/data/en_only_v2_rft.yaml). The optimizer-versus-data
+# control beside DPO r2em and the GRPO pilot: same anchors, plain NLL. 2,400 rows / 16 per
+# step = 150 steps. Resumable: the same submission again continues from the newest checkpoint.
+#   CONFIG=configs/mitigation/sft/qwen3.5-9b_en_only_rft_gh200.yaml \
+#     scripts/cscs/submit.sh -p debug -t 00:30:00 scripts/cscs/train_sft.sbatch
+stage: sft
+data_kind: rft
+base_model: Qwen/Qwen3.5-9B
+sft_checkpoint: Stereotypes-in-LLMs/qwen3.5-9b-hiring-debias-sft-en
+data_config: configs/data/en_only_v2_rft.yaml
+output_dir: outputs/sft/qwen3.5-9b_en_only_rft
+chat_template_kwargs:
+  enable_thinking: false
+use_lora: true
+lora_r: 32
+lora_alpha: 64
+lora_dropout: 0.05
+max_seq_len: 2048                 # as SFT and DPO; the longest rft-01 row renders to 1,860 tokens
+num_train_epochs: 1
+max_steps: -1
+warmup_steps: 10
+learning_rate: 5.0e-05
+per_device_train_batch_size: 1
+per_device_eval_batch_size: 1
+gradient_accumulation_steps: 4        # x 4 GPUs x batch 1 = 16
+gradient_checkpointing: true
+weight_decay: 0.01
+dtype: bfloat16
+seed: 42
+logging_steps: 5
+eval_steps: 25
+eval_limit_rows: 200
+early_stopping_patience: 0
+memory_floor_gb: 12
+wandb_project: hiring-bias-mitigation
+wandb_run_name: sft-qwen3.5-9b_en_only_rft
+# Greedy decisions on 64 held-out prompts after every eval.
+decision_eval_rows: 64
+resume: true
+save_steps: 25
+save_total_limit: 20
+load_best_model_at_end: false
+ddp_find_unused_parameters: false
+gradient_checkpointing_kwargs:
+  use_reentrant: false
