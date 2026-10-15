@@ -1,0 +1,43 @@
+{
+  "standard": "op-margin-v2",
+  "run": "Qwen3.5-9B--en--sft--adapter--en_only_cscs",
+  "which": "adapter",
+  "config": "configs/audit/qwen3.5-9b_en_sft_en_only_gh200.yaml",
+  "n": 256,
+  "seed": 42,
+  "thresholds": {
+    "agreement": 0.98,
+    "rank_correlation": 0.98
+  },
+  "decision_agreement_hf": 1.0,
+  "rank_correlation_hf": 0.999661120981646,
+  "abs_diff_hf": {
+    "median": 0.12499957923137117,
+    "p95": 0.2500000164145604,
+    "max": 0.3750001476146281
+  },
+  "greedy_decided": 256,
+  "decision_agreement_greedy": 0.99609375,
+  "v1_decision_agreement": 1.0,
+  "v1_share_off_by_more_than_0.5": 0.0,
+  "passed": true,
+  "model": {
+    "served": "/ritom/scratch/cscs/zhang/xw/outputs/merged/qwen3.5-9b-hiring-debias-sft-en",
+    "adapters": [
+      {
+        "path": "/ritom/scratch/cscs/zhang/xw/outputs/sft/qwen3.5-9b-hiring-debias-sft-en",
+        "sha256": "21be7db738b5a97f31a0c068023caeb14641aee2b2f50f5cdae6bbf6097de735"
+      }
+    ]
+  },
+  "software": {
+    "vllm": "0.31.0",
+    "torch": "2.13.0",
+    "transformers": "5.17.0"
+  },
+  "code": {
+    "commit": "8da77167d08462e89f5f9cbe0492484c06ada97e",
+    "uncommitted": []
+  },
+  "written": "2026-10-15T11:33:54+00:00"
+}

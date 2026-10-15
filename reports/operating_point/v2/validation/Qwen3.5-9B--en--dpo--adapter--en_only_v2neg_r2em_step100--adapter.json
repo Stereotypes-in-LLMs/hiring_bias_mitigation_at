@@ -1,0 +1,47 @@
+{
+  "standard": "op-margin-v2",
+  "run": "Qwen3.5-9B--en--dpo--adapter--en_only_v2neg_r2em_step100",
+  "which": "adapter",
+  "config": "configs/audit/qwen3.5-9b_en_dpo_v2neg_r2em_step100_gh200.yaml",
+  "n": 256,
+  "seed": 42,
+  "thresholds": {
+    "agreement": 0.98,
+    "rank_correlation": 0.98
+  },
+  "decision_agreement_hf": 0.99609375,
+  "rank_correlation_hf": 0.9905835610708982,
+  "abs_diff_hf": {
+    "median": 0.09375131180178187,
+    "p95": 1.2031249701969386,
+    "max": 13.874999762054358
+  },
+  "greedy_decided": 256,
+  "decision_agreement_greedy": 1.0,
+  "v1_decision_agreement": 1.0,
+  "v1_share_off_by_more_than_0.5": 0.9609375,
+  "passed": true,
+  "model": {
+    "served": "/ritom/scratch/cscs/zhang/xw/outputs/merged/qwen3.5-9b_en_only_dpo_v2neg_r2em--checkpoint-100",
+    "adapters": [
+      {
+        "path": "/ritom/scratch/cscs/zhang/xw/hf-cache/hub/models--Stereotypes-in-LLMs--qwen3.5-9b-hiring-debias-sft-en/snapshots/ebe927cf955b33101ca27c6c58525cd03817ee71",
+        "sha256": "21be7db738b5a97f31a0c068023caeb14641aee2b2f50f5cdae6bbf6097de735"
+      },
+      {
+        "path": "/ritom/scratch/cscs/zhang/xw/outputs/dpo/qwen3.5-9b_en_only_dpo_v2neg_r2em/checkpoint-100",
+        "sha256": "4aa3caa9956ccee1c7f561abad4807cb328a477b60934094a01e3508daf7944c"
+      }
+    ]
+  },
+  "software": {
+    "vllm": "0.31.0",
+    "torch": "2.13.0",
+    "transformers": "5.17.0"
+  },
+  "code": {
+    "commit": "8da77167d08462e89f5f9cbe0492484c06ada97e",
+    "uncommitted": []
+  },
+  "written": "2026-10-15T11:33:54+00:00"
+}
