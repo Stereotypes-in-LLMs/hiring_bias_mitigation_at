@@ -10,7 +10,7 @@ objective: grpo
 data_kind: grpo
 base_model: Qwen/Qwen3.5-9B
 sft_checkpoint: Stereotypes-in-LLMs/qwen3.5-9b-hiring-debias-sft-en
-data_config: configs/data/en_only_grpo_01.yaml
+data_config: configs/data/en_only_grpo_02.yaml
 output_dir: outputs/grpo/qwen3.5-9b_en_only_grpo_smoke
 chat_template_kwargs:
   enable_thinking: false
@@ -54,13 +54,12 @@ wandb_run_name: grpo-qwen3.5-9b_en_only_grpo_smoke
 sync_validate_rows: 256
 sync_validate_steps: 20        # again after the last step, with a trained adapter
 # Greedy decisions on 256 held-out prompts every 25 steps; stop when the projected benchmark
-# hire rate (SFT's 28% plus the change since SFT, per-side rates reweighted to the
-# benchmark's 33% hire reference) leaves 20-40%, where round-1 DPO went (19%).
+# hire rate leaves 20-40% (round-1 DPO went to 19%). Projection: each reference side's hire
+# rate relative to SFT's on the same rows, times SFT's benchmark rate on that side
+# (mitigation/grpo.py, projected_hire_rate).
 decision_eval_rows: 64
 decision_eval_steps: 10
 hire_rate_band: [0.20, 0.40]
-hire_rate_anchor: 0.28
-benchmark_reference_hire_share: 0.33
 resume: false
 save_steps: 10
 save_total_limit: 20

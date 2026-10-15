@@ -19,7 +19,8 @@ def _rows(n_hire: int, n_reject: int, tipped_hire: int, tipped_reject: int) -> p
             rows.append({"pair_id": f"{side}-p{i // 3}", "candidate_id": f"{side}-c{i // 3}",
                          "job_id": f"j{i % 5}", "lang": "en", "reference_decision": side,
                          "protected_group": ("gender", "religion", "military_status")[i % 3],
-                         "protected_attr": f"a{i % 3}", "condition": ("explicit", "implicit")[i % 2],
+                         "protected_attr": f"a{i % 3}",
+                         "condition": ("explicit", "implicit")[i % 2],
                          "prompt": f"prompt {side} {i}", "tipped": i < tipped})
     return pd.DataFrame(rows)
 
@@ -87,6 +88,59 @@ def test_prompts_attach_by_row_position_and_refuse_a_mismatch():
                                                                   "row two"]
     with pytest.raises(ValueError, match="different runs"):
         G.attach_prompts(rows.iloc[:2], prompts)
+
+
+def _with_pull(rows: pd.DataFrame, rate_tipped: dict, rate_untipped: dict) -> pd.DataFrame:
+    """Every row's student hire rate set by verdict and tipped flag."""
+    rate = [(rate_tipped if t else rate_untipped)[r]
+            for r, t in zip(rows["reference_decision"], rows["tipped"])]
+    counts = {p: (round(h * 8), 8) for p, h in zip(rows["prompt"], rate)}
+    return G.attach_sft_rates(rows, counts)
+
+
+def test_student_samples_give_each_row_its_rate_and_pull():
+    rows = _rows(2, 2, 0, 0)
+    samples = pd.DataFrame({
+        "prompt": [rows["prompt"][0]] * 4 + [rows["prompt"][1]] * 2 + [rows["prompt"][2]] * 2
+        + [rows["prompt"][3]] * 2,
+        "raw_output": [_answer("hire")] * 3 + [_answer("reject"), _answer("hire"),
+                                               "no answer", _answer("hire"), _answer("reject"),
+                                               _answer("reject"), _answer("reject")]})
+    k8 = G.sample_hire_counts(samples)
+    k32 = {rows["prompt"][1]: (16, 32)}
+    out = G.attach_sft_rates(rows, k32, k8)
+    assert out["sft_hire_rate"].tolist() == [0.75, 0.5, 0.5, 0.0]
+    assert out["sft_samples"].tolist() == [4, 32, 2, 2]
+    # hire rows err by rejecting, reject rows by hiring; pull = sqrt(p(1-p))
+    assert out["pull"].tolist() == pytest.approx([0.75 ** 0.5 * 0.5, 0.5, 0.5, 0.0])
+    with pytest.raises(KeyError, match="no stored student samples"):
+        G.attach_sft_rates(rows, k32)
+
+
+def test_signal_balance_gives_both_halves_the_same_pull():
+    # hire side: few errors per row (pull 0.33 tipped); reject side: many (pull 0.48 tipped)
+    rows = _with_pull(_rows(100, 400, 60, 200), {"hire": 7 / 8, "reject": 3 / 8},
+                      {"hire": 1.0, "reject": 0.0})
+    train, plan = G.signal_balanced_train(rows, 80, seed=3)
+    assert train["reference_decision"].value_counts().to_dict() == {"hire": 40, "reject": 40}
+    assert plan["hire"]["drawn_tipped"] == 40  # the weaker side takes every tipped row it can
+    assert plan["reject"]["drawn_tipped"] < 40
+    pulls = train.groupby("reference_decision")["pull"].sum()
+    assert abs(pulls["hire"] - pulls["reject"]) <= 0.5  # one reject row's pull
+    assert plan["hire"]["pull"] == pytest.approx(pulls["hire"], abs=0.01)
+    assert not train.duplicated(G.ROW_KEY).any()
+
+
+def test_signal_balance_refuses_a_side_too_small_and_is_seeded():
+    rows = _with_pull(_rows(30, 400, 10, 100), {"hire": 0.5, "reject": 0.5},
+                      {"hire": 1.0, "reject": 0.0})
+    with pytest.raises(ValueError, match="hire-reference rows"):
+        G.signal_balanced_train(rows, 80)
+    rows = _with_pull(_rows(100, 100, 50, 50), {"hire": 0.75, "reject": 0.5},
+                      {"hire": 1.0, "reject": 0.0})
+    a, _ = G.signal_balanced_train(rows, 40, seed=5)
+    b, _ = G.signal_balanced_train(rows, 40, seed=5)
+    assert a.equals(b)
 
 
 # ---- rewards ------------------------------------------------------------------------------
@@ -223,14 +277,21 @@ def test_a_zero_adapter_pushes_the_base_weights_exactly():
 
 # ---- decision monitor ---------------------------------------------------------------------
 
-def test_projected_hire_rate_moves_sfts_benchmark_rate_by_the_reweighted_change():
-    sft = {"hire_rate_ref_hire": 0.80, "hire_rate_ref_reject": 0.10}
-    later = {"hire_rate_ref_hire": 0.50, "hire_rate_ref_reject": 0.05}
-    out = grpo.projected_hire_rate(later, sft, anchor=0.28, ref_share=0.33)
-    assert out["hire_rate_weighted_sft"] == pytest.approx(0.33 * 0.80 + 0.67 * 0.10)
-    assert out["hire_rate_projected"] == pytest.approx(0.28 + 0.33 * -0.30 + 0.67 * -0.05)
-    assert grpo.projected_hire_rate(sft, sft, 0.28, 0.33)["hire_rate_projected"] == \
-        pytest.approx(0.28)
+def test_projected_hire_rate_carries_relative_changes_onto_sfts_benchmark_rates():
+    sft = {"hire_rate_ref_hire": 1.0, "hire_rate_ref_reject": 0.21875}
+    same = grpo.projected_hire_rate(sft, sft, n_side=32)
+    assert same["hire_rate_projected"] == pytest.approx(0.333 * 0.658 + 0.667 * 0.091)
+    # smoke job 5065891 at step 20: fewer false hires, three fewer true hires of 32
+    later = {"hire_rate_ref_hire": 0.90625, "hire_rate_ref_reject": 0.0625}
+    out = grpo.projected_hire_rate(later, sft, n_side=32)
+    assert out["projected_hire_rate_ref_hire"] == pytest.approx(0.658 * 29.5 / 32.5)
+    assert out["projected_hire_rate_ref_reject"] == pytest.approx(0.091 * 2.5 / 7.5)
+    assert 0.20 < out["hire_rate_projected"] < 0.23
+    # r1-300's own change on the benchmark lands on its own hire rate
+    r1 = {"hire_rate_ref_hire": 0.476 / 0.658, "hire_rate_ref_reject": 0.048 / 0.091}
+    base = {"hire_rate_ref_hire": 1.0, "hire_rate_ref_reject": 1.0}
+    assert grpo.projected_hire_rate(r1, base, n_side=10_000)["hire_rate_projected"] == \
+        pytest.approx(0.191, abs=0.002)
 
 
 def test_merged_into_base_runs_the_pushed_weights_and_restores_the_base_bit_for_bit():

@@ -1,0 +1,15 @@
+# Hand-written -- NOT produced by generate_experiment_configs.py.
+# GRPO pilot prompts (scripts/build_grpo_prompts.py --balance signal, data_kind grpo): 3,000
+# attributed English pool prompts, exactly half per reference verdict, each half's tipped share
+# chosen so both carry the same summed pull sqrt(p(1-p)) under the SFT student's own samples
+# (hire: 1,500 of 1,500 tipped; reject: 873). Every candidate of an existing validation split is
+# held out; 256 held-out prompts for the monitors (the same rows as grpo-01).
+name: en_only_grpo_02
+artifacts_dir: artifacts/semisynthetic-v2/grpo-02
+seed: 42
+protected_groups:
+- military_status
+- gender
+- religion
+languages:
+- en

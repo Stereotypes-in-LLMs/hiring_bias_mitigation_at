@@ -91,7 +91,8 @@ def decision_reward(completions: list[str], reference_decision: list[str],
         for side in (HIRE, REJECT):
             mine = [d for d, r in zip(decisions, references) if r == side]
             if mine:
-                log_metric(f"sampled_hire_rate_ref_{side}", sum(d == HIRE for d in mine) / len(mine))
+                log_metric(f"sampled_hire_rate_ref_{side}",
+                           sum(d == HIRE for d in mine) / len(mine))
     return [DECISION_REWARD if d == r else 0.0 for d, r in zip(decisions, references)]
 
 
@@ -399,20 +400,35 @@ def _sync_validation_class():
     return SyncValidationCallback
 
 
-def projected_hire_rate(metrics: dict, baseline: dict, anchor: float, ref_share: float) -> dict:
-    """The monitor's hire rate on the benchmark's scale.
+#: SFT on the 2,700-set benchmark (outputs/raw/Qwen3.5-9B--en--sft--adapter--en_only_cscs):
+#: the reference hires 33.3% of prompts; SFT hires 65.8% of those and 9.1% of the others,
+#: 28.0% in all. r1-300, which collapsed to 19.1%, hired 47.6% and 4.8%.
+SFT_BENCHMARK = {"reference_hire_share": 0.333, "hire_rate_ref_hire": 0.658,
+                 "hire_rate_ref_reject": 0.091}
 
-    The monitor rows are half hire-reference, the benchmark's reference hires `ref_share`, so
-    the per-side rates are reweighted to that share. The pool's prompts differ from the
-    benchmark's, so the level still differs: the change since SFT is added to SFT's benchmark
-    hire rate (`anchor`), and that is what the band is checked against.
+
+def projected_hire_rate(metrics: dict, baseline: dict, n_side: int,
+                        sft_benchmark: dict = SFT_BENCHMARK) -> dict:
+    """The monitor's hire rate carried onto the benchmark's scale, per reference side.
+
+    The monitor rows are held-out pool rows, harder than the benchmark's on the reject side
+    (SFT hires 22% of them against 9% on the benchmark) and easier on the hire side, so a
+    change in points does not transfer. A relative change does, to first order: each side's
+    hire rate since SFT, as a ratio (counts +0.5 against an empty side), multiplies SFT's
+    benchmark rate on that side, and the two are weighted by the benchmark's reference share.
+    Unchanged rates give SFT's 28.0%; r1-300's ratios would give its 19%.
     """
-    def weighted(m: dict) -> float:
-        return ref_share * m["hire_rate_ref_hire"] + (1 - ref_share) * m["hire_rate_ref_reject"]
-
-    now, then = weighted(metrics), weighted(baseline)
-    return {"hire_rate_weighted": now, "hire_rate_weighted_sft": then,
-            "hire_rate_projected": anchor + now - then}
+    projected = 0.0
+    out = {}
+    for side, weight in (("hire", sft_benchmark["reference_hire_share"]),
+                         ("reject", 1 - sft_benchmark["reference_hire_share"])):
+        key = f"hire_rate_ref_{side}"
+        ratio = (metrics[key] * n_side + 0.5) / (baseline[key] * n_side + 0.5)
+        rate = min(1.0, sft_benchmark[key] * ratio)
+        out[f"projected_{key}"] = rate
+        projected += weight * rate
+    out["hire_rate_projected"] = projected
+    return out
 
 
 def _decision_monitor_class():
@@ -430,7 +446,7 @@ def _decision_monitor_class():
         """
 
         def __init__(self, rows, tokenizer, output_dir, every: int, band: tuple[float, float],
-                     anchor: float, ref_share: float, template_kwargs: dict | None,
+                     template_kwargs: dict | None,
                      max_new_tokens: int = 96, lang: str = "en", vllm_generation=None):
             self.rows = rows.reset_index(drop=True)
             self.vllm_generation = vllm_generation
@@ -438,13 +454,14 @@ def _decision_monitor_class():
             self.output_dir = Path(output_dir)
             self.every = every
             self.band = band
-            self.anchor = anchor
-            self.ref_share = ref_share
             self.template_kwargs = template_kwargs
             self.max_new_tokens = max_new_tokens
             self.lang = lang
             self.baseline = None
             self.aborted = False
+
+        def _n_side(self) -> int:
+            return int(self.rows["reference_decision"].value_counts().min())
 
         def _baseline_path(self) -> Path:
             return self.output_dir / "decision_eval_sft.json"
@@ -494,8 +511,7 @@ def _decision_monitor_class():
                 from .decision_eval import record
 
                 outputs, metrics = self._evaluate(model)
-                metrics.update(projected_hire_rate(metrics, self.baseline, self.anchor,
-                                                   self.ref_share))
+                metrics.update(projected_hire_rate(metrics, self.baseline, self._n_side()))
                 low, high = self.band
                 stop = not low <= metrics["hire_rate_projected"] <= high
                 metrics["out_of_band"] = stop
@@ -506,8 +522,7 @@ def _decision_monitor_class():
                          metrics["invalid_rate"])
                 if self.vllm_generation is not None:
                     served_out, served = self._evaluate_served()
-                    served.update(projected_hire_rate(served, self.baseline, self.anchor,
-                                                      self.ref_share))
+                    served.update(projected_hire_rate(served, self.baseline, self._n_side()))
                     record(self.output_dir, state.global_step, self.rows, served_out, served,
                            prefix="decision_served")
                     log.info("served (merged) at step %d: agree %.3f, projected hire rate %.3f, "
@@ -581,8 +596,7 @@ def train(cfg: dict) -> C.TrainArtifacts:
         monitor = _decision_monitor_class()(
             eval_rows(rows, int(cfg.get("decision_eval_rows", 256)), seed), tokenizer,
             output_dir, int(cfg.get("decision_eval_steps", 25)), (float(band[0]), float(band[1])),
-            float(cfg.get("hire_rate_anchor", 0.28)),
-            float(cfg.get("benchmark_reference_hire_share", 0.33)), chat_kwargs,
+            chat_kwargs,
             int(cfg.get("decision_eval_max_new_tokens", 96)),
             vllm_generation=trainer.vllm_generation)
         trainer.add_callback(monitor)

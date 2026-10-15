@@ -20,6 +20,17 @@ Three choices, each against a failure seen in the DPO rounds:
   Hold-out. Every candidate in an existing validation split stays out of training, so those
   splits stay comparable across arms, and the decision monitor reads its rows from them. Both
   frames pass `assert_no_leakage` against the benchmark, as every data builder here does.
+
+  Signal balance (`signal_balanced_train`, the default since grpo-02). Equal counts are not
+  an equal pull. With group-normalised advantages, a prompt on which the student errs with
+  probability p pushes its decision by sqrt(p(1-p)) per completion in expectation. The
+  student's own samples at temperature 1 (8 per row, 32 for the hire top-up) give p for every
+  row. In grpo-01 (half of each side tipped) the reject side carried 3x the hire side's error
+  mass and 1.5x its pull, and the 20-step smoke (job 5065891) moved accordingly: sampled hires
+  on reject-reference prompts fell from 29% to ~5%, on hire-reference prompts not at all. So
+  each side's tipped share is now chosen to give both sides the same summed pull: the weaker
+  side takes all the tipped rows its half allows, the stronger one as many as match it. This
+  is r2em's error-mass balance (docs/ITERATIVE_DPO.md) in the quantity GRPO responds to.
 """
 
 from __future__ import annotations
@@ -37,7 +48,8 @@ log = get_logger(__name__)
 ROW_KEY = ["pair_id", "protected_attr", "condition"]
 #: Carried into the parquet next to `prompt`; the reward functions receive every one of them.
 COLUMNS = ["prompt", "reference_decision", "pair_id", "candidate_id", "job_id", "lang",
-           "protected_group", "protected_attr", "condition", "tipped"]
+           "protected_group", "protected_attr", "condition", "tipped", "sft_hire_rate",
+           "sft_samples", "pull"]
 SIDES = ("hire", "reject")
 
 
@@ -97,7 +109,7 @@ def balanced_train(rows: pd.DataFrame, n: int, tipped_share: float,
     for side in SIDES:
         pool = rows[rows["reference_decision"] == side]
         tipped, rest = pool[pool["tipped"]], pool[~pool["tipped"]]
-        want = int(round(tipped_share * half))
+        want = round(tipped_share * half)
         a = _draw(tipped, want, rng)
         b = _draw(rest, half - len(a), rng)
         if len(a) + len(b) < half:
@@ -114,6 +126,86 @@ def balanced_validation(rows: pd.DataFrame, n: int, seed: int = 42) -> pd.DataFr
     rng = np.random.default_rng(seed)
     parts = [_draw(rows[rows["reference_decision"] == side], n // 2, rng) for side in SIDES]
     return pd.concat(parts).sort_index().reset_index(drop=True)
+
+
+def sample_hire_counts(samples: pd.DataFrame, lang: str = "en") -> dict[str, tuple[int, int]]:
+    """prompt -> (hire decisions, samples) over the student's stored samples
+    (`raw/samples/chunk-*.parquet`: one row per prompt and sample)."""
+    from ..eval.parsing import HIRE, parse_output
+
+    hires = [parse_output(o, lang).decision == HIRE for o in samples["raw_output"]]
+    grouped = pd.DataFrame({"prompt": samples["prompt"], "hire": hires}).groupby("prompt")["hire"]
+    return {p: (int(h), int(n)) for p, h, n in zip(grouped.sum().index, grouped.sum(),
+                                                    grouped.count())}
+
+
+def attach_sft_rates(rows: pd.DataFrame, *counts: dict) -> pd.DataFrame:
+    """The student's sampled hire rate per row, from the first count table that has its prompt
+    (pass the k=32 top-up before the k=8 pool), and the row's expected pull
+    sqrt(p(1-p)), p the rate of the decision that disagrees with the reference."""
+    hire, n = [], []
+    for prompt in rows["prompt"]:
+        found = next((c[prompt] for c in counts if prompt in c), None)
+        if found is None:
+            raise KeyError("a pool row has no stored student samples: the samples are from "
+                           "another run than rows.parquet")
+        hire.append(found[0] / found[1])
+        n.append(found[1])
+    rate = np.asarray(hire)
+    wrong = np.where(rows["reference_decision"].to_numpy() == "hire", 1 - rate, rate)
+    return rows.assign(sft_hire_rate=rate, sft_samples=n, pull=np.sqrt(wrong * (1 - wrong)))
+
+
+def signal_balanced_train(rows: pd.DataFrame, n: int, seed: int = 42) -> tuple[pd.DataFrame, dict]:
+    """`n` prompts, exactly half per reference verdict, the two halves carrying the same summed
+    `pull` as nearly as the rows allow.
+
+    Within a side, tipped and untipped rows are each shuffled once (seeded); the half is the
+    first k tipped and the first half-k untipped. Every side's largest pull (k as large as the
+    half and its tipped rows allow) is computed; the smaller of those is the target, and each
+    side takes the k whose pull comes closest to it.
+    """
+    if n % 2:
+        raise ValueError(f"n={n} cannot split exactly in half")
+    rng = np.random.default_rng(seed)
+    half, options = n // 2, {}
+    for side in SIDES:
+        pool = rows[rows["reference_decision"] == side]
+        tipped = pool[pool["tipped"]].iloc[rng.permutation(int(pool["tipped"].sum()))]
+        rest = pool[~pool["tipped"]].iloc[rng.permutation(int((~pool["tipped"]).sum()))]
+        low, high = max(0, half - len(rest)), min(half, len(tipped))
+        if low > high:
+            raise ValueError(f"only {len(pool)} {side}-reference rows for a half of {half}")
+        a = np.concatenate([[0.0], np.cumsum(tipped["pull"].to_numpy())])
+        b = np.concatenate([[0.0], np.cumsum(rest["pull"].to_numpy())])
+        ks = np.arange(low, high + 1)
+        options[side] = (tipped, rest, ks, a[ks] + b[half - ks])
+    target = min(pulls.max() for *_, pulls in options.values())
+    parts, plan = [], {"target_pull": round(float(target), 2)}
+    for side, (tipped, rest, ks, pulls) in options.items():
+        i = int(np.argmin(np.abs(pulls - target)))
+        k = int(ks[i])
+        chosen = pd.concat([tipped.iloc[:k], rest.iloc[:half - k]])
+        parts.append(chosen)
+        plan[side] = {"available": len(tipped) + len(rest), "available_tipped": len(tipped),
+                      "drawn_tipped": k, "drawn_untipped": half - k,
+                      "pull": round(float(pulls[i]), 2),
+                      "error_mass": round(float(np.where(side == "hire",
+                                                         1 - chosen["sft_hire_rate"],
+                                                         chosen["sft_hire_rate"]).sum()), 2)}
+    out = pd.concat(parts).sample(frac=1.0, random_state=seed).reset_index(drop=True)
+    return out, plan
+
+
+def side_pull(frame: pd.DataFrame) -> dict:
+    """Summed pull and error mass per reference verdict, for the report."""
+    out = {}
+    for side, g in frame.groupby("reference_decision"):
+        wrong = 1 - g["sft_hire_rate"] if side == "hire" else g["sft_hire_rate"]
+        out[str(side)] = {"pull": round(float(g["pull"].sum()), 2),
+                          "error_mass": round(float(wrong.sum()), 2),
+                          "informative_share": round(float(((wrong > 0) & (wrong < 1)).mean()), 4)}
+    return out
 
 
 def describe(frame: pd.DataFrame) -> dict:
