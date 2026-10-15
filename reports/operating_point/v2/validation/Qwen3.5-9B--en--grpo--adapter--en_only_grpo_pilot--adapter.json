@@ -1,0 +1,45 @@
+{
+  "standard": "op-margin-v2",
+  "run": "Qwen3.5-9B--en--grpo--adapter--en_only_grpo_pilot",
+  "which": "adapter",
+  "config": "configs/audit/qwen3.5-9b_en_grpo_pilot_gh200.yaml",
+  "n": 256,
+  "seed": 42,
+  "thresholds": {
+    "agreement": 0.98,
+    "rank_correlation": 0.98
+  },
+  "decision_agreement_hf": 1.0,
+  "rank_correlation_hf": 0.9983384798731747,
+  "abs_diff_hf": {
+    "median": 0.12499960795685183,
+    "p95": 0.3749999236315489,
+    "max": 1.124999673163984
+  },
+  "greedy_decided": 256,
+  "decision_agreement_greedy": 1.0,
+  "passed": true,
+  "model": {
+    "served": "/ritom/scratch/cscs/zhang/xw/outputs/merged/qwen3.5-9b_en_only_grpo_pilot",
+    "adapters": [
+      {
+        "path": "/ritom/scratch/cscs/zhang/xw/hf-cache/hub/models--Stereotypes-in-LLMs--qwen3.5-9b-hiring-debias-sft-en/snapshots/ebe927cf955b33101ca27c6c58525cd03817ee71",
+        "sha256": "21be7db738b5a97f31a0c068023caeb14641aee2b2f50f5cdae6bbf6097de735"
+      },
+      {
+        "path": "/ritom/scratch/cscs/zhang/xw/outputs/grpo/qwen3.5-9b_en_only_grpo_pilot",
+        "sha256": "029f65b93e760c427d75883c066e9e1cbcf651f55eb4d60b02bb12c5d60ce8f6"
+      }
+    ]
+  },
+  "software": {
+    "vllm": "0.31.0",
+    "torch": "2.13.0",
+    "transformers": "5.17.0"
+  },
+  "code": {
+    "commit": "24ebfe67b6edaee6031ab64d9c0be595f05016c9",
+    "uncommitted": []
+  },
+  "written": "2026-10-15T19:31:58+00:00"
+}
