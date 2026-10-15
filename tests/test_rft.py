@@ -118,3 +118,13 @@ def test_a_second_sft_stage_merges_with_its_sft_parent(monkeypatch, tmp_path):
     # a first-stage SFT run records no parent and stays a chain of one
     C.write_run_manifest(cfg, sft, {"mitigation_family": "sft", "sft_checkpoint": None})
     assert MG.adapter_chain(sft) == [sft]
+
+
+def test_sft_leaves_an_unset_loss_type_to_trl():
+    """TRL 1.15 rejects loss_type=None; job 5066765 died on it before its first step."""
+    from hiring_bias_mitigation.mitigation.sft import sft_config_candidates
+
+    assert "loss_type" not in sft_config_candidates({"max_seq_len": 2048})
+    assert sft_config_candidates({}, weight=3.0)["loss_type"] == "nll"
+    assert sft_config_candidates({"loss_type": "dft"})["loss_type"] == "dft"
+    assert sft_config_candidates({})["completion_only_loss"] is True

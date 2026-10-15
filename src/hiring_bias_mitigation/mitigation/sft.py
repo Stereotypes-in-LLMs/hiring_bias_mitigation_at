@@ -132,6 +132,26 @@ def decision_token_count(tokenizer, sample: str = '{"decision": "reject"') -> in
     return len(tokenizer(sample, add_special_tokens=False)["input_ids"])
 
 
+def sft_config_candidates(cfg: dict, weight: float = 1.0) -> dict:
+    """SFTConfig fields this trainer sets, before version filtering. A field the config leaves
+    unset is left out rather than passed as None: TRL 1.15's SFTTrainer rejects
+    `loss_type=None` at construction (job 5066765), so TRL's own default has to apply."""
+    candidates = {
+        "max_length": cfg.get("max_seq_len", 2048),
+        "packing": False,
+        # Train on the response only. The prompt is a job ad and a CV the model is
+        # shown, not text it should learn to produce.
+        "completion_only_loss": True,
+        # TRL's default `chunked_nll` computes entropy from fields its own patched
+        # forward attaches (`outputs.num_valid_tokens`). A custom loss bypasses that
+        # forward, so the entropy branch then reads an attribute that is not there and
+        # the run dies on the first training step. `nll` is the same maths without the
+        # chunked lm_head projection, and it does not touch those fields.
+        "loss_type": "nll" if weight != 1.0 else cfg.get("loss_type"),
+    }
+    return {k: v for k, v in candidates.items() if v is not None}
+
+
 def train(cfg: dict) -> C.TrainArtifacts:
     from trl import SFTConfig, SFTTrainer
 
@@ -160,19 +180,7 @@ def train(cfg: dict) -> C.TrainArtifacts:
         **base_args.to_dict(),
         **C.supported_kwargs(
             SFTConfig,
-            {
-                "max_length": cfg.get("max_seq_len", 2048),
-                "packing": False,
-                # Train on the response only. The prompt is a job ad and a CV the model is
-                # shown, not text it should learn to produce.
-                "completion_only_loss": True,
-                # TRL's default `chunked_nll` computes entropy from fields its own patched
-                # forward attaches (`outputs.num_valid_tokens`). A custom loss bypasses that
-                # forward, so the entropy branch then reads an attribute that is not there and
-                # the run dies on the first training step. `nll` is the same maths without the
-                # chunked lm_head projection, and it does not touch those fields.
-                "loss_type": "nll" if weight != 1.0 else cfg.get("loss_type"),
-            },
+            sft_config_candidates(cfg, weight),
             "SFTConfig",
         ),
     )
