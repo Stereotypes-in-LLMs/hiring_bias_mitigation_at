@@ -12,7 +12,7 @@ Where each mitigation family intervenes:
                    labelled field is also dropped, since a scrubber that leaves the audit's
                    own injected field in place is not scrubbing anything
     embedding   -> a forward hook on the backend's model
-    sft / dpo   -> adapter merged into the weights (vLLM) or `lora_path` (transformers)
+    sft / dpo / grpo -> adapter merged into the weights (vLLM) or `lora_path` (transformers)
 
 Raw generations are written to parquet before any scoring, so re-scoring a run (a new
 similarity model, a corrected parser, an added measure) never costs a second inference pass.
@@ -36,6 +36,9 @@ from . import backends as BK
 from .parsing import parse_frame
 
 log = get_logger(__name__)
+
+#: Families whose `lora_path` is a trained adapter, served merged (see run_audit).
+ADAPTER_FAMILIES = ("sft", "dpo", "grpo")
 
 
 def build_run_name(cfg: dict) -> str:
@@ -232,7 +235,7 @@ def run_audit(cfg: dict) -> tuple[pd.DataFrame, dict]:
         )
 
     backend_cfg = dict(cfg)
-    if family in ("sft", "dpo") and mitigation.get("lora_path"):
+    if family in ADAPTER_FAMILIES and mitigation.get("lora_path"):
         adapter = _require_adapter(mitigation["lora_path"])
         from hiring_bias_mitigation.mitigation import merge as MG
 

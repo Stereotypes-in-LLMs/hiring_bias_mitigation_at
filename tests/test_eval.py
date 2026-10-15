@@ -571,6 +571,44 @@ def test_transformers_audit_of_a_dpo_adapter_on_sft_serves_merged_weights(monkey
     assert not seen.get("lora_path")
 
 
+def test_vllm_audit_of_a_grpo_adapter_on_sft_serves_merged_weights(monkeypatch, tmp_path):
+    """A GRPO adapter is fitted on SFT like a DPO one, and is served the same way."""
+    import json
+    from pathlib import Path
+
+    import hiring_bias_mitigation.mitigation.merge as MG
+    from hiring_bias_mitigation.eval import backends as BK
+    from hiring_bias_mitigation.eval import runner as R
+
+    sft = tmp_path / "sft_adapter"
+    grpo = tmp_path / "grpo_adapter"
+    for adapter in (sft, grpo):
+        adapter.mkdir()
+        (adapter / "adapter_config.json").write_text(
+            json.dumps({"base_model_name_or_path": "Qwen/Qwen3.5-9B"}))
+    (grpo / "run_config.json").write_text(json.dumps({"sft_checkpoint": str(sft)}))
+    monkeypatch.setattr(MG, "merge", lambda a: tmp_path / "merged" / Path(a).name)
+    seen = {}
+
+    class Stop(Exception):
+        pass
+
+    def fake_build(cfg, activation_editor=None):
+        seen.update(cfg)
+        raise Stop
+
+    monkeypatch.setattr(BK, "build_backend", fake_build)
+    cfg = {"model": "Qwen/Qwen3.5-9B", "lang": "en", "backend": "vllm",
+           "protected_groups": ["gender"],
+           "mitigation": {"family": "grpo", "lora_path": str(grpo)}}
+    with pytest.raises(Stop):
+        R.run_audit(cfg)
+    assert seen["model"] == str(tmp_path / "merged" / "grpo_adapter")
+    assert not seen.get("lora_path")
+    assert R.build_run_name(cfg).startswith("Qwen3.5-9B--en--grpo--adapter")
+    assert MG.adapter_chain(grpo) == [sft, grpo]
+
+
 def test_report_excludes_adapters_served_through_vllm_lora():
     from hiring_bias_mitigation.eval import report as RP
 
