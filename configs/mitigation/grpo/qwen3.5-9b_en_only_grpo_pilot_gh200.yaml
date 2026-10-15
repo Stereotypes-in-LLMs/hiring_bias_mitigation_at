@@ -32,6 +32,9 @@ vllm_gpu_memory_utilization: 0.30   # of 95.6 GiB; the policy and its optimizer 
 vllm_max_model_length: 4096         # longest prompt ~2.5k tokens, plus 96
 vllm_engine_kwargs:
   gdn_prefill_backend: triton       # no CUDA toolkit on Daint for FlashInfer's JIT
+  # Text prompts only: no vision-encoder profiling at start-up, where job 5065963 died
+  # (CUDA illegal memory access in profile_encoder_cache on rank 0, before any training).
+  language_model_only: true
 log_completions: false
 # Optimisation: 8 completions per GPU per micro-step x 4 GPUs x 4 accumulation = 128
 # completions = 16 prompts per step.
