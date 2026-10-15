@@ -141,6 +141,30 @@ so a mitigation that moves the hire rate a long way should also be compared at e
 `reports/set_stability.csv`, `reports/set_stability_by_group.csv`; code:
 `src/hiring_bias_mitigation/analysis/stability.py`.
 
+### Set stability at matched hire rate (the operating-point control)
+
+**What it is.** One arm's share of unstable sets minus a reference arm's, after the reference
+arm's decision threshold is moved until it hires exactly as many prompts. Negative is a gain
+that a stricter or more lenient threshold alone does not explain.
+
+**How it is computed.** By one procedure, `op-margin-v2`, specified in the docstring of
+`scripts/operating_point_control.py`:
+- the exact log-probabilities of the first token of `hire` and `reject` after the forced
+  `{"decision": "` prefix, read by vLLM (`logprob_token_ids`), never a substitute;
+- margins snapped to a 1/1024 grid, with the reference arm's tied bin at the cut weighted
+  whole sets at a time, so ties never split a set;
+- a 95% interval from 1,000 bootstrap draws of candidates.
+
+Every score file records the prompts, model weights (adapter sha256), software and commit it
+came from, and every report carries both inputs' records.
+
+**How to read it.** A report with `"conforms": true` needs no check of the method; otherwise
+`issues` says why. `validate` checks the scorer against HuggingFace on the same weights, once
+per vLLM version. Version-1 reports (`reports/operating_point/*.json`, top-20 logprobs with a
+word outside them scored at the 20th logprob − 1) keep every margin's sign but not its size:
+nothing that reads a DPO model's margin away from 0 — a sweep, a cut moved on a DPO arm, an
+AUC, a share of margins above some size — carries over.
+
 ### Feedback similarity (FS)
 
 **What it is.** Cosine similarity between the sentence embedding of the model's written

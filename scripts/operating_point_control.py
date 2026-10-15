@@ -7,19 +7,12 @@ So a stability gain could in principle come from the shift alone. This control s
 two by reading each model's decision margin directly and sweeping the decision threshold.
 
 For every audited prompt, the model is given the audit's exact chat-wrapped prompt plus the
-forced prefix `{"decision": "` and the log-probability gap between the first token of the two
-decision words is read in a single vLLM step (no generation). With decisions `margin > t`,
+forced prefix `{"decision": "`, and the log-probabilities of the first token of the two
+decision words are read in a single vLLM step (no generation). With decisions `margin > t`,
 each threshold `t` gives a hire rate and a share of unstable counterfactual sets; the two
 models are then compared **at equal hire rate**, which the audit itself cannot do.
 
-The margins come from top-20 logprobs, so they are quantised (a 1/8 grid near 0, thousands of
-prompts tied on one value) and carry float noise. The matching therefore snaps them to a fixed
-grid and hires the tied bin at the cut with a weight, whole sets at a time (`matched_flags`):
-the matched hire rate is exact, and prompts tied inside one set are never split. A decision
-word outside the top 20 gets a floor value whose ordering means nothing; a comparison whose cut
-falls among such prompts is refused (`floor_check`).
-
-    # one pass per model, then the comparison (the pass is ~10 min on the GPU)
+    # one pass per model, then the comparison (a pass is ~12 min on one GH200)
     python scripts/operating_point_control.py margins --config configs/audit/qwen3.5-9b_en_sft_en_only.yaml --which base
     python scripts/operating_point_control.py margins --config configs/audit/qwen3.5-9b_en_sft_en_only.yaml --which adapter
     python scripts/operating_point_control.py compare --config configs/audit/qwen3.5-9b_en_sft_en_only.yaml
@@ -28,13 +21,57 @@ Two fine-tuned arms against each other (e.g. DPO continued from SFT), each after
 `margins --which adapter` pass: the reference arm is moved to the compared arm's hire rate.
 
     python scripts/operating_point_control.py compare-arms --config <dpo audit cfg> --against <sft audit cfg>
+
+One standard (`STANDARD`)
+-------------------------
+Every file this control writes follows the one procedure fixed here, so a new checkpoint needs
+no check of the method of its own: `margins`, then `compare-arms`, and the report says whether
+it conforms.
+
+Scores. The exact log-probabilities of the two decision tokens, which vLLM gathers from the
+full softmax over the raw logits whatever their rank (`logprob_token_ids`); margin =
+logprob(hire) - logprob(reject). A missing value stops the pass. Version 1 read the two words
+from the top-20 logprobs and scored a word outside them at the 20th logprob - 1: that kept
+every margin's sign but not its size, and it touched 92-99% of a DPO checkpoint's prompts.
+
+Files. `outputs/operating_point/v2/<run>--<which>.parquet` (the key columns, `logprob_hire`,
+`logprob_reject`, `margin`) beside `<same>.meta.json`: the standard, a fingerprint of the
+scored prompts, the decision tokens and chat-template settings, the model (served weights,
+base revision, adapter chain with sha256), engine settings, software versions and the code
+commit. A file is rescored only when its prompts or adapter weights change. Version-1 files
+(`outputs/operating_point/<run>--<which>.parquet`) are left as they are and read by no
+comparison; their reports stay under `reports/operating_point/`.
+
+Matching. Margins are snapped to a 1/1024 grid (differences of bf16 logits, plus float noise).
+The reference arm hires exactly the compared arm's count: the bin tied at the cut is hired
+with a weight, whole sets at a time (`matched_flags`), so prompts tied inside one set are
+never split. The interval resamples candidates (1,000 draws, seed 42), since sets sharing a
+candidate are not independent.
+
+Reports. `reports/operating_point/v2/<run>--vs--<ref>.json` (and `<run>.json`,
+`<run>--curve.csv` for `compare`) carry both inputs' provenance and `conforms`, with
+`issues` when it is false: a file scored or a comparison run with uncommitted code changes,
+inputs scored with different vLLM versions, or a vLLM version no passing `validate` record
+covers. Inputs from another standard, or scored on different prompts, are refused outright.
+
+`validate` checks the scorer itself, once per vLLM version: on a fixed sample it compares the
+vLLM margins with the same quantity computed by HuggingFace on the same weights
+(`eval/margins.py`), and their signs with the audit's greedy decisions, and writes the record
+under `reports/operating_point/v2/validation/` that later reports look up.
+
+    python scripts/operating_point_control.py validate --config <audit cfg> --which adapter
 """
 
 from __future__ import annotations
 
 import argparse
+import hashlib
 import json
+import subprocess
 import sys
+import time
+from datetime import datetime, timezone
+from importlib import metadata
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
@@ -53,6 +90,10 @@ from hiring_bias_mitigation.utils.logging import get_logger  # noqa: E402
 
 log = get_logger("operating_point_control")
 
+#: The procedure every score file and report here follows (module docstring).
+STANDARD = "op-margin-v2"
+#: Where this standard's score files and reports live, beside the version-1 ones.
+VERSION_DIR = "v2"
 PREFIX = '{"decision": "'
 WORDS = {"en": ("hire", "reject"), "uk": ("найняти", "відхилити")}
 KEY = ["pair_id", "protected_group", "protected_attr", "condition"]
@@ -61,16 +102,39 @@ SET = ["pair_id", "protected_group", "condition"]
 #: logprobs: every one sits on a 1/16 grid, plus noise of up to ~1e-6 that a quantile picks up
 #: (1.374999985) and that splits prompts with the same grid value.
 GRID = 1 / 1024
-#: A decision word outside the top 20 is scored this far below the 20th logprob.
-FLOOR_GAP = 1.0
-#: Per-prompt flags written by `margins`: which decision word fell outside the top 20.
-FLOORED = ["hire_missing", "reject_missing"]
-#: Refuse a matched comparison when floor-substituted prompts could move it by more than this.
-MAX_FLOOR_PP = 0.1
+N_BOOT = 1000
+BOOT_SEED = 42
+METHOD = {
+    "grid": GRID,
+    "run_threshold": 0.0,
+    "matching": "the reference arm hires exactly the compared arm's count; the bin tied at the "
+                "cut is weighted, whole counterfactual sets at a time",
+    "bootstrap": {"draws": N_BOOT, "seed": BOOT_SEED, "unit": "candidate"},
+}
+#: `validate` passes when vLLM and HuggingFace agree on at least this share of decisions and
+#: rank the prompts alike, and vLLM's decisions match the audit's greedy ones as often.
+MIN_AGREEMENT = 0.98
+MIN_RANK_CORRELATION = 0.98
+#: Below this share of prompts continuing with one of the two decision tokens, the model does
+#: not answer with these words and its margins mean nothing.
+MIN_DECISION_TOKEN_SHARE = 0.5
 
 
 def out_dir() -> Path:
     d = Path(resolve_output_path("outputs/operating_point"))
+    d.mkdir(parents=True, exist_ok=True)
+    return d
+
+
+def score_paths(run: str, which: str) -> tuple[Path, Path]:
+    """This standard's score file for one model, and its record."""
+    d = out_dir() / VERSION_DIR
+    d.mkdir(exist_ok=True)
+    return d / f"{run}--{which}.parquet", d / f"{run}--{which}.meta.json"
+
+
+def reports_dir(*parts: str) -> Path:
+    d = REPO_ROOT.joinpath("reports", "operating_point", VERSION_DIR, *parts)
     d.mkdir(parents=True, exist_ok=True)
     return d
 
@@ -116,66 +180,197 @@ def decision_token_ids(tokenizer, words: tuple[str, str]) -> tuple[int, int]:
     return ids[0], ids[1]
 
 
-def cmd_margins(cfg: dict, which: str, chunk: int = 2000) -> None:
-    from transformers import AutoTokenizer
-    from vllm import LLM, SamplingParams
+# ---- provenance ---------------------------------------------------------------------------
 
-    done = out_dir() / f"{R.build_run_name(cfg)}--{which}.parquet"
-    if done.exists() and set(FLOORED) <= set(pd.read_parquet(done).columns):
-        log.info("%s already written; skipping this pass", done.name)
-        return
-    if done.exists():
-        log.info("%s predates the per-prompt floor flags; recomputing it", done.name)
+def prompt_fingerprint(frame: pd.DataFrame, prompts: list[str]) -> dict:
+    """The scored prompts' identity, in order: two files are comparable only if it is equal."""
+    h = hashlib.sha1()
+    for key, text in zip(frame[KEY].itertuples(index=False, name=None), prompts):
+        h.update("\x1f".join(map(str, key)).encode())
+        h.update(b"\x1e")
+        h.update(text.encode())
+        h.update(b"\x1d")
+    return {"n": len(prompts), "sha1": h.hexdigest()}
+
+
+def file_sha256(path: Path) -> str:
+    h = hashlib.sha256()
+    with open(path, "rb") as fh:
+        for block in iter(lambda: fh.read(1 << 24), b""):
+            h.update(block)
+    return h.hexdigest()
+
+
+def adapter_record(adapter: Path) -> dict:
+    weights = sorted(adapter.glob("adapter_model*"))
+    return {"path": str(adapter), "sha256": file_sha256(weights[0]) if weights else None}
+
+
+def hub_revision(model: str) -> str | None:
+    """The cached snapshot of a Hub model id; None for a local path or a model not cached."""
+    from huggingface_hub import snapshot_download
+    from huggingface_hub.errors import HFValidationError, LocalEntryNotFoundError
+
+    if Path(model).exists():
+        return None
+    try:
+        path = snapshot_download(model, local_files_only=True, allow_patterns=["config.json"])
+    except (HFValidationError, LocalEntryNotFoundError, OSError):
+        return None
+    return Path(path).name
+
+
+def software() -> dict:
+    versions = {}
+    for package in ("vllm", "torch", "transformers"):
+        try:
+            versions[package] = metadata.version(package)
+        except metadata.PackageNotFoundError:
+            versions[package] = None
+    return versions
+
+
+def code_state() -> dict:
+    """The commit this code runs at, and its uncommitted changes to tracked code or configs."""
+    def git(*args: str) -> str:
+        return subprocess.run(["git", "-C", str(REPO_ROOT), *args], capture_output=True,
+                              text=True, check=True).stdout
+
+    try:
+        commit = git("rev-parse", "HEAD").strip()
+        status = git("status", "--porcelain", "--untracked-files=no", "--",
+                     "scripts", "src", "configs")
+    except (OSError, subprocess.CalledProcessError):
+        return {"commit": None, "uncommitted": None}
+    return {"commit": commit,
+            "uncommitted": [line[3:] for line in status.splitlines() if line.strip()]}
+
+
+def _now() -> str:
+    return datetime.now(timezone.utc).isoformat(timespec="seconds")
+
+
+# ---- scoring ------------------------------------------------------------------------------
+
+def scoring_plan(cfg: dict, which: str) -> dict:
+    """What a pass scores and with which adapter weights, before any model is loaded."""
     frame = R.build_frame(cfg)
     prompts = R._build_prompts(frame, "baseline")
-    if which == "base":
+    chain: list[Path] = []
+    if which == "adapter":
+        from hiring_bias_mitigation.mitigation.merge import adapter_chain
+
+        chain = adapter_chain(Path(R._require_adapter(cfg["mitigation"]["lora_path"])))
+    return {"run": R.build_run_name(cfg), "which": which, "frame": frame, "prompts": prompts,
+            "fingerprint": prompt_fingerprint(frame, prompts),
+            "adapters": [adapter_record(a) for a in chain]}
+
+
+def load_scorer(cfg: dict, plan: dict) -> dict:
+    """The served weights, the decision tokens and the exact texts the pass feeds the model."""
+    from transformers import AutoTokenizer
+
+    if plan["which"] == "base":
         model_path = cfg["model"]
     else:
         from hiring_bias_mitigation.mitigation.merge import merge
 
         model_path = str(merge(R._require_adapter(cfg["mitigation"]["lora_path"])))
     tokenizer = AutoTokenizer.from_pretrained(model_path, trust_remote_code=True)
-    run_name = R.build_run_name(cfg)
     # For the base pass the answer style is the baseline run's, not the adapter's.
-    source = run_name if which == "adapter" else f"{cfg['model'].split('/')[-1]}--{cfg['lang']}--baseline"
-    hire_id, reject_id = decision_token_ids(tokenizer, decision_words(source, cfg["lang"]))
+    source = (plan["run"] if plan["which"] == "adapter"
+              else f"{cfg['model'].split('/')[-1]}--{cfg['lang']}--baseline")
+    words = decision_words(source, cfg["lang"])
     kwargs = cfg.get("chat_template_kwargs")
-    texts = [BK._chat_wrap(tokenizer, p, kwargs) + PREFIX for p in prompts]
+    return {"model_path": model_path, "tokenizer": tokenizer, "words": words,
+            "token_ids": decision_token_ids(tokenizer, words),
+            "texts": [BK._chat_wrap(tokenizer, p, kwargs) + PREFIX for p in plan["prompts"]]}
 
-    # This pass needs one token, not a 512-token generation, so it asks for far less KV cache
-    # than an audit. Holding every RequestOutput for 31k prompts is what made the 12B pass run
-    # the machine out of memory, so the prompts go through in chunks and only the margin is
-    # kept -- the outputs are dropped as soon as each chunk is read.
-    llm = LLM(**llm_kwargs(cfg, model_path))
-    params = SamplingParams(max_tokens=1, temperature=0.0, logprobs=20)
 
-    margins, hire_missing, reject_missing = [], [], []
+def score_logprobs(llm, texts: list[str], token_ids: tuple[int, int],
+                   chunk: int = 2000) -> tuple[np.ndarray, np.ndarray, float]:
+    """The two decision tokens' log-probabilities after the prefix, one pair per text, and the
+    share of texts whose greedy next token is one of them.
+
+    `logprob_token_ids` makes vLLM gather exactly these ids from the full log-softmax of the
+    raw logits, so nothing is estimated: a missing value is an error, never a substitute. The
+    texts go through in chunks, keeping only the numbers: holding every RequestOutput for 31k
+    prompts is what ran the 12B pass out of memory.
+    """
+    from vllm import SamplingParams
+
+    params = SamplingParams(max_tokens=1, temperature=0.0, logprob_token_ids=list(token_ids))
+    hire_id, reject_id = token_ids
+    hire, reject, decided = [], [], 0
     for start in range(0, len(texts), chunk):
-        for o in llm.generate(texts[start:start + chunk], params):
-            lp = o.outputs[0].logprobs[0]
-            floor = min(v.logprob for v in lp.values()) - FLOOR_GAP  # a word outside the top 20
-            h = lp[hire_id].logprob if hire_id in lp else floor
-            r = lp[reject_id].logprob if reject_id in lp else floor
-            hire_missing.append(hire_id not in lp)
-            reject_missing.append(reject_id not in lp)
-            margins.append(h - r)
-        log.info("  %d / %d prompts", len(margins), len(texts))
-    # The flags go with the margins: a floor value only bounds the true margin, so a comparison
-    # has to know which prompts carry one (see floor_uncertain).
-    result = frame[KEY].assign(margin=margins, hire_missing=hire_missing,
-                               reject_missing=reject_missing)
-    missing = int(result[FLOORED].to_numpy().sum())
-    path = out_dir() / f"{run_name}--{which}.parquet"
-    result.to_parquet(path, index=False)
-    log.info("wrote %s (%d prompts; %d decision words outside the top 20)", path, len(result),
-             missing)
-    if missing > 0.5 * 2 * len(result):
-        raise SystemExit(
-            f"{missing} of {2 * len(result)} decision-word lookups missed the top 20: the model "
-            "does not answer with these words, so the margin is meaningless. Check "
-            f"{path.name} against the run's raw_decision values."
-        )
+        for offset, o in enumerate(llm.generate(texts[start:start + chunk], params)):
+            out = o.outputs[0]
+            lp = out.logprobs[0]
+            missing = [t for t in token_ids if t not in lp]
+            if missing:
+                raise RuntimeError(
+                    f"vLLM returned no logprob for decision token(s) {missing} on prompt "
+                    f"{start + offset}: this vLLM does not honour logprob_token_ids")
+            hire.append(lp[hire_id].logprob)
+            reject.append(lp[reject_id].logprob)
+            decided += out.token_ids[0] in token_ids
+        log.info("  %d / %d prompts", len(hire), len(texts))
+    return np.asarray(hire, dtype=float), np.asarray(reject, dtype=float), decided / len(texts)
 
+
+def is_current(path: Path, meta_path: Path, plan: dict) -> bool:
+    """A file of this standard for the same prompts and the same adapter weights."""
+    if not (path.exists() and meta_path.exists()):
+        return False
+    meta = json.loads(meta_path.read_text())
+    return (meta.get("standard") == STANDARD and meta.get("prompts") == plan["fingerprint"]
+            and [a["sha256"] for a in meta["model"]["adapters"]]
+            == [a["sha256"] for a in plan["adapters"]])
+
+
+def cmd_margins(cfg: dict, which: str, chunk: int = 2000) -> None:
+    from vllm import LLM
+
+    plan = scoring_plan(cfg, which)
+    path, meta_path = score_paths(plan["run"], which)
+    if is_current(path, meta_path, plan):
+        log.info("%s is current under %s; skipping this pass", path.name, STANDARD)
+        return
+    scorer = load_scorer(cfg, plan)
+    engine = llm_kwargs(cfg, scorer["model_path"])
+    started = time.monotonic()
+    llm = LLM(**engine)
+    hire, reject, decided = score_logprobs(llm, scorer["texts"], scorer["token_ids"], chunk)
+    if decided < MIN_DECISION_TOKEN_SHARE:
+        raise SystemExit(
+            f"only {decided:.1%} of prompts continue with {scorer['words']}: the model does not "
+            "answer with these words, so the margin is meaningless. Check the run's "
+            "raw_decision values.")
+    plan["frame"][KEY].assign(logprob_hire=hire, logprob_reject=reject,
+                              margin=hire - reject).to_parquet(path, index=False)
+    meta = {
+        "standard": STANDARD,
+        "scoring": "log-probabilities of the first token of each decision word after the forced "
+                   "prefix, gathered by vLLM from the full softmax over the raw logits "
+                   "(logprob_token_ids); margin = logprob_hire - logprob_reject",
+        "run": plan["run"], "which": which, "config": cfg.get("_config_path"),
+        "prompts": plan["fingerprint"],
+        "decision": {"prefix": PREFIX, "words": list(scorer["words"]),
+                     "token_ids": list(scorer["token_ids"]),
+                     "chat_template_kwargs": cfg.get("chat_template_kwargs"),
+                     "sampled_decision_token_share": decided},
+        "model": {"served": scorer["model_path"], "base": cfg["model"],
+                  "base_revision": hub_revision(cfg["model"]), "adapters": plan["adapters"]},
+        "engine": {k: v for k, v in engine.items() if k != "model"},
+        "software": software(), "code": code_state(),
+        "wall_seconds": round(time.monotonic() - started, 1), "written": _now(),
+    }
+    meta_path.write_text(json.dumps(meta, indent=2))
+    log.info("wrote %s (%d prompts; %.1f%% continue with a decision token)", path,
+             len(hire), 100 * decided)
+
+
+# ---- matching -----------------------------------------------------------------------------
 
 def snap(margin) -> np.ndarray:
     """Margins on the GRID, so that prompts with the same grid value compare equal."""
@@ -233,72 +428,25 @@ def matched_flags(frame: pd.DataFrame, column: str, k: int) -> tuple[pd.Series, 
     }
 
 
-def floor_uncertain(frame: pd.DataFrame, arm: str, level: float) -> np.ndarray | None:
-    """Prompts of `arm` whose decision at a cut at `level` their margin cannot settle; None for
-    a margin file written before the per-prompt flags.
-
-    A decision word outside the top 20 is scored FLOOR_GAP below the 20th logprob, but its true
-    logprob is only known to lie below the 20th. With hire missing the true margin is at most
-    margin + FLOOR_GAP, with reject missing at least margin - FLOOR_GAP, with both anything: a
-    cut beyond that bound decides the prompt, a cut inside it does not.
-    """
-    columns = [f"{c}_{arm}" for c in FLOORED]
-    if not set(columns) <= set(frame.columns):
-        return None
-    m = snap(frame[f"margin_{arm}"])
-    hire_missing, reject_missing = (frame[c].to_numpy(dtype=bool) for c in columns)
-    return ((hire_missing & reject_missing)
-            | (hire_missing & (m + FLOOR_GAP >= level))
-            | (reject_missing & (m - FLOOR_GAP <= level)))
-
-
-def floor_check(frame: pd.DataFrame, cuts: dict[str, float],
-                max_floor_pp: float = MAX_FLOOR_PP) -> dict:
-    """How far floor-substituted prompts could move a comparison made at these cuts (arm -> level).
-
-    A prompt the floor leaves undecided can flip only its own set, so the sets holding one bound
-    the error in the unstable share. Above `max_floor_pp` the comparison is refused; below it,
-    any such prompt is a warning. A margin file without the flags leaves it unverified.
-    """
-    uncertain = {arm: floor_uncertain(frame, arm, level) for arm, level in cuts.items()}
-    known = [u for u in uncertain.values() if u is not None]
-    hit = np.logical_or.reduce(known) if known else np.zeros(len(frame), dtype=bool)
-    in_sets = frame["condition"].to_numpy() != "attr_free"
-    sets = len(frame.loc[hit & in_sets, SET].drop_duplicates())
-    bound = 100 * sets / len(frame.loc[in_sets, SET].drop_duplicates())
-    if bound > max_floor_pp:
-        status = "refused"
-    elif len(known) < len(uncertain):
-        status, sets, bound = "unverified", None, None   # a partial count would read as a pass
-    else:
-        status = "warning" if hit.any() else "ok"
-    return {"floor_check": status,
-            "floor_uncertain_prompts": {arm: None if u is None else int(u.sum())
-                                        for arm, u in uncertain.items()},
-            "floor_uncertain_sets": sets, "floor_bound_pp": bound}
-
-
-def matched_comparison(ref: pd.DataFrame, run: pd.DataFrame, n_boot: int = 1000,
-                       seed: int = 42, max_floor_pp: float = MAX_FLOOR_PP) -> dict:
-    """`run` at its own greedy threshold against `ref` moved to the same hire rate.
+def matched_comparison(ref: pd.DataFrame, run: pd.DataFrame, n_boot: int = N_BOOT,
+                       seed: int = BOOT_SEED) -> dict:
+    """`run` at its own greedy threshold against `ref` moved to the same hire count.
 
     The interval resamples candidates (a CV appears in several sets) with both cuts held fixed,
-    the same clustering as analysis.stability.compare. A comparison refused by floor_check
-    carries no matched instability, delta or interval.
+    the same clustering as analysis.stability.compare.
     """
     both = _paired(ref, run)
     hire_ref, unstable_ref = unstable_share(both, "margin_ref", 0.0)
     run_hire = snap(both["margin_run"]) > 0.0
     run_flags = _set_flags(both, run_hire)
     ref_flags, cut = matched_flags(both, "margin_ref", int(run_hire.sum()))
-    floor = floor_check(both, {"ref": cut["threshold"], "run": 0.0}, max_floor_pp)
     candidate = run_flags.index.get_level_values("pair_id").str.split("__").str[0]
     per = (run_flags.astype(float) - ref_flags).groupby(candidate).agg(["sum", "count"])
     rng = np.random.default_rng(seed)
     idx = rng.integers(0, len(per), size=(n_boot, len(per)))
     boots = 100 * per["sum"].to_numpy()[idx].sum(axis=1) / per["count"].to_numpy()[idx].sum(axis=1)
     unstable_run = float(run_flags.mean())
-    result = {
+    return {
         "prompts": len(both), "sets": len(run_flags), "grid": GRID,
         "hire_rate_ref": hire_ref, "unstable_ref": unstable_ref,
         "hire_rate_run": float(run_hire.mean()), "unstable_run": unstable_run,
@@ -309,51 +457,105 @@ def matched_comparison(ref: pd.DataFrame, run: pd.DataFrame, n_boot: int = 1000,
         "unstable_ref_bin_included": cut["unstable_bin_included"],
         "delta_matched_pp": 100 * (unstable_run - cut["unstable"]),
         "ci_low": float(np.percentile(boots, 2.5)), "ci_high": float(np.percentile(boots, 97.5)),
-        **floor,
     }
-    if floor["floor_check"] == "refused":
-        result.update(dict.fromkeys(["unstable_ref_matched", "unstable_ref_bin_excluded",
-                                     "unstable_ref_bin_included", "delta_matched_pp",
-                                     "ci_low", "ci_high"]))
-    return result
 
 
-def _guard_floor(summary: dict, path: Path, max_floor_pp: float) -> None:
-    """Log the floor check; exit non-zero (the report is written, without its delta) on refusal."""
-    status = summary["floor_check"]
-    if status == "refused":
-        raise SystemExit(
-            f"refused: the matched cut lies among floor-substituted margins (a decision word "
-            f"outside the top 20), whose order means nothing. They could move the comparison by "
-            f"up to {summary['floor_bound_pp']:.2f} pp ({summary['floor_uncertain_sets']} sets; "
-            f"limit {max_floor_pp} pp). {path.name} is written without the matched result.")
-    if status == "warning":
-        log.warning("floor-substituted margins near the matched cut could move the comparison by "
-                    "up to %.3f pp (%d sets)", summary["floor_bound_pp"],
-                    summary["floor_uncertain_sets"])
-    if status == "unverified":
-        log.warning("a margin file predates the per-prompt floor flags (rerun `margins`): whether "
-                    "the matched cut lies among floor-substituted margins is unchecked")
+# ---- comparisons --------------------------------------------------------------------------
+
+def load_scores(run: str, which: str) -> tuple[pd.DataFrame, dict]:
+    """One model's scores under this standard, and their record; anything else is refused."""
+    path, meta_path = score_paths(run, which)
+    if not (path.exists() and meta_path.exists()):
+        old = out_dir() / f"{run}--{which}.parquet"
+        hint = (f"; {old.name} is a version-1 file (top-20 logprobs with a floor), which no "
+                "comparison reads" if old.exists() else "")
+        raise SystemExit(f"no {STANDARD} scores for {run} --{which}{hint}. Run `margins` first.")
+    meta = json.loads(meta_path.read_text())
+    if meta.get("standard") != STANDARD:
+        raise SystemExit(f"{meta_path.name} was written under {meta.get('standard')!r}, "
+                         f"not {STANDARD}. Run `margins` again.")
+    return pd.read_parquet(path), meta
 
 
-def cmd_compare_arms(cfg: dict, against: dict, max_floor_pp: float = MAX_FLOOR_PP) -> None:
-    run_name, ref_name = R.build_run_name(cfg), R.build_run_name(against)
-    run = pd.read_parquet(out_dir() / f"{run_name}--adapter.parquet")
-    ref = pd.read_parquet(out_dir() / f"{ref_name}--adapter.parquet")
-    summary = {"run": run_name, "against": ref_name,
-               **matched_comparison(ref, run, max_floor_pp=max_floor_pp)}
-    report = REPO_ROOT / "reports" / "operating_point"
-    report.mkdir(parents=True, exist_ok=True)
-    path = report / f"{run_name}--vs--{ref_name}.json"
+def check_comparable(*metas: dict) -> None:
+    """Refuses inputs scored on different prompts, or after a different prefix or template."""
+    fields = {"prompts": lambda m: m["prompts"],
+              "decision prefix": lambda m: m["decision"]["prefix"],
+              "chat-template settings": lambda m: m["decision"]["chat_template_kwargs"]}
+    for name, get in fields.items():
+        values = {json.dumps(get(m), sort_keys=True) for m in metas}
+        if len(values) > 1:
+            raise SystemExit(f"the inputs differ in their {name} ({sorted(values)}): they were "
+                             "not scored on the same prompts the same way")
+
+
+def validation_records() -> list[dict]:
+    d = REPO_ROOT / "reports" / "operating_point" / VERSION_DIR / "validation"
+    return [json.loads(p.read_text()) for p in sorted(d.glob("*.json"))] if d.is_dir() else []
+
+
+def conformance(metas: list[dict], code: dict, records: list[dict]) -> list[str]:
+    """Why a report does not meet the standard; empty when it does."""
+    validated = {r["software"].get("vllm") for r in records
+                 if r.get("standard") == STANDARD and r.get("passed")}
+    issues = []
+    for m in metas:
+        name = f"{m['run']} --{m['which']}"
+        if m["code"]["commit"] is None:
+            issues.append(f"{name}: scored with no code commit recorded")
+        elif m["code"]["uncommitted"]:
+            issues.append(f"{name}: scored with uncommitted changes to "
+                          f"{', '.join(m['code']['uncommitted'])}")
+        if m["software"].get("vllm") not in validated:
+            issues.append(f"{name}: scored with vLLM {m['software'].get('vllm')}, which no "
+                          "passing `validate` record covers")
+    if len({m["software"].get("vllm") for m in metas}) > 1:
+        issues.append("the inputs were scored with different vLLM versions")
+    if code["commit"] is None:
+        issues.append("comparison: no code commit recorded")
+    elif code["uncommitted"]:
+        issues.append(f"comparison: run with uncommitted changes to {', '.join(code['uncommitted'])}")
+    return issues
+
+
+def provenance(meta: dict) -> dict:
+    keep = ("run", "which", "config", "prompts", "decision", "model", "software", "code", "written")
+    return {k: meta.get(k) for k in keep}
+
+
+def arm_report(run_name: str, ref_name: str, run: pd.DataFrame, run_meta: dict,
+               ref: pd.DataFrame, ref_meta: dict, code: dict, records: list[dict]) -> dict:
+    """The compared arm against the reference arm at matched hire rate, as one report."""
+    check_comparable(ref_meta, run_meta)
+    issues = conformance([run_meta, ref_meta], code, records)
+    return {"standard": STANDARD, "run": run_name, "against": ref_name,
+            "conforms": not issues, "issues": issues, **matched_comparison(ref, run),
+            "method": METHOD, "code": code,
+            "inputs": {"run": provenance(run_meta), "against": provenance(ref_meta)}}
+
+
+def _write_report(summary: dict, path: Path) -> None:
     path.write_text(json.dumps(summary, indent=2))
-    print(json.dumps(summary, indent=2))
-    _guard_floor(summary, path, max_floor_pp)
+    print(json.dumps({k: v for k, v in summary.items() if k != "inputs"}, indent=2))
+    for issue in summary["issues"]:
+        log.warning("does not conform: %s", issue)
+    log.info("wrote %s (%s)", path, "conforms" if summary["conforms"] else "does NOT conform")
 
 
-def cmd_compare(cfg: dict, max_floor_pp: float = MAX_FLOOR_PP) -> None:
+def cmd_compare_arms(cfg: dict, against: dict) -> None:
+    run_name, ref_name = R.build_run_name(cfg), R.build_run_name(against)
+    run, run_meta = load_scores(run_name, "adapter")
+    ref, ref_meta = load_scores(ref_name, "adapter")
+    summary = arm_report(run_name, ref_name, run, run_meta, ref, ref_meta, code_state(),
+                         validation_records())
+    _write_report(summary, reports_dir() / f"{run_name}--vs--{ref_name}.json")
+
+
+def cmd_compare(cfg: dict) -> None:
     name = R.build_run_name(cfg)
-    base = pd.read_parquet(out_dir() / f"{name}--base.parquet")
-    adapter = pd.read_parquet(out_dir() / f"{name}--adapter.parquet")
+    base, base_meta = load_scores(name, "base")
+    adapter, adapter_meta = load_scores(name, "adapter")
+    check_comparable(base_meta, adapter_meta)
     both = _paired(base, adapter, ("base", "adapter"))
 
     # Sweep: on each row both models are moved to the same hire count, exactly.
@@ -369,11 +571,14 @@ def cmd_compare(cfg: dict, max_floor_pp: float = MAX_FLOOR_PP) -> None:
 
     # The headline: each model at its own greedy threshold, and the base moved to the
     # adapter's hire rate.
-    pair = matched_comparison(base, adapter, max_floor_pp=max_floor_pp)
+    pair = matched_comparison(base, adapter)
     unstable_base_0, unstable_adapter_0 = pair["unstable_ref"], pair["unstable_run"]
     matched = pair["unstable_ref_matched"]
+    code = code_state()
+    issues = conformance([adapter_meta, base_meta], code, validation_records())
     summary = {
-        "run": name, "prompts": pair["prompts"], "grid": GRID,
+        "standard": STANDARD, "run": name, "conforms": not issues, "issues": issues,
+        "prompts": pair["prompts"], "grid": GRID,
         "hire_rate_base": pair["hire_rate_ref"],
         "hire_rate_adapter": pair["hire_rate_run"],
         "unstable_base_at_own_threshold": unstable_base_0,
@@ -383,22 +588,118 @@ def cmd_compare(cfg: dict, max_floor_pp: float = MAX_FLOOR_PP) -> None:
         "base_tied_prompts": pair["ref_tied_prompts"],
         "hire_rate_base_matched": pair["hire_rate_ref_matched"],
         "unstable_base_at_matched_hire_rate": matched,
-        "gain_explained_by_shift_pct": None if matched is None else float(
+        "gain_explained_by_shift_pct": float(
             100 * (unstable_base_0 - matched)
             / max(unstable_base_0 - unstable_adapter_0, 1e-9)),
-        "floor_check": pair["floor_check"],
-        "floor_uncertain_prompts": {"base": pair["floor_uncertain_prompts"]["ref"],
-                                    "adapter": pair["floor_uncertain_prompts"]["run"]},
-        "floor_uncertain_sets": pair["floor_uncertain_sets"],
-        "floor_bound_pp": pair["floor_bound_pp"],
+        "method": METHOD, "code": code,
+        "inputs": {"adapter": provenance(adapter_meta), "base": provenance(base_meta)},
     }
-    report = REPO_ROOT / "reports" / "operating_point"
-    report.mkdir(parents=True, exist_ok=True)
-    curve.to_csv(report / f"{name}--curve.csv", index=False)
-    path = report / f"{name}.json"
-    path.write_text(json.dumps(summary, indent=2))
-    print(json.dumps(summary, indent=2))
-    _guard_floor(summary, path, max_floor_pp)
+    out = reports_dir()
+    curve.to_csv(out / f"{name}--curve.csv", index=False)
+    _write_report(summary, out / f"{name}.json")
+
+
+# ---- validating the scorer, once per vLLM version ----------------------------------------
+
+def validation_sample(n_total: int, n: int, seed: int) -> np.ndarray:
+    """A fixed, seeded subset of prompt positions, in order."""
+    rng = np.random.default_rng(seed)
+    return np.sort(rng.choice(n_total, size=min(n, n_total), replace=False))
+
+
+def _rank_correlation(a: np.ndarray, b: np.ndarray) -> float:
+    """Spearman's rho as a Pearson correlation of ranks; NaN (a failed check) when either
+    input is constant."""
+    ra, rb = pd.Series(a).rank().to_numpy(), pd.Series(b).rank().to_numpy()
+    if ra.std() == 0 or rb.std() == 0:
+        return float("nan")
+    return float(np.corrcoef(ra, rb)[0, 1])
+
+
+def validation_summary(vllm_margin, hf_margin, greedy=None, v1_margin=None) -> dict:
+    """How closely the vLLM margins match HuggingFace's on the same weights, and the audit's
+    greedy decisions; `passed` when every available check clears its threshold."""
+    v, h = np.asarray(vllm_margin, dtype=float), np.asarray(hf_margin, dtype=float)
+    diff = np.abs(v - h)
+    out = {
+        "decision_agreement_hf": float(np.mean((v > 0) == (h > 0))),
+        "rank_correlation_hf": _rank_correlation(v, h),
+        "abs_diff_hf": {"median": float(np.median(diff)),
+                        "p95": float(np.percentile(diff, 95)), "max": float(diff.max())},
+    }
+    checks = [out["decision_agreement_hf"] >= MIN_AGREEMENT,
+              out["rank_correlation_hf"] >= MIN_RANK_CORRELATION]
+    if greedy is not None:
+        g = np.asarray(greedy, dtype=object)
+        decided = np.isin(g, ["hire", "reject"])
+        out["greedy_decided"] = int(decided.sum())
+        if decided.any():
+            out["decision_agreement_greedy"] = float(
+                np.mean((v[decided] > 0) == (g[decided] == "hire")))
+            checks.append(out["decision_agreement_greedy"] >= MIN_AGREEMENT)
+    if v1_margin is not None:
+        old = np.asarray(v1_margin, dtype=float)
+        out["v1_decision_agreement"] = float(np.mean((old > 0) == (v > 0)))
+        out["v1_share_off_by_more_than_0.5"] = float(np.mean(np.abs(old - v) > 0.5))
+    out["passed"] = bool(all(checks))
+    return out
+
+
+def _aligned(path: Path, sample: pd.DataFrame, column: str):
+    """`column` of the file at `path` for the sample's rows, or None without the file."""
+    if not path.exists():
+        return None
+    other = pd.read_parquet(path, columns=[*KEY, column])
+    return sample.merge(other, on=KEY, how="left")[column].to_numpy()
+
+
+def cmd_validate(cfg: dict, which: str, n: int = 256, seed: int = 42,
+                 batch_size: int = 4) -> None:
+    import gc
+
+    import torch
+    from transformers import AutoModelForCausalLM
+    from vllm import LLM
+
+    from hiring_bias_mitigation.eval.margins import decision_margins
+
+    plan = scoring_plan(cfg, which)
+    scorer = load_scorer(cfg, plan)
+    rows = validation_sample(len(plan["prompts"]), n, seed)
+    prompts = [plan["prompts"][i] for i in rows]
+    # HuggingFace first: it hands its memory back entirely before vLLM sizes its cache.
+    model = AutoModelForCausalLM.from_pretrained(scorer["model_path"], dtype=torch.bfloat16,
+                                                 trust_remote_code=True).to("cuda")
+    hf = decision_margins(model, scorer["tokenizer"], prompts, lang=cfg["lang"],
+                          batch_size=batch_size,
+                          chat_template_kwargs=cfg.get("chat_template_kwargs"),
+                          words=scorer["words"])
+    del model
+    gc.collect()
+    torch.cuda.empty_cache()
+    llm = LLM(**llm_kwargs(cfg, scorer["model_path"]))
+    hire, reject, _ = score_logprobs(llm, [scorer["texts"][i] for i in rows],
+                                     scorer["token_ids"], chunk=len(rows))
+    sample = plan["frame"].iloc[rows][KEY].reset_index(drop=True)
+    raw = Path(resolve_output_path("outputs/raw")) / f"{plan['run']}.parquet"
+    greedy = _aligned(raw, sample, "decision") if which == "adapter" else None
+    v1 = _aligned(out_dir() / f"{plan['run']}--{which}.parquet", sample, "margin")
+    summary = validation_summary(hire - reject, hf, greedy, v1)
+    record = {
+        "standard": STANDARD, "run": plan["run"], "which": which,
+        "config": cfg.get("_config_path"), "n": len(rows), "seed": seed,
+        "thresholds": {"agreement": MIN_AGREEMENT, "rank_correlation": MIN_RANK_CORRELATION},
+        **summary,
+        "model": {"served": scorer["model_path"], "adapters": plan["adapters"]},
+        "software": software(), "code": code_state(), "written": _now(),
+    }
+    path = reports_dir("validation") / f"{plan['run']}--{which}.json"
+    path.write_text(json.dumps(record, indent=2))
+    print(json.dumps(record, indent=2))
+    if not summary["passed"]:
+        raise SystemExit(f"validation failed ({path}): the vLLM scorer does not reproduce the "
+                         "reference quantity on this stack")
+    log.info("validation passed: %s", path)
 
 
 def main() -> None:
@@ -415,10 +716,11 @@ def main() -> None:
     a = sub.add_parser("compare-arms")
     a.add_argument("--config", required=True, help="the arm compared (e.g. DPO)")
     a.add_argument("--against", required=True, help="the reference arm (e.g. SFT)")
-    for p in (c, a):
-        p.add_argument("--max-floor-pp", type=float, default=MAX_FLOOR_PP,
-                       help="refuse when floor-substituted margins could move the matched "
-                            "instability by more than this many points")
+    v = sub.add_parser("validate", help="check the scorer against HuggingFace; once per vLLM version")
+    v.add_argument("--config", required=True)
+    v.add_argument("--which", choices=("base", "adapter"), required=True)
+    v.add_argument("--n", type=int, default=256, help="prompts in the fixed sample")
+    v.add_argument("--batch-size", type=int, default=4, help="HuggingFace batch size")
     args = parser.parse_args()
     cfg = load_config(args.config)
     # A config listed in reports/operating_point/skip.txt is skipped (exit 0): the control
@@ -431,9 +733,11 @@ def main() -> None:
     if args.cmd == "margins":
         cmd_margins(cfg, args.which, args.chunk)
     elif args.cmd == "compare-arms":
-        cmd_compare_arms(cfg, load_config(args.against), args.max_floor_pp)
+        cmd_compare_arms(cfg, load_config(args.against))
+    elif args.cmd == "validate":
+        cmd_validate(cfg, args.which, args.n, batch_size=args.batch_size)
     else:
-        cmd_compare(cfg, args.max_floor_pp)
+        cmd_compare(cfg)
 
 
 if __name__ == "__main__":
