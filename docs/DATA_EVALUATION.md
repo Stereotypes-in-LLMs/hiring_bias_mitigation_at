@@ -109,7 +109,7 @@ Three things are still open:
 
 ## On-policy negatives from a DPO model
 
-The same construction with the round-1 DPO model as the student (r2em checkpoint-100) found 409 tipped rows on the full pool instead of SFT's 5,614. The judge kept 305 pairs, and they fail D6 with a `chosen` hire share of 0.013. `docs/ITERATIVE_DPO.md` explains why and why that round was not trained. GRPO from SFT on the same pool, with a reward instead of negatives, is in `docs/GRPO_PILOT.md`: −0.95 pp at matched hire rate, reached by rejecting more, as round 1 did.
+The same construction with the round-1 DPO model as the student (r2em checkpoint-100) found 409 tipped rows on the full pool instead of SFT's 5,614. The judge kept 305 pairs, and they fail D6 with a `chosen` hire share of 0.013. `docs/ITERATIVE_DPO.md` explains why and why that round was not trained. GRPO from SFT on the same pool, with a reward instead of negatives, is in `docs/GRPO_PILOT.md`: −0.95 pp at matched hire rate, reached by rejecting more, as round 1 did. A second SFT stage on the student's own right answers (`docs/RFT_CONTROL.md`) gains nothing at matched hire rate (+0.31 pp) and also rejects more.
 
 ## Running the checks
 

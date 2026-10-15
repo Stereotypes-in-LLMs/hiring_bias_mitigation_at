@@ -95,7 +95,7 @@ So GRPO became stricter mostly by reading requirements more strictly, not by inv
 
 ## Reading
 
-GRPO did what its reward asked on the prompts it saw. It was symmetric in principle and one-directional in effect. At matched hire rate it is more consistent than SFT by the same 0.95 pp that DPO reached. Its interval is the first among the preference arms to exclude zero. It bought that at round-1 DPO's operating point: 8 pp of hire rate and 2 pp of agreement with the reference. Two optimisers on top of SFT, DPO and now GRPO, meet at about 1 pp on the same anchors. That gap is inside the noise of a single temperature-0.7 reference sample on borderline CVs (`docs/DATA_EVALUATION.md`), which points at the anchor rather than at another optimiser. The rejection-sampling SFT control would test that from the other side; it has not been run.
+GRPO did what its reward asked on the prompts it saw. It was symmetric in principle and one-directional in effect. At matched hire rate it is more consistent than SFT by the same 0.95 pp that DPO reached. Its interval is the first among the preference arms to exclude zero. It bought that at round-1 DPO's operating point: 8 pp of hire rate and 2 pp of agreement with the reference. Two optimisers on top of SFT, DPO and now GRPO, meet at about 1 pp on the same anchors. That gap is inside the noise of a single temperature-0.7 reference sample on borderline CVs (`docs/DATA_EVALUATION.md`), which points at the anchor rather than at another optimiser. The rejection-sampling SFT control (`docs/RFT_CONTROL.md`) keeps the anchors and drops the contrast. It gains nothing at matched hire rate (+0.31 pp) and still lowers the hire rate, to 23.7%.
 
 If GRPO is tried again, three changes follow from this run:
 
