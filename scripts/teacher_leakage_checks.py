@@ -58,6 +58,8 @@ HEDGES = ("however", "although", "but", "though", "despite", "while", "yet", "ma
           "could", "somewhat", "partially", "potential", "potentially")
 INTENSITY = ("strong", "strongly", "excellent", "extensive", "proven", "perfectly", "exceeds",
              "solid", "robust", "outstanding", "highly", "deep", "impressive")
+#: Addressing the candidate ("your background", "we require") instead of describing them.
+ADDRESS = ("you", "your", "yours", "we", "our", "us")
 INVARIANT = "artifacts/semisynthetic-v1/raw/en_invariant.parquet"
 ROUNDS = ("artifacts/semisynthetic-v2/onpolicy-full", "artifacts/semisynthetic-v2/onpolicy-hire32")
 
@@ -74,6 +76,7 @@ def features(feedback: pd.Series, groups: pd.Series | None = None) -> pd.DataFra
         "hedges": feedback.map(lambda t: count_terms(t, HEDGES)),
         "intensity": feedback.map(lambda t: count_terms(t, INTENSITY)),
         "proxies": feedback.map(lambda t: len(N.proxy_words(str(t)))),
+        "addresses": feedback.map(lambda t: int(count_terms(t, ADDRESS) > 0)),
     }, index=feedback.index)
     if groups is not None:
         # Words naming the row's own group (negatives_v2.GROUP_LEXICON), which the invariant
@@ -328,6 +331,7 @@ def main() -> None:
 
     meta = {"check": args.check, "inputs_sha256": inputs, "n_perm": args.n_perm,
             "min_plausibility": args.min_plausibility, "hedges": HEDGES, "intensity": INTENSITY,
+            "address": ADDRESS,
             "code": code_state()}
     (out / f"meta_{args.check}.json").write_text(json.dumps(meta, indent=2) + "\n",
                                                 encoding="utf-8")

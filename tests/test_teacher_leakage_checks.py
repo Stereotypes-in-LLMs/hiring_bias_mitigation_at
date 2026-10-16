@@ -21,6 +21,9 @@ def test_features_count_whole_words_from_each_list():
     assert f.loc[0, "intensity"] == 2    # strong, proven ("unproven" is another word)
     assert f.loc[0, "proxies"] == 1      # availability
     assert f.loc[0, "words"] == 13
+    assert f.loc[0, "addresses"] == 0
+    addressed = TL.features(pd.Series(["Your background meets what we require."]))
+    assert addressed.loc[0, "addresses"] == 1
 
 
 def _kept(pair, group, cond, text):
