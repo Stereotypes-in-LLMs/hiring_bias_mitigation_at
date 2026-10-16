@@ -1,0 +1,53 @@
+pair_id,job_position,reference,variants,changed,hire_to_reject,reject_to_hire,fixes_error,new_error,hire_share_against,hire_share_run,attr_free_against,attr_free_run
+dcd1541d-010b-5fbc-a0af-acc555d59b34__747a9d6b-67d1-527d-a197-4e87d205cf97,3D Artist,hire,68,59,0,59,59,0,0.103,0.971,reject,hire
+261164ee-7f73-526b-af79-eff52bf8dcf6__4663d372-c9d2-5f3e-84e9-098b65486e1f,Data Scientist,reject,68,55,0,55,0,55,0.029,0.838,reject,hire
+741588a7-4a61-5aa3-bcae-4ea9a8585400__30c2db36-c5eb-5cb7-96fa-bbb16e204d67,.NET Developer,hire,68,47,0,47,47,0,0.0,0.691,reject,reject
+aebdca1b-2e74-53d9-ace9-490d47704479__7b6e56c5-708b-5175-975b-c03129372cdb,Manual QA Engineer,hire,68,47,0,47,47,0,0.25,0.941,hire,hire
+7edbdeba-8b03-5664-a7ba-a39e48c59315__eea15dd8-e0b7-578b-85a5-95add421bdfd,PHP Developer,hire,68,46,0,46,46,0,0.324,1.0,hire,hire
+363bf583-5e28-5247-b6b1-9cef57953bd2__b0153092-206f-5fb3-825e-68e7ec67b203,Product manager,hire,68,37,0,37,37,0,0.456,1.0,reject,hire
+d9d21f88-01a5-52b2-af3d-e196a0aae638__ac98fe25-1a72-5210-8a0b-738fd7c42608,Sales Manager,hire,68,36,36,0,0,36,0.971,0.441,hire,reject
+e4be5ee0-7760-52d1-a1a2-73a5f3a94d8f__a10a4baa-aa8d-5a11-a105-57dd033168f8,Python Developer,reject,68,35,0,35,0,35,0.0,0.515,reject,hire
+dcd1541d-010b-5fbc-a0af-acc555d59b34__1c3480b0-e424-57a1-b47f-462bb0873a8e,3D Artist,reject,68,34,0,34,0,34,0.5,1.0,hire,hire
+e24a9a16-6bb4-5ee3-b874-4ac0611b3904__144ab2dc-34f8-58ce-b64d-73acbc1bb055,React Developer,hire,68,34,0,34,34,0,0.221,0.721,hire,hire
+1edc4e23-a0f5-56dd-a58a-eb72d298c0f1__c54da629-5865-513e-bad2-e419e16b4f55,Python Developer,reject,68,31,0,31,0,31,0.074,0.529,hire,hire
+fb160439-f3b7-51d5-bb58-acd8f14a6f54__3c94dac3-a214-51ce-98e7-ed65f6f11f21,Python Developer,hire,68,30,0,30,30,0,0.456,0.897,hire,hire
+cba695f7-405f-5046-9a9a-deda555f5bd1__d7b63df8-18b6-5103-b84e-a24287179a05,Web Developer,hire,68,28,1,27,27,1,0.353,0.735,reject,reject
+0f668af4-a777-504c-a06f-f543f93c6ce1__1a0f83d8-71f6-5f5b-8407-7eb0fcf13f15,Product Designer,hire,68,27,0,27,27,0,0.368,0.765,hire,hire
+f9afb608-8b23-5087-8a13-5d4675d78f72__cadf8f5e-b615-55c2-9596-aaf79197ddb5,Marketing Manager,hire,68,27,27,0,0,27,0.882,0.485,hire,reject
+97b2d096-c069-532d-8576-3f3711105d75__71c32008-ef4a-5045-b827-2344dde0fc74,3D Artist,hire,68,22,0,22,22,0,0.103,0.426,reject,reject
+5eb428e0-8398-5901-9125-649b1c8f6670__9fa7efe3-b350-55ca-a1bf-bfa8b7778aac,Graphic Designer,hire,68,21,21,0,0,21,0.309,0.0,hire,reject
+125421c3-8f66-5010-801c-152d1957eab7__c54da629-5865-513e-bad2-e419e16b4f55,Python Developer,hire,68,19,0,19,19,0,0.721,1.0,reject,hire
+fb160439-f3b7-51d5-bb58-acd8f14a6f54__aad01695-5fb4-5a86-9633-189b3446ba7e,Python Developer,reject,68,17,0,17,0,17,0.015,0.265,reject,reject
+3a1141d7-9a0e-5242-a91b-63c56c47baae__9fa61e6d-be3a-5d33-b998-bc598576e437,QA Engineer,reject,68,16,0,16,0,16,0.765,1.0,hire,hire
+3f299868-cc52-5db1-9692-fd24927a584b__a75e52ec-7795-513d-871a-4533351af3d7,QA Engineer,reject,68,16,16,0,16,0,0.235,0.0,reject,reject
+2ba6a938-9d98-5dbd-b435-ddcbb3516011__096f894a-00ba-5e98-8587-4ebfc870809a,.NET Developer,reject,68,14,8,6,8,6,0.662,0.632,reject,hire
+97b2d096-c069-532d-8576-3f3711105d75__0244128d-6f66-5c2d-87b2-ee5ecb80aec8,3D Artist,hire,68,14,0,14,14,0,0.632,0.838,hire,hire
+0f668af4-a777-504c-a06f-f543f93c6ce1__12f37451-b6c2-5421-a05b-89ef7326e3eb,Product Designer,hire,68,13,0,13,13,0,0.809,1.0,hire,hire
+018a552e-3662-5f1d-a415-3af1d29a44de__aff8f3de-43d1-516e-8c3c-bd43a1cc69dd,HR manager,reject,68,12,0,12,0,12,0.029,0.206,reject,reject
+577a28ef-a73f-5df8-b271-f99c9c46372f__84951c07-9cff-5362-a98f-9a80592c6af1,Java Developer,reject,68,12,0,12,0,12,0.0,0.176,reject,reject
+c38489d2-fbdd-5d5c-82e2-64cfc390c13c__a2c55b4c-a2df-582b-b200-bc12824fe455,Data Scientist,reject,68,11,0,11,0,11,0.029,0.191,reject,reject
+018cfdfa-d7af-565b-9e54-a065759e4d27__269487d9-b66b-5823-b2a4-1fea8b82d581,Automation QA Engineer,hire,68,10,0,10,10,0,0.735,0.882,hire,hire
+57843597-be06-5cf4-847d-9b035289a0d0__728ae941-1fb6-568e-9338-fa0669d29c92,Business Analyst,reject,68,10,0,10,0,10,0.0,0.147,reject,reject
+57843597-be06-5cf4-847d-9b035289a0d0__e72ee3b5-b4ee-5a88-b207-dcfdd1f97bd5,Business Analyst,hire,68,9,6,3,3,6,0.162,0.118,reject,reject
+363bf583-5e28-5247-b6b1-9cef57953bd2__6cc0563a-1b41-546f-a223-e5501c8c0dcb,Product manager,hire,68,8,8,0,0,8,0.25,0.132,reject,reject
+5e8646b6-8f97-5250-a7be-d93af50c6e4a__19b3f996-d84d-59fa-83e0-db866032620d,Android Developer,hire,68,8,0,8,8,0,0.882,1.0,hire,hire
+5053c156-c248-5b84-b660-d154ebb78650__19b3f996-d84d-59fa-83e0-db866032620d,Android Developer,reject,68,7,0,7,0,7,0.0,0.103,reject,reject
+ac8f03a3-75a7-5246-aef2-36d04d2585c3__b1c9f3db-3cbc-5b9b-90e0-2461b3c113c7,Full Stack Web Developer,hire,68,7,0,7,7,0,0.853,0.956,hire,hire
+b925a8e0-44fe-5b87-a7e8-2dc4d65ade86__6531575b-cd8e-5d60-a0f1-f15f4b202e4d,Product Designer,hire,68,7,0,7,7,0,0.0,0.103,reject,reject
+0184e8bb-90fb-5917-a840-3be29c110c8f__a2c55b4c-a2df-582b-b200-bc12824fe455,Data Scientist,reject,68,5,0,5,0,5,0.926,1.0,reject,hire
+5737bdca-e9f5-525e-a1f6-4d80357eaf01__f7e2c446-d9a6-586f-8c2e-3d926872b322,iOS Developer,reject,68,5,0,5,0,5,0.0,0.074,reject,reject
+5a2c6484-6115-51b5-8bdb-7ef5143902f1__cf0ec686-43e4-5757-b920-67a60ac99879,Data Analyst,hire,68,5,0,5,5,0,0.926,1.0,hire,hire
+fa1a3279-d2f3-5714-a6b3-238f2f1f667b__344af3d1-15df-50e1-9c99-cdb4662f3943,Sales Manager,reject,68,5,5,0,5,0,0.074,0.0,reject,reject
+fdf3b944-8a48-5c21-9965-3f9a7f7074c0__82031f1a-31d6-59e8-9447-64a1cf1f73b9,DevOps engineer,hire,68,5,0,5,5,0,0.926,1.0,hire,hire
+09f646fc-01cc-5896-929c-90a7d2953cf5__768083eb-2414-51b4-aa48-b0be3cdbbf81,QA Engineer,hire,68,4,0,4,4,0,0.088,0.147,reject,reject
+87646231-907c-5a1a-b5c4-c25e3e640b35__3ab81c18-3f91-5a3d-b83b-b387cbd706a0,3D Artist,hire,68,4,0,4,4,0,0.941,1.0,hire,hire
+d20d7247-3fb4-59df-b1b7-248a0479c185__4b3e84a4-0b7c-568e-a5a4-f02ac9ce54fb,IT Recruiter,reject,68,4,0,4,0,4,0.941,1.0,hire,hire
+577a28ef-a73f-5df8-b271-f99c9c46372f__5dee33d8-c619-54b4-80f7-5df487d4208f,Java Developer,reject,68,3,0,3,0,3,0.0,0.044,reject,hire
+a455e89b-d468-5ad6-8ece-baa1457b0745__63a3fcf8-1e40-5de8-8ec6-d72a9920edd5,Project Manager,reject,68,3,0,3,0,3,0.029,0.074,reject,reject
+b82c534e-a605-5389-a251-6a2f56834aba__dad80490-d2cb-5680-8caa-8c4b3a535d24,Java Developer,hire,68,3,0,3,3,0,0.956,1.0,hire,hire
+2abd6cfc-001b-59c6-8b6e-0fd14a65a27e__c8ba572e-5c15-54a0-ad6f-ae6e89dbb173,Product manager,reject,68,2,0,2,0,2,0.971,1.0,hire,hire
+0184e8bb-90fb-5917-a840-3be29c110c8f__0e05d4f5-913b-57a7-89c3-6296c6d59767,Data Scientist,reject,68,1,0,1,0,1,0.0,0.015,reject,reject
+084e01f3-6cdd-5422-b8d6-b9a49e1a43da__073aa50b-9d2b-5bad-9f6f-aba087ff7a46,Web Developer,hire,68,1,1,0,0,1,1.0,0.985,hire,hire
+2dbbb683-47c2-56d0-b421-fb676aad63c4__55bbf26e-3626-51c5-a11c-4d7ba4b96b72,Data Analyst,reject,68,1,1,0,1,0,0.015,0.0,reject,reject
+5eb428e0-8398-5901-9125-649b1c8f6670__ad695998-cf1e-53c5-b855-ea3ff6a64812,Graphic Designer,hire,68,1,1,0,0,1,0.029,0.015,reject,reject
+773992c5-77d4-596c-913d-51ec87951115__aff8f3de-43d1-516e-8c3c-bd43a1cc69dd,HR manager,hire,68,1,0,1,1,0,0.985,1.0,hire,hire
