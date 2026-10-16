@@ -201,7 +201,37 @@ def judge_by_cell(judged: pd.DataFrame, min_plausibility: int = 3) -> pd.DataFra
     table = pd.DataFrame(rows)
     reasons = [c for c in table.columns if "judge_" in c]
     table[reasons] = table[reasons].fillna(0).astype(int)
+    for side in ("rejected", "chosen", "both"):
+        lo, hi = wilson(table[f"{side}_pass"] * table["n"], table["n"])
+        table[f"{side}_pass_lo"], table[f"{side}_pass_hi"] = lo, hi
     return table
+
+
+def wilson(successes, n, z: float = 1.96):
+    """Wilson 95% interval for a proportion, elementwise."""
+    successes, n = np.asarray(successes, dtype=float), np.asarray(n, dtype=float)
+    p = successes / n
+    centre = (p + z * z / (2 * n)) / (1 + z * z / n)
+    half = z * np.sqrt(p * (1 - p) / n + z * z / (4 * n * n)) / (1 + z * z / n)
+    return centre - half, centre + half
+
+
+def judge_homogeneity(table: pd.DataFrame) -> pd.DataFrame:
+    """Chi-square test across the group x condition cells, per round, reference verdict and
+    side: does the pass rate depend on the cell at all?"""
+    from scipy.stats import chi2_contingency
+
+    rows = []
+    for (round_, reference), part in table.groupby(["round", "reference_decision"]):
+        for side in ("rejected", "chosen", "both"):
+            passed = (part[f"{side}_pass"] * part["n"]).round().astype(int)
+            counts = np.stack([passed, part["n"] - passed])
+            chi2, p, dof, _ = chi2_contingency(counts)
+            rows.append({"round": round_, "reference_decision": reference, "side": side,
+                         "cells": len(part), "chi2": float(chi2), "dof": int(dof),
+                         "p": float(p), "min_pass": float(part[f"{side}_pass"].min()),
+                         "max_pass": float(part[f"{side}_pass"].max())})
+    return pd.DataFrame(rows)
 
 
 # ---- output --------------------------------------------------------------------------------
@@ -260,7 +290,9 @@ def main() -> None:
                 inputs[f"{directory}/raw/{name}"] = _sha256(root / "raw" / name)
             tables.append(judge_by_cell(judged_round(root), args.min_plausibility)
                           .assign(round=Path(directory).name))
-        pd.concat(tables, ignore_index=True).to_csv(out / "judge_by_cell.csv", index=False)
+        judged = pd.concat(tables, ignore_index=True)
+        judged.to_csv(out / "judge_by_cell.csv", index=False)
+        judge_homogeneity(judged).to_csv(out / "judge_homogeneity.csv", index=False)
         print(f"judge: {len(args.rounds)} rounds")
 
     meta = {"check": args.check, "inputs_sha256": inputs, "n_perm": args.n_perm,

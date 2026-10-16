@@ -91,3 +91,13 @@ def test_the_cell_classifier_finds_a_cell_marker_and_the_null_does_not():
     table = TL.cell_classifier(pd.DataFrame(rows), n_perm=2, folds=5).set_index("cell")
     assert table.loc["a / explicit", "auc"] > 0.9
     assert table.loc["a / explicit", "null_mean"] < table.loc["a / explicit", "auc"]
+
+
+def test_wilson_interval_and_homogeneity_test():
+    lo, hi = TL.wilson([50], [100])
+    assert round(float(lo[0]), 3) == 0.404 and round(float(hi[0]), 3) == 0.596
+    table = pd.DataFrame({"round": "r", "reference_decision": "hire", "n": [100, 100],
+                          "rejected_pass": [0.5, 0.9], "chosen_pass": [0.9, 0.9],
+                          "both_pass": [0.45, 0.81]})
+    h = TL.judge_homogeneity(table).set_index("side")
+    assert h.loc["rejected", "p"] < 0.001 and h.loc["chosen", "p"] > 0.99
