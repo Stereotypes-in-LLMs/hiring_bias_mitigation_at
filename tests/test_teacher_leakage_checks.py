@@ -101,3 +101,16 @@ def test_wilson_interval_and_homogeneity_test():
                           "both_pass": [0.45, 0.81]})
     h = TL.judge_homogeneity(table).set_index("side")
     assert h.loc["rejected", "p"] < 0.001 and h.loc["chosen", "p"] > 0.99
+
+
+def test_group_words_and_top_features():
+    f = TL.features(pd.Series(["Ready for a civilian role.", "Ready for a new role."]),
+                    pd.Series(["military_status", "religion"]))
+    assert f["group_words"].tolist() == [1, 0]
+    rows = []
+    for i in range(10):
+        rows.append(_kept(f"p{i}", "a", "explicit", f"shared words alpha marker {i}"))
+        rows.append(_kept(f"p{i}", "b", "explicit", f"shared words beta marker {i}"))
+    top = TL.cell_top_features(pd.DataFrame(rows), k=1).set_index("cell")
+    assert top.loc["a / explicit", "ngram"] == "alpha"
+    assert top.loc["a / explicit", "rationales_with_it"] == 10

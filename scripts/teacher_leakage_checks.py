@@ -68,13 +68,18 @@ def count_terms(text: str, terms: tuple[str, ...]) -> int:
     return sum(len(re.findall(r"\b" + re.escape(t) + r"\b", lowered)) for t in terms)
 
 
-def features(feedback: pd.Series) -> pd.DataFrame:
-    return pd.DataFrame({
+def features(feedback: pd.Series, groups: pd.Series | None = None) -> pd.DataFrame:
+    out = pd.DataFrame({
         "words": feedback.map(lambda t: len(str(t).split())),
         "hedges": feedback.map(lambda t: count_terms(t, HEDGES)),
         "intensity": feedback.map(lambda t: count_terms(t, INTENSITY)),
         "proxies": feedback.map(lambda t: len(N.proxy_words(str(t)))),
     }, index=feedback.index)
+    if groups is not None:
+        # Words naming the row's own group (negatives_v2.GROUP_LEXICON), which the invariant
+        # filter does not check: it drops only the attribute value itself.
+        out["group_words"] = [int(N.mentions_group(str(t), g)) for t, g in zip(feedback, groups)]
+    return out
 
 
 # ---- invariant targets ----------------------------------------------------------------------
@@ -100,7 +105,7 @@ def within_pair_deviation(kept: pd.DataFrame, n_boot: int = 1000,
                           seed: int = 42) -> pd.DataFrame:
     """Each cell's mean feature and its mean deviation from its own pair's mean, with a
     bootstrap over pairs for the deviation."""
-    feats = features(kept["chosen_feedback"])
+    feats = features(kept["chosen_feedback"], kept["protected_group"])
     cols = list(feats.columns)
     data = pd.concat([kept[["pair_id", *SPLIT]], feats], axis=1)
     dev = data[cols] - data.groupby("pair_id")[cols].transform("mean")
@@ -166,6 +171,28 @@ def cell_classifier(kept: pd.DataFrame, n_perm: int = 10, folds: int = 5,
                           "null_mean": float(np.mean(null[c])) if null[c] else None,
                           "null_max": float(np.max(null[c])) if null[c] else None,
                           "n_perm": n_perm} for c in classes])
+
+
+def cell_top_features(kept: pd.DataFrame, k: int = 15) -> pd.DataFrame:
+    """What the cell classifier reads: the n-grams with the largest coefficients per cell when
+    one model is fitted on every kept rationale."""
+    from sklearn.feature_extraction.text import TfidfVectorizer
+    from sklearn.linear_model import LogisticRegression
+
+    texts = kept["chosen_feedback"].astype(str).tolist()
+    labels = (kept["protected_group"] + " / " + kept["condition"]).to_numpy()
+    vec = TfidfVectorizer(ngram_range=(1, 2), min_df=2, sublinear_tf=True)
+    model = LogisticRegression(max_iter=2000).fit(vec.fit_transform(texts), labels)
+    terms = np.asarray(vec.get_feature_names_out())
+    rows = []
+    for i, cell in enumerate(model.classes_):
+        top = np.argsort(model.coef_[i])[::-1][:k]
+        rows += [{"cell": cell, "rank": r + 1, "ngram": terms[j],
+                  "coefficient": float(model.coef_[i][j]),
+                  "rationales_with_it": int(sum(terms[j] in t.lower() for t in
+                                                np.asarray(texts)[labels == cell]))}
+                 for r, j in enumerate(top)]
+    return pd.DataFrame(rows)
 
 
 # ---- judge ---------------------------------------------------------------------------------
@@ -280,6 +307,7 @@ def main() -> None:
         within_pair_deviation(kept).to_csv(out / "invariant_features_by_cell.csv", index=False)
         cell_classifier(kept, n_perm=args.n_perm).to_csv(out / "invariant_cell_classifier.csv",
                                                           index=False)
+        cell_top_features(kept).to_csv(out / "invariant_cell_top_features.csv", index=False)
         print(f"invariant: {len(kept)} of {len(raw)} kept")
 
     if args.check in ("judge", "both"):
