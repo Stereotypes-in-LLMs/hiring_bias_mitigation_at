@@ -42,7 +42,7 @@ The tipped count needs only one wrong sample in eight, so it falls whenever a mo
 
 The last row is the matched comparison. π1 minus SFT is −0.96 pp, with a 95% interval from −1.96 to +0.04 (`reports/operating_point/v2/`, job 5063275). The scorer behind it matches HuggingFace at a rank correlation of 0.9997 for SFT and 0.991 for π1.
 
-What changed on the flipped rows is confidence. On π1's 293 strongly tipped rows, SFT hired in 4.5 of 8 attributed samples and was right in only 61% of the attribute-free ones. π1 hires in 7.9 of 8 with the attribute and is right in 99% without. DPO made these decisions confident, so the attribute dependence that is left is crisp instead of noisy.
+What changed on the flipped rows is confidence. On π1's 293 strongly tipped rows, SFT hired in 4.5 of 8 attributed samples and was right in only 61% of the attribute-free ones. π1 hires in 7.9 of 8 with the attribute and is right in 99% without. DPO made these decisions confident, so the attribute dependence that is left is crisp instead of noisy. Which of SFT's benchmark decisions π1 changed, prompt by prompt, is in `docs/R2EM_VS_SFT.md`.
 
 On the benchmark, the remaining flips mostly run the other way. For every audited model, an attribute line turns an attribute-free hire into a reject far more often than the reverse.
 

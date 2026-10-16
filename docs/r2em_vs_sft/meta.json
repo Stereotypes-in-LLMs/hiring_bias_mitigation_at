@@ -1,0 +1,20 @@
+{
+  "run": "Qwen3.5-9B--en--dpo--adapter--en_only_v2neg_r2em_step100",
+  "against": "Qwen3.5-9B--en--sft--adapter--en_only_cscs",
+  "inputs": {
+    "Qwen3.5-9B--en--dpo--adapter--en_only_v2neg_r2em_step100": {
+      "path": "outputs/raw/Qwen3.5-9B--en--dpo--adapter--en_only_v2neg_r2em_step100.parquet",
+      "sha256": "76cb3857deacf53bb59d27d8c29a48dc453339a9aefcfbff48884411f1816e3e"
+    },
+    "Qwen3.5-9B--en--sft--adapter--en_only_cscs": {
+      "path": "outputs/raw/Qwen3.5-9B--en--sft--adapter--en_only_cscs.parquet",
+      "sha256": "3114facd75569a8178641735ff20ba131ba3f4bae77504183a9630345e8e04df"
+    }
+  },
+  "shared_prompts": 31050,
+  "changed_prompts": 664,
+  "code": {
+    "commit": "88b16e10c7cf5c30e09270a9d4c9e650f5f1d6bd",
+    "uncommitted": []
+  }
+}

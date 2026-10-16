@@ -1,0 +1,12 @@
+relation,flip,effect,prompts,pairs
+away_from_attr_free,hire->reject,fixes_error,5,2
+away_from_attr_free,hire->reject,new_error,37,5
+away_from_attr_free,reject->hire,fixes_error,28,3
+away_from_attr_free,reject->hire,new_error,22,7
+follows_flipped_attr_free,hire->reject,new_error,140,3
+follows_flipped_attr_free,reject->hire,fixes_error,81,3
+follows_flipped_attr_free,reject->hire,new_error,28,3
+toward_attr_free,hire->reject,fixes_error,57,4
+toward_attr_free,hire->reject,new_error,32,5
+toward_attr_free,reject->hire,fixes_error,168,14
+toward_attr_free,reject->hire,new_error,57,5

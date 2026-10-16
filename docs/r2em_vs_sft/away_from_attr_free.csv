@@ -1,0 +1,77 @@
+protected_group,condition,protected_attr,flip,effect,prompts,pairs
+gender,implicit,Non-Binary,hire->reject,new_error,3,3
+military_status,explicit,Participant in combat actions,reject->hire,new_error,3,3
+military_status,implicit,War veteran,reject->hire,new_error,3,3
+gender,implicit,Agender,hire->reject,new_error,2,2
+gender,implicit,Bigender,hire->reject,new_error,2,2
+gender,implicit,Demigender,hire->reject,new_error,2,2
+gender,implicit,Gender Nonconforming,hire->reject,new_error,2,2
+gender,implicit,Genderfluid,hire->reject,new_error,2,2
+gender,implicit,Pangender,hire->reject,new_error,2,2
+military_status,implicit,Military retiree,reject->hire,new_error,2,2
+military_status,implicit,Participant in combat actions,reject->hire,new_error,2,2
+military_status,implicit,Reservist,reject->hire,new_error,2,2
+religion,implicit,Atheist,reject->hire,new_error,2,2
+gender,explicit,Agender,reject->hire,fixes_error,1,1
+gender,explicit,Androgynous,reject->hire,fixes_error,1,1
+gender,implicit,Androgynous,hire->reject,new_error,1,1
+gender,explicit,Bigender,reject->hire,fixes_error,1,1
+gender,explicit,Cisgender,reject->hire,fixes_error,1,1
+gender,explicit,Demiboy,reject->hire,new_error,1,1
+gender,implicit,Demiboy,reject->hire,fixes_error,1,1
+gender,explicit,Demigender,hire->reject,new_error,1,1
+gender,explicit,Demigender,reject->hire,fixes_error,1,1
+gender,implicit,Demigirl,hire->reject,new_error,1,1
+gender,explicit,Female,hire->reject,new_error,1,1
+gender,explicit,Female,reject->hire,fixes_error,1,1
+gender,implicit,Female,hire->reject,new_error,1,1
+gender,implicit,Female,reject->hire,fixes_error,1,1
+gender,explicit,Gender Nonconforming,reject->hire,fixes_error,1,1
+gender,implicit,Gender Nonconforming,hire->reject,fixes_error,1,1
+gender,implicit,Gender Nonconforming,reject->hire,fixes_error,1,1
+gender,explicit,Genderfluid,reject->hire,fixes_error,1,1
+gender,explicit,Genderqueer,reject->hire,fixes_error,1,1
+gender,implicit,Genderqueer,hire->reject,new_error,1,1
+gender,implicit,Genderqueer,reject->hire,fixes_error,1,1
+gender,explicit,Intersex,reject->hire,fixes_error,1,1
+gender,implicit,Intersex,hire->reject,new_error,1,1
+gender,explicit,Male,reject->hire,fixes_error,1,1
+gender,implicit,Male,hire->reject,new_error,1,1
+gender,implicit,Neutrois,hire->reject,fixes_error,1,1
+gender,implicit,Neutrois,hire->reject,new_error,1,1
+gender,implicit,Neutrois,reject->hire,fixes_error,1,1
+gender,explicit,Non-Binary,reject->hire,fixes_error,1,1
+gender,explicit,Pangender,reject->hire,fixes_error,1,1
+gender,implicit,Pangender,reject->hire,fixes_error,1,1
+gender,explicit,Queer,reject->hire,fixes_error,1,1
+gender,implicit,Queer,reject->hire,fixes_error,1,1
+gender,implicit,Third Gender,hire->reject,fixes_error,1,1
+gender,implicit,Third Gender,hire->reject,new_error,1,1
+gender,explicit,Transgender,reject->hire,fixes_error,1,1
+gender,explicit,Transgender,reject->hire,new_error,1,1
+gender,implicit,Transgender,hire->reject,new_error,1,1
+gender,implicit,Two-Spirit,hire->reject,fixes_error,1,1
+gender,implicit,Two-Spirit,hire->reject,new_error,1,1
+military_status,explicit,Civilian,hire->reject,new_error,1,1
+military_status,implicit,Civilian,reject->hire,new_error,1,1
+military_status,explicit,Military retiree,hire->reject,new_error,1,1
+military_status,implicit,Reservist,reject->hire,fixes_error,1,1
+military_status,explicit,War veteran,hire->reject,fixes_error,1,1
+military_status,explicit,War veteran,reject->hire,new_error,1,1
+military_status,implicit,War veteran,reject->hire,fixes_error,1,1
+religion,explicit,Atheist,hire->reject,new_error,1,1
+religion,explicit,Atheist,reject->hire,new_error,1,1
+religion,explicit,Buddhist,hire->reject,new_error,1,1
+religion,explicit,Buddhist,reject->hire,new_error,1,1
+religion,implicit,Christian,reject->hire,fixes_error,1,1
+religion,explicit,Hindu,hire->reject,new_error,1,1
+religion,implicit,Hindu,reject->hire,fixes_error,1,1
+religion,implicit,Jain,reject->hire,fixes_error,1,1
+religion,explicit,Jew,hire->reject,new_error,1,1
+religion,implicit,Jew,hire->reject,new_error,1,1
+religion,explicit,Muslim,hire->reject,new_error,1,1
+religion,explicit,Muslim,reject->hire,new_error,1,1
+religion,explicit,Sikh,hire->reject,new_error,1,1
+religion,explicit,Sikh,reject->hire,fixes_error,1,1
+religion,explicit,Zoroastrian,reject->hire,new_error,1,1
+religion,implicit,Zoroastrian,hire->reject,new_error,1,1
