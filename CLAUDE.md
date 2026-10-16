@@ -242,7 +242,7 @@ Reading, Caveats and Reproducing. The card at the top links at least these:
 
 | Field | Where it lives here |
 |---|---|
-| code version and uncommitted diff | `git rev-parse --short HEAD` and `git status --porcelain` at launch. Nothing in the code records this, so write it into the card by hand |
+| code version and uncommitted diff | `code.commit` and `code.uncommitted` in the op-margin-v2 JSON under `reports/operating_point/v2/`, and the `commit` field on the first line of a `scripts/cscs/*.sbatch` job log. The audit `meta.json` and the training `run_config.json` do not record it, so for those write `git rev-parse --short HEAD` and `git status --porcelain` into the card by hand |
 | full config and data version | the config path (`meta.config_path`, `run_config.json`), `data_config`, `artifacts_dir` such as `artifacts/semisynthetic-v1`, and `data_kind` |
 | training run ID | `output_dir` under `$HBM_OUTPUT_ROOT/outputs/{sft,dpo}/`, the checkpoint step, `wandb_run_name`, the scheduler job ID |
 | independent evaluation run ID | the audit run name and its `eval/results/<run>.json`; `served_model` in the meta shows the merged checkpoint that was actually evaluated |
