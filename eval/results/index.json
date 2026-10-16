@@ -233,6 +233,15 @@
     "reference_agreement": 0.7777777777777778,
     "n_tests": 204
   },
+  "Qwen3.5-9B--en--baseline--cscs": {
+    "model": "Qwen/Qwen3.5-9B",
+    "lang": "en",
+    "mitigation": "none",
+    "n_prompts": 31050,
+    "population_acceptance_rate": 0.1565217391304348,
+    "reference_agreement": 0.788341384863124,
+    "n_tests": 136
+  },
   "Qwen3.5-9B--en--baseline": {
     "model": "Qwen/Qwen3.5-9B",
     "lang": "en",
@@ -260,6 +269,69 @@
     "reference_agreement": 0.8236714975845411,
     "n_tests": 204
   },
+  "Qwen3.5-9B--en--dpo--adapter--en_only_v2neg_r1_step100": {
+    "model": "Qwen/Qwen3.5-9B",
+    "lang": "en",
+    "mitigation": "dpo",
+    "n_prompts": 31050,
+    "population_acceptance_rate": 0.19027375201288244,
+    "reference_agreement": 0.7892431561996779,
+    "n_tests": 136
+  },
+  "Qwen3.5-9B--en--dpo--adapter--en_only_v2neg_r1_step300": {
+    "model": "Qwen/Qwen3.5-9B",
+    "lang": "en",
+    "mitigation": "dpo",
+    "n_prompts": 31050,
+    "population_acceptance_rate": 0.19088566827697262,
+    "reference_agreement": 0.793268921095008,
+    "n_tests": 136
+  },
+  "Qwen3.5-9B--en--dpo--adapter--en_only_v2neg_r2_step102": {
+    "model": "Qwen/Qwen3.5-9B",
+    "lang": "en",
+    "mitigation": "dpo",
+    "n_prompts": 31050,
+    "population_acceptance_rate": 0.200805152979066,
+    "reference_agreement": 0.7975201288244766,
+    "n_tests": 136
+  },
+  "Qwen3.5-9B--en--dpo--adapter--en_only_v2neg_r2_step50": {
+    "model": "Qwen/Qwen3.5-9B",
+    "lang": "en",
+    "mitigation": "dpo",
+    "n_prompts": 31050,
+    "population_acceptance_rate": 0.18933977455716586,
+    "reference_agreement": 0.7876650563607085,
+    "n_tests": 136
+  },
+  "Qwen3.5-9B--en--dpo--adapter--en_only_v2neg_r2em_step100": {
+    "model": "Qwen/Qwen3.5-9B",
+    "lang": "en",
+    "mitigation": "dpo",
+    "n_prompts": 31050,
+    "population_acceptance_rate": 0.283768115942029,
+    "reference_agreement": 0.8261191626409018,
+    "n_tests": 136
+  },
+  "Qwen3.5-9B--en--dpo--adapter--en_only_v2neg_r2em_step148": {
+    "model": "Qwen/Qwen3.5-9B",
+    "lang": "en",
+    "mitigation": "dpo",
+    "n_prompts": 31050,
+    "population_acceptance_rate": 0.3000644122383253,
+    "reference_agreement": 0.8297906602254428,
+    "n_tests": 136
+  },
+  "Qwen3.5-9B--en--dpo--adapter--en_only_v2neg_r2em_step50": {
+    "model": "Qwen/Qwen3.5-9B",
+    "lang": "en",
+    "mitigation": "dpo",
+    "n_prompts": 31050,
+    "population_acceptance_rate": 0.21381642512077295,
+    "reference_agreement": 0.8095008051529791,
+    "n_tests": 136
+  },
   "Qwen3.5-9B--en--embedding--leace": {
     "model": "Qwen/Qwen3.5-9B",
     "lang": "en",
@@ -268,6 +340,15 @@
     "population_acceptance_rate": 0.07444444444444444,
     "reference_agreement": 0.7314814814814815,
     "n_tests": 15
+  },
+  "Qwen3.5-9B--en--grpo--adapter--en_only_grpo_pilot": {
+    "model": "Qwen/Qwen3.5-9B",
+    "lang": "en",
+    "mitigation": "grpo",
+    "n_prompts": 31050,
+    "population_acceptance_rate": 0.19948470209339775,
+    "reference_agreement": 0.8043156199677939,
+    "n_tests": 136
   },
   "Qwen3.5-9B--en--prompt--counterfactual_invariance": {
     "model": "Qwen/Qwen3.5-9B",
@@ -394,6 +475,24 @@
     "population_acceptance_rate": 0.28048309178743963,
     "reference_agreement": 0.8252173913043478,
     "n_tests": 204
+  },
+  "Qwen3.5-9B--en--sft--adapter--en_only_cscs": {
+    "model": "Qwen/Qwen3.5-9B",
+    "lang": "en",
+    "mitigation": "sft",
+    "n_prompts": 31050,
+    "population_acceptance_rate": 0.28003220611916263,
+    "reference_agreement": 0.825475040257649,
+    "n_tests": 136
+  },
+  "Qwen3.5-9B--en--sft--adapter--en_only_rft": {
+    "model": "Qwen/Qwen3.5-9B",
+    "lang": "en",
+    "mitigation": "sft",
+    "n_prompts": 31050,
+    "population_acceptance_rate": 0.23690821256038647,
+    "reference_agreement": 0.8088244766505636,
+    "n_tests": 136
   },
   "Qwen3.5-9B--en--sft--adapter--en_only_v2_ckpt250": {
     "model": "Qwen/Qwen3.5-9B",
