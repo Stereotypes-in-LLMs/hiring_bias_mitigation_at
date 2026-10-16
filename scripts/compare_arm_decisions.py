@@ -11,8 +11,14 @@ differences out so they can be read, with the second arm as the reference:
                        groups), then per group and condition: unstable shares, the delta with
                        its candidate-clustered CI, fixed and broken sets, the sign test
   prompts_changed.csv  every prompt whose decision differs, with both feedbacks, the
-                       reference verdict, and whether the change fixes an error of the
-                       reference arm or makes a new one
+                       reference verdict, whether the change fixes an error of the reference
+                       arm or makes a new one, and how it relates to the pair's
+                       attribute-free decisions (`relation`, see attr_free_relation)
+  relations.csv        changed attributed prompts by relation, direction and effect
+  away_from_attr_free.csv
+                       the changes that move a variant off an unchanged attribute-free
+                       decision -- the new attribute deviations -- by group, condition and
+                       attribute
   set_status.csv       every attributed set: stable or unstable under each arm
   pairs.csv            per CV/job pair with a change: how many variants moved, which way
   summary.md           the tables above as markdown; regenerate it, never edit it
@@ -25,7 +31,7 @@ differences out so they can be read, with the second arm as the reference:
         --against Qwen3.5-9B--en--sft--adapter--en_only_cscs
 
 Reads $HBM_OUTPUT_ROOT/outputs/raw/<run>.parquet for both arms and writes to
-reports/decision_diff/<run>--vs--<against>/.
+reports/decision_diff/<run>--vs--<against>/, or to the directory given by --into.
 """
 
 from __future__ import annotations
@@ -80,6 +86,56 @@ def prompt_diff(against: pd.DataFrame, run: pd.DataFrame) -> pd.DataFrame:
     m.loc[m["changed"] & right_a & ~right_r, "effect"] = "new_error"
     m.loc[m["changed"] & ~right_a & ~right_r, "effect"] = "other"
     return m
+
+
+def attr_free_relation(diff: pd.DataFrame) -> pd.DataFrame:
+    """Labels each changed attributed prompt by how it moved against its pair's
+    attribute-free decision under each arm.
+
+      follows_flipped_attr_free   the attribute-free decision itself changed, and the variant
+                                  moved with it: the arm reads the CV differently
+      against_flipped_attr_free   the attribute-free decision changed, the variant moved the
+                                  other way
+      toward_attr_free            the attribute-free decision is the same under both arms and
+                                  the variant moved onto it: a deviation of the reference arm,
+                                  removed
+      away_from_attr_free         the attribute-free decision is the same and the variant moved
+                                  off it: a new deviation, the attribute-specific kind
+      no_attr_free_decision       an arm left the attribute-free prompt undecided
+
+    Unchanged rows and the attribute-free prompts themselves get no label.
+    """
+    free = (diff[diff["condition"] == "attr_free"].drop_duplicates("pair_id")
+            .set_index("pair_id")[["d_against", "d_run"]])
+    out = diff.assign(attr_free_against=diff["pair_id"].map(free["d_against"]),
+                      attr_free_run=diff["pair_id"].map(free["d_run"]))
+    moved = out["changed"] & (out["condition"] != "attr_free")
+    known = out["attr_free_against"].notna() & out["attr_free_run"].notna()
+    flipped = out["attr_free_against"] != out["attr_free_run"]
+    onto = out["d_run"] == out["attr_free_run"]
+    relation = pd.Series(None, index=out.index, dtype="object")
+    relation[moved & ~known] = "no_attr_free_decision"
+    relation[moved & known & flipped & onto] = "follows_flipped_attr_free"
+    relation[moved & known & flipped & ~onto] = "against_flipped_attr_free"
+    relation[moved & known & ~flipped & onto] = "toward_attr_free"
+    relation[moved & known & ~flipped & ~onto] = "away_from_attr_free"
+    return out.assign(relation=relation)
+
+
+def relation_table(diff: pd.DataFrame) -> pd.DataFrame:
+    """Changed attributed prompts by relation, direction and effect, with their pairs."""
+    labelled = diff[diff["relation"].notna()]
+    return (labelled.groupby(["relation", "flip", "effect"])
+            .agg(prompts=("pair_id", "size"), pairs=("pair_id", "nunique")).reset_index())
+
+
+def away_table(diff: pd.DataFrame) -> pd.DataFrame:
+    """The new deviations (away_from_attr_free) by group, condition, attribute and effect."""
+    away = diff[diff["relation"] == "away_from_attr_free"]
+    return (away.groupby(["protected_group", "condition", "protected_attr", "flip", "effect"])
+            .agg(prompts=("pair_id", "size"), pairs=("pair_id", "nunique")).reset_index()
+            .sort_values(["prompts", "protected_group", "protected_attr"],
+                         ascending=[False, True, True]).reset_index(drop=True))
 
 
 def set_status(diff: pd.DataFrame) -> pd.DataFrame:
@@ -173,6 +229,16 @@ def render(run: str, against: str, sets: pd.DataFrame, diff: pd.DataFrame,
     flips = (diff[diff["changed"]].assign(prompts=kind[diff["changed"]])
              .groupby(["prompts", "flip", "effect"]).size().rename("n").reset_index())
     top = pairs.head(15).assign(pair_id=lambda f: f["pair_id"].str.slice(0, 8))
+    labelled = diff[diff["relation"].notna()]
+    by_relation = labelled.groupby("relation").agg(
+        prompts=("pair_id", "size"), pairs=("pair_id", "nunique"),
+        new_error=("effect", lambda s: int((s == "new_error").sum())),
+        fixes_error=("effect", lambda s: int((s == "fixes_error").sum()))).reset_index()
+    away = (labelled[labelled["relation"] == "away_from_attr_free"]
+            .groupby(["protected_group", "condition", "flip"])
+            .agg(prompts=("pair_id", "size"), pairs=("pair_id", "nunique"),
+                 new_error=("effect", lambda s: int((s == "new_error").sum())))
+            .reset_index())
     counts = status["status"].value_counts()
     status_line = ", ".join(f"{k} {int(counts.get(k, 0))}"
                             for k in ("stable_both", "fixed", "broken", "unstable_both"))
@@ -194,6 +260,19 @@ def render(run: str, against: str, sets: pd.DataFrame, diff: pd.DataFrame,
         f"## Decisions that differ: {int(diff['changed'].sum())} of {len(diff)} prompts",
         "",
         _table(flips),
+        "",
+        "## Each change against its pair's attribute-free decision",
+        "",
+        "`follows_flipped_attr_free`: the attribute-free decision changed too, so the arm reads "
+        "the CV differently. `toward_attr_free`: an old deviation from an unchanged "
+        "attribute-free decision removed. `away_from_attr_free`: a new deviation, the "
+        "attribute-specific kind (`away_from_attr_free.csv` lists it by attribute).",
+        "",
+        _table(by_relation),
+        "",
+        "New deviations by group, condition and direction:",
+        "",
+        _table(away),
         "",
         "## How concentrated the changes are",
         "",
@@ -240,25 +319,30 @@ def main() -> None:
                                      formatter_class=argparse.RawDescriptionHelpFormatter)
     parser.add_argument("--run", required=True, help="the arm read against the reference")
     parser.add_argument("--against", required=True, help="the reference arm, e.g. SFT")
-    parser.add_argument("--out", default=str(REPO_ROOT / "reports" / "decision_diff"))
+    parser.add_argument("--out", default=str(REPO_ROOT / "reports" / "decision_diff"),
+                        help="parent directory; the run pair gets <run>--vs--<against>/")
+    parser.add_argument("--into", help="write to exactly this directory instead")
     args = parser.parse_args()
 
     raw = Path(resolve_output_path("outputs/raw"))
     run_path, against_path = raw / f"{args.run}.parquet", raw / f"{args.against}.parquet"
-    out = Path(args.out) / f"{args.run}--vs--{args.against}"
+    out = Path(args.into) if args.into else Path(args.out) / f"{args.run}--vs--{args.against}"
     out.mkdir(parents=True, exist_ok=True)
 
     sets = set_comparison(S.load_rows(str(against_path)), S.load_rows(str(run_path)))
-    diff = prompt_diff(load(against_path), load(run_path))
+    diff = attr_free_relation(prompt_diff(load(against_path), load(run_path)))
     status = set_status(diff)
     pairs = pair_summary(diff)
     conc = concentration(status)
 
     sets.to_csv(out / "sets.csv", index=False)
     keep = [*KEY, "candidate_id", "job_position", "ref", "d_against", "d_run", "flip", "effect",
-            "feedback_against", "feedback_run"]
+            "attr_free_against", "attr_free_run", "relation", "feedback_against",
+            "feedback_run"]
     (diff[diff["changed"]][keep].rename(columns={"ref": "reference"})
      .sort_values(KEY).to_csv(out / "prompts_changed.csv", index=False))
+    relation_table(diff).to_csv(out / "relations.csv", index=False)
+    away_table(diff).to_csv(out / "away_from_attr_free.csv", index=False)
     status.to_csv(out / "set_status.csv", index=False)
     pairs.to_csv(out / "pairs.csv", index=False)
     (out / "summary.md").write_text(render(args.run, args.against, sets, diff, conc, pairs,

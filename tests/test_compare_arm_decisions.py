@@ -73,3 +73,25 @@ def test_set_comparison_counts_fixed_and_broken_sets_pooled_and_per_cell():
     assert table.loc["all groups (pair x condition)", "fixed"] == 1
     assert table.loc["all groups (pair x condition)", "broken"] == 1
     assert table.loc["gender / explicit", "sets"] == 2
+
+
+def test_each_change_is_read_against_its_pairs_attribute_free_decision():
+    # p keeps its attribute-free reject: its variant a moves off it, its variant b (a deviation
+    # of the reference arm) moves back onto it. q's attribute-free decision flips to hire: a and
+    # c follow it, b moves the other way.
+    against = {**AGAINST, ("p", "b"): "hire"}
+    run = {**RUN, ("p", "b"): "reject", ("q", "b"): "reject"}
+    diff = CD.attr_free_relation(CD.prompt_diff(CD.normalise(_arm(against)),
+                                                CD.normalise(_arm(run))))
+    relation = diff[diff["relation"].notna()].set_index(["pair_id", "protected_attr"])["relation"]
+    assert relation.to_dict() == {
+        ("p", "a"): "away_from_attr_free", ("p", "b"): "toward_attr_free",
+        ("q", "a"): "follows_flipped_attr_free", ("q", "b"): "against_flipped_attr_free",
+        ("q", "c"): "follows_flipped_attr_free"}
+    assert diff.loc[diff["condition"] == "attr_free", "relation"].isna().all()
+
+    away = CD.away_table(diff)
+    assert away[["protected_attr", "flip", "effect", "prompts"]].values.tolist() == [
+        ["a", "reject->hire", "new_error", 1]]
+    table = CD.relation_table(diff).set_index(["relation", "flip"])
+    assert table.loc[("follows_flipped_attr_free", "reject->hire"), "pairs"].item() == 1
