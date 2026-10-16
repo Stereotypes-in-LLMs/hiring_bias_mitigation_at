@@ -112,5 +112,6 @@ def test_group_words_and_top_features():
         rows.append(_kept(f"p{i}", "a", "explicit", f"shared words alpha marker {i}"))
         rows.append(_kept(f"p{i}", "b", "explicit", f"shared words beta marker {i}"))
     top = TL.cell_top_features(pd.DataFrame(rows), k=1).set_index("cell")
-    assert top.loc["a / explicit", "ngram"] == "alpha"
+    assert "alpha" in top.loc["a / explicit", "ngram"]   # "alpha" or a bigram around it
     assert top.loc["a / explicit", "rationales_with_it"] == 10
+    assert "beta" in top.loc["b / explicit", "ngram"]

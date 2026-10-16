@@ -184,11 +184,14 @@ def cell_top_features(kept: pd.DataFrame, k: int = 15) -> pd.DataFrame:
     vec = TfidfVectorizer(ngram_range=(1, 2), min_df=2, sublinear_tf=True)
     model = LogisticRegression(max_iter=2000).fit(vec.fit_transform(texts), labels)
     terms = np.asarray(vec.get_feature_names_out())
+    coef = model.coef_
+    if coef.shape[0] == 1:  # two cells: one row of coefficients, for classes_[1]
+        coef = np.vstack([-coef[0], coef[0]])
     rows = []
     for i, cell in enumerate(model.classes_):
-        top = np.argsort(model.coef_[i])[::-1][:k]
+        top = np.argsort(coef[i])[::-1][:k]
         rows += [{"cell": cell, "rank": r + 1, "ngram": terms[j],
-                  "coefficient": float(model.coef_[i][j]),
+                  "coefficient": float(coef[i][j]),
                   "rationales_with_it": int(sum(terms[j] in t.lower() for t in
                                                 np.asarray(texts)[labels == cell]))}
                  for r, j in enumerate(top)]
