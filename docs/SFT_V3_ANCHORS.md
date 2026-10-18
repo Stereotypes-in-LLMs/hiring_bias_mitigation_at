@@ -125,6 +125,39 @@ Written on 2026-10-16 at about 20:20 CEST, after the stage-0a results and before
 | yes | no | The edits loosen it mainly where the reviewer says hire. |
 | no | yes | The edits loosen it mainly where the reviewer says reject. |
 
+### Addendum: the pool-wide vote
+
+Written on 2026-10-16 at about 20:40 CEST, after the redraw control and before this arm ran. The user approved it as generation only: it trains nothing and does not read the benchmark. The version of this page it ran with is kept as `reports/sft_v3_anchors/PREREG_votes.md`.
+
+**Question.** How noisy are the v1 anchors across the whole pool? And were the earlier preference-training sets built disproportionately on unstable anchors?
+
+**The arm.**
+- `synth.REFERENCE_PROMPT`, unchanged.
+- 8 draws per pair on all 2,992 pool pairs.
+- The v1 decoding, except seed 43, so that the 391 reviewed pairs get draws independent of the control's seed 42.
+- The same vote rule, so ties keep v1.
+
+**Definitions.**
+- An anchor is **unstable** when the vote overturns v1, when its majority is at most 5 of the decided draws (4 to 4 or 5 to 3), or when no draw is decided.
+- The pool's unstable share counts pairs.
+- A training set's unstable share counts its rows, each row taking its pair's anchor.
+- A set's **enrichment** is its unstable share divided by the pool's.
+
+**Readouts and thresholds.**
+
+| check | what is measured | threshold and meaning |
+|---|---|---|
+| B: platform | Daint's per-draw hire share on the 2,992 pairs, against v1's 0.1417 | A gap above 3 pp means the platform contributes to the flips, and A is read with that caveat. |
+| A: enrichment | The enrichment of each earlier training set: SFT v1 targets, DPO r1, r2, r2em and it2, GRPO grpo-02, RFT rft-01 | A holds for a set when its enrichment is at least 2. |
+| D: stability | On the 391 reviewed pairs, the agreement between this arm's verdicts and the control's | Descriptive, no threshold. |
+| SFT retrain | The share of pool pairs whose verdict the vote changes | At least 10% before an SFT retrain on vote anchors is worth proposing. |
+
+**What follows from the result.** A training proposal, a preference arm rebuilt on vote anchors without the unstable pairs, is made only when both of the following hold. Otherwise the anchor work stops here.
+- A holds for the arm whose data would be rebuilt, which is DPO r2em or GRPO grpo-02.
+- The platform check passes.
+
+**Compute.** One debug job on one GH200 node, about 25 minutes. The draws are saved in parts, so a job that runs out of time resumes where it stopped.
+
 ## Result
 
 Stage 0a ran as job 5073299, taking 9 min 52 s on one GH200 node in the debug partition. The code was 67f4bb1 plus three untracked files:
@@ -222,19 +255,73 @@ Raw cases, quoted from the draws and the review.
 
 The per-draw results are in `artifacts/semisynthetic-v3/anchors/control_draws.parquet` on Daint: 3,128 draws.
 
+### The pool-wide vote
+
+The vote ran as job 5073453, taking 22 min 39 s on one GH200 node in the debug partition. It used script sha256 6ff5a9551aed and the second-addendum version of this page, sha256 7e3e35978d88, kept as `reports/sft_v3_anchors/PREREG_votes.md`. From `reports/sft_v3_anchors/pool_votes.md`:
+
+| check | result | threshold | outcome |
+|---|---|---|---|
+| B: platform | Daint per-draw hire share 0.2173, against 0.1417 for v1 (gap +0.0756) | at most 0.03 | fail |
+| A: enrichment of DPO r2em | 0.552 | at least 2 | does not hold |
+| A: enrichment of GRPO grpo-02 | 0.780 | at least 2 | does not hold |
+| SFT retrain: pool verdicts that change | 0.0642 | at least 0.10 | no |
+
+So, as pre-registered, there is no training proposal and no SFT retrain.
+
+- **The pool.** The vote turns 192 of the 2,568 v1 rejects into hires, and none of the 424 v1 hires into rejects.
+  - 72 pairs tie.
+  - 70% of pairs get 0 of 8 hire votes, and 13% get 8 of 8.
+  - 11.2% of anchors are unstable: 0.9% of v1 hires and 12.9% of v1 rejects.
+- **Enrichment.** Every trained set is below 1: DPO r1 0.94, r2 0.73, r2em 0.55, GRPO 0.78, RFT 0.42. The untrained it2 pairs reach 2.34.
+- **D: stability.** On the 391 reviewed pairs, this vote (seed 43) and the control (seed 42) agree on 0.918. On the target pairs they agree on 0.905, with 17 flips to hire and 15 to reject (p = 0.86).
+
+Two readouts were added after the platform check failed and were not pre-registered.
+
+- **Single draws.** The two rows below differ in direction, not in size:
+
+  | comparison | disagreement on pool pairs | flips to hire | flips to reject | p |
+  |---|---|---|---|---|
+  | two Daint draws of the same pair | 7.3% | 115 | 103 | 0.46 |
+  | v1's draw against one Daint draw | 7.8% | 221 | 11 | < 0.001 |
+
+- **Enrichment within each side.** The preference sets are balanced, while the pool is 86% reject. Counted on the reject side only, the enrichment is:
+
+  | set | reject-side enrichment |
+  |---|---|
+  | DPO r1 | 1.54 |
+  | DPO r2 | 1.19 |
+  | DPO r2em | 0.87 |
+  | GRPO grpo-02 | 1.27 |
+  | RFT rft-01 | 0.65 |
+
+  None reaches 2.
+
+The per-pair votes are in `artifacts/semisynthetic-v3/anchors/pool_votes_seed43.parquet` (23,936 draws) and `pool_votes_seed43_anchors.parquet` on Daint.
+
 ## Reading
 
-- **Fact.** On the 337 target pairs, drawing the unchanged v1 prompt 8 times and taking the vote turns 131 rejects into hires, 65 of the 124 clear hires among them.
-  - Only 3 of the 34 clear rejects flip this way.
-  - The two edited prompts add hires on top of that: +45 and +38 on the target pairs.
+- **Fact: the edited prompts (stage 0a and the control).** These comparisons all ran on Daint.
+  - Both edited prompts hire more than the unchanged prompt on the contested target pairs: +45 and +38.
   - On the clear pairs, only audit's gain among clear hires is significant (+18, p = 0.006). Their extra hires among clear rejects (+5 and +3) are not.
-- **Interpretation, not confirmed.** On these contested pairs, most of what looked like a strict anchor is a single noisy draw. Under the same prompt, the teacher's own majority disagrees with that draw on 39% of them. The prompt edits loosen the teacher further, and audit adds some unfounded hires: "cloud-ready" for a CV without cloud work.
+  - Audit adds unfounded hires, for example "cloud-ready" for a CV without cloud work.
+- **Fact: the v1 anchors are shifted, not noisier.**
+  - On the same 2,992 pairs and the same prompt, Daint hires 21.7% of draws, against 14.2% for v1.
+  - Disagreements between v1 and Daint run 221 to 11 toward hire, while two Daint draws disagree about as often but symmetrically.
+  - The vote changes no v1 hire.
+- **Revised reading of the redraw control.** The 131 flips on the contested target pairs mix two things: the selection on a single reject draw, and this shift. They are not evidence that the v1 anchors were unlucky draws from the distribution the teacher has on Daint. The earlier sentence that "most of what looked like a strict anchor is a single noisy draw" is withdrawn.
+- **Fact: the preference sets do not concentrate on unstable anchors.** Their enrichment is below 1 overall, and at most 1.54 on the reject side. Explanation A (mining the anchors' noise) is not supported.
+- **Interpretation, not confirmed.** The v1 anchors are stricter than what the same teacher and prompt produce on Daint. The cause is unknown. It could be:
+  - Daint's platform: GH200, the vLLM version, the Triton prefill kernel for Qwen3.5's linear attention, tensor parallel 4;
+  - the pre-fork code the v1 run used. `artifacts/semisynthetic-v1/generation_report.json` records neither a commit nor a prompt hash.
+- **Consequence.** Every Daint measurement of the teacher (jobs 5071748 and 5071836, the v2 judge passes, this page) describes the Daint teacher, not the setup that made the v1 anchors. How that setup would score on the benchmark is not known.
 - **Unknown.**
-  - How large the redraw effect is on the whole pool. These pairs were selected for disagreement with the student, so they are enriched for unlucky draws. On the 450 benchmark pairs, a single draw matched the 8-draw vote on 95.4% of untied pairs (`reports/teacher_anchor/`).
+  - The cause of the shift, and whether it also holds on benchmark CVs.
   - Whether the reviewer's clear-reject grades are right.
 
 ## Caveats
 
+- **The platform check assumes a shared distribution.** It compares a per-draw share with v1's single draws on identical pairs. Both estimate the same mean only if the two setups share a distribution, and that is what failed.
+- **Post-hoc readouts are descriptive.** The single-draw comparison and the side-wise enrichment were added after the results. Every pre-registered readout in `pool_votes.md` is the job's own.
 - **The control was added after stage 0a.** Its question and its reading table were written down before it ran (the addendum). It does not change the stage-0a outcome: no candidate passed, and stage 0b stays stopped.
 - **The set is selected.** The 337 target pairs were chosen because a single v1 draw said reject while the student hired. They are not a sample of the pool, so neither effect is a pool-wide rate.
 - **Each arm was drawn once,** 8 times per pair with seed 42. The control and the candidates ran in separate jobs.
@@ -269,3 +356,13 @@ python scripts/sft_v3_anchors.py --stage compare    # CPU, reads both draw files
 ```
 
 `control.md` was regenerated from the job's draws on 2026-10-16 to add the borderline (fit 3) rows. Every row the job wrote is unchanged.
+
+The pool-wide vote was job 5073453:
+
+```bash
+REPO=$XW/hiring_bias_mitigation_at-teacher scripts/cscs/submit.sh -p debug -t 00:30:00 \
+  scripts/cscs/sft_v3_anchors.sbatch votes
+python scripts/sft_v3_anchors.py --stage enrichment   # CPU
+```
+
+`pool_votes.md` was regenerated from the job's draws on 2026-10-16 to add the two readouts marked as not pre-registered. Every readout the job wrote is unchanged.
