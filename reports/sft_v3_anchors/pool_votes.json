@@ -321,6 +321,32 @@
       "disagreement": 0.07754010695187166
     }
   },
+  "output_format_not_preregistered": {
+    "v1 anchors, pool pairs": {
+      "outputs": 2992,
+      "fenced": 1,
+      "fenced_share": 0.00033422459893048126
+    },
+    "v1 anchors, all generated": {
+      "outputs": 3000,
+      "fenced": 1,
+      "fenced_share": 0.0003333333333333333
+    },
+    "v1 invariant targets": {
+      "outputs": 36000,
+      "fenced": 100,
+      "fenced_share": 0.002777777777777778
+    },
+    "Daint anchor draws": {
+      "outputs": 23936,
+      "fenced": 3132,
+      "fenced_share": 0.13084893048128343
+    },
+    "daint_hire_share_by_format": {
+      "fenced": 0.15676883780332057,
+      "bare": 0.22644683714670255
+    }
+  },
   "decisions": {
     "a_holds_for_rebuild_candidates": {
       "DPO r2em": false,
@@ -381,15 +407,14 @@
       "script_sha256": "6ff5a9551aedf304eccb5badbc045fbb187abed73aa7f5c92499defeb68c29c5"
     }
   },
-  "written": "2026-10-16T19:42:28+00:00",
-  "prereg_sha256": "7e3e35978d887134c68156c039075d2d8ade0dd76ecf9051264ca84655333e83",
+  "written": "2026-10-18T08:28:12+00:00",
+  "prereg_sha256": "84af9a1d618f1d97883146e7ed97e4d2433d5553b4457b77277fcc99c170e7b1",
   "code": {
-    "commit": "c99fdffa606c97ac34adefcdf0a5d9d7ee305295",
+    "commit": "92e73ff1b8ec586b2db5a999d4668956be43453a",
     "uncommitted": [
-      "scripts/cscs/sft_v3_anchors.sbatch",
       "scripts/sft_v3_anchors.py"
     ],
     "untracked": [],
-    "script_sha256": "ac7c8411f87c058a615d0641a1928b824ef7de62ad48767cee876394dc715034"
+    "script_sha256": "7187a871b0a74a0ba78ae959850de25427d14545ac84a88d09377e367b96ad76"
   }
 }

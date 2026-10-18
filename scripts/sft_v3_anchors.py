@@ -73,6 +73,8 @@ K = 8
 POOL = "artifacts/semisynthetic-v2/onpolicy-full/rows.parquet"
 #: v1's 12 attribute variants per pair, which the changed pairs are regenerated over.
 INVARIANT_V1 = "artifacts/semisynthetic-v1/raw/en_invariant.parquet"
+#: v1's raw anchor generations, kept unmodified by generate_training_data._dump_raw.
+REFERENCE_V1 = "artifacts/semisynthetic-v1/raw/en_reference.parquet"
 OUT = "artifacts/semisynthetic-v3"
 REPORTS = REPO_ROOT / "reports" / "sft_v3_anchors"
 LABELS = REPORTS / "inputs" / "claude_anchor_review_labels.csv"
@@ -338,6 +340,33 @@ def single_draws(draws: pd.DataFrame, pairs: pd.DataFrame) -> dict:
     for r in out.values():
         r["disagreement"] = (r["reject_to_hire"] + r["hire_to_reject"]) / r["pairs"]
     return out
+
+
+def fenced(raw: pd.Series) -> pd.Series:
+    """Whether a raw answer wraps its JSON in a Markdown code fence."""
+    return raw.astype(str).str.contains("```", regex=False)
+
+
+def output_format(draws: pd.DataFrame, v1_reference: pd.DataFrame, v1_invariant: pd.DataFrame,
+                  pairs: pd.DataFrame) -> dict:
+    """Not pre-registered, added after the platform check failed: how often the answer is
+    wrapped in a code fence, in v1's raw generations and in Daint's draws, and Daint's hire
+    share by format. Both setups were given the same nominal prompt and decoding; a different
+    fence rate says the model behaved differently, not only that its decisions moved."""
+    def count(raw: pd.Series) -> dict:
+        f = fenced(raw)
+        return {"outputs": int(raw.size), "fenced": int(f.sum()),
+                "fenced_share": float(f.mean()) if raw.size else None}
+
+    on_pool = v1_reference[v1_reference["pair_id"].isin(pairs["pair_id"])]
+    f, decided = fenced(draws["raw_output"]), draws["decision"].isin(TA.DECIDED)
+    hire = {name: float((draws.loc[mask & decided, "decision"] == "hire").mean())
+            for name, mask in (("fenced", f), ("bare", ~f))}
+    return {"v1 anchors, pool pairs": count(on_pool["raw_output"]),
+            "v1 anchors, all generated": count(v1_reference["raw_output"]),
+            "v1 invariant targets": count(v1_invariant["raw_output"]),
+            "Daint anchor draws": count(draws["raw_output"]),
+            "daint_hire_share_by_format": hire}
 
 
 def enrichment(rows: pd.DataFrame, unstable_pairs: pd.Series, pool_share: float) -> dict:
@@ -778,6 +807,10 @@ def stage_enrichment(args) -> None:
                                                  .items()}},
         "training_sets": sets, "stability_against_control": stability,
         "single_draws_not_preregistered": single_draws(draws, pairs),
+        "output_format_not_preregistered": output_format(
+            draws, pd.read_parquet(resolve_output_path(REFERENCE_V1), columns=["pair_id",
+                                                                             "raw_output"]),
+            pd.read_parquet(resolve_output_path(INVARIANT_V1), columns=["raw_output"]), pairs),
         "decisions": {
             "a_holds_for_rebuild_candidates": rebuild,
             "training_proposal": bool(platform["pass"] and any(rebuild.values())),
@@ -899,6 +932,7 @@ def render_compare(s: dict) -> str:
 
 def render_votes(s: dict) -> str:
     p, pool, d = s["platform"], s["pool"], s["decisions"]
+    fmt = s["output_format_not_preregistered"]
     sets = [{"set": name, **{k: v for k, v in r.items() if k != "path"}}
             for name, r in s["training_sets"].items()]
     sides = [{"set": name, **{f"{side} {k}": v for side, b in r["by_side_not_preregistered"].items()
@@ -946,6 +980,13 @@ def render_votes(s: dict) -> str:
                      s["single_draws_not_preregistered"].items()],
                     ["comparison", "pairs", "disagreement", "before_hired", "after_hired",
                      "reject_to_hire", "hire_to_reject", "mcnemar_p"]), "",
+        "Not pre-registered, added after the platform check failed: answers wrapped in a code "
+        "fence. v1's raw generations are stored unmodified; both setups had the same nominal "
+        "prompt and decoding.", "",
+        *_table([{"outputs of": k, **v} for k, v in fmt.items()
+                 if k != "daint_hire_share_by_format"],
+                ["outputs of", "outputs", "fenced", "fenced_share"]), "",
+        f"Daint hire share by format: {fmt['daint_hire_share_by_format']}.", "",
     ])
 
 

@@ -239,13 +239,13 @@ The control ran as job 5073323, taking 7 min 50 s on one GH200 node in the debug
 
 Raw cases, quoted from the draws and the review.
 
-**Redraw: the same prompt, drawn again.**
+**Redraw: the nominally same prompt, drawn again on Daint.**
 - **Graphic Designer, reviewer fit 4.**
   - The v1 anchor rejected: "Candidate is a motion designer with video focus, but the role requires static banner and email design. Skills mismatch."
-  - Drawn again, the same prompt hires 8 of 8: "Strong match: proven graphic design, banner creation, and deadline management."
+  - Drawn again on Daint with nominally the same settings, it is hired 8 of 8: "Strong match: proven graphic design, banner creation, and deadline management."
 - **QA Manual, reviewer fit 4.**
   - The v1 anchor rejected the candidate as "overqualified with automation and leadership experience".
-  - Drawn again, the same prompt hires 7 of 8.
+  - Drawn again on Daint, it is hired 7 of 8.
 
 **Prompt: a clear reject the control rejects and audit hires.**
 - **JavaScript (React.js) Developer, reviewer fit 2.**
@@ -275,7 +275,7 @@ So, as pre-registered, there is no training proposal and no SFT retrain.
 - **Enrichment.** Every trained set is below 1: DPO r1 0.94, r2 0.73, r2em 0.55, GRPO 0.78, RFT 0.42. The untrained it2 pairs reach 2.34.
 - **D: stability.** On the 391 reviewed pairs, this vote (seed 43) and the control (seed 42) agree on 0.918. On the target pairs they agree on 0.905, with 17 flips to hire and 15 to reject (p = 0.86).
 
-Two readouts were added after the platform check failed and were not pre-registered.
+Three readouts were added after the platform check failed and were not pre-registered.
 
 - **Single draws.** The two rows below differ in direction, not in size:
 
@@ -296,6 +296,16 @@ Two readouts were added after the platform check failed and were not pre-registe
 
   None reaches 2.
 
+- **Output format.** Both setups were given the same nominal prompt and decoding, and v1's raw generations are stored unmodified (`generate_training_data._dump_raw`). Yet they format their answers differently:
+
+  | outputs | wrapped in a code fence |
+  |---|---|
+  | v1 anchors, 3,000 generated | 1 |
+  | v1 invariant targets, 36,000 | 100 (0.3%) |
+  | Daint anchor draws, 23,936 | 3,132 (13.1%) |
+
+  On Daint, fenced draws hire 15.7% and bare ones 22.6%.
+
 The per-pair votes are in `artifacts/semisynthetic-v3/anchors/pool_votes_seed43.parquet` (23,936 draws) and `pool_votes_seed43_anchors.parquet` on Daint.
 
 ## Reading
@@ -305,14 +315,16 @@ The per-pair votes are in `artifacts/semisynthetic-v3/anchors/pool_votes_seed43.
   - On the clear pairs, only audit's gain among clear hires is significant (+18, p = 0.006). Their extra hires among clear rejects (+5 and +3) are not.
   - Audit adds unfounded hires, for example "cloud-ready" for a CV without cloud work.
 - **Fact: the v1 anchors are shifted, not noisier.**
-  - On the same 2,992 pairs and the same prompt, Daint hires 21.7% of draws, against 14.2% for v1.
+  - On the same 2,992 pairs, with nominally the same settings (the same model name, the prompt text in the code, the decoding), Daint hires 21.7% of draws, against 14.2% for v1.
   - Disagreements between v1 and Daint run 221 to 11 toward hire, while two Daint draws disagree about as often but symmetrically.
   - The vote changes no v1 hire.
+- **Fact: the two setups are not equivalent.** v1 wrapped 1 of 3,000 anchors in a code fence, Daint 13.1% of its draws. Settings that are nominally the same did not produce the same behaviour, so "the same prompt" holds only for the text in the code, not for what the model was given.
 - **Revised reading of the redraw control.** The 131 flips on the contested target pairs mix two things: the selection on a single reject draw, and this shift. They are not evidence that the v1 anchors were unlucky draws from the distribution the teacher has on Daint. The earlier sentence that "most of what looked like a strict anchor is a single noisy draw" is withdrawn.
 - **Fact: the preference sets do not concentrate on unstable anchors.** Their enrichment is below 1 overall, and at most 1.54 on the reject side. Explanation A (mining the anchors' noise) is not supported.
-- **Interpretation, not confirmed.** The v1 anchors are stricter than what the same teacher and prompt produce on Daint. The cause is unknown. It could be:
+- **Interpretation, not confirmed.** The v1 anchors are stricter than what nominally the same settings produce on Daint. The cause is unknown. It could be:
   - Daint's platform: GH200, the vLLM version, the Triton prefill kernel for Qwen3.5's linear attention, tensor parallel 4;
-  - the pre-fork code the v1 run used. `artifacts/semisynthetic-v1/generation_report.json` records neither a commit nor a prompt hash.
+  - the pre-fork code the v1 run used. `artifacts/semisynthetic-v1/generation_report.json` records neither a commit nor a prompt hash;
+  - the model snapshot, whose chat template or tokenizer decides how the prompt is rendered. The difference in formatting points to the prompt the model saw, or to sampling defaults, more than to numerical noise.
 - **Consequence.** Every Daint measurement of the teacher (jobs 5071748 and 5071836, the v2 judge passes, this page) describes the Daint teacher, not the setup that made the v1 anchors. How that setup would score on the benchmark is not known.
 - **Unknown.**
   - The cause of the shift, and whether it also holds on benchmark CVs.
@@ -365,4 +377,4 @@ REPO=$XW/hiring_bias_mitigation_at-teacher scripts/cscs/submit.sh -p debug -t 00
 python scripts/sft_v3_anchors.py --stage enrichment   # CPU
 ```
 
-`pool_votes.md` was regenerated from the job's draws on 2026-10-16 to add the two readouts marked as not pre-registered. Every readout the job wrote is unchanged.
+`pool_votes.md` was regenerated from the job's draws to add the three readouts marked as not pre-registered: single draws and side-wise enrichment on 2026-10-16, output format on 2026-10-18. Every readout the job wrote is unchanged.

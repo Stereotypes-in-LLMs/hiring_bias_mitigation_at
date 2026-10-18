@@ -193,6 +193,22 @@ def test_side_enrichment_compares_each_side_with_the_pools_same_side():
     assert r["hire"]["pool_share"] == 0.0 and r["hire"]["enrichment"] is None
 
 
+def test_output_format_counts_fenced_answers_on_each_side():
+    bare = json.dumps({"decision": "reject", "feedback": "Lacks the PostgreSQL depth needed."})
+    fence = f"```json\n{bare.replace('reject', 'hire')}\n```"
+    pairs = pd.DataFrame({"pair_id": ["a", "b"]})
+    v1_ref = pd.DataFrame({"pair_id": ["a", "b", "dropped"], "raw_output": [bare, bare, fence]})
+    v1_inv = pd.DataFrame({"raw_output": [bare, fence, bare, bare]})
+    draws = pd.DataFrame({"raw_output": [bare, fence, fence, bare],
+                          "decision": ["reject", "hire", "reject", "reject"]})
+    r = V3.output_format(draws, v1_ref, v1_inv, pairs)
+    assert r["v1 anchors, pool pairs"]["fenced"] == 0
+    assert r["v1 anchors, all generated"]["fenced"] == 1
+    assert r["v1 invariant targets"]["fenced_share"] == 0.25
+    assert r["Daint anchor draws"]["fenced"] == 2
+    assert r["daint_hire_share_by_format"] == {"fenced": 0.5, "bare": 0.0}
+
+
 def test_single_draws_compare_one_draw_with_another_and_with_v1():
     pairs = pd.DataFrame({"pair_id": ["a", "b", "c"], "v1_decision": ["reject"] * 3})
     draws = pd.DataFrame({"pair_id": ["a", "a", "b", "b", "c", "c"],
