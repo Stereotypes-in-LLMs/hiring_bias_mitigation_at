@@ -15,10 +15,14 @@ Stages, in order:
                  procedure on the pairs whose verdict changed; resumes from saved draws
   gate      CPU  stage 1: C1 to C3 and the descriptive readouts
 
-and the redraw control, added after stage 0a (the page's addendum):
+and the two arms added after stage 0a (the page's addenda):
 
-  control   GPU  the unchanged v1 prompt, 8 draws, on the same 391 reviewed pairs
-  compare   CPU  the control against both candidates on the same pairs
+  control     GPU  the redraw control: the unchanged v1 prompt, 8 draws, on the 391 pairs
+  compare     CPU  the control against both candidates on the same pairs
+  votes       GPU  the pool-wide vote: the unchanged v1 prompt, 8 draws at seed 43, on all
+                   2,992 pool pairs, saved in parts; resumes from saved parts
+  enrichment  CPU  the platform check, unstable anchors in earlier training sets, and the
+                   vote's agreement with the control
 
 Outputs: artifacts/semisynthetic-v3/ under $HBM_OUTPUT_ROOT (training data from the pool, never
 benchmark outputs) and reports/sft_v3_anchors/.
@@ -30,6 +34,8 @@ benchmark outputs) and reports/sft_v3_anchors/.
     python scripts/sft_v3_anchors.py --stage gate
     python scripts/sft_v3_anchors.py --stage control     # GPU, tensor parallel 4
     python scripts/sft_v3_anchors.py --stage compare
+    python scripts/sft_v3_anchors.py --stage votes       # GPU, tensor parallel 4
+    python scripts/sft_v3_anchors.py --stage enrichment
 """
 
 from __future__ import annotations
@@ -75,6 +81,12 @@ PREREG = REPO_ROOT / "docs" / "SFT_V3_ANCHORS.md"
 CANDIDATES = ("audit", "reference_no_decisive")
 #: The redraw control: v1's own anchor prompt, drawn again.
 CONTROL = "reference"
+#: The pool-wide vote and its pre-registered readouts (the page's second addendum).
+POOL_VOTE_SEED, POOL_VOTE_PARTS = 43, 4
+UNSTABLE_MAX_MAJORITY = 5 / 8
+PLATFORM_MAX_GAP, ENRICHMENT_MIN, SFT_RETRAIN_MIN_CHANGED = 0.03, 2.0, 0.10
+#: The arms whose data a follow-up would rebuild on vote anchors.
+REBUILD_CANDIDATES = ("DPO r2em", "GRPO grpo-02")
 DECISIVE = " Be decisive: a genuinely weak match is a reject."
 #: The pre-registered thresholds and tie rule (docs/SFT_V3_ANCHORS.md).
 C1_MIN, C2_MIN, C3_GAIN, TIE_MARGIN = 0.60, 0.90, 0.05, 0.02
@@ -294,6 +306,67 @@ def paired_flips(before: pd.Series, after: pd.Series) -> dict:
             "mcnemar_p": float(binomtest(up, up + down, 0.5).pvalue) if up + down else None}
 
 
+def unstable(anchors: pd.DataFrame) -> pd.Series:
+    """Overturned by the vote, a majority of at most 5 in 8 decided draws, or no decided draw."""
+    decided = anchors["decided"]
+    majority = np.maximum(anchors["hire_votes"], decided - anchors["hire_votes"])
+    weak = majority <= UNSTABLE_MAX_MAJORITY * decided
+    return anchors["changed"] | weak | decided.eq(0)
+
+
+def platform_check(draws: pd.DataFrame, pairs: pd.DataFrame) -> dict:
+    """Daint's per-draw hire share against the v1 anchors' on the same pairs."""
+    decided = draws[draws["decision"].isin(TA.DECIDED)]
+    v1 = float((pairs["v1_decision"] == "hire").mean())
+    now = float((decided["decision"] == "hire").mean())
+    return {"pairs": len(pairs), "decided_draws": len(decided), "v1_hire_share": v1,
+            "per_draw_hire_share": now, "gap": now - v1, "max_gap": PLATFORM_MAX_GAP,
+            "pass": abs(now - v1) <= PLATFORM_MAX_GAP}
+
+
+def single_draws(draws: pd.DataFrame, pairs: pd.DataFrame) -> dict:
+    """Not pre-registered, added after the platform check failed: one Daint draw against
+    another, and v1's draw against one Daint draw. Without a platform shift the two disagree
+    about equally often, and both symmetrically."""
+    d = draws[draws["sample_index"].isin([0, 1])].pivot(index="pair_id", columns="sample_index",
+                                                         values="decision")
+    both = d[d[0].isin(TA.DECIDED) & d[1].isin(TA.DECIDED)]
+    first = d.loc[d[0].isin(TA.DECIDED), 0]
+    v1 = pairs.set_index("pair_id")["v1_decision"]
+    out = {"daint_draw_0_then_1": paired_flips(both[0], both[1]),
+           "v1_then_daint_draw_0": paired_flips(v1.loc[first.index], first)}
+    for r in out.values():
+        r["disagreement"] = (r["reject_to_hire"] + r["hire_to_reject"]) / r["pairs"]
+    return out
+
+
+def enrichment(rows: pd.DataFrame, unstable_pairs: pd.Series, pool_share: float) -> dict:
+    """A training set's share of rows on unstable anchors, against the pool's share of pairs."""
+    on = rows["pair_id"].map(unstable_pairs)
+    if on.isna().any():
+        raise ValueError(f"{int(on.isna().sum())} rows are on pairs outside the pool")
+    share = float(on.astype(bool).mean())
+    ratio = share / pool_share if pool_share else None
+    return {"rows": len(rows), "unstable_rows": int(on.astype(bool).sum()),
+            "unstable_share": share, "enrichment": ratio,
+            "a_holds": bool(ratio is not None and ratio >= ENRICHMENT_MIN)}
+
+
+def side_enrichment(rows: pd.DataFrame, anchors: pd.DataFrame) -> dict:
+    """Not pre-registered: enrichment within each old target side, against the pool's pairs on
+    that side. The pre-registered ratio mixes the sides, while the preference sets are balanced
+    and the pool is mostly reject."""
+    by_pair = anchors.set_index("pair_id")
+    out = {}
+    for side in TA.DECIDED:
+        pool = float(by_pair.loc[by_pair["v1_decision"] == side, "unstable"].mean())
+        mine = rows[rows["reference_decision"] == side]["pair_id"].map(by_pair["unstable"])
+        share = float(mine.astype(bool).mean()) if len(mine) else None
+        out[side] = {"rows": len(mine), "unstable_share": share, "pool_share": pool,
+                     "enrichment": share / pool if share is not None and pool else None}
+    return out
+
+
 def comparison_sets(labels: pd.DataFrame) -> dict[str, pd.Series]:
     """The pairs each comparison of the redraw control is read on."""
     return {"all 391": labels["set"].notna(), "target 337": labels["set"] == "target",
@@ -410,10 +483,10 @@ def _write_json(path: Path, payload: dict) -> None:
     path.write_text(json.dumps(payload, indent=2, default=str) + "\n", encoding="utf-8")
 
 
-def _backend():
+def _backend(generation: dict = TA.V1_GENERATION):
     from hiring_bias_mitigation.eval import backends as BK
 
-    return BK.build_backend({"model": TA.TEACHER, "generation": TA.V1_GENERATION, **TA.SERVING})
+    return BK.build_backend({"model": TA.TEACHER, "generation": generation, **TA.SERVING})
 
 
 def _fmt(value) -> str:
@@ -625,6 +698,102 @@ def stage_compare(args) -> None:
     print(render_compare(summary))
 
 
+def _votes_path() -> Path:
+    return Path(resolve_output_path(OUT)) / "anchors" / f"pool_votes_seed{POOL_VOTE_SEED}"
+
+
+def stage_votes(args) -> None:
+    require_output_root()
+    pairs = pool_pairs()
+    parts_dir = _votes_path()
+    parts_dir.mkdir(parents=True, exist_ok=True)
+    decoding = {**TA.V1_GENERATION, "seed": POOL_VOTE_SEED}
+    backend, seconds = _backend(decoding), {}
+    parts = np.array_split(np.arange(len(pairs)), POOL_VOTE_PARTS)
+    try:
+        for i, index in enumerate(parts):
+            chunk, path = pairs.iloc[index], parts_dir / f"part{i}.parquet"
+            saved = set(pd.read_parquet(path, columns=["pair_id"])["pair_id"]) if path.exists() \
+                else set()
+            if saved == set(chunk["pair_id"]):
+                print(f"resuming: {path} is complete")
+                continue
+            start = time.time()
+            frame = draw_frame(chunk, CONTROL, backend.generate_samples(
+                candidate_prompts(chunk, CONTROL), K))
+            frame.to_parquet(path, index=False)
+            seconds[f"part{i}"] = round(time.time() - start, 1)
+            print(f"wrote {path}: {len(frame)} draws in {seconds[f'part{i}']} s")
+    finally:
+        backend.close()
+    draws = pd.concat([pd.read_parquet(parts_dir / f"part{i}.parquet")
+                       for i in range(POOL_VOTE_PARTS)], ignore_index=True)
+    draws.to_parquet(parts_dir.with_suffix(".parquet"), index=False)
+    _write_json(parts_dir.with_suffix(".meta.json"), {
+        "stage": "votes", "prompt": CONTROL, "model": TA.TEACHER, "pairs": len(pairs), "k": K,
+        "decoding": decoding, "serving": TA.SERVING, "parts": POOL_VOTE_PARTS,
+        "prompts_sha256": {CONTROL: prompts_sha256(candidate_prompts(pairs, CONTROL))},
+        "generation_seconds_this_job": seconds, **provenance()})
+    print(f"wrote {parts_dir.with_suffix('.parquet')}: {len(draws)} draws")
+
+
+def stage_enrichment(args) -> None:
+    labels = load_labels()
+    pairs = pool_pairs()
+    draws = pd.read_parquet(_votes_path().with_suffix(".parquet"))
+    anchors = new_anchors(draws, pairs)
+    anchors["unstable"] = unstable(anchors)
+    by_pair = anchors.set_index("pair_id")
+    pool_share = float(anchors["unstable"].mean())
+    sets = {}
+    for name, path in TRAINING_SETS.items():
+        rows = pd.read_parquet(resolve_output_path(path), columns=["pair_id", "reference_decision"])
+        flips = flip_readout(rows, anchors)
+        sets[name] = {"path": path, **enrichment(rows, by_pair["unstable"], pool_share),
+                      **{k: flips[k] for k in flips if k not in ("rows",)},
+                      "by_side_not_preregistered": side_enrichment(rows, anchors)}
+    control = pd.read_parquet(Path(resolve_output_path(OUT)) / "anchors" / "control_draws.parquet")
+    reviewed = reviewed_pairs(labels)
+    seed42 = new_anchors(control, reviewed).set_index("pair_id")["new_decision"]
+    stability = []
+    for name, mask in comparison_sets(labels).items():
+        ids = labels.loc[mask, "pair_id"].tolist()
+        before, after = seed42.loc[ids], by_pair.loc[ids, "new_decision"]
+        stability.append({"set": name, "agreement": float((before == after).mean()),
+                          **paired_flips(before, after)})
+    platform = platform_check(draws, pairs)
+    changed = float(anchors["changed"].mean())
+    rebuild = {name: sets[name]["a_holds"] for name in REBUILD_CANDIDATES}
+    full = anchors[anchors["decided"] == K]
+    summary = {
+        "pairs": len(anchors), "platform": platform,
+        "pool": {"unstable_share": pool_share, "changed_share": changed,
+                 "v1_by_new": {f"v1 {a}": {f"new {b}": int(n) for b, n in g.value_counts().items()}
+                               for a, g in anchors.groupby("v1_decision")["new_decision"]},
+                 "unstable_by_v1": {side: float(g.mean()) for side, g in
+                                    anchors.groupby("v1_decision")["unstable"]},
+                 "sources": {k: int(v) for k, v in anchors["source"].value_counts().items()},
+                 "hire_votes_when_all_decided": {f"{h} of {K}": int(n) for h, n in
+                                                 full["hire_votes"].value_counts().sort_index()
+                                                 .items()}},
+        "training_sets": sets, "stability_against_control": stability,
+        "single_draws_not_preregistered": single_draws(draws, pairs),
+        "decisions": {
+            "a_holds_for_rebuild_candidates": rebuild,
+            "training_proposal": bool(platform["pass"] and any(rebuild.values())),
+            "sft_retrain_worth_proposing": changed >= SFT_RETRAIN_MIN_CHANGED},
+        "thresholds": {"unstable_max_majority": UNSTABLE_MAX_MAJORITY,
+                       "platform_max_gap": PLATFORM_MAX_GAP, "enrichment_min": ENRICHMENT_MIN,
+                       "sft_retrain_min_changed": SFT_RETRAIN_MIN_CHANGED},
+        "draws_meta": json.loads(_votes_path().with_suffix(".meta.json").read_text()),
+        **provenance()}
+    anchors.to_parquet(_votes_path().parent / f"pool_votes_seed{POOL_VOTE_SEED}_anchors.parquet",
+                       index=False)
+    _write_json(REPORTS / "pool_votes.json", summary)
+    (REPORTS / "pool_votes.md").write_text(render_votes(summary), encoding="utf-8")
+    print(render_votes(summary))
+
+
 # ---- reports --------------------------------------------------------------------------------
 
 def _criterion_cells(r: dict) -> list:
@@ -728,11 +897,64 @@ def render_compare(s: dict) -> str:
     ])
 
 
+def render_votes(s: dict) -> str:
+    p, pool, d = s["platform"], s["pool"], s["decisions"]
+    sets = [{"set": name, **{k: v for k, v in r.items() if k != "path"}}
+            for name, r in s["training_sets"].items()]
+    sides = [{"set": name, **{f"{side} {k}": v for side, b in r["by_side_not_preregistered"].items()
+                              for k, v in b.items() if k != "pool_share"}}
+             for name, r in s["training_sets"].items()]
+    pool_sides = {side: round(b["pool_share"], 4) for side, b in
+                  next(iter(s["training_sets"].values()))["by_side_not_preregistered"].items()}
+    meta = s["draws_meta"]
+    return "\n".join([
+        "# SFT-v3: the pool-wide vote", "",
+        "Generated by `scripts/sft_v3_anchors.py --stage enrichment`; regenerate it, do not edit "
+        f"it. `{CONTROL}` (`synth.REFERENCE_PROMPT` unchanged), {meta['k']} draws per pair on "
+        f"{s['pairs']} pool pairs at {meta['decoding']}, ties keep v1. Readouts and thresholds: "
+        f"`docs/SFT_V3_ANCHORS.md` (sha256 {s['prereg_sha256'][:12]}). Unstable: overturned by "
+        f"the vote, a majority of at most {UNSTABLE_MAX_MAJORITY:.3f} of decided draws, or none "
+        "decided.", "",
+        "| check | result | threshold | outcome |", "|---|---|---|---|",
+        f"| B platform: per-draw hire share against v1 | {p['per_draw_hire_share']:.4f} against "
+        f"{p['v1_hire_share']:.4f} (gap {p['gap']:+.4f}) | at most {PLATFORM_MAX_GAP} | "
+        f"{'pass' if p['pass'] else 'fail'} |",
+        f"| SFT retrain: pool pairs whose verdict changes | {pool['changed_share']:.4f} | at least "
+        f"{SFT_RETRAIN_MIN_CHANGED} | {d['sft_retrain_worth_proposing']} |",
+        f"| A for the rebuild candidates | {d['a_holds_for_rebuild_candidates']} | enrichment at "
+        f"least {ENRICHMENT_MIN} | training proposal: {d['training_proposal']} |", "",
+        f"Pool: unstable share {pool['unstable_share']:.4f} (by v1 verdict "
+        f"{ {k: round(v, 4) for k, v in pool['unstable_by_v1'].items()} }). v1 against new "
+        f"anchor: {pool['v1_by_new']}. Sources: {pool['sources']}. Hire votes among {K} draws: "
+        f"{pool['hire_votes_when_all_decided']}.", "",
+        "A: earlier training sets, rows on unstable anchors and rows whose target the vote flips.",
+        "", *_table(sets, ["set", "rows", "pairs", "unstable_rows", "unstable_share", "enrichment",
+                           "a_holds", "flipped", "old_hire", "old_hire_flipped", "old_reject",
+                           "old_reject_flipped"]), "",
+        f"D: the 391 reviewed pairs, the control (seed 42, job 5073323) before, this vote (seed "
+        f"{POOL_VOTE_SEED}) after.", "",
+        *_table(s["stability_against_control"], ["set", "agreement", "pairs", "before_hired",
+                                                 "after_hired", "reject_to_hire",
+                                                 "hire_to_reject", "mcnemar_p"]), "",
+        "Not pre-registered: enrichment within each old target side, against the pool's pairs "
+        f"on that side (pool unstable share by side: {pool_sides}).", "",
+        *_table(sides, ["set", "reject rows", "reject unstable_share", "reject enrichment",
+                        "hire rows", "hire unstable_share", "hire enrichment"]), "",
+        "Not pre-registered, added after the platform check failed: single draws on all pool "
+        "pairs. Without a platform shift both rows disagree about equally, and symmetrically.",
+        "", *_table([{"comparison": k, **v} for k, v in
+                     s["single_draws_not_preregistered"].items()],
+                    ["comparison", "pairs", "disagreement", "before_hired", "after_hired",
+                     "reject_to_hire", "hire_to_reject", "mcnemar_p"]), "",
+    ])
+
+
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__,
                                      formatter_class=argparse.RawDescriptionHelpFormatter)
     parser.add_argument("--stage", choices=("labels", "select", "score", "generate", "gate",
-                                            "control", "compare"), required=True)
+                                            "control", "compare", "votes", "enrichment"),
+                        required=True)
     parser.add_argument("--review", help="the blind review's graded_cases.csv (stage labels)")
     parser.add_argument("--reports", type=Path, default=REPORTS,
                         help="where the reports and the labels live (default %(default)s)")
@@ -740,7 +962,8 @@ def main() -> None:
     set_reports(args.reports)
     {"labels": stage_labels, "select": stage_select, "score": stage_score,
      "generate": stage_generate, "gate": stage_gate, "control": stage_control,
-     "compare": stage_compare}[args.stage](args)
+     "compare": stage_compare, "votes": stage_votes,
+     "enrichment": stage_enrichment}[args.stage](args)
 
 
 if __name__ == "__main__":

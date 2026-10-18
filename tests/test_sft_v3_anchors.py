@@ -156,6 +156,55 @@ def test_paired_flips_count_both_ways_and_need_the_same_pairs():
         V3.paired_flips(before, after.iloc[::-1])
 
 
+def test_unstable_anchors_platform_check_and_enrichment():
+    anchors = pd.DataFrame({
+        "pair_id": ["flip", "weak", "firm", "tie", "none", "weak7", "firm7"],
+        "hire_votes": [6, 3, 2, 4, 0, 3, 2], "decided": [8, 8, 8, 8, 0, 7, 7],
+        "changed": [True, False, False, False, False, False, False]})
+    flags = V3.unstable(anchors).tolist()
+    assert flags == [True, True, False, True, True, True, False]   # 5:3 weak, 6:2 firm
+
+    pairs = pd.DataFrame({"pair_id": ["a", "b"], "v1_decision": ["hire", "reject"]})
+    draws = pd.DataFrame({"pair_id": ["a"] * 4 + ["b"] * 4,
+                          "decision": ["hire", "hire", "reject", None,
+                                       "reject", "reject", "reject", "hire"]})
+    p = V3.platform_check(draws, pairs)
+    assert (p["decided_draws"], p["v1_hire_share"]) == (7, 0.5)
+    assert abs(p["per_draw_hire_share"] - 3 / 7) < 1e-12 and p["pass"] is False
+
+    by_pair = pd.Series([True, False, False, False, False], index=list("vwxyz"))
+    rows = pd.DataFrame({"pair_id": ["v", "v", "w", "x", "y"]})
+    r = V3.enrichment(rows, by_pair, pool_share=0.2)               # 2 of 5 rows against 0.2
+    assert (r["unstable_rows"], r["a_holds"]) == (2, True) and abs(r["enrichment"] - 2) < 1e-12
+    assert not V3.enrichment(rows.iloc[2:], by_pair, 0.2)["a_holds"]
+    with pytest.raises(ValueError):
+        V3.enrichment(pd.DataFrame({"pair_id": ["elsewhere"]}), by_pair, 0.2)
+
+
+def test_side_enrichment_compares_each_side_with_the_pools_same_side():
+    anchors = pd.DataFrame({"pair_id": list("abcdef"),
+                            "v1_decision": ["hire", "hire", "reject", "reject", "reject", "reject"],
+                            "unstable": [False, False, True, False, False, False]})
+    rows = pd.DataFrame({"pair_id": ["a", "c", "c", "d"],
+                         "reference_decision": ["hire", "reject", "reject", "reject"]})
+    r = V3.side_enrichment(rows, anchors)
+    assert r["reject"]["pool_share"] == 0.25 and abs(r["reject"]["unstable_share"] - 2 / 3) < 1e-12
+    assert abs(r["reject"]["enrichment"] - 8 / 3) < 1e-12
+    assert r["hire"]["pool_share"] == 0.0 and r["hire"]["enrichment"] is None
+
+
+def test_single_draws_compare_one_draw_with_another_and_with_v1():
+    pairs = pd.DataFrame({"pair_id": ["a", "b", "c"], "v1_decision": ["reject"] * 3})
+    draws = pd.DataFrame({"pair_id": ["a", "a", "b", "b", "c", "c"],
+                          "sample_index": [0, 1] * 3,
+                          "decision": ["hire", "reject", "hire", "hire", "reject", None]})
+    r = V3.single_draws(draws, pairs)
+    within, between = r["daint_draw_0_then_1"], r["v1_then_daint_draw_0"]
+    assert (within["pairs"], within["hire_to_reject"], within["reject_to_hire"]) == (2, 1, 0)
+    assert (between["pairs"], between["reject_to_hire"], between["hire_to_reject"]) == (3, 2, 0)
+    assert abs(between["disagreement"] - 2 / 3) < 1e-12
+
+
 def test_c3_passes_at_exactly_five_points():
     labels = _labels()
     pool = pd.DataFrame({"pair_id": [f"p{i}" for i in range(40)], "decided": 8, "hire_votes": 0,
