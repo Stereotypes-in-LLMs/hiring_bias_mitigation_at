@@ -581,7 +581,15 @@ def _auc(texts: list[str], labels: list[int], groups: list[str], seed: int) -> f
     return float(scores.mean())
 
 
-def separability(pairs: pd.DataFrame, seed: int = 42) -> dict:
+#: Fewest pairs of each reference decision for `auc_balanced`. Below it the balanced resample
+#: leaves one or two pairs in each of the five grouped folds. Saved direction reports read
+#: 0.700 FAIL from 3+3 pairs (onpolicy-gender-pi1), and 0.400 and 0.0 PASS from 4+4
+#: (onpolicy-it2, batch-01-onpolicy's student_untipped).
+BALANCED_MIN_PER_DECISION = 10
+
+
+def separability(pairs: pd.DataFrame, seed: int = 42,
+                 min_per_decision: int = BALANCED_MIN_PER_DECISION) -> dict:
     """Can a classifier tell chosen from rejected by the rationale text alone?
 
     `auc_balanced` is the number that matters: computed on a reference-decision-balanced
@@ -589,10 +597,16 @@ def separability(pairs: pd.DataFrame, seed: int = 42) -> dict:
     legitimately follows the decision) cancels and only a wording or style shortcut is left.
     v1-style pairs score ~1.0 here; covert pairs should sit near 0.5. `auc_within_decision`
     is reported for completeness and is high by design.
+
+    `auc_balanced` is None, with `balanced_note` saying why, when the pairs hold one reference
+    decision or fewer than `min_per_decision` of either. A one-decision AUC is the
+    within-decision AUC, and it used to be reported as the balanced one, which failed
+    one-sided batches by design (the all-hire onpolicy-hire32 batch read 0.999).
     """
     if pairs.empty:
         return {"auc_balanced": None, "auc_overall": None, "auc_within_decision": None,
-                "per_decision": {}, "n_pairs": 0, "n_balanced_pairs": 0}
+                "per_decision": {}, "n_pairs": 0, "n_balanced_pairs": 0,
+                "balanced_note": "no pairs"}
     frame = pairs.copy().reset_index(drop=True)
     frame["_chosen_text"] = frame["chosen"].map(_feedback_of)
     frame["_rejected_text"] = frame["rejected"].map(_feedback_of)
@@ -621,15 +635,20 @@ def separability(pairs: pd.DataFrame, seed: int = 42) -> dict:
     within = weighted / total if total else None
 
     counts = frame["reference_decision"].value_counts()
-    if len(counts) >= 2:
+    auc_balanced, n_balanced, note = None, 0, None
+    if len(counts) < 2:
+        note = (f"one reference decision ({counts.index[0]}: {int(counts.iloc[0])})"
+                if len(counts) else "no reference decision")
+    elif counts.min() < min_per_decision:
+        note = (f"{int(counts.min())} {counts.idxmin()} pairs, fewer than {min_per_decision} "
+                "per decision")
+    else:
         n = int(counts.min())
         balanced = pd.concat(
             [sub.sample(n=n, random_state=seed) for _, sub in frame.groupby("reference_decision")]
         )
         auc_balanced = _auc(*docs(balanced), seed=seed)
         n_balanced = len(balanced)
-    else:
-        auc_balanced, n_balanced = overall, len(frame)  # one decision class: nothing to balance
 
     return {
         "auc_balanced": auc_balanced,
@@ -638,6 +657,7 @@ def separability(pairs: pd.DataFrame, seed: int = 42) -> dict:
         "per_decision": per_decision,
         "n_pairs": len(frame),
         "n_balanced_pairs": int(n_balanced),
+        "balanced_note": note,
     }
 
 

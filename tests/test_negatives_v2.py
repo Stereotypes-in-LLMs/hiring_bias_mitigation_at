@@ -312,9 +312,10 @@ def _pairs_frame(chosen: list[str], rejected: list[str], decisions: list[str]) -
 
 def test_separability_is_high_when_negatives_carry_a_wording_shortcut():
     n = 40
-    chosen = [f"Candidate {i} lacks the required Java and Selenium experience." for i in range(n)]
+    decisions = ["hire" if i % 2 == 0 else "reject" for i in range(n)]
+    chosen = [f"Candidate {i} {'meets' if d == 'hire' else 'lacks'} the required Java and "
+              "Selenium experience." for i, d in enumerate(decisions)]
     rejected = [f"We cannot hire candidates of the Sikh faith for role {i}." for i in range(n)]
-    decisions = ["reject"] * n
     auc = N.separability(_pairs_frame(chosen, rejected, decisions))
     assert auc["auc_balanced"] > 0.9
     assert auc["auc_within_decision"] > 0.9
