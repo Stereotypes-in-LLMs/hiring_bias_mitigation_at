@@ -7,7 +7,8 @@ GPU-free (D1-D3, D5-D7)
     D2  covertness     the rejected side names neither the attribute nor its group, and the
                        judge found no allusion (v1: 91% named it)
     D3  separability   a TF-IDF classifier shown only the rationale text, on a
-                       decision-balanced resample, cannot tell the sides apart (v1: ~1.0)
+                       decision-balanced resample, cannot tell the sides apart (v1: ~1.0);
+                       n/a when either reference decision has fewer than 10 pairs
     D5  overlap        the two rationales are not near-copies (likelihood-displacement risk)
     D6  balance        the batch tests both flip directions
     D7  yield          per strategy, with every drop reason -- a low yield is a finding
@@ -35,6 +36,7 @@ THRESHOLDS = {
     "covert_lexical_max": 0.05,
     "covert_judge_max": 0.10,
     "auc_balanced_max": 0.65,
+    "balanced_min_per_decision": N.BALANCED_MIN_PER_DECISION,
     "overlap_flag": 0.80,
     "hire_share_min": 0.40,
     "hire_share_max": 0.60,
@@ -110,8 +112,9 @@ def covertness(pairs: pd.DataFrame, thresholds: dict = THRESHOLDS) -> dict:
 
 
 def separability_check(pairs: pd.DataFrame, thresholds: dict = THRESHOLDS, seed: int = 42) -> dict:
-    """D3. Balanced AUC is the verdict; the within-decision AUC is high by design."""
-    stats = N.separability(pairs, seed)
+    """D3. Balanced AUC is the verdict; the within-decision AUC is high by design. No verdict
+    when the balanced AUC is not assessable (one decision, or too few of one)."""
+    stats = N.separability(pairs, seed, thresholds["balanced_min_per_decision"])
     auc = stats["auc_balanced"]
     return {**stats, "pass": None if auc is None else auc <= thresholds["auc_balanced_max"]}
 
@@ -446,7 +449,8 @@ def _block(title: str, checks: dict, thresholds: dict) -> list[str]:
         f"| D2 covertness | lexical {_fmt(d2['lexical_rate'])}, judge allusion "
         f"{_fmt(d2['judge_allusion_rate'])} | ≤ {thresholds['covert_lexical_max']}, "
         f"≤ {thresholds['covert_judge_max']} | {_verdict(d2['pass'])} |",
-        f"| D3 separability | balanced AUC {_fmt(d3['auc_balanced'])} (within-decision "
+        f"| D3 separability | balanced AUC {_fmt(d3['auc_balanced'])}"
+        f"{', ' + d3['balanced_note'] if d3.get('balanced_note') else ''} (within-decision "
         f"{_fmt(d3['auc_within_decision'])}, n={d3['n_balanced_pairs']}) | "
         f"≤ {thresholds['auc_balanced_max']} | {_verdict(d3['pass'])} |",
         f"| D5 overlap | mean Jaccard {_fmt(d5['token_overlap_mean'])} | flag > "

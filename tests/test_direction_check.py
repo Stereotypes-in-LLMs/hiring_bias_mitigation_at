@@ -52,6 +52,54 @@ def test_v1_style_pairs_fail_covertness_and_separability():
     assert report["D3_separability"]["pass"] is False
 
 
+def _polar_pairs(decisions: list[str]) -> pd.DataFrame:
+    """Pairs whose rationale follows the verdict, as real ones do: the hire side praises and
+    the reject side criticises, so within one reference decision the sides separate by design."""
+    import random
+
+    skills = random.Random(0).sample(range(1000), len(decisions))
+    pairs = _pairs(len(decisions))
+    for i, (decision, skill) in enumerate(zip(decisions, skills)):
+        praise = f"Strong skill{skill} experience meets the requirement."
+        critique = f"Lacks the required skill{skill} experience for this role."
+        chosen, rejected = (praise, critique) if decision == "hire" else (critique, praise)
+        pairs.loc[i, "chosen"] = json.dumps({"decision": decision, "feedback": chosen})
+        pairs.loc[i, "rejected"] = json.dumps({"decision": N.flip(decision), "feedback": rejected})
+        pairs.loc[i, ["reference_decision", "chosen_decision", "rejected_decision"]] = [
+            decision, decision, N.flip(decision)]
+    return pairs
+
+
+def test_d3_is_not_assessable_on_a_batch_with_one_reference_decision():
+    """With one reference decision there is nothing to balance, and the AUC left over is the
+    within-decision one, high by design. It used to be reported as the balanced AUC and
+    failed against 0.65: the all-hire `onpolicy-hire32` batch read 0.999 FAIL."""
+    report = DC.surface_report(_polar_pairs(["reject"] * 40))
+    d3 = report["overall"]["D3_separability"]
+    assert d3["auc_balanced"] is None
+    assert d3["pass"] is None
+    assert d3["auc_within_decision"] > 0.9
+    assert d3["auc_overall"] > 0.9
+    row = next(line for line in DC.render_markdown(report).splitlines()
+               if line.startswith("| D3"))
+    assert row.endswith("| n/a |")
+    assert "one reference decision" in row
+
+
+def test_d3_is_not_assessable_when_the_smaller_decision_class_is_thin():
+    """A balanced resample of a few pairs per decision leaves one or two pairs in each of the
+    five grouped folds. The gender-coverage run (3 hire, 93 reject) read 0.700 FAIL from 6
+    pairs and `onpolicy-it2` (4 hire, 301 reject) read 0.400 PASS from 8."""
+    thin = DC.separability_check(_polar_pairs(["hire"] * 3 + ["reject"] * 37))
+    assert thin["auc_balanced"] is None
+    assert thin["pass"] is None
+    assert thin["n_balanced_pairs"] == 0
+    assert "3 hire" in thin["balanced_note"]
+    enough = DC.separability_check(_polar_pairs(["hire"] * 10 + ["reject"] * 30))
+    assert enough["auc_balanced"] is not None
+    assert enough["n_balanced_pairs"] == 20
+
+
 def test_validity_catches_a_pair_whose_rejected_side_did_not_flip():
     pairs = _pairs(4)
     pairs.loc[0, "rejected"] = json.dumps({"decision": "hire", "feedback": "x"})
