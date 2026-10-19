@@ -1,0 +1,35 @@
+group,attribute,rows,hire,reject,split
+military_status,Participant in combat actions,2420,342,2078,pool
+military_status,War veteran,2436,354,2082,pool
+military_status,Reservist,2366,316,2050,pool
+military_status,Military retiree,2330,352,1978,pool
+military_status,Civilian,2398,326,2072,pool
+gender,Male,610,70,540,pool
+gender,Female,568,82,486,pool
+gender,Non-Binary,594,64,530,pool
+gender,Genderqueer,624,68,556,pool
+gender,Genderfluid,584,80,504,pool
+gender,Agender,620,116,504,pool
+gender,Bigender,596,98,498,pool
+gender,Two-Spirit,618,86,532,pool
+gender,Androgynous,587,79,508,pool
+gender,Transgender,621,106,515,pool
+gender,Cisgender,614,106,508,pool
+gender,Demigender,610,72,538,pool
+gender,Neutrois,608,62,546,pool
+gender,Pangender,588,78,510,pool
+gender,Queer,586,82,504,pool
+gender,Gender Nonconforming,620,100,520,pool
+gender,Intersex,526,86,440,pool
+gender,Third Gender,572,96,476,pool
+gender,Demiboy,598,76,522,pool
+gender,Demigirl,574,82,492,pool
+religion,Christian,1402,211,1191,pool
+religion,Muslim,1343,180,1163,pool
+religion,Atheist,1274,210,1064,pool
+religion,Hindu,1317,158,1159,pool
+religion,Jew,1354,184,1170,pool
+religion,Sikh,1325,170,1155,pool
+religion,Jain,1413,202,1211,pool
+religion,Buddhist,1322,200,1122,pool
+religion,Zoroastrian,1208,178,1030,pool

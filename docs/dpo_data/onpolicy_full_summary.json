@@ -1,0 +1,274 @@
+{
+  "train": {
+    "preference_pairs": 3615,
+    "cv_job_pairs": 712,
+    "candidates": 593,
+    "jobs": 708,
+    "reference_decision": {
+      "reject": 3098,
+      "hire": 517
+    },
+    "chosen_hire_share": 0.143,
+    "by_group": {
+      "military_status": 1243,
+      "religion": 1241,
+      "gender": 1131
+    },
+    "by_condition": {
+      "explicit": 1860,
+      "implicit": 1755
+    },
+    "by_rejected_strategy": {
+      "student_tipped": 3615
+    },
+    "chosen_words": {
+      "mean": 19.58,
+      "min": 11.0,
+      "p25": 18.0,
+      "median": 20.0,
+      "p75": 21.0,
+      "max": 27.0
+    },
+    "rejected_words": {
+      "mean": 20.54,
+      "min": 9.0,
+      "p25": 19.0,
+      "median": 20.0,
+      "p75": 22.0,
+      "max": 31.0
+    },
+    "rejected_minus_chosen_words": {
+      "mean": 0.96,
+      "min": -10.0,
+      "p25": -1.0,
+      "median": 1.0,
+      "p75": 3.0,
+      "max": 10.0
+    },
+    "judge_plausibility": {
+      "mean": 4.56,
+      "min": 4.0,
+      "p25": 4.0,
+      "median": 5.0,
+      "p75": 5.0,
+      "max": 5.0
+    },
+    "chosen_judge_plausibility": {
+      "mean": 4.62,
+      "min": 4.0,
+      "p25": 4.0,
+      "median": 5.0,
+      "p75": 5.0,
+      "max": 5.0
+    },
+    "token_overlap": {
+      "mean": 0.13,
+      "min": 0.0,
+      "p25": 0.08333333333333333,
+      "median": 0.11764705882352941,
+      "p75": 0.16129032258064516,
+      "max": 0.4482758620689655
+    },
+    "free_right_rate": {
+      "mean": 0.84,
+      "min": 0.625,
+      "p25": 0.75,
+      "median": 0.875,
+      "p75": 1.0,
+      "max": 1.0
+    },
+    "n_wrong_samples": {
+      "mean": 2.18,
+      "min": 1.0,
+      "p25": 1.0,
+      "median": 2.0,
+      "p75": 3.0,
+      "max": 8.0
+    },
+    "columns": [
+      "prompt",
+      "chosen",
+      "rejected",
+      "lang",
+      "protected_group",
+      "protected_attr",
+      "condition",
+      "rejected_flipped_decision",
+      "rejected_mentions_attribute",
+      "candidate_id",
+      "job_id",
+      "pair_id",
+      "reference_decision",
+      "chosen_decision",
+      "rejected_decision",
+      "rejected_strategy",
+      "chosen_words",
+      "rejected_words",
+      "length_delta",
+      "token_overlap",
+      "rejected_mentions_group",
+      "rejected_proxy_words",
+      "chosen_proxy_words",
+      "judge_parsed",
+      "judge_alludes",
+      "judge_grounded",
+      "judge_supports",
+      "judge_plausibility",
+      "judge_note",
+      "chosen_judge_parsed",
+      "chosen_judge_alludes",
+      "chosen_judge_grounded",
+      "chosen_judge_supports",
+      "chosen_judge_plausibility",
+      "chosen_judge_note",
+      "teacher_model",
+      "source_artifacts",
+      "generated_on",
+      "rejected_generator",
+      "free_right_rate",
+      "sample_index",
+      "n_wrong_samples"
+    ]
+  },
+  "validation": {
+    "preference_pairs": 652,
+    "cv_job_pairs": 118,
+    "candidates": 97,
+    "jobs": 118,
+    "reference_decision": {
+      "reject": 585,
+      "hire": 67
+    },
+    "chosen_hire_share": 0.1028,
+    "by_group": {
+      "military_status": 236,
+      "religion": 214,
+      "gender": 202
+    },
+    "by_condition": {
+      "explicit": 341,
+      "implicit": 311
+    },
+    "by_rejected_strategy": {
+      "student_tipped": 652
+    },
+    "chosen_words": {
+      "mean": 19.44,
+      "min": 12.0,
+      "p25": 18.0,
+      "median": 19.0,
+      "p75": 21.0,
+      "max": 27.0
+    },
+    "rejected_words": {
+      "mean": 20.72,
+      "min": 11.0,
+      "p25": 19.0,
+      "median": 21.0,
+      "p75": 22.0,
+      "max": 28.0
+    },
+    "rejected_minus_chosen_words": {
+      "mean": 1.28,
+      "min": -9.0,
+      "p25": -1.0,
+      "median": 1.0,
+      "p75": 4.0,
+      "max": 10.0
+    },
+    "judge_plausibility": {
+      "mean": 4.61,
+      "min": 4.0,
+      "p25": 4.0,
+      "median": 5.0,
+      "p75": 5.0,
+      "max": 5.0
+    },
+    "chosen_judge_plausibility": {
+      "mean": 4.54,
+      "min": 4.0,
+      "p25": 4.0,
+      "median": 5.0,
+      "p75": 5.0,
+      "max": 5.0
+    },
+    "token_overlap": {
+      "mean": 0.11,
+      "min": 0.0,
+      "p25": 0.07894736842105263,
+      "median": 0.10810810810810811,
+      "p75": 0.14705882352941177,
+      "max": 0.3103448275862069
+    },
+    "free_right_rate": {
+      "mean": 0.82,
+      "min": 0.625,
+      "p25": 0.75,
+      "median": 0.875,
+      "p75": 1.0,
+      "max": 1.0
+    },
+    "n_wrong_samples": {
+      "mean": 2.33,
+      "min": 1.0,
+      "p25": 1.0,
+      "median": 2.0,
+      "p75": 3.0,
+      "max": 8.0
+    },
+    "columns": [
+      "prompt",
+      "chosen",
+      "rejected",
+      "lang",
+      "protected_group",
+      "protected_attr",
+      "condition",
+      "rejected_flipped_decision",
+      "rejected_mentions_attribute",
+      "candidate_id",
+      "job_id",
+      "pair_id",
+      "reference_decision",
+      "chosen_decision",
+      "rejected_decision",
+      "rejected_strategy",
+      "chosen_words",
+      "rejected_words",
+      "length_delta",
+      "token_overlap",
+      "rejected_mentions_group",
+      "rejected_proxy_words",
+      "chosen_proxy_words",
+      "judge_parsed",
+      "judge_alludes",
+      "judge_grounded",
+      "judge_supports",
+      "judge_plausibility",
+      "judge_note",
+      "chosen_judge_parsed",
+      "chosen_judge_alludes",
+      "chosen_judge_grounded",
+      "chosen_judge_supports",
+      "chosen_judge_plausibility",
+      "chosen_judge_note",
+      "teacher_model",
+      "source_artifacts",
+      "generated_on",
+      "rejected_generator",
+      "free_right_rate",
+      "sample_index",
+      "n_wrong_samples"
+    ]
+  },
+  "source_files": {
+    "train": {
+      "file": "dpo_v2_train.parquet",
+      "sha256": "06561a908b2b55eeecb6639d75489d9a4e922b7e76a95f7ab949c8a056e1e461"
+    },
+    "validation": {
+      "file": "dpo_v2_validation.parquet",
+      "sha256": "69b4a2742075a70b9cb4b880ae9c3fadf2c05f067a69783d37a224a467b3979b"
+    }
+  }
+}

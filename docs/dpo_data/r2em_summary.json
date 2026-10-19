@@ -1,0 +1,186 @@
+{
+  "train": {
+    "preference_pairs": 2362,
+    "cv_job_pairs": 582,
+    "candidates": 501,
+    "jobs": 577,
+    "reference_decision": {
+      "hire": 1181,
+      "reject": 1181
+    },
+    "chosen_hire_share": 0.5,
+    "by_group": {
+      "religion": 818,
+      "military_status": 804,
+      "gender": 740
+    },
+    "by_condition": {
+      "implicit": 1184,
+      "explicit": 1178
+    },
+    "by_source": {
+      "extra:onpolicy_reject_surplus": {
+        "reject": 748
+      },
+      "legacy": {
+        "hire": 42
+      },
+      "round1": {
+        "hire": 1139,
+        "reject": 433
+      }
+    },
+    "chosen_words": {
+      "mean": 19.9,
+      "min": 12.0,
+      "p25": 18.0,
+      "median": 20.0,
+      "p75": 22.0,
+      "max": 26.0
+    },
+    "rejected_words": {
+      "mean": 20.29,
+      "min": 9.0,
+      "p25": 19.0,
+      "median": 20.0,
+      "p75": 22.0,
+      "max": 32.0
+    },
+    "rejected_minus_chosen_words": {
+      "mean": 0.39,
+      "min": -14.0,
+      "p25": -2.0,
+      "median": 0.0,
+      "p75": 3.0,
+      "max": 10.0
+    },
+    "student_margin": {
+      "mean": 0.26,
+      "min": -3.75,
+      "p25": -2.25,
+      "median": -1.625,
+      "p75": 2.875,
+      "max": 8.125
+    },
+    "p_wrong": {
+      "mean": 0.09,
+      "min": 0.000295957113513077,
+      "p25": 0.03732688734412946,
+      "median": 0.07585818002124355,
+      "p75": 0.13296424019782926,
+      "max": 0.8519528019683106
+    },
+    "columns": [
+      "prompt",
+      "chosen",
+      "rejected",
+      "decision",
+      "rejected_decision",
+      "lang",
+      "protected_group",
+      "protected_attr",
+      "condition",
+      "candidate_id",
+      "job_id",
+      "pair_id",
+      "source",
+      "split",
+      "prompt_sha1",
+      "pair_sha1",
+      "student_margin",
+      "p_wrong",
+      "reference_decision"
+    ]
+  },
+  "validation": {
+    "preference_pairs": 295,
+    "cv_job_pairs": 104,
+    "candidates": 86,
+    "jobs": 104,
+    "reference_decision": {
+      "hire": 149,
+      "reject": 146
+    },
+    "chosen_hire_share": 0.5051,
+    "by_group": {
+      "military_status": 118,
+      "gender": 91,
+      "religion": 86
+    },
+    "by_condition": {
+      "explicit": 160,
+      "implicit": 135
+    },
+    "by_source": {
+      "legacy": {
+        "hire": 3
+      },
+      "round1": {
+        "reject": 146,
+        "hire": 146
+      }
+    },
+    "chosen_words": {
+      "mean": 19.91,
+      "min": 12.0,
+      "p25": 19.0,
+      "median": 20.0,
+      "p75": 21.0,
+      "max": 27.0
+    },
+    "rejected_words": {
+      "mean": 20.49,
+      "min": 11.0,
+      "p25": 19.0,
+      "median": 21.0,
+      "p75": 22.0,
+      "max": 30.0
+    },
+    "rejected_minus_chosen_words": {
+      "mean": 0.58,
+      "min": -14.0,
+      "p25": -2.0,
+      "median": 1.0,
+      "p75": 3.0,
+      "max": 10.0
+    },
+    "student_margin": {
+      "mean": 0.87,
+      "min": -4.5,
+      "p25": -1.125,
+      "median": 0.625,
+      "p75": 2.875,
+      "max": 8.0
+    },
+    "columns": [
+      "prompt",
+      "chosen",
+      "rejected",
+      "decision",
+      "rejected_decision",
+      "lang",
+      "protected_group",
+      "protected_attr",
+      "condition",
+      "candidate_id",
+      "job_id",
+      "pair_id",
+      "source",
+      "split",
+      "prompt_sha1",
+      "pair_sha1",
+      "student_margin",
+      "reference_decision"
+    ]
+  },
+  "source_files": {
+    "train": {
+      "file": "dpo_round2_train.parquet",
+      "sha256": "d4ca469445d44adad65a604863a75cdc636804b423066ecb813b0d02ee9eb41f"
+    },
+    "validation": {
+      "file": "dpo_round2_validation.parquet",
+      "sha256": "4d592238c1a17281b7e683b49130dc40ba505ea41b3a6af2309fc6b2809fb91b"
+    }
+  }
+}

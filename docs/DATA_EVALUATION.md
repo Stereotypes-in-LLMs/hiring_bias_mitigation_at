@@ -107,6 +107,10 @@ Three things are still open:
 2. **The reference verdict.** The reference is a single teacher sample at temperature 0.7, so some "wrong" student answers on borderline candidates may be defensible. The judge's decision-support question catches some of these, not all.
 3. **Self-judging.** The teacher judges the `chosen` texts it wrote itself. The lexical filters and the student-based D4 do not depend on it, but an independent judge, or a 50-item human calibration, would make the judge's numbers more trustworthy.
 
+## The sets DPO trained on
+
+`student_tipped` went to full scale, and two training sets came out of it. Round 1 is the full-pool pairs plus a hire-side top-up at 32 samples per prompt, balanced by reference verdict. r2em adds round 1's reject-side surplus and the v1 pairs the judge found covert, and balances by the SFT student's error mass. `docs/V2_NEGATIVES_DPO_DATA.md` describes how each was built, its checks and what training on it gave. `docs/DPO_DATA_CREATION.md` walks through the stages from v1's invariant pool and tabulates the attributes in each set. Round 1's final set fails D3 at 0.684, and r2em's final set has no direction check.
+
 ## On-policy negatives from a DPO model
 
 The same construction with the round-1 DPO model as the student (r2em checkpoint-100) found 409 tipped rows on the full pool instead of SFT's 5,614. The judge kept 305 pairs, and they fail D6 with a `chosen` hire share of 0.013. `docs/ITERATIVE_DPO.md` explains why and why that round was not trained.

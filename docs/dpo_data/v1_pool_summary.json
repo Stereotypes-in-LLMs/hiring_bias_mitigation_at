@@ -1,0 +1,92 @@
+{
+  "invariant_filter": {
+    "n_input": 36000,
+    "n_kept": 35826,
+    "yield": 0.9952,
+    "dropped_by_reason": {
+      "invariant_meta_commentary": 123,
+      "invariant_attribute_leak": 51
+    }
+  },
+  "rows": 35826,
+  "cv_job_pairs": 2992,
+  "candidates": 1500,
+  "jobs": 2918,
+  "rows_per_pair": {
+    "mean": 11.97,
+    "min": 1.0,
+    "p25": 12.0,
+    "median": 12.0,
+    "p75": 12.0,
+    "max": 12.0
+  },
+  "jobs_per_candidate": {
+    "1": 8,
+    "2": 1492
+  },
+  "reference_decision_rows": {
+    "reject": 30754,
+    "hire": 5072
+  },
+  "reference_decision_pairs": {
+    "reject": 2568,
+    "hire": 424
+  },
+  "primary_keywords": 40,
+  "top_primary_keywords": {
+    "JavaScript": 504,
+    "QA": 418,
+    "Design": 232,
+    "Project Manager": 174,
+    "Java": 142,
+    "Python": 128,
+    "Marketing": 126,
+    ".NET": 108,
+    "QA Automation": 88,
+    "Recruiter": 86
+  },
+  "candidate_years": {
+    "mean": 3.03,
+    "min": 0.0,
+    "p25": 1.0,
+    "median": 2.5,
+    "p75": 5.0,
+    "max": 8.0
+  },
+  "job_required_years": {
+    "mean": 2.03,
+    "min": 0.0,
+    "p25": 1.0,
+    "median": 2.0,
+    "p75": 3.0,
+    "max": 5.0
+  },
+  "cv_chars": {
+    "mean": 1080.42,
+    "min": 400.0,
+    "p25": 605.75,
+    "median": 867.0,
+    "p75": 1356.0,
+    "max": 4920.0
+  },
+  "job_description_chars": {
+    "mean": 1731.32,
+    "min": 402.0,
+    "p25": 1064.5,
+    "median": 1554.0,
+    "p75": 2239.0,
+    "max": 5860.0
+  },
+  "chosen_feedback_words": {
+    "mean": 19.79,
+    "min": 8.0,
+    "p25": 18.0,
+    "median": 20.0,
+    "p75": 22.0,
+    "max": 33.0
+  },
+  "source_file": {
+    "file": "en_invariant.parquet",
+    "sha256": "88b4dd0fd78a2a5aabb091e8ac9472a8a492a595851ee7c81e06fc9e4de7fcc0"
+  }
+}

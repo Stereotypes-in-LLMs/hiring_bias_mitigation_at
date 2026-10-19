@@ -1,0 +1,272 @@
+{
+  "train": {
+    "preference_pairs": 1092,
+    "cv_job_pairs": 235,
+    "candidates": 212,
+    "jobs": 235,
+    "reference_decision": {
+      "hire": 1092
+    },
+    "chosen_hire_share": 1.0,
+    "by_group": {
+      "religion": 397,
+      "military_status": 376,
+      "gender": 319
+    },
+    "by_condition": {
+      "implicit": 569,
+      "explicit": 523
+    },
+    "by_rejected_strategy": {
+      "student_tipped": 1092
+    },
+    "chosen_words": {
+      "mean": 20.19,
+      "min": 15.0,
+      "p25": 19.0,
+      "median": 20.0,
+      "p75": 22.0,
+      "max": 26.0
+    },
+    "rejected_words": {
+      "mean": 20.12,
+      "min": 9.0,
+      "p25": 18.0,
+      "median": 20.0,
+      "p75": 22.0,
+      "max": 32.0
+    },
+    "rejected_minus_chosen_words": {
+      "mean": -0.07,
+      "min": -10.0,
+      "p25": -3.0,
+      "median": 0.0,
+      "p75": 2.0,
+      "max": 10.0
+    },
+    "judge_plausibility": {
+      "mean": 4.13,
+      "min": 4.0,
+      "p25": 4.0,
+      "median": 4.0,
+      "p75": 4.0,
+      "max": 5.0
+    },
+    "chosen_judge_plausibility": {
+      "mean": 4.93,
+      "min": 4.0,
+      "p25": 5.0,
+      "median": 5.0,
+      "p75": 5.0,
+      "max": 5.0
+    },
+    "token_overlap": {
+      "mean": 0.13,
+      "min": 0.0,
+      "p25": 0.08571428571428572,
+      "median": 0.125,
+      "p75": 0.16666666666666666,
+      "max": 0.37037037037037035
+    },
+    "free_right_rate": {
+      "mean": 0.9,
+      "min": 0.53125,
+      "p25": 0.875,
+      "median": 0.9375,
+      "p75": 0.96875,
+      "max": 1.0
+    },
+    "n_wrong_samples": {
+      "mean": 3.24,
+      "min": 1.0,
+      "p25": 1.0,
+      "median": 2.0,
+      "p75": 4.0,
+      "max": 22.0
+    },
+    "columns": [
+      "prompt",
+      "chosen",
+      "rejected",
+      "lang",
+      "protected_group",
+      "protected_attr",
+      "condition",
+      "rejected_flipped_decision",
+      "rejected_mentions_attribute",
+      "candidate_id",
+      "job_id",
+      "pair_id",
+      "reference_decision",
+      "chosen_decision",
+      "rejected_decision",
+      "rejected_strategy",
+      "chosen_words",
+      "rejected_words",
+      "length_delta",
+      "token_overlap",
+      "rejected_mentions_group",
+      "rejected_proxy_words",
+      "chosen_proxy_words",
+      "judge_parsed",
+      "judge_alludes",
+      "judge_grounded",
+      "judge_supports",
+      "judge_plausibility",
+      "judge_note",
+      "chosen_judge_parsed",
+      "chosen_judge_alludes",
+      "chosen_judge_grounded",
+      "chosen_judge_supports",
+      "chosen_judge_plausibility",
+      "chosen_judge_note",
+      "teacher_model",
+      "source_artifacts",
+      "generated_on",
+      "rejected_generator",
+      "free_right_rate",
+      "sample_index",
+      "n_wrong_samples"
+    ]
+  },
+  "validation": {
+    "preference_pairs": 132,
+    "cv_job_pairs": 34,
+    "candidates": 31,
+    "jobs": 34,
+    "reference_decision": {
+      "hire": 132
+    },
+    "chosen_hire_share": 1.0,
+    "by_group": {
+      "military_status": 51,
+      "gender": 41,
+      "religion": 40
+    },
+    "by_condition": {
+      "explicit": 72,
+      "implicit": 60
+    },
+    "by_rejected_strategy": {
+      "student_tipped": 132
+    },
+    "chosen_words": {
+      "mean": 20.24,
+      "min": 16.0,
+      "p25": 19.0,
+      "median": 20.0,
+      "p75": 22.0,
+      "max": 26.0
+    },
+    "rejected_words": {
+      "mean": 20.39,
+      "min": 11.0,
+      "p25": 19.0,
+      "median": 21.0,
+      "p75": 22.0,
+      "max": 30.0
+    },
+    "rejected_minus_chosen_words": {
+      "mean": 0.14,
+      "min": -8.0,
+      "p25": -2.0,
+      "median": 0.0,
+      "p75": 2.0,
+      "max": 10.0
+    },
+    "judge_plausibility": {
+      "mean": 4.14,
+      "min": 4.0,
+      "p25": 4.0,
+      "median": 4.0,
+      "p75": 4.0,
+      "max": 5.0
+    },
+    "chosen_judge_plausibility": {
+      "mean": 4.86,
+      "min": 4.0,
+      "p25": 5.0,
+      "median": 5.0,
+      "p75": 5.0,
+      "max": 5.0
+    },
+    "token_overlap": {
+      "mean": 0.11,
+      "min": 0.0,
+      "p25": 0.0764423076923077,
+      "median": 0.10762548262548263,
+      "p75": 0.15269886363636365,
+      "max": 0.2857142857142857
+    },
+    "free_right_rate": {
+      "mean": 0.89,
+      "min": 0.5625,
+      "p25": 0.84375,
+      "median": 0.9375,
+      "p75": 0.96875,
+      "max": 1.0
+    },
+    "n_wrong_samples": {
+      "mean": 3.64,
+      "min": 1.0,
+      "p25": 1.0,
+      "median": 2.0,
+      "p75": 5.0,
+      "max": 19.0
+    },
+    "columns": [
+      "prompt",
+      "chosen",
+      "rejected",
+      "lang",
+      "protected_group",
+      "protected_attr",
+      "condition",
+      "rejected_flipped_decision",
+      "rejected_mentions_attribute",
+      "candidate_id",
+      "job_id",
+      "pair_id",
+      "reference_decision",
+      "chosen_decision",
+      "rejected_decision",
+      "rejected_strategy",
+      "chosen_words",
+      "rejected_words",
+      "length_delta",
+      "token_overlap",
+      "rejected_mentions_group",
+      "rejected_proxy_words",
+      "chosen_proxy_words",
+      "judge_parsed",
+      "judge_alludes",
+      "judge_grounded",
+      "judge_supports",
+      "judge_plausibility",
+      "judge_note",
+      "chosen_judge_parsed",
+      "chosen_judge_alludes",
+      "chosen_judge_grounded",
+      "chosen_judge_supports",
+      "chosen_judge_plausibility",
+      "chosen_judge_note",
+      "teacher_model",
+      "source_artifacts",
+      "generated_on",
+      "rejected_generator",
+      "free_right_rate",
+      "sample_index",
+      "n_wrong_samples"
+    ]
+  },
+  "source_files": {
+    "train": {
+      "file": "dpo_v2_train.parquet",
+      "sha256": "2b28bbe17fe33957da2b2b783415ad985c4f1da6654d3ba901a74fb97cd07376"
+    },
+    "validation": {
+      "file": "dpo_v2_validation.parquet",
+      "sha256": "7e66cd834add53235268c291c24061624e147895ef80c1e820468de7301d87ae"
+    }
+  }
+}

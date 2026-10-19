@@ -1,0 +1,65 @@
+group,attribute,rows,hire,reject,split
+military_status,Participant in combat actions,71,71,0,train
+military_status,War veteran,78,78,0,train
+military_status,Reservist,82,82,0,train
+military_status,Military retiree,76,76,0,train
+military_status,Civilian,69,69,0,train
+gender,Male,15,15,0,train
+gender,Female,16,16,0,train
+gender,Non-Binary,12,12,0,train
+gender,Genderqueer,8,8,0,train
+gender,Genderfluid,18,18,0,train
+gender,Agender,18,18,0,train
+gender,Bigender,26,26,0,train
+gender,Two-Spirit,21,21,0,train
+gender,Androgynous,11,11,0,train
+gender,Transgender,19,19,0,train
+gender,Cisgender,26,26,0,train
+gender,Demigender,8,8,0,train
+gender,Neutrois,18,18,0,train
+gender,Pangender,18,18,0,train
+gender,Queer,12,12,0,train
+gender,Gender Nonconforming,14,14,0,train
+gender,Intersex,8,8,0,train
+gender,Third Gender,18,18,0,train
+gender,Demiboy,21,21,0,train
+gender,Demigirl,12,12,0,train
+religion,Christian,55,55,0,train
+religion,Muslim,32,32,0,train
+religion,Atheist,44,44,0,train
+religion,Hindu,45,45,0,train
+religion,Jew,48,48,0,train
+religion,Sikh,36,36,0,train
+religion,Jain,47,47,0,train
+religion,Buddhist,49,49,0,train
+religion,Zoroastrian,41,41,0,train
+military_status,Participant in combat actions,10,10,0,validation
+military_status,War veteran,15,15,0,validation
+military_status,Reservist,11,11,0,validation
+military_status,Military retiree,8,8,0,validation
+military_status,Civilian,7,7,0,validation
+gender,Male,1,1,0,validation
+gender,Female,2,2,0,validation
+gender,Non-Binary,1,1,0,validation
+gender,Genderqueer,2,2,0,validation
+gender,Genderfluid,4,4,0,validation
+gender,Agender,3,3,0,validation
+gender,Bigender,4,4,0,validation
+gender,Two-Spirit,2,2,0,validation
+gender,Androgynous,3,3,0,validation
+gender,Transgender,2,2,0,validation
+gender,Cisgender,1,1,0,validation
+gender,Demigender,5,5,0,validation
+gender,Pangender,3,3,0,validation
+gender,Queer,3,3,0,validation
+gender,Gender Nonconforming,4,4,0,validation
+gender,Demiboy,1,1,0,validation
+religion,Christian,4,4,0,validation
+religion,Muslim,4,4,0,validation
+religion,Atheist,12,12,0,validation
+religion,Hindu,4,4,0,validation
+religion,Jew,5,5,0,validation
+religion,Sikh,4,4,0,validation
+religion,Jain,4,4,0,validation
+religion,Buddhist,1,1,0,validation
+religion,Zoroastrian,2,2,0,validation
