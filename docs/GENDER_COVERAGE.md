@@ -1,6 +1,22 @@
 # Gender coverage: more gender attributes per pair, pi1's mistakes on them
 
-Status: pre-registered 2026-10-19 before any GPU job. Results to follow.
+Status: pre-registered 2026-10-19 before any GPU job (commit d9b5555); run the same day.
+
+**Conclusion.** Fact: on 11,916 new gender rows pi1 makes attribute-tipped mistakes at the same
+rate as on the same pairs' original gender rows (1.04% vs 1.07%, difference -0.03 pp, 95% CI
+-0.20 to +0.14), and 102 of the 124 new error rows sit on pairs that already erred.
+Interpretation: pi1's remaining attribute flips belong to a few fragile CV/job pairs, not to
+particular gender attributes, so more gender rows add little new preference data.
+Unknown: whether any inserted line, not only a protected attribute, flips those pairs.
+
+| Field | Value |
+|---|---|
+| Code | branch xinyang/gender-coverage, d9b5555 (logged as `commit` in each job log); the comparison script and this card in the follow-up commit |
+| Config | configs/generation/negatives_v2_onpolicy_gender_pi1_gh200.yaml (`add_attributes` gender k=2 seed 20261019, `split_of` onpolicy-it2) |
+| Student | pi1 = outputs/dpo/qwen3.5-9b_en_only_dpo_v2neg_r2em/checkpoint-100, merged with its SFT parent (outputs/merged/qwen3.5-9b_en_only_dpo_v2neg_r2em--checkpoint-100) |
+| Data | $HBM_OUTPUT_ROOT/artifacts/semisynthetic-v2/onpolicy-gender-pi1 (rows, prompts, raw/samples, selected, candidates, report.json, direction_report.md, check_all/direction_report.md) |
+| Jobs | sample 5098345 (11 min), judge 5098495 (6 min), check 5098780 (2 min), all on `normal` with a 30-min limit |
+| Comparison | scripts/compare_onpolicy_rows.py, base onpolicy-it2 (gender rows) -> reports/gender_coverage/{summary.json,by_attribute.csv,pairs.csv} |
 
 ## Setup: the local dry run (written before running)
 
@@ -80,3 +96,80 @@ Stop. A stage that fails twice is not resubmitted; report instead.
 - Gender rows per attribute 526-624 before, 1,139-1,254 after. Hire share of the new rows 0.1415 (pool 0.1416). 10,205 rows on training candidates, 1,711 on validation candidates.
 - No new chosen texts: 13,480 distinct before and after; in 77% of (pair, condition) cells both new attributes carry the same text.
 - Independent recount reproduced every number; prompts render byte-identically to the sampler's; a blind read flagged 0 of 120 reused rationales and 2 of 60 original ones (both a generic singular 'they').
+
+
+## Result
+
+Sampling (sample_report.json): 11,916 rows x 8 samples; pi1 right 86.0% with the attribute and
+86.2% without; 1,688 rows with any wrong sample, 124 attribute-tipped with a wrong sample, all
+124 kept by the covert filters (raw attribute or group mention 0.3%).
+
+Judge (report.json): 105 of 124 pass the rejected-side judge (18 ungrounded, 1 contradicts),
+96 after the chosen re-check (9 ungrounded); split 74 train / 22 validation.
+
+Against the same pairs' original gender rows in it2 (reports/gender_coverage/summary.json, pair
+bootstrap, 10,000 draws):
+
+| Slice | New attributes | Original attributes (it2) | Difference, pp [95% CI] |
+|---|---|---|---|
+| All | 124 / 11,916 = 1.04% | 128 / 11,918 = 1.07% | -0.03 [-0.20, +0.14] |
+| Explicit | 73 / 5,957 | 77 / 5,960 | -0.07 [-0.30, +0.17] |
+| Implicit | 51 / 5,959 | 51 / 5,958 | -0.00 [-0.20, +0.20] |
+| Reference reject | 118 / 10,230 | 126 / 10,229 | -0.08 [-0.27, +0.12] |
+| Reference hire | 6 / 1,686 (2 pairs) | 2 / 1,689 (1 pair) | +0.24 [0.00, +0.65] |
+
+Pairs with an error row: 54 on new attributes, 57 on original ones, 42 in both. 102 of the 124
+new error rows are on pairs that already erred on their original gender rows
+(reports/gender_coverage/pairs.csv; per attribute in by_attribute.csv).
+
+Data checks on the 96 judged pairs (direction_report.md; D4 in check_all/direction_report.md):
+
+| Check | Value | Reading |
+|---|---|---|
+| D1 validity | 0 chosen off reference, 0 rejected not flipped | pass |
+| D2 covertness | lexical 0.000, judge allusion 0.000 | pass |
+| D3 separability | not assessable (pre-registered): 93 of 96 pairs are reject-reference, so the printed "balanced AUC 0.700" rests on 6 pairs; within-decision 0.992 (it2 0.999) | n/a |
+| D5 overlap | mean Jaccard 0.136 | no flag |
+| D6 balance | chosen hire share 0.031 (3 of 96) | fails [0.4, 0.6]; as expected for this pool |
+| D4, pi1 | prefers chosen 15.6% (per token 11.5%), decides the reference 7.3% | pi1's own confident mistakes; 84% informative |
+| D4, SFT | prefers chosen 50.0%, decides the reference 47.9% | SFT is split on the same pairs |
+| D7 yield | 96 / 11,916 = 0.8% | it2 305 / 35,826 = 0.85% |
+
+D4's band [0.5, 0.9] was set for teacher-written negatives scored by SFT; on-policy negatives of
+the scoring model itself sit below it by construction.
+
+## Reading
+
+- What the evidence supports: the extra gender attributes do not expose new weaknesses of pi1.
+  The new error rows repeat it2's error pairs, and pi1 errs on those pairs whatever gender line
+  is added. pi1 is far more confident in these mistakes than SFT (D4 7.3% vs 47.9% reference
+  decisions), which matches docs/ITERATIVE_DPO.md: DPO sharpened the remaining flips.
+- What it does not support: that gender coverage was limiting training, or that these 96 pairs
+  would help. 93 of 96 teach "reject" on reject-reference CVs, the direction that made rounds 1
+  and 2 stricter, and most of their chosen texts already appear in it2's candidates.
+- Cheapest next check, if wanted: insert a neutral line of the same length (no protected
+  attribute) into the error pairs and sample pi1 again; one short GPU job tells whether the
+  flips are about attributes at all.
+
+## Caveats
+
+- One sampling seed for every request (eval/backends.py `generate_samples`: one SamplingParams
+  with seed 42 and n=k for all prompts). Prompts that differ only in the attribute line share
+  their random stream, so samples are correlated across a pair's rows and between runs; an
+  exploratory read found 16-17% of same-index samples identical across attributes of a pair,
+  and most attribute-free samples identical to it2's. Most flips here are 8/8 against 8/8, so the
+  readout stands, but the k samples are not independent draws across rows. This holds for
+  round 1 and it2 too.
+- Single seed, single student; the hire stratum has 3 pairs.
+- The teacher that judged is the Daint teacher, which differs from v1's (docs/SFT_V3_ANCHORS.md
+  on branch xinyang/sft-v3-anchors); the same judge was used for it2, so the comparison holds.
+
+## Reproducing
+
+    REPO=$XW/hiring_bias_mitigation_at-gender \
+    CONFIG=configs/generation/negatives_v2_onpolicy_gender_pi1_gh200.yaml \
+      scripts/cscs/submit.sh -p normal -t 00:30:00 scripts/cscs/onpolicy_full.sbatch sample
+    # then `judge`, then CHECK_PAIRS=candidates ... `check`
+    python scripts/compare_onpolicy_rows.py --base artifacts/semisynthetic-v2/onpolicy-it2 \
+      --new artifacts/semisynthetic-v2/onpolicy-gender-pi1 --group gender \
+      --out reports/gender_coverage
