@@ -105,7 +105,7 @@ Three things are still open:
 
 1. **D3 at a size that can decide it.** We need several hundred student pairs, from more rows or more samples per row.
 2. **The reference verdict.** The reference is a single teacher sample at temperature 0.7, so some "wrong" student answers on borderline candidates may be defensible. The judge's decision-support question catches some of these, not all.
-3. **Self-judging.** The teacher judges the `chosen` texts it wrote itself. The lexical filters and the student-based D4 do not depend on it, but an independent judge, or a 50-item human calibration, would make the judge's numbers more trustworthy.
+3. **Self-judging.** The teacher judges the `chosen` texts it wrote itself. The lexical filters and the student-based D4 do not depend on it, but an independent judge, or a 50-item human calibration, would make the judge's numbers more trustworthy. Partly answered: on hire rows, the student's own correct samples pass the judge 95.8–96.0% against 97.1% for `chosen`, so the gap with `rejected` follows the verdict, not the author (`docs/JUDGE_AUTHOR_CONTROL.md`).
 
 ## The sets DPO trained on
 

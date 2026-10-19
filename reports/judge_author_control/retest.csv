@@ -1,0 +1,5 @@
+round,side,n,pass_october,pass_retest,agreement_pass,agreement_reason,mcnemar_only_first,mcnemar_only_second,mcnemar_p
+onpolicy-full,rejected,400,0.6175,0.62,0.9425,0.9375,12,11,1.0
+onpolicy-full,chosen,400,0.97,0.97,0.985,0.985,3,3,1.0
+onpolicy-hire32,rejected,400,0.6225,0.6175,0.965,0.9575,6,8,0.79052734375
+onpolicy-hire32,chosen,400,0.965,0.9675,0.9925,0.9925,2,1,1.0
