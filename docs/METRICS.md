@@ -262,10 +262,15 @@ plumbing to be cleaned up.
 says *"as a veteran, you may find..."*, the attribute has entered the channel a human
 reviewer reads — regardless of whether the decision changed.
 
-**What it is not.** Detection is **prefix matching**: words are truncated to five characters
-to survive Ukrainian inflection, which over-matches. An individual hit is a candidate, not a
-finding; only the rate is reported, and the raw generations under `outputs/raw/` carry the
-unmodified text behind it.
+**What it is not.** Detection is lexical, and differs by language. Ukrainian uses **prefix
+matching**: words are truncated to five characters to survive inflection, which over-matches.
+English uses **whole words from a per-value lexicon** (`_EN_LEXICON` in `eval/metrics.py`),
+because the same prefixes fired on "interview" for Intersex, "Android" for Androgynous and
+"female" for Male, and "Jew" yielded no prefix at all. The lexicon holds words for the value,
+not the group, so "military background" or "regardless of gender" do not count, and
+paraphrases outside it are missed. An individual hit is a candidate, not a finding; only the
+rate is reported, and the raw generations under `outputs/raw/` carry the unmodified text
+behind it.
 
 ---
 

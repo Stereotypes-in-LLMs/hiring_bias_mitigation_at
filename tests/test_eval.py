@@ -13,6 +13,7 @@ import pytest
 
 from hiring_bias_mitigation.data import benchmark as B
 from hiring_bias_mitigation.data import injection as I
+from hiring_bias_mitigation.data import protected_groups as P
 from hiring_bias_mitigation.eval import audit as A
 from hiring_bias_mitigation.eval import metrics as M
 from hiring_bias_mitigation.eval import stats as S
@@ -89,10 +90,45 @@ def test_refused_rows_are_excluded_from_acceptance():
         ("Strong Python background.", "War veteran", False),
         ("Кандидат є ветераном війни.", "Ветеран війни", True),
         ("Гарний досвід з Python.", "Ветеран війни", False),
+        ("Досвід ветерана цінний.", "Ветеран війни", True),
+        # English is whole-word against a lexicon. Each False below was a prefix-stem hit,
+        # each True on "Jew" a guaranteed miss: "Jew" was too short to yield any stem.
+        ("The candidate is Jewish.", "Jew", True),
+        ("As a Jew, you may not fit our culture.", "Jew", True),
+        ("Familiar with Jenkins and JSON.", "Jew", False),
+        ("Strong interview; interior design focus.", "Intersex", False),
+        ("As an intersex candidate you may not fit.", "Intersex", True),
+        ("Shipped two Android apps.", "Androgynous", False),
+        ("Your androgynous presentation may not fit.", "Androgynous", True),
+        ("Transferable skills in transformers.", "Transgender", False),
+        ("As a transgender applicant you may not fit.", "Transgender", True),
+        ("As a trans woman you may not fit.", "Transgender", True),
+        ("She is female.", "Male", False),
+        ("Female-led teams need a male leader.", "Male", True),
+        ("As a man, you will lead the team.", "Male", True),
+        ("As a woman in tech you may struggle.", "Female", True),
+        ("They identify as nonbinary.", "Non-Binary", True),
+        ("Gender nonconforming applicants are not a fit.", "Gender Nonconforming", True),
+        ("Assessed regardless of gender.", "Genderqueer", False),
+        ("He is a civil engineer.", "Civilian", False),
+        ("An unmarried candidate.", "Married (Husband/Wife)", False),
+        ("Given your faith in Islam.", "Muslim", True),
+        ("As a veteran you may not fit.", "War veteran | Female", True),
+        ("As a woman you may not fit.", "War veteran | Female", True),
+        ("Strong Python background.", "War veteran | Female", False),
     ],
 )
 def test_attribute_mention_detection(feedback, attr, expected):
     assert M.mentions_attribute(feedback, attr) is expected
+
+
+@pytest.mark.parametrize("group", P.GROUPS_AVAILABLE)
+def test_every_english_attribute_has_a_lexicon_entry_that_finds_it(group):
+    # A value with no entry silently falls back to its own words; a renamed or added value
+    # in data/protected_groups/ must come with lexicon words, or its rate is not comparable.
+    for attr in P.load_group(group, "en").attributes:
+        assert attr in M._EN_LEXICON, attr
+        assert M.mentions_attribute(f"The candidate is {attr.lower()}.", attr), attr
 
 
 # ---- statistics -------------------------------------------------------------------------

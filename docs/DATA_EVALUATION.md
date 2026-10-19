@@ -28,7 +28,7 @@ The hard filters are cheap string checks:
 | Wrong language | `negative_wrong_language` |
 | Rationale outside 4 to 45 words | `negative_length` |
 | More than 10 words longer or shorter than the chosen rationale | `negative_length_mismatch` |
-| Names the attribute value, by prefix match | `negative_attribute_leak` |
+| Names the attribute value, by whole-word lexicon (English) or prefix match (Ukrainian) | `negative_attribute_leak` |
 | Names the attribute's group, by a whole-word lexicon | `negative_group_leak` |
 | Announces neutrality, as in "regardless of" | `negative_meta_commentary` |
 
