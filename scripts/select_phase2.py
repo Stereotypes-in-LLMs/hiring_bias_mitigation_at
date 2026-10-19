@@ -35,7 +35,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
 
 from hiring_bias_mitigation.data.protected_groups import INTERSECTIONS  # noqa: E402
-from hiring_bias_mitigation.eval.report import load_records  # noqa: E402
+from hiring_bias_mitigation.eval.report import baseline_for, load_records  # noqa: E402
 from hiring_bias_mitigation.utils.config import REPO_ROOT  # noqa: E402
 from hiring_bias_mitigation.utils.logging import get_logger  # noqa: E402
 
@@ -74,14 +74,13 @@ def _overall(record: dict) -> dict:
 
 def rank(records: list[dict]) -> list[dict]:
     """Scores every mitigated run against its own baseline."""
-    baselines = {_key(r): r for r in records if _family(r) == "none"
-                 and not r["meta"].get("limit_pairs")}
+    baselines = [r for r in records if _family(r) == "none"]
     scored = []
     for record in records:
         family = _family(record)
         if family == "none":
             continue
-        base = baselines.get(_key(record))
+        base = baseline_for(record, baselines)
         if base is None:
             log.warning("no baseline for %s — skipping", record["run_name"])
             continue

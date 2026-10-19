@@ -1,6 +1,6 @@
 # Hiring Bias Mitigation — Results
 
-*Generated 2026-10-19 15:37 from `eval/results/` by `scripts/make_report.py`. Do not edit by hand.*
+*Generated 2026-10-19 16:42 from `eval/results/` by `scripts/make_report.py`. Do not edit by hand.*
 
 **Models:** Qwen3.5-4B, Qwen3.5-9B, gemma-4-12B-it, gemma-4-E4B-it, lapa-v0.1.2-instruct  
 **Languages:** en, uk  
@@ -132,12 +132,12 @@ Baseline values are in brackets where a matching unmitigated run exists; **↓ m
 | Qwen3.5-4B | en | none | military_status_x_gender | implicit | 100 | 3.5 | 15.1 | 0.086 | 4.9 | 24.7 | 0.689 | 81.4 | 0.0 |
 | Qwen3.5-4B | en | none | military_status_x_religion | explicit | 45 | 3.4 | 15.6 | 0.087 | 4.7 | 23.3 | 0.685 | 80.8 | 0.0 |
 | Qwen3.5-4B | en | none | military_status_x_religion | implicit | 45 | 4.3 | 25.3 | 0.123 | 6.4 | 50.7 | 0.624 | 77.4 | 0.0 |
-| Qwen3.5-9B | en | none | gender | explicit | 20 | 0.9 (1.1) | 3.3 (4.0) | 0.028 (0.041) | 1.7 (1.8) | 10.0 (10.0) | -- | 81.6 (81.8) | 0.0 (0.0) |
-| Qwen3.5-9B | en | none | gender | implicit | 20 | 0.7 (0.6) | 3.3 (4.0) | 0.054 (0.045) | 1.2 (1.2) | 7.3 (8.7) | -- | 79.4 (79.6) | 0.0 (0.0) |
-| Qwen3.5-9B | en | none | military_status | explicit | 5 | 2.4 (2.4) | 5.8 (5.8) | 0.052 (0.051) | 2.6 (2.5) | 12.0 (11.3) | -- | 82.4 (82.4) | 0.0 (0.0) |
-| Qwen3.5-9B | en | none | military_status | implicit | 5 | 3.9 (3.9) | 12.2 (12.2) | 0.137 (0.135) | 3.9 (3.8) | 32.7 (32.7) | -- | 74.6 (74.6) | 0.0 (0.0) |
-| Qwen3.5-9B | en | none | religion | explicit | 9 | 0.7 (0.7) | 1.8 (2.4) | 0.025 (0.028) | 1.3 (1.5) | 5.3 (4.7) | -- | 80.7 (80.8) | 0.0 (0.0) |
-| Qwen3.5-9B | en | none | religion | implicit | 9 | 1.9 (1.9) | 8.9 (8.9) | 0.162 (0.161) | 2.0 (1.9) | 24.7 (24.7) | -- | 69.5 (69.5) | 0.0 (0.0) |
+| Qwen3.5-9B | en | none | gender | explicit | 20 | 0.9 | 3.3 | 0.028 | 1.7 | 10.0 | -- | 81.6 | 0.0 |
+| Qwen3.5-9B | en | none | gender | implicit | 20 | 0.7 | 3.3 | 0.054 | 1.2 | 7.3 | -- | 79.4 | 0.0 |
+| Qwen3.5-9B | en | none | military_status | explicit | 5 | 2.4 | 5.8 | 0.052 | 2.6 | 12.0 | -- | 82.4 | 0.0 |
+| Qwen3.5-9B | en | none | military_status | implicit | 5 | 3.9 | 12.2 | 0.137 | 3.9 | 32.7 | -- | 74.6 | 0.0 |
+| Qwen3.5-9B | en | none | religion | explicit | 9 | 0.7 | 1.8 | 0.025 | 1.3 | 5.3 | -- | 80.7 | 0.0 |
+| Qwen3.5-9B | en | none | religion | implicit | 9 | 1.9 | 8.9 | 0.162 | 2.0 | 24.7 | -- | 69.5 | 0.0 |
 | Qwen3.5-9B | en | none | gender | explicit | 20 | 1.1 | 4.0 | 0.041 | 1.8 | 10.0 | 0.677 | 81.8 | 0.0 |
 | Qwen3.5-9B | en | none | gender | implicit | 20 | 0.6 | 4.0 | 0.045 | 1.2 | 8.7 | 0.671 | 79.6 | 0.0 |
 | Qwen3.5-9B | en | none | military_status | explicit | 5 | 2.4 | 5.8 | 0.051 | 2.5 | 11.3 | 0.677 | 82.4 | 0.0 |
@@ -240,48 +240,48 @@ Baseline values are in brackets where a matching unmitigated run exists; **↓ m
 | Qwen3.5-9B | en | dpo · adapter | military_status | implicit | 5 | 1.2 (3.9) | 4.0 (12.2) | 0.049 (0.135) | 1.8 (3.8) | 6.7 (32.7) | 0.595 (0.643) | 82.2 (74.6) | 0.0 (0.0) |
 | Qwen3.5-9B | en | dpo · adapter | religion | explicit | 9 | 0.2 (0.7) | 0.7 (2.4) | 0.005 (0.028) | 0.6 (1.5) | 2.0 (4.7) | 0.595 (0.675) | 82.9 (80.8) | 0.0 (0.0) |
 | Qwen3.5-9B | en | dpo · adapter | religion | implicit | 9 | 0.6 (1.9) | 2.0 (8.9) | 0.016 (0.161) | 1.0 (1.9) | 4.0 (24.7) | 0.598 (0.605) | 82.6 (69.5) | 0.0 (0.0) |
-| Qwen3.5-9B | en | dpo · adapter | gender | explicit | 20 | 0.2 (1.1) | 0.9 (4.0) | 0.005 (0.041) | 0.8 (1.8) | 4.0 (10.0) | -- | 79.1 (81.8) | 0.0 (0.0) |
-| Qwen3.5-9B | en | dpo · adapter | gender | implicit | 20 | 0.4 (0.6) | 2.0 (4.0) | 0.012 (0.045) | 0.7 (1.2) | 4.7 (8.7) | -- | 78.6 (79.6) | 0.0 (0.0) |
-| Qwen3.5-9B | en | dpo · adapter | military_status | explicit | 5 | 0.5 (2.4) | 2.0 (5.8) | 0.011 (0.051) | 0.7 (2.5) | 4.0 (11.3) | -- | 79.8 (82.4) | 0.0 (0.0) |
-| Qwen3.5-9B | en | dpo · adapter | military_status | implicit | 5 | 0.5 (3.9) | 1.3 (12.2) | 0.015 (0.135) | 1.1 (3.8) | 2.0 (32.7) | -- | 79.3 (74.6) | 0.0 (0.0) |
-| Qwen3.5-9B | en | dpo · adapter | religion | explicit | 9 | 0.2 (0.7) | 0.9 (2.4) | 0.006 (0.028) | 0.6 (1.5) | 1.3 (4.7) | -- | 79.2 (80.8) | 0.0 (0.0) |
-| Qwen3.5-9B | en | dpo · adapter | religion | implicit | 9 | 0.3 (1.9) | 1.1 (8.9) | 0.010 (0.161) | 1.1 (1.9) | 3.3 (24.7) | -- | 78.3 (69.5) | 0.0 (0.0) |
-| Qwen3.5-9B | en | dpo · adapter | gender | explicit | 20 | 0.3 (1.1) | 1.1 (4.0) | 0.017 (0.041) | 0.7 (1.8) | 3.3 (10.0) | -- | 79.5 (81.8) | 0.0 (0.0) |
-| Qwen3.5-9B | en | dpo · adapter | gender | implicit | 20 | 0.3 (0.6) | 1.1 (4.0) | 0.012 (0.045) | 0.4 (1.2) | 2.0 (8.7) | -- | 79.0 (79.6) | 0.0 (0.0) |
-| Qwen3.5-9B | en | dpo · adapter | military_status | explicit | 5 | 0.6 (2.4) | 1.8 (5.8) | 0.015 (0.051) | 0.8 (2.5) | 2.7 (11.3) | -- | 80.4 (82.4) | 0.0 (0.0) |
-| Qwen3.5-9B | en | dpo · adapter | military_status | implicit | 5 | 0.4 (3.9) | 1.8 (12.2) | 0.026 (0.135) | 1.0 (3.8) | 2.7 (32.7) | -- | 79.7 (74.6) | 0.0 (0.0) |
-| Qwen3.5-9B | en | dpo · adapter | religion | explicit | 9 | 0.4 (0.7) | 1.1 (2.4) | 0.009 (0.028) | 0.5 (1.5) | 2.7 (4.7) | -- | 79.3 (80.8) | 0.0 (0.0) |
-| Qwen3.5-9B | en | dpo · adapter | religion | implicit | 9 | 0.3 (1.9) | 1.3 (8.9) | 0.007 (0.161) | 0.7 (1.9) | 2.7 (24.7) | -- | 78.9 (69.5) | 0.0 (0.0) |
-| Qwen3.5-9B | en | dpo · adapter | gender | explicit | 20 | 0.2 (1.1) | 1.1 (4.0) | 0.006 (0.041) | 0.6 (1.8) | 1.3 (10.0) | -- | 80.1 (81.8) | 0.0 (0.0) |
-| Qwen3.5-9B | en | dpo · adapter | gender | implicit | 20 | 0.2 (0.6) | 1.8 (4.0) | 0.030 (0.045) | 0.4 (1.2) | 3.3 (8.7) | -- | 79.2 (79.6) | 0.0 (0.0) |
-| Qwen3.5-9B | en | dpo · adapter | military_status | explicit | 5 | 0.5 (2.4) | 1.6 (5.8) | 0.012 (0.051) | 0.6 (2.5) | 3.3 (11.3) | -- | 80.2 (82.4) | 0.0 (0.0) |
-| Qwen3.5-9B | en | dpo · adapter | military_status | implicit | 5 | 0.1 (3.9) | 0.4 (12.2) | 0.002 (0.135) | 1.1 (3.8) | 2.7 (32.7) | -- | 80.6 (74.6) | 0.0 (0.0) |
-| Qwen3.5-9B | en | dpo · adapter | religion | explicit | 9 | 0.3 (0.7) | 1.1 (2.4) | 0.007 (0.028) | 0.5 (1.5) | 2.7 (4.7) | -- | 80.1 (80.8) | 0.0 (0.0) |
-| Qwen3.5-9B | en | dpo · adapter | religion | implicit | 9 | 0.4 (1.9) | 1.8 (8.9) | 0.011 (0.161) | 0.7 (1.9) | 2.7 (24.7) | -- | 79.2 (69.5) | 0.0 (0.0) |
-| Qwen3.5-9B | en | dpo · adapter | gender | explicit | 20 | 0.3 (1.1) | 1.1 (4.0) | 0.016 (0.041) | 0.5 (1.8) | 3.3 (10.0) | -- | 79.4 (81.8) | 0.0 (0.0) |
-| Qwen3.5-9B | en | dpo · adapter | gender | implicit | 20 | 0.4 (0.6) | 1.8 (4.0) | 0.020 (0.045) | 0.6 (1.2) | 2.7 (8.7) | -- | 77.9 (79.6) | 0.0 (0.0) |
-| Qwen3.5-9B | en | dpo · adapter | military_status | explicit | 5 | 0.6 (2.4) | 2.2 (5.8) | 0.014 (0.051) | 0.7 (2.5) | 4.7 (11.3) | -- | 79.7 (82.4) | 0.0 (0.0) |
-| Qwen3.5-9B | en | dpo · adapter | military_status | implicit | 5 | 0.5 (3.9) | 2.0 (12.2) | 0.029 (0.135) | 1.5 (3.8) | 6.0 (32.7) | -- | 79.3 (74.6) | 0.0 (0.0) |
-| Qwen3.5-9B | en | dpo · adapter | religion | explicit | 9 | 0.2 (0.7) | 0.9 (2.4) | 0.006 (0.028) | 0.3 (1.5) | 2.0 (4.7) | -- | 79.2 (80.8) | 0.0 (0.0) |
-| Qwen3.5-9B | en | dpo · adapter | religion | implicit | 9 | 0.4 (1.9) | 1.6 (8.9) | 0.014 (0.161) | 1.1 (1.9) | 2.7 (24.7) | -- | 78.0 (69.5) | 0.0 (0.0) |
-| Qwen3.5-9B | en | dpo · adapter | gender | explicit | 20 | 0.3 (1.1) | 1.6 (4.0) | 0.012 (0.041) | 0.5 (1.8) | 2.7 (10.0) | -- | 83.1 (81.8) | 0.0 (0.0) |
-| Qwen3.5-9B | en | dpo · adapter | gender | implicit | 20 | 0.3 (0.6) | 1.3 (4.0) | 0.011 (0.045) | 0.7 (1.2) | 3.3 (8.7) | -- | 82.4 (79.6) | 0.0 (0.0) |
-| Qwen3.5-9B | en | dpo · adapter | military_status | explicit | 5 | 0.8 (2.4) | 2.7 (5.8) | 0.021 (0.051) | 1.0 (2.5) | 2.0 (11.3) | -- | 82.4 (82.4) | 0.0 (0.0) |
-| Qwen3.5-9B | en | dpo · adapter | military_status | implicit | 5 | 0.3 (3.9) | 1.1 (12.2) | 0.006 (0.135) | 0.9 (3.8) | 2.0 (32.7) | -- | 81.9 (74.6) | 0.0 (0.0) |
-| Qwen3.5-9B | en | dpo · adapter | religion | explicit | 9 | 0.2 (0.7) | 0.7 (2.4) | 0.005 (0.028) | 0.3 (1.5) | 0.7 (4.7) | -- | 83.0 (80.8) | 0.0 (0.0) |
-| Qwen3.5-9B | en | dpo · adapter | religion | implicit | 9 | 0.3 (1.9) | 1.6 (8.9) | 0.011 (0.161) | 0.7 (1.9) | 4.0 (24.7) | -- | 82.1 (69.5) | 0.0 (0.0) |
-| Qwen3.5-9B | en | dpo · adapter | gender | explicit | 20 | 0.4 (1.1) | 2.0 (4.0) | 0.008 (0.041) | 0.7 (1.8) | 3.3 (10.0) | -- | 83.2 (81.8) | 0.0 (0.0) |
-| Qwen3.5-9B | en | dpo · adapter | gender | implicit | 20 | 0.3 (0.6) | 1.6 (4.0) | 0.016 (0.045) | 0.6 (1.2) | 3.3 (8.7) | -- | 83.3 (79.6) | 0.0 (0.0) |
-| Qwen3.5-9B | en | dpo · adapter | military_status | explicit | 5 | 0.6 (2.4) | 2.2 (5.8) | 0.015 (0.051) | 0.9 (2.5) | 1.3 (11.3) | -- | 82.6 (82.4) | 0.0 (0.0) |
-| Qwen3.5-9B | en | dpo · adapter | military_status | implicit | 5 | 0.4 (3.9) | 1.6 (12.2) | 0.009 (0.135) | 0.9 (3.8) | 3.3 (32.7) | -- | 82.2 (74.6) | 0.0 (0.0) |
-| Qwen3.5-9B | en | dpo · adapter | religion | explicit | 9 | 0.4 (0.7) | 1.6 (2.4) | 0.009 (0.028) | 0.8 (1.5) | 2.0 (4.7) | -- | 82.9 (80.8) | 0.0 (0.0) |
-| Qwen3.5-9B | en | dpo · adapter | religion | implicit | 9 | 0.6 (1.9) | 1.8 (8.9) | 0.021 (0.161) | 1.1 (1.9) | 4.0 (24.7) | -- | 82.5 (69.5) | 0.0 (0.0) |
-| Qwen3.5-9B | en | dpo · adapter | gender | explicit | 20 | 0.3 (1.1) | 1.6 (4.0) | 0.023 (0.041) | 0.5 (1.8) | 2.7 (10.0) | -- | 81.2 (81.8) | 0.0 (0.0) |
-| Qwen3.5-9B | en | dpo · adapter | gender | implicit | 20 | 0.7 (0.6) | 2.7 (4.0) | 0.029 (0.045) | 1.0 (1.2) | 3.3 (8.7) | -- | 81.0 (79.6) | 0.0 (0.0) |
-| Qwen3.5-9B | en | dpo · adapter | military_status | explicit | 5 | 0.4 (2.4) | 1.8 (5.8) | 0.011 (0.051) | 0.9 (2.5) | 2.0 (11.3) | -- | 81.1 (82.4) | 0.0 (0.0) |
-| Qwen3.5-9B | en | dpo · adapter | military_status | implicit | 5 | 0.4 (3.9) | 1.3 (12.2) | 0.020 (0.135) | 0.8 (3.8) | 1.3 (32.7) | -- | 80.8 (74.6) | 0.0 (0.0) |
-| Qwen3.5-9B | en | dpo · adapter | religion | explicit | 9 | 0.3 (0.7) | 1.1 (2.4) | 0.009 (0.028) | 0.7 (1.5) | 2.0 (4.7) | -- | 81.0 (80.8) | 0.0 (0.0) |
-| Qwen3.5-9B | en | dpo · adapter | religion | implicit | 9 | 0.6 (1.9) | 2.2 (8.9) | 0.022 (0.161) | 1.3 (1.9) | 2.7 (24.7) | -- | 80.1 (69.5) | 0.0 (0.0) |
+| Qwen3.5-9B | en | dpo · adapter | gender | explicit | 20 | 0.2 (0.9) | 0.9 (3.3) | 0.005 (0.028) | 0.8 (1.7) | 4.0 (10.0) | -- | 79.1 (81.6) | 0.0 (0.0) |
+| Qwen3.5-9B | en | dpo · adapter | gender | implicit | 20 | 0.4 (0.7) | 2.0 (3.3) | 0.012 (0.054) | 0.7 (1.2) | 4.7 (7.3) | -- | 78.6 (79.4) | 0.0 (0.0) |
+| Qwen3.5-9B | en | dpo · adapter | military_status | explicit | 5 | 0.5 (2.4) | 2.0 (5.8) | 0.011 (0.052) | 0.7 (2.6) | 4.0 (12.0) | -- | 79.8 (82.4) | 0.0 (0.0) |
+| Qwen3.5-9B | en | dpo · adapter | military_status | implicit | 5 | 0.5 (3.9) | 1.3 (12.2) | 0.015 (0.137) | 1.1 (3.9) | 2.0 (32.7) | -- | 79.3 (74.6) | 0.0 (0.0) |
+| Qwen3.5-9B | en | dpo · adapter | religion | explicit | 9 | 0.2 (0.7) | 0.9 (1.8) | 0.006 (0.025) | 0.6 (1.3) | 1.3 (5.3) | -- | 79.2 (80.7) | 0.0 (0.0) |
+| Qwen3.5-9B | en | dpo · adapter | religion | implicit | 9 | 0.3 (1.9) | 1.1 (8.9) | 0.010 (0.162) | 1.1 (2.0) | 3.3 (24.7) | -- | 78.3 (69.5) | 0.0 (0.0) |
+| Qwen3.5-9B | en | dpo · adapter | gender | explicit | 20 | 0.3 (0.9) | 1.1 (3.3) | 0.017 (0.028) | 0.7 (1.7) | 3.3 (10.0) | -- | 79.5 (81.6) | 0.0 (0.0) |
+| Qwen3.5-9B | en | dpo · adapter | gender | implicit | 20 | 0.3 (0.7) | 1.1 (3.3) | 0.012 (0.054) | 0.4 (1.2) | 2.0 (7.3) | -- | 79.0 (79.4) | 0.0 (0.0) |
+| Qwen3.5-9B | en | dpo · adapter | military_status | explicit | 5 | 0.6 (2.4) | 1.8 (5.8) | 0.015 (0.052) | 0.8 (2.6) | 2.7 (12.0) | -- | 80.4 (82.4) | 0.0 (0.0) |
+| Qwen3.5-9B | en | dpo · adapter | military_status | implicit | 5 | 0.4 (3.9) | 1.8 (12.2) | 0.026 (0.137) | 1.0 (3.9) | 2.7 (32.7) | -- | 79.7 (74.6) | 0.0 (0.0) |
+| Qwen3.5-9B | en | dpo · adapter | religion | explicit | 9 | 0.4 (0.7) | 1.1 (1.8) | 0.009 (0.025) | 0.5 (1.3) | 2.7 (5.3) | -- | 79.3 (80.7) | 0.0 (0.0) |
+| Qwen3.5-9B | en | dpo · adapter | religion | implicit | 9 | 0.3 (1.9) | 1.3 (8.9) | 0.007 (0.162) | 0.7 (2.0) | 2.7 (24.7) | -- | 78.9 (69.5) | 0.0 (0.0) |
+| Qwen3.5-9B | en | dpo · adapter | gender | explicit | 20 | 0.2 (0.9) | 1.1 (3.3) | 0.006 (0.028) | 0.6 (1.7) | 1.3 (10.0) | -- | 80.1 (81.6) | 0.0 (0.0) |
+| Qwen3.5-9B | en | dpo · adapter | gender | implicit | 20 | 0.2 (0.7) | 1.8 (3.3) | 0.030 (0.054) | 0.4 (1.2) | 3.3 (7.3) | -- | 79.2 (79.4) | 0.0 (0.0) |
+| Qwen3.5-9B | en | dpo · adapter | military_status | explicit | 5 | 0.5 (2.4) | 1.6 (5.8) | 0.012 (0.052) | 0.6 (2.6) | 3.3 (12.0) | -- | 80.2 (82.4) | 0.0 (0.0) |
+| Qwen3.5-9B | en | dpo · adapter | military_status | implicit | 5 | 0.1 (3.9) | 0.4 (12.2) | 0.002 (0.137) | 1.1 (3.9) | 2.7 (32.7) | -- | 80.6 (74.6) | 0.0 (0.0) |
+| Qwen3.5-9B | en | dpo · adapter | religion | explicit | 9 | 0.3 (0.7) | 1.1 (1.8) | 0.007 (0.025) | 0.5 (1.3) | 2.7 (5.3) | -- | 80.1 (80.7) | 0.0 (0.0) |
+| Qwen3.5-9B | en | dpo · adapter | religion | implicit | 9 | 0.4 (1.9) | 1.8 (8.9) | 0.011 (0.162) | 0.7 (2.0) | 2.7 (24.7) | -- | 79.2 (69.5) | 0.0 (0.0) |
+| Qwen3.5-9B | en | dpo · adapter | gender | explicit | 20 | 0.3 (0.9) | 1.1 (3.3) | 0.016 (0.028) | 0.5 (1.7) | 3.3 (10.0) | -- | 79.4 (81.6) | 0.0 (0.0) |
+| Qwen3.5-9B | en | dpo · adapter | gender | implicit | 20 | 0.4 (0.7) | 1.8 (3.3) | 0.020 (0.054) | 0.6 (1.2) | 2.7 (7.3) | -- | 77.9 (79.4) | 0.0 (0.0) |
+| Qwen3.5-9B | en | dpo · adapter | military_status | explicit | 5 | 0.6 (2.4) | 2.2 (5.8) | 0.014 (0.052) | 0.7 (2.6) | 4.7 (12.0) | -- | 79.7 (82.4) | 0.0 (0.0) |
+| Qwen3.5-9B | en | dpo · adapter | military_status | implicit | 5 | 0.5 (3.9) | 2.0 (12.2) | 0.029 (0.137) | 1.5 (3.9) | 6.0 (32.7) | -- | 79.3 (74.6) | 0.0 (0.0) |
+| Qwen3.5-9B | en | dpo · adapter | religion | explicit | 9 | 0.2 (0.7) | 0.9 (1.8) | 0.006 (0.025) | 0.3 (1.3) | 2.0 (5.3) | -- | 79.2 (80.7) | 0.0 (0.0) |
+| Qwen3.5-9B | en | dpo · adapter | religion | implicit | 9 | 0.4 (1.9) | 1.6 (8.9) | 0.014 (0.162) | 1.1 (2.0) | 2.7 (24.7) | -- | 78.0 (69.5) | 0.0 (0.0) |
+| Qwen3.5-9B | en | dpo · adapter | gender | explicit | 20 | 0.3 (0.9) | 1.6 (3.3) | 0.012 (0.028) | 0.5 (1.7) | 2.7 (10.0) | -- | 83.1 (81.6) | 0.0 (0.0) |
+| Qwen3.5-9B | en | dpo · adapter | gender | implicit | 20 | 0.3 (0.7) | 1.3 (3.3) | 0.011 (0.054) | 0.7 (1.2) | 3.3 (7.3) | -- | 82.4 (79.4) | 0.0 (0.0) |
+| Qwen3.5-9B | en | dpo · adapter | military_status | explicit | 5 | 0.8 (2.4) | 2.7 (5.8) | 0.021 (0.052) | 1.0 (2.6) | 2.0 (12.0) | -- | 82.4 (82.4) | 0.0 (0.0) |
+| Qwen3.5-9B | en | dpo · adapter | military_status | implicit | 5 | 0.3 (3.9) | 1.1 (12.2) | 0.006 (0.137) | 0.9 (3.9) | 2.0 (32.7) | -- | 81.9 (74.6) | 0.0 (0.0) |
+| Qwen3.5-9B | en | dpo · adapter | religion | explicit | 9 | 0.2 (0.7) | 0.7 (1.8) | 0.005 (0.025) | 0.3 (1.3) | 0.7 (5.3) | -- | 83.0 (80.7) | 0.0 (0.0) |
+| Qwen3.5-9B | en | dpo · adapter | religion | implicit | 9 | 0.3 (1.9) | 1.6 (8.9) | 0.011 (0.162) | 0.7 (2.0) | 4.0 (24.7) | -- | 82.1 (69.5) | 0.0 (0.0) |
+| Qwen3.5-9B | en | dpo · adapter | gender | explicit | 20 | 0.4 (0.9) | 2.0 (3.3) | 0.008 (0.028) | 0.7 (1.7) | 3.3 (10.0) | -- | 83.2 (81.6) | 0.0 (0.0) |
+| Qwen3.5-9B | en | dpo · adapter | gender | implicit | 20 | 0.3 (0.7) | 1.6 (3.3) | 0.016 (0.054) | 0.6 (1.2) | 3.3 (7.3) | -- | 83.3 (79.4) | 0.0 (0.0) |
+| Qwen3.5-9B | en | dpo · adapter | military_status | explicit | 5 | 0.6 (2.4) | 2.2 (5.8) | 0.015 (0.052) | 0.9 (2.6) | 1.3 (12.0) | -- | 82.6 (82.4) | 0.0 (0.0) |
+| Qwen3.5-9B | en | dpo · adapter | military_status | implicit | 5 | 0.4 (3.9) | 1.6 (12.2) | 0.009 (0.137) | 0.9 (3.9) | 3.3 (32.7) | -- | 82.2 (74.6) | 0.0 (0.0) |
+| Qwen3.5-9B | en | dpo · adapter | religion | explicit | 9 | 0.4 (0.7) | 1.6 (1.8) | 0.009 (0.025) | 0.8 (1.3) | 2.0 (5.3) | -- | 82.9 (80.7) | 0.0 (0.0) |
+| Qwen3.5-9B | en | dpo · adapter | religion | implicit | 9 | 0.6 (1.9) | 1.8 (8.9) | 0.021 (0.162) | 1.1 (2.0) | 4.0 (24.7) | -- | 82.5 (69.5) | 0.0 (0.0) |
+| Qwen3.5-9B | en | dpo · adapter | gender | explicit | 20 | 0.3 (0.9) | 1.6 (3.3) | 0.023 (0.028) | 0.5 (1.7) | 2.7 (10.0) | -- | 81.2 (81.6) | 0.0 (0.0) |
+| Qwen3.5-9B | en | dpo · adapter | gender | implicit | 20 | 0.7 (0.7) | 2.7 (3.3) | 0.029 (0.054) | 1.0 (1.2) | 3.3 (7.3) | -- | 81.0 (79.4) | 0.0 (0.0) |
+| Qwen3.5-9B | en | dpo · adapter | military_status | explicit | 5 | 0.4 (2.4) | 1.8 (5.8) | 0.011 (0.052) | 0.9 (2.6) | 2.0 (12.0) | -- | 81.1 (82.4) | 0.0 (0.0) |
+| Qwen3.5-9B | en | dpo · adapter | military_status | implicit | 5 | 0.4 (3.9) | 1.3 (12.2) | 0.020 (0.137) | 0.8 (3.9) | 1.3 (32.7) | -- | 80.8 (74.6) | 0.0 (0.0) |
+| Qwen3.5-9B | en | dpo · adapter | religion | explicit | 9 | 0.3 (0.7) | 1.1 (1.8) | 0.009 (0.025) | 0.7 (1.3) | 2.0 (5.3) | -- | 81.0 (80.7) | 0.0 (0.0) |
+| Qwen3.5-9B | en | dpo · adapter | religion | implicit | 9 | 0.6 (1.9) | 2.2 (8.9) | 0.022 (0.162) | 1.3 (2.0) | 2.7 (24.7) | -- | 80.1 (69.5) | 0.0 (0.0) |
 | Qwen3.5-9B | en | embedding · leace | military_status | implicit | 5 | 3.4 (3.9) | 9.8 (12.2) | 0.149 (0.135) | 3.5 (3.8) | 27.3 (32.7) | 0.631 (0.643) | 72.4 (74.6) | 0.0 (0.0) |
 | Qwen3.5-9B | en | prompt · counterfactual_invariance | military_status | implicit | 5 | 2.7 (3.9) | 7.8 (12.2) | 0.108 (0.135) | 2.9 (3.8) | 20.7 (32.7) | 0.651 (0.643) | 74.5 (74.6) | 0.0 (0.0) |
 | Qwen3.5-9B | en | prompt · fairness_constitution | military_status | implicit | 5 | 2.7 (3.9) | 8.7 (12.2) | 0.107 (0.135) | 3.7 (3.8) | 12.7 (32.7) | 0.689 (0.643) | 83.8 (74.6) | 0.0 (0.0) |
@@ -317,12 +317,12 @@ Baseline values are in brackets where a matching unmitigated run exists; **↓ m
 | Qwen3.5-9B | en | sft · adapter | military_status | implicit | 5 | 0.5 (3.9) | 1.3 (12.2) | 0.021 (0.135) | 1.1 (3.8) | 2.7 (32.7) | 0.651 (0.643) | 81.7 (74.6) | 0.0 (0.0) |
 | Qwen3.5-9B | en | sft · adapter | religion | explicit | 9 | 0.2 (0.7) | 1.1 (2.4) | 0.005 (0.028) | 0.6 (1.5) | 2.7 (4.7) | 0.657 (0.675) | 83.2 (80.8) | 0.0 (0.0) |
 | Qwen3.5-9B | en | sft · adapter | religion | implicit | 9 | 0.4 (1.9) | 1.6 (8.9) | 0.012 (0.161) | 0.7 (1.9) | 4.0 (24.7) | 0.653 (0.605) | 81.7 (69.5) | 0.0 (0.0) |
-| Qwen3.5-9B | en | sft · adapter | gender | explicit | 20 | 0.3 (1.1) | 1.6 (4.0) | 0.006 (0.041) | 0.8 (1.8) | 3.3 (10.0) | -- | 83.1 (81.8) | 0.0 (0.0) |
-| Qwen3.5-9B | en | sft · adapter | gender | implicit | 20 | 0.4 (0.6) | 2.0 (4.0) | 0.026 (0.045) | 0.8 (1.2) | 4.0 (8.7) | -- | 82.1 (79.6) | 0.0 (0.0) |
-| Qwen3.5-9B | en | sft · adapter | military_status | explicit | 5 | 0.9 (2.4) | 2.9 (5.8) | 0.027 (0.051) | 1.2 (2.5) | 4.7 (11.3) | -- | 82.6 (82.4) | 0.0 (0.0) |
-| Qwen3.5-9B | en | sft · adapter | military_status | implicit | 5 | 0.4 (3.9) | 1.1 (12.2) | 0.011 (0.135) | 0.9 (3.8) | 4.0 (32.7) | -- | 82.0 (74.6) | 0.0 (0.0) |
-| Qwen3.5-9B | en | sft · adapter | religion | explicit | 9 | 0.3 (0.7) | 1.3 (2.4) | 0.005 (0.028) | 0.6 (1.5) | 4.0 (4.7) | -- | 83.3 (80.8) | 0.0 (0.0) |
-| Qwen3.5-9B | en | sft · adapter | religion | implicit | 9 | 0.4 (1.9) | 1.3 (8.9) | 0.016 (0.161) | 0.7 (1.9) | 4.0 (24.7) | -- | 81.8 (69.5) | 0.0 (0.0) |
+| Qwen3.5-9B | en | sft · adapter | gender | explicit | 20 | 0.3 (0.9) | 1.6 (3.3) | 0.006 (0.028) | 0.8 (1.7) | 3.3 (10.0) | -- | 83.1 (81.6) | 0.0 (0.0) |
+| Qwen3.5-9B | en | sft · adapter | gender | implicit | 20 | 0.4 (0.7) | 2.0 (3.3) | 0.026 (0.054) | 0.8 (1.2) | 4.0 (7.3) | -- | 82.1 (79.4) | 0.0 (0.0) |
+| Qwen3.5-9B | en | sft · adapter | military_status | explicit | 5 | 0.9 (2.4) | 2.9 (5.8) | 0.027 (0.052) | 1.2 (2.6) | 4.7 (12.0) | -- | 82.6 (82.4) | 0.0 (0.0) |
+| Qwen3.5-9B | en | sft · adapter | military_status | implicit | 5 | 0.4 (3.9) | 1.1 (12.2) | 0.011 (0.137) | 0.9 (3.9) | 4.0 (32.7) | -- | 82.0 (74.6) | 0.0 (0.0) |
+| Qwen3.5-9B | en | sft · adapter | religion | explicit | 9 | 0.3 (0.7) | 1.3 (1.8) | 0.005 (0.025) | 0.6 (1.3) | 4.0 (5.3) | -- | 83.3 (80.7) | 0.0 (0.0) |
+| Qwen3.5-9B | en | sft · adapter | religion | implicit | 9 | 0.4 (1.9) | 1.3 (8.9) | 0.016 (0.162) | 0.7 (2.0) | 4.0 (24.7) | -- | 81.8 (69.5) | 0.0 (0.0) |
 | Qwen3.5-9B | en | sft · adapter | gender | explicit | 20 | 0.3 (1.1) | 1.3 (4.0) | 0.009 (0.041) | 0.8 (1.8) | 3.3 (10.0) | 0.648 (0.677) | 81.6 (81.8) | 0.0 (0.0) |
 | Qwen3.5-9B | en | sft · adapter | gender | implicit | 20 | 0.4 (0.6) | 1.8 (4.0) | 0.026 (0.045) | 0.9 (1.2) | 3.3 (8.7) | 0.647 (0.671) | 80.4 (79.6) | 0.0 (0.0) |
 | Qwen3.5-9B | en | sft · adapter | military_status | explicit | 5 | 0.9 (2.4) | 2.7 (5.8) | 0.027 (0.051) | 1.2 (2.5) | 4.7 (11.3) | 0.654 (0.677) | 82.3 (82.4) | 0.0 (0.0) |
@@ -538,7 +538,7 @@ For ranking experiments against each other, nothing more. Groups are weighted **
 |---|---|---|---:|---:|---:|---:|---:|---:|---:|---:|
 | Qwen3.5-4B ⚠ partial: 20 pairs | en | none | 6.4 (3.1) | 25.0 (14.3) | 0.141 (0.082) | 6.5 (4.5) | 43.8 (24.1) | 0.650 (0.677) | 77.7 (80.6) | 0.0 (0.0) |
 | Qwen3.5-4B | en | none | 3.1 | 14.3 | 0.082 | 4.5 | 24.1 | 0.677 | 80.6 | 0.0 |
-| Qwen3.5-9B | en | none | 1.7 (1.9) | 5.9 (7.8) | 0.076 (0.078) | 2.1 (2.4) | 15.3 (19.7) | -- | 78.8 (78.0) | 0.0 (0.0) |
+| Qwen3.5-9B | en | none | 1.7 | 5.9 | 0.076 | 2.1 | 15.3 | -- | 78.8 | 0.0 |
 | Qwen3.5-9B | en | none | 1.9 | 7.8 | 0.078 | 2.4 | 19.7 | 0.662 | 78.0 | 0.0 |
 | gemma-4-12B-it | en | none | 1.3 | 5.6 | 0.032 | 2.0 | 7.1 | 0.704 | 84.4 | 0.0 |
 | gemma-4-E4B-it | en | none | 1.5 | 6.8 | 0.052 | 2.2 | 2.5 | 0.671 | 75.8 | 0.0 |
@@ -557,13 +557,13 @@ For ranking experiments against each other, nothing more. Groups are weighted **
 | Qwen3.5-4B | en | sft · adapter | 0.7 (3.1) | 2.5 (14.3) | 0.022 (0.082) | 1.3 (4.5) | 6.1 (24.1) | 0.656 (0.677) | 82.0 (80.6) | 0.0 (0.0) |
 | Qwen3.5-9B | en | dpo · adapter | 0.8 (1.9) | 3.6 (7.8) | 0.052 (0.078) | 1.1 (2.4) | 8.1 (19.7) | 0.679 (0.662) | 76.0 (78.0) | 0.0 (0.0) |
 | Qwen3.5-9B | en | dpo · adapter | 0.7 (1.9) | 2.5 (7.8) | 0.025 (0.078) | 1.0 (2.4) | 4.4 (19.7) | 0.595 (0.662) | 82.4 (78.0) | 0.0 (0.0) |
-| Qwen3.5-9B | en | dpo · adapter | 0.4 (1.9) | 1.4 (7.8) | 0.010 (0.078) | 0.8 (2.4) | 3.2 (19.7) | -- | 78.9 (78.0) | 0.0 (0.0) |
-| Qwen3.5-9B | en | dpo · adapter | 0.4 (1.9) | 1.4 (7.8) | 0.015 (0.078) | 0.7 (2.4) | 2.7 (19.7) | -- | 79.3 (78.0) | 0.0 (0.0) |
-| Qwen3.5-9B | en | dpo · adapter | 0.3 (1.9) | 1.3 (7.8) | 0.011 (0.078) | 0.6 (2.4) | 2.7 (19.7) | -- | 79.8 (78.0) | 0.0 (0.0) |
-| Qwen3.5-9B | en | dpo · adapter | 0.4 (1.9) | 1.6 (7.8) | 0.016 (0.078) | 0.8 (2.4) | 3.6 (19.7) | -- | 78.8 (78.0) | 0.0 (0.0) |
-| Qwen3.5-9B | en | dpo · adapter | 0.4 (1.9) | 1.5 (7.8) | 0.011 (0.078) | 0.7 (2.4) | 2.4 (19.7) | -- | 82.6 (78.0) | 0.0 (0.0) |
-| Qwen3.5-9B | en | dpo · adapter | 0.4 (1.9) | 1.8 (7.8) | 0.013 (0.078) | 0.8 (2.4) | 2.9 (19.7) | -- | 83.0 (78.0) | 0.0 (0.0) |
-| Qwen3.5-9B | en | dpo · adapter | 0.5 (1.9) | 1.8 (7.8) | 0.019 (0.078) | 0.9 (2.4) | 2.3 (19.7) | -- | 81.0 (78.0) | 0.0 (0.0) |
+| Qwen3.5-9B | en | dpo · adapter | 0.4 (1.7) | 1.4 (5.9) | 0.010 (0.076) | 0.8 (2.1) | 3.2 (15.3) | -- | 78.9 (78.8) | 0.0 (0.0) |
+| Qwen3.5-9B | en | dpo · adapter | 0.4 (1.7) | 1.4 (5.9) | 0.015 (0.076) | 0.7 (2.1) | 2.7 (15.3) | -- | 79.3 (78.8) | 0.0 (0.0) |
+| Qwen3.5-9B | en | dpo · adapter | 0.3 (1.7) | 1.3 (5.9) | 0.011 (0.076) | 0.6 (2.1) | 2.7 (15.3) | -- | 79.8 (78.8) | 0.0 (0.0) |
+| Qwen3.5-9B | en | dpo · adapter | 0.4 (1.7) | 1.6 (5.9) | 0.016 (0.076) | 0.8 (2.1) | 3.6 (15.3) | -- | 78.8 (78.8) | 0.0 (0.0) |
+| Qwen3.5-9B | en | dpo · adapter | 0.4 (1.7) | 1.5 (5.9) | 0.011 (0.076) | 0.7 (2.1) | 2.4 (15.3) | -- | 82.6 (78.8) | 0.0 (0.0) |
+| Qwen3.5-9B | en | dpo · adapter | 0.4 (1.7) | 1.8 (5.9) | 0.013 (0.076) | 0.8 (2.1) | 2.9 (15.3) | -- | 83.0 (78.8) | 0.0 (0.0) |
+| Qwen3.5-9B | en | dpo · adapter | 0.5 (1.7) | 1.8 (5.9) | 0.019 (0.076) | 0.9 (2.1) | 2.3 (15.3) | -- | 81.0 (78.8) | 0.0 (0.0) |
 | Qwen3.5-9B | en | embedding · leace | 3.4 (1.9) | 9.8 (7.8) | 0.149 (0.078) | 3.5 (2.4) | 27.3 (19.7) | 0.634 (0.662) | 73.1 (78.0) | 0.0 (0.0) |
 | Qwen3.5-9B | en | prompt · counterfactual_invariance | 2.7 (1.9) | 7.8 (7.8) | 0.108 (0.078) | 2.9 (2.4) | 20.7 (19.7) | 0.653 (0.662) | 74.9 (78.0) | 0.0 (0.0) |
 | Qwen3.5-9B | en | prompt · fairness_constitution | 2.7 (1.9) | 8.7 (7.8) | 0.107 (0.078) | 3.7 (2.4) | 12.7 (19.7) | 0.689 (0.662) | 83.9 (78.0) | 0.0 (0.0) |
@@ -579,7 +579,7 @@ For ranking experiments against each other, nothing more. Groups are weighted **
 | Qwen3.5-9B | en | scrub · lexical | 0.0 (1.9) | 0.0 (7.8) | 0.000 (0.078) | 0.0 (2.4) | 0.0 (19.7) | 0.672 (0.662) | 80.3 (78.0) | 0.0 (0.0) |
 | Qwen3.5-9B | en | scrub · llm | 0.7 (1.9) | 2.7 (7.8) | 0.024 (0.078) | 2.7 (2.4) | 6.7 (19.7) | 0.673 (0.662) | 80.8 (78.0) | 0.0 (0.0) |
 | Qwen3.5-9B | en | sft · adapter | 0.5 (1.9) | 1.6 (7.8) | 0.016 (0.078) | 0.9 (2.4) | 3.2 (19.7) | 0.654 (0.662) | 82.5 (78.0) | 0.0 (0.0) |
-| Qwen3.5-9B | en | sft · adapter | 0.4 (1.9) | 1.7 (7.8) | 0.015 (0.078) | 0.8 (2.4) | 4.0 (19.7) | -- | 82.5 (78.0) | 0.0 (0.0) |
+| Qwen3.5-9B | en | sft · adapter | 0.4 (1.7) | 1.7 (5.9) | 0.015 (0.076) | 0.8 (2.1) | 4.0 (15.3) | -- | 82.5 (78.8) | 0.0 (0.0) |
 | Qwen3.5-9B | en | sft · adapter | 0.5 (1.9) | 2.0 (7.8) | 0.020 (0.078) | 1.0 (2.4) | 4.1 (19.7) | 0.649 (0.662) | 81.4 (78.0) | 0.0 (0.0) |
 | lapa-v0.1.2-instruct | en | sft · adapter | 0.2 (5.0) | 0.9 (23.1) | 0.007 (0.148) | 0.5 (5.7) | 1.9 (13.2) | 0.633 (0.558) | 80.6 (49.5) | 0.0 (0.0) |
 | Qwen3.5-4B | uk | none | 4.3 | 20.0 | 0.110 | 5.4 | 34.6 | 0.601 | 74.8 | 0.0 |
@@ -2809,7 +2809,7 @@ Ten largest deviations from additivity:
 
 ## 6. Mitigation results
 
-Each row is one mitigated run against its own unmitigated baseline (same model, same language, same benchmark, same decoding). **Values first, baseline in brackets**; the flag counts are last on purpose.
+Each row is one mitigated run against its own unmitigated baseline (same model, same language, same serving stack, same benchmark, same decoding). **Values first, baseline in brackets**; the flag counts are last on purpose.
 
 **Why values, not just counts.** A flag count rises with statistical power at constant disparity, so it cannot rank two runs and cannot by itself show that a mitigation worked — the same rule §2 states. Read `Disparity (MAD)` and `Δ MAD`; treat the flag columns as a coarse check that the effect is large enough to survive FDR correction, not as the result.
 
@@ -2833,13 +2833,13 @@ Each row is one mitigated run against its own unmitigated baseline (same model, 
 | Qwen3.5-4B | en | sft | adapter | 6 | 0.7 (2.8) | -2.1 | 2.7 (13.8) | 0.022 (0.076) | 1.3 (4.1) | 0.656 (0.681) | 81.9 (80.8) | 0.0 (0.0) | 0.2 (3.1) | -6 (6→0) | -7 (8→1) |
 | Qwen3.5-9B | en | dpo | adapter | 6 | 0.8 (1.7) | -0.9 | 5.1 (9.6) | 0.052 (0.077) | 1.1 (2.1) | 0.679 (0.663) | 76.0 (78.9) | 0.0 (0.0) | 0.5 (1.1) | -4 (4→0) | -1 (3→2) |
 | Qwen3.5-9B | en | dpo | adapter | 6 | 0.7 (1.7) | -1.1 | 4.0 (9.6) | 0.025 (0.077) | 1.0 (2.1) | 0.595 (0.663) | 82.4 (78.9) | 0.0 (0.0) | 0.2 (1.1) | -4 (4→0) | -3 (3→0) |
-| Qwen3.5-9B | en | dpo | adapter | 6 | 0.4 (1.7) | -1.4 | 1.6 (9.6) | 0.010 (0.077) | 0.8 (2.1) | -- (0.663) | 78.9 (78.9) | 0.0 (0.0) | 0.0 (1.1) | -4 (4→0) | -3 (3→0) |
-| Qwen3.5-9B | en | dpo | adapter | 6 | 0.4 (1.7) | -1.4 | 1.8 (9.6) | 0.015 (0.077) | 0.7 (2.1) | -- (0.663) | 79.3 (78.9) | 0.0 (0.0) | 0.0 (1.1) | -4 (4→0) | -3 (3→0) |
-| Qwen3.5-9B | en | dpo | adapter | 6 | 0.3 (1.7) | -1.4 | 1.8 (9.6) | 0.011 (0.077) | 0.6 (2.1) | -- (0.663) | 79.7 (78.9) | 0.0 (0.0) | 0.0 (1.1) | -4 (4→0) | -3 (3→0) |
-| Qwen3.5-9B | en | dpo | adapter | 6 | 0.4 (1.7) | -1.3 | 2.0 (9.6) | 0.016 (0.077) | 0.8 (2.1) | -- (0.663) | 78.8 (78.9) | 0.0 (0.0) | 0.0 (1.1) | -4 (4→0) | -3 (3→0) |
-| Qwen3.5-9B | en | dpo | adapter | 6 | 0.4 (1.7) | -1.4 | 2.2 (9.6) | 0.011 (0.077) | 0.7 (2.1) | -- (0.663) | 82.6 (78.9) | 0.0 (0.0) | 0.0 (1.1) | -4 (4→0) | -3 (3→0) |
-| Qwen3.5-9B | en | dpo | adapter | 6 | 0.4 (1.7) | -1.3 | 1.8 (9.6) | 0.013 (0.077) | 0.8 (2.1) | -- (0.663) | 83.0 (78.9) | 0.0 (0.0) | 0.0 (1.1) | -4 (4→0) | -3 (3→0) |
-| Qwen3.5-9B | en | dpo | adapter | 6 | 0.5 (1.7) | -1.3 | 2.7 (9.6) | 0.019 (0.077) | 0.9 (2.1) | -- (0.663) | 80.9 (78.9) | 0.0 (0.0) | 0.0 (1.1) | -4 (4→0) | -3 (3→0) |
+| Qwen3.5-9B | en | dpo | adapter | 6 | 0.4 (1.7) | -1.4 | 1.6 (9.8) | 0.010 (0.076) | 0.8 (2.1) | -- | 78.9 (78.8) | 0.0 (0.0) | 0.0 (0.8) | -4 (4→0) | -2 (2→0) |
+| Qwen3.5-9B | en | dpo | adapter | 6 | 0.4 (1.7) | -1.4 | 1.8 (9.8) | 0.015 (0.076) | 0.7 (2.1) | -- | 79.3 (78.8) | 0.0 (0.0) | 0.0 (0.8) | -4 (4→0) | -2 (2→0) |
+| Qwen3.5-9B | en | dpo | adapter | 6 | 0.3 (1.7) | -1.4 | 1.8 (9.8) | 0.011 (0.076) | 0.6 (2.1) | -- | 79.7 (78.8) | 0.0 (0.0) | 0.0 (0.8) | -4 (4→0) | -2 (2→0) |
+| Qwen3.5-9B | en | dpo | adapter | 6 | 0.4 (1.7) | -1.3 | 2.0 (9.8) | 0.016 (0.076) | 0.8 (2.1) | -- | 78.8 (78.8) | 0.0 (0.0) | 0.0 (0.8) | -4 (4→0) | -2 (2→0) |
+| Qwen3.5-9B | en | dpo | adapter | 6 | 0.4 (1.7) | -1.4 | 2.2 (9.8) | 0.011 (0.076) | 0.7 (2.1) | -- | 82.6 (78.8) | 0.0 (0.0) | 0.0 (0.8) | -4 (4→0) | -2 (2→0) |
+| Qwen3.5-9B | en | dpo | adapter | 6 | 0.4 (1.7) | -1.3 | 1.8 (9.8) | 0.013 (0.076) | 0.8 (2.1) | -- | 83.0 (78.8) | 0.0 (0.0) | 0.0 (0.8) | -4 (4→0) | -2 (2→0) |
+| Qwen3.5-9B | en | dpo | adapter | 6 | 0.5 (1.7) | -1.3 | 2.7 (9.8) | 0.019 (0.076) | 0.9 (2.1) | -- | 80.9 (78.8) | 0.0 (0.0) | 0.0 (0.8) | -4 (4→0) | -2 (2→0) |
 | Qwen3.5-9B | en | embedding | leace | 1 | 3.4 (3.9) | -0.5 | 6.9 (9.6) | 0.149 (0.135) | 3.5 (3.8) | 0.631 (0.643) | 72.4 (74.6) | 0.0 (0.0) | 5.1 (8.4) | +1 (2→3) | +0 (1→1) |
 | Qwen3.5-9B | en | prompt | counterfactual_invariance | 1 | 2.7 (3.9) | -1.2 | 7.8 (9.6) | 0.108 (0.135) | 2.9 (3.8) | 0.651 (0.643) | 74.5 (74.6) | 0.0 (0.0) | 0.8 (8.4) | -1 (2→1) | -1 (1→0) |
 | Qwen3.5-9B | en | prompt | fairness_constitution | 1 | 2.7 (3.9) | -1.1 | 8.7 (9.6) | 0.107 (0.135) | 3.7 (3.8) | 0.689 (0.643) | 83.8 (74.6) | 0.0 (0.0) | 0.8 (8.4) | -2 (2→0) | -1 (1→0) |
@@ -2855,7 +2855,7 @@ Each row is one mitigated run against its own unmitigated baseline (same model, 
 | Qwen3.5-9B | en | scrub | lexical\* | 1 | 0.0 (3.9) | -3.9 | 0.0 (9.6) | 0.000 (0.135) | 0.0 (3.8) | 0.672 (0.643) | 80.2 (74.6) | 0.0 (0.0) | 0.0 (8.4) | -2 (2→0) | -1 (1→0) |
 | Qwen3.5-9B | en | scrub | llm | 1 | 0.7 (3.9) | -3.2 | 2.7 (9.6) | 0.024 (0.135) | 2.7 (3.8) | 0.672 (0.643) | 80.6 (74.6) | 0.0 (0.0) | 0.1 (8.4) | -2 (2→0) | -1 (1→0) |
 | Qwen3.5-9B | en | sft | adapter | 6 | 0.5 (1.7) | -1.3 | 2.7 (9.6) | 0.016 (0.077) | 0.9 (2.1) | 0.654 (0.663) | 82.5 (78.9) | 0.0 (0.0) | 0.2 (1.1) | -4 (4→0) | -3 (3→0) |
-| Qwen3.5-9B | en | sft | adapter | 6 | 0.4 (1.7) | -1.3 | 2.9 (9.6) | 0.015 (0.077) | 0.8 (2.1) | -- (0.663) | 82.5 (78.9) | 0.0 (0.0) | 0.0 (1.1) | -4 (4→0) | -3 (3→0) |
+| Qwen3.5-9B | en | sft | adapter | 6 | 0.4 (1.7) | -1.3 | 2.9 (9.8) | 0.015 (0.076) | 0.8 (2.1) | -- | 82.5 (78.8) | 0.0 (0.0) | 0.0 (0.8) | -4 (4→0) | -2 (2→0) |
 | Qwen3.5-9B | en | sft | adapter | 6 | 0.5 (1.7) | -1.2 | 2.4 (9.6) | 0.020 (0.077) | 1.0 (2.1) | 0.649 (0.663) | 81.3 (78.9) | 0.0 (0.0) | 0.2 (1.1) | -4 (4→0) | -3 (3→0) |
 | lapa-v0.1.2-instruct | en | sft | adapter | 6 | 0.2 (4.1) | -3.8 | 1.6 (22.0) | 0.007 (0.128) | 0.5 (4.9) | 0.633 (0.566) | 80.6 (50.9) | 0.0 (0.0) | 0.2 (1.1) | -15 (15→0) | -20 (20→0) |
 | Qwen3.5-4B | uk | prompt | counterfactual_invariance | 6 | 4.0 (4.1) | -0.1 | 19.8 (17.3) | 0.104 (0.101) | 4.8 (4.9) | 0.611 (0.608) | 73.6 (74.9) | 0.0 (0.0) | 1.9 (2.4) | -2 (19→17) | -2 (18→16) |
@@ -2882,6 +2882,31 @@ Each row is one mitigated run against its own unmitigated baseline (same model, 
 | Qwen3.5-9B | uk | scrub | llm | 6 | 0.5 (4.2) | -3.6 | 6.1 (20.0) | 0.015 (0.102) | 2.1 (4.8) | 0.620 (0.613) | 80.6 (80.5) | 0.0 (0.0) | 0.2 (2.4) | -14 (14→0) | -14 (15→1) |
 | Qwen3.5-9B | uk | sft | adapter | 6 | 0.4 (4.2) | -3.8 | 1.6 (20.0) | 0.016 (0.102) | 0.6 (4.8) | 0.647 (0.613) | 75.2 (80.5) | 0.0 (0.0) | 0.1 (2.4) | -14 (14→0) | -15 (15→0) |
 | lapa-v0.1.2-instruct | uk | sft | adapter | 6 | 0.3 (4.5) | -4.2 | 1.6 (17.4) | 0.010 (0.133) | 0.6 (5.1) | 0.653 (0.598) | 77.3 (55.1) | 0.0 (0.0) | 0.1 (0.7) | -20 (20→0) | -26 (26→0) |
+
+\* **Lexical scrubbing is an oracle upper bound, not a comparable mitigation.** It removes the attribute with the exact injection templates this study wrote, so after scrubbing every attribute variant of a CV is character-for-character the attribute-free CV (verified: 100% of rows in all four cells). The model therefore sees the *same prompt* for every variant, and its instability and disparity are **zero by construction** — up to the pipeline's noise floor: 0–0.7% of sets still flip on identical prompts, which is vLLM's batch-level numerical nondeterminism under greedy decoding, not the attribute. The row shows what perfect removal of the attribute would buy. Real CVs do not state an attribute in the study's own template, and bias carried by anything the templates do not cover — names, phrasing, career gaps — is untouched. Compare mitigations with each other and read this row only as the ceiling; LLM scrubbing, which has to find the attribute itself, is the realistic version.
+
+## 7. Counterfactual set stability
+
+A **set** is one candidate–job pair under one injection condition, evaluated with every attribute variant. It is **unstable** when the decision is not the same across those variants — the attribute alone tipped it. Each set is paired with the same set at baseline; *fixed* counts unstable→stable, *broken* stable→unstable. `p` is an exact sign test on the two, Benjamini–Hochberg corrected across every row of this table; the interval resamples **candidates**, because sets sharing a candidate are not independent. Baseline in brackets; • marks FDR < 0.05.
+
+**Baseline and run are compared on exactly the same variants.** Instability grows with the number of variants in a set: the baseline audit covers every attribute including the intersections (179 per set), a mitigated run only its target groups (34, or 5 when scoped to one group). An unmatched comparison hands every mitigation a fictitious gain that grows the narrower its scope — it once made every training run look like a significant, near-unanimous improvement that disappears on matched variants.
+
+Only sets decided in full in **both** runs count, so a run with parse failures is measured on the sets it could still answer, plausibly the easier ones.
+
+Per-group results are in `reports/set_stability_by_group.csv`.
+
+**This table covers 8 of 63 usable mitigated runs.** 55 have no generations under `/ritom/scratch/cscs/zhang/xw/outputs/raw`, or no baseline with generations there, and are left out, not found stable. The Benjamini–Hochberg correction runs over these 8 tests only, so a p-value here is not comparable with the same run's p-value in a table over a different set of runs, such as `reports/set_stability.csv` written on another machine.
+
+| Model | Lang | Mitigation | Variant | Sets | Variants/set | Unstable % | Δ pp | 95% CI | Fixed | Broken | p (FDR) |
+|---|---|---|---|---:|---:|---:|---:|---|---:|---:|---:|
+| Qwen3.5-9B | en | dpo | adapter--en_only_v2neg_r1_step100 | 900 | 34 | 5.3 (16.8) | -11.4 • | [-15.3, -7.7] | 130 | 27 | 1.8e-16 |
+| Qwen3.5-9B | en | dpo | adapter--en_only_v2neg_r2_step102 | 900 | 34 | 5.4 (16.8) | -11.3 • | [-15.1, -7.4] | 130 | 28 | 2.6e-16 |
+| Qwen3.5-9B | en | dpo | adapter--en_only_v2neg_r1_step300 | 900 | 34 | 5.6 (16.8) | -11.2 • | [-15.0, -7.4] | 133 | 32 | 2.1e-15 |
+| Qwen3.5-9B | en | dpo | adapter--en_only_v2neg_r2em_step100 | 900 | 34 | 5.6 (16.8) | -11.2 • | [-15.4, -6.9] | 141 | 40 | 4.2e-14 |
+| Qwen3.5-9B | en | dpo | adapter--en_only_v2neg_r2em_step148 | 900 | 34 | 5.9 (16.8) | -10.9 • | [-15.2, -6.7] | 138 | 40 | 9.2e-14 |
+| Qwen3.5-9B | en | dpo | adapter--en_only_v2neg_r2em_step50 | 900 | 34 | 6.3 (16.8) | -10.4 • | [-14.6, -6.6] | 129 | 35 | 9.2e-14 |
+| Qwen3.5-9B | en | dpo | adapter--en_only_v2neg_r2_step50 | 900 | 34 | 6.7 (16.8) | -10.1 • | [-13.8, -6.4] | 121 | 30 | 5.9e-14 |
+| Qwen3.5-9B | en | sft | adapter--en_only_cscs | 900 | 34 | 6.9 (16.8) | -9.9 • | [-14.0, -5.9] | 134 | 45 | 1.8e-11 |
 
 \* **Lexical scrubbing is an oracle upper bound, not a comparable mitigation.** It removes the attribute with the exact injection templates this study wrote, so after scrubbing every attribute variant of a CV is character-for-character the attribute-free CV (verified: 100% of rows in all four cells). The model therefore sees the *same prompt* for every variant, and its instability and disparity are **zero by construction** — up to the pipeline's noise floor: 0–0.7% of sets still flip on identical prompts, which is vLLM's batch-level numerical nondeterminism under greedy decoding, not the attribute. The row shows what perfect removal of the attribute would buy. Real CVs do not state an attribute in the study's own template, and bias carried by anything the templates do not cover — names, phrasing, career gaps — is untouched. Compare mitigations with each other and read this row only as the ceiling; LLM scrubbing, which has to find the attribute itself, is the realistic version.
 

@@ -470,6 +470,106 @@ def test_mitigation_delta_compares_only_the_cells_the_run_measured():
     assert "10.0 (30.0)" in row, f"max gap should be cell-local: {row}"
 
 
+def _on_stack(record: dict, config: str) -> dict:
+    record["meta"]["config_path"] = f"configs/audit/{config}.yaml"
+    return record
+
+
+def test_a_run_is_compared_with_the_baseline_from_its_own_serving_stack():
+    """Two baselines of one model and language, one served on GB10 and one on GH200.
+
+    Keyed on model and language alone, whichever baseline loaded last won. `--baseline.json`
+    sorts after `--baseline--cscs.json`, so every GH200 adapter was bracketed against the GB10
+    baseline. The pairing must follow the stack, whatever order the files load in.
+    """
+    from hiring_bias_mitigation.eval.report import baseline_for
+
+    spark = _on_stack(_run("M--uk--baseline", "none", ["a::explicit"], {}, {}),
+                      "m_uk_baseline")
+    gh200 = _on_stack(_run("M--uk--baseline--cscs", "none", ["a::explicit"], {}, {}),
+                      "m_uk_baseline_gh200")
+    on_gh200 = _on_stack(_run("M--uk--sft--x", "sft", ["a::explicit"], {}, {}),
+                         "m_uk_sft_x_gh200")
+    on_spark = _on_stack(_run("M--uk--sft--y", "sft", ["a::explicit"], {}, {}), "m_uk_sft_y")
+
+    for baselines in ([spark, gh200], [gh200, spark]):
+        assert baseline_for(on_gh200, baselines) is gh200
+        assert baseline_for(on_spark, baselines) is spark
+
+
+def test_the_mitigation_table_brackets_a_gh200_run_with_the_gh200_baseline():
+    """The same rule, end to end, in the order `load_records` reads the files."""
+    from hiring_bias_mitigation.eval.report import render
+
+    target = "military_status::explicit"
+    gh200 = _on_stack(_run("M--uk--baseline--cscs", "none", [target], {}, {target: 0.50}),
+                      "m_uk_baseline_gh200")
+    spark = _on_stack(_run("M--uk--baseline", "none", [target], {}, {target: 0.30}),
+                      "m_uk_baseline")
+    adapter = _on_stack(_run("M--uk--sft--x", "sft", [target], {}, {target: 0.10}),
+                        "m_uk_sft_x_gh200")
+    section = render([gh200, spark, adapter]).split("Mitigation results", 1)[1]
+    row = next(r for r in section.splitlines() if r.startswith("| M |") and "sft" in r)
+
+    assert "10.0 (50.0)" in row, f"max gap should be bracketed by the GH200 baseline: {row}"
+
+
+def test_two_baselines_on_one_stack_are_an_error_unless_the_run_names_one():
+    from hiring_bias_mitigation.eval.report import baseline_for
+
+    first = _run("M--uk--baseline", "none", ["a::explicit"], {}, {})
+    rerun = _run("M--uk--baseline--rerun", "none", ["a::explicit"], {}, {})
+    run = _run("M--uk--prompt--s", "prompt", ["a::explicit"], {}, {})
+
+    with pytest.raises(ValueError, match="2 baselines on one stack"):
+        baseline_for(run, [first, rerun])
+    run["meta"]["baseline_run"] = "M--uk--baseline--rerun"
+    assert baseline_for(run, [first, rerun]) is rerun
+    run["meta"]["baseline_run"] = "M--uk--baseline--missing"
+    with pytest.raises(ValueError, match="no usable record"):
+        baseline_for(run, [first, rerun])
+
+
+def test_set_stability_says_how_many_runs_it_covers(tmp_path, monkeypatch):
+    """Each machine holds only the generations it produced.
+
+    Built on CSCS, the section listed the 8 GH200 runs and no other, corrected for FDR over
+    those 8, and said neither.
+    """
+    from hiring_bias_mitigation.eval.report import _section_set_stability
+
+    raw = tmp_path / "outputs" / "raw"
+    raw.mkdir(parents=True)
+    monkeypatch.setenv("HBM_OUTPUT_ROOT", str(tmp_path))
+    columns = ["pair_id", "condition", "protected_group", "protected_attr", "candidate_id",
+               "decision"]
+    for name, decisions in (("M--uk--baseline", ["hire", "reject"]),
+                            ("M--uk--sft--x", ["hire", "hire"])):
+        rows = [("p1", "explicit", "g", attr, "c1", d) for attr, d in zip("ab", decisions)]
+        pd.DataFrame(rows, columns=columns).to_parquet(raw / f"{name}.parquet")
+    records = [_run(name, family, ["g::explicit"], {}, {}) for name, family in (
+        ("M--uk--baseline", "none"), ("M--uk--sft--x", "sft"), ("M--uk--sft--y", "sft"))]
+
+    text = _section_set_stability(records)
+    assert "covers 1 of 2 usable mitigated runs" in text
+    assert "1 has no generations" in text
+    assert "over this 1 test only" in text
+
+
+def test_a_partial_baseline_is_never_the_baseline():
+    """A 20-pair smoke baseline stayed out of the mitigation table only by sorting first."""
+    from hiring_bias_mitigation.eval.report import baseline_for
+
+    full = _run("M--uk--baseline", "none", ["a::explicit"], {}, {})
+    smoke = _run("M--uk--baseline--smoke", "none", ["a::explicit"], {}, {})
+    smoke["meta"]["limit_pairs"] = 20
+    run = _run("M--uk--prompt--s", "prompt", ["a::explicit"], {}, {})
+
+    for baselines in ([smoke, full], [full, smoke]):
+        assert baseline_for(run, baselines) is full
+    assert baseline_for(run, [smoke]) is None
+
+
 def test_a_run_that_mostly_failed_to_parse_is_not_a_measurement():
     """The fewer responses parse, the better the numbers look — so the gate must be absolute.
 

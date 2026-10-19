@@ -92,6 +92,10 @@ def main() -> None:
     else:
         parsed, meta = R.run_audit(cfg)
         R.save_raw(parsed, meta, raw_dir)
+    # The baseline this run is read against (`eval.report.baseline_for`). Taken from the config
+    # on --score-only as well, so naming one costs a re-score rather than a regeneration.
+    if cfg.get("baseline_run"):
+        meta["baseline_run"] = cfg["baseline_run"]
 
     similarity = None
     if not args.no_similarity:

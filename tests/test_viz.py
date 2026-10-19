@@ -115,6 +115,21 @@ def test_baseline_join_is_per_model_and_language():
     assert row["mad_pp_delta"] == pytest.approx(-2.0)
 
 
+def test_baseline_join_takes_one_baseline_from_the_runs_own_stack():
+    """Joined on model and language, a run matched both baselines and was plotted twice."""
+    spark = _record("M--en--baseline", "none", "none", lang="en", mad=0.02)
+    gh200 = _record("M--en--baseline--cscs", "none", "none", lang="en", mad=0.03)
+    run = _record("M--en--sft--x", "sft", "x", lang="en", mad=0.01)
+    for record, config in ((spark, "m_en_baseline"), (gh200, "m_en_baseline_gh200"),
+                           (run, "m_en_sft_x_gh200")):
+        record["meta"]["config_path"] = f"configs/audit/{config}.yaml"
+
+    merged = D.with_baseline(D.run_level([gh200, spark, run]), ("mad_pp",))
+    rows = merged[merged["run"] == "M--en--sft--x"]
+    assert len(rows) == 1, "one point per run, not one per baseline"
+    assert rows.iloc[0]["mad_pp_baseline"] == pytest.approx(3.0)
+
+
 def test_attribute_level_carries_intervals_and_reference_flag():
     frame = D.attribute_level([_record("r", "none", "none")])
     reference = frame[frame["is_reference"]].iloc[0]

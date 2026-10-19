@@ -21,8 +21,8 @@ import pandas as pd  # noqa: E402
 from hiring_bias_mitigation.analysis.stability import stability_table  # noqa: E402
 from hiring_bias_mitigation.eval.report import (  # noqa: E402
     _family,
-    _model_short,
     _restricted_metrics,
+    baseline_for,
     load_records,
 )
 from hiring_bias_mitigation.utils.config import REPO_ROOT, resolve_output_path  # noqa: E402
@@ -32,12 +32,11 @@ def decision_table(stability: pd.DataFrame, records: list[dict]) -> pd.DataFrame
     """Stability + the utility change on the same cells + the run's parse-failure rate."""
     # stability_table names an arm exactly as the run file does: model--lang--family--variant.
     by_name = {r["run_name"]: r for r in records}
-    baselines = {(_model_short(r), r["meta"]["lang"]): r
-                 for r in records if _family(r) in ("none", "baseline")}
+    baselines = [r for r in records if _family(r) == "none"]
     rows = []
     for r in stability.itertuples():
         record = by_name.get(f"{r.model}--{r.lang}--{r.family}--{r.variant}")
-        base = baselines.get((r.model, r.lang))
+        base = baseline_for(record, baselines) if record is not None else None
         if record is None or base is None:
             continue
         cells = set(record["groups"])
@@ -56,11 +55,10 @@ def decision_table(stability: pd.DataFrame, records: list[dict]) -> pd.DataFrame
 
 def main() -> None:
     records = load_records(REPO_ROOT / "eval" / "results")
-    usable = {r["run_name"] for r in records}
     raw = resolve_output_path("outputs/raw")
     pd.set_option("display.width", 240)
     for by_group, name in ((False, "set_stability.csv"), (True, "set_stability_by_group.csv")):
-        df = stability_table(raw, usable, by_group=by_group)
+        df = stability_table(raw, records, by_group=by_group)
         out = REPO_ROOT / "reports" / name
         df.to_csv(out, index=False)
         show = df.copy()

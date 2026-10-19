@@ -191,6 +191,46 @@ def _run_label(record: dict) -> str:
     return f"{_model_short(record)}{suffix}"
 
 
+#: Serving stacks other than the default, named by the suffix of the audit config's file name
+#: (`qwen3.5-9b_en_baseline_gh200.yaml`). The same weights served on GB10 and on GH200 are two
+#: runs, and a mitigated run is read only against the baseline from its own stack.
+STACK_SUFFIXES = ("gh200",)
+
+
+def serving_stack(record: dict) -> str:
+    stem = Path(record.get("meta", {}).get("config_path") or "").stem
+    return next((tag for tag in STACK_SUFFIXES if stem.endswith(f"_{tag}")), "default")
+
+
+def baseline_for(record: dict, baselines: list[dict]) -> dict | None:
+    """The one baseline a run is compared against, or None when it has none.
+
+    `meta.baseline_run` names it outright. Otherwise it is the full (not `limit_pairs`)
+    baseline of the same model, language and serving stack. Keying on model and language
+    alone let whichever baseline sorted last win, which paired every GH200 adapter with the
+    GB10 baseline. Two candidates on one stack is an error rather than a silent pick.
+    """
+    meta = record.get("meta", {})
+    named = meta.get("baseline_run")
+    if named:
+        found = [b for b in baselines if b["run_name"] == named]
+        if not found:
+            raise ValueError(f"{record['run_name']}: baseline_run {named!r} has no usable record")
+        return found[0]
+    found = [
+        b for b in baselines
+        if not b["meta"].get("limit_pairs")
+        and _model_short(b) == _model_short(record)
+        and b["meta"].get("lang") == meta.get("lang")
+        and serving_stack(b) == serving_stack(record)
+    ]
+    if len(found) > 1:
+        names = ", ".join(sorted(b["run_name"] for b in found))
+        raise ValueError(f"{record['run_name']}: {len(found)} baselines on one stack ({names}); "
+                         "set baseline_run in its audit config")
+    return found[0] if found else None
+
+
 def _section_excluded(records: list[dict]) -> str:
     """Runs that produced output but not measurements.
 
@@ -247,8 +287,7 @@ def _section_set_stability(records: list[dict]) -> str:
             # HBM_OUTPUT_ROOT the section would otherwise vanish from the report unnoticed.
             return (f"_Set stability unavailable: no raw generations at `{raw_dir}`. Load `.env` "
                     "(HBM_OUTPUT_ROOT) and rerun `scripts/make_report.py`._")
-        usable = {r["run_name"] for r in records}
-        table = stability_table(raw_dir, usable)
+        table = stability_table(raw_dir, records)
     except Exception as exc:  # pragma: no cover - depends on the model drive being mounted
         return f"_Set stability unavailable: {exc}_"
     if table.empty:
@@ -284,8 +323,46 @@ def _section_set_stability(records: list[dict]) -> str:
         "Only sets decided in full in **both** runs count, so a run with parse failures is "
         "measured on the sets it could still answer, plausibly the easier ones.\n\n"
         "Per-group results are in `reports/set_stability_by_group.csv`.\n\n"
+        + _stability_coverage(records, table, raw_dir)
         + "\n".join(rows)
         + "\n\n" + ORACLE_NOTE
+    )
+
+
+def _stability_coverage(records: list[dict], table, raw_dir: Path) -> str:
+    """Which usable mitigated runs the table leaves out, and what that does to its p-values.
+
+    A run gets a row only when its generations and its baseline's are both under `raw_dir`.
+    Each machine holds the generations it produced, so the same report built on two machines
+    covers two different sets of runs, and the FDR family changes with the set.
+    """
+    eligible = [r for r in records if _family(r) != "none" and "--smoke" not in r["run_name"]]
+    covered = {f"{r.model}--{r.lang}--{r.family}--{r.variant}" for r in table.itertuples()}
+    missing = [r for r in eligible if r["run_name"] not in covered]
+    if not missing:
+        return ""
+    baselines = [r for r in records if _family(r) == "none"]
+
+    def on_disk(record: dict) -> bool:
+        base = baseline_for(record, baselines)
+        return base is not None and all(
+            (raw_dir / f"{r['run_name']}.parquet").exists() for r in (record, base)
+        )
+
+    no_raw = sum(not on_disk(r) for r in missing)
+    no_sets = len(missing) - no_raw
+    n = len(table)
+    tests = "this 1 test" if n == 1 else f"these {n} tests"
+    return (
+        f"**This table covers {n} of {len(eligible)} usable mitigated runs.** "
+        + (f"{no_raw} {'has' if no_raw == 1 else 'have'} no generations under `{raw_dir}`, or "
+           f"no baseline with generations there, and {'is' if no_raw == 1 else 'are'} left out, "
+           "not found stable. " if no_raw else "")
+        + (f"{no_sets} more {'has' if no_sets == 1 else 'have'} generations but no set decided "
+           "in full in both runs. " if no_sets else "")
+        + f"The Benjamini–Hochberg correction runs over {tests} only, so a p-value here is not "
+        "comparable with the same run's p-value in a table over a different set of runs, such "
+        "as `reports/set_stability.csv` written on another machine.\n\n"
     )
 
 
@@ -486,12 +563,7 @@ MAIN_ALIGN = "|---|---|---|---|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|
 
 def _main_table(records: list[dict]) -> list[str]:
     """One row per run x protected group x condition, with baselines in brackets."""
-    baseline_by_key: dict[tuple, dict] = {}
-    for record in records:
-        if _family(record) != "none" or record["meta"].get("limit_pairs"):
-            continue
-        for key, metrics in _by_group(record).items():
-            baseline_by_key[(_model_short(record), record["meta"]["lang"], key)] = metrics
+    baselines = [r for r in records if _family(r) == "none"]
 
     rows = [MAIN_HEADER, MAIN_ALIGN]
     for record in sorted(
@@ -499,13 +571,13 @@ def _main_table(records: list[dict]) -> list[str]:
     ):
         by_group = _by_group(record)
         lang = record["meta"]["lang"]
+        base_record = baseline_for(record, baselines)
+        same = base_record is None or base_record is record
+        base_groups = {} if same else _by_group(base_record)
         for key in sorted(by_group, key=_group_sort_key):
             metrics = by_group[key]
             group, condition = key.split("::")
-            base = baseline_by_key.get((_model_short(record), lang, key))
-            if base is metrics:
-                base = None
-            base = base or {}
+            base = base_groups.get(key) or {}
             rows.append(
                 "| " + " | ".join([
                     _run_label(record),
@@ -539,11 +611,6 @@ def _main_table(records: list[dict]) -> list[str]:
 
 def _rollup_table(records: list[dict], baselines: list[dict]) -> list[str]:
     """One row per run: the same columns, averaged over groups and conditions."""
-    baseline_index = {
-        (_model_short(r), r["meta"]["lang"]): r
-        for r in baselines
-        if not r["meta"].get("limit_pairs")
-    }
     rows = [
         "| Run | Lang | Mitigation | Disparity (MAD, pp) ↓ | AR range (pp) ↓ | "
         "Cohen's h ↓ | Inconsistency % ↓ | On ref-hire (pp) ↓ | Mean FS | Utility % ↑ | "
@@ -556,7 +623,7 @@ def _rollup_table(records: list[dict], baselines: list[dict]) -> list[str]:
         overall = (record["summary"].get("disparity") or {}).get("overall", {})
         if not overall:
             continue
-        base = baseline_index.get((_model_short(record), record["meta"]["lang"]))
+        base = baseline_for(record, baselines)
         base = None if base is record else base
         base_overall = (base["summary"].get("disparity") or {}).get("overall", {}) if base else {}
         base_summary = base["summary"] if base else {}
@@ -879,7 +946,6 @@ def _section_mitigation(baselines: list[dict], mitigated: list[dict]) -> str:
             "run them, then re-score._"
         )
 
-    index = {(_model_short(r), r["meta"]["lang"]): r for r in baselines}
     rows = [
         "| Model | Lang | Mitigation | Variant | Cells | Disparity (MAD, pp) ↓ | Δ MAD | "
         "Max gap (pp) ↓ | Cohen's h ↓ | Inconsistency % ↓ | Mean FS | Utility % ↑ | "
@@ -887,7 +953,7 @@ def _section_mitigation(baselines: list[dict], mitigated: list[dict]) -> str:
         "|---|---|---|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|",
     ]
     for record in sorted(mitigated, key=lambda r: (r["meta"]["lang"], _model_short(r))):
-        base = index.get((_model_short(record), record["meta"]["lang"]))
+        base = baseline_for(record, baselines)
         cells = set(record["groups"])
         after = _restricted_metrics(record, cells)
         before = _restricted_metrics(base, cells) if base else {}
@@ -908,8 +974,8 @@ def _section_mitigation(baselines: list[dict], mitigated: list[dict]) -> str:
         )
     return (
         "Each row is one mitigated run against its own unmitigated baseline (same model, "
-        "same language, same benchmark, same decoding). **Values first, baseline in "
-        "brackets**; the flag counts are last on purpose.\n\n"
+        "same language, same serving stack, same benchmark, same decoding). **Values first, "
+        "baseline in brackets**; the flag counts are last on purpose.\n\n"
         "**Why values, not just counts.** A flag count rises with statistical power at "
         "constant disparity, so it cannot rank two runs and cannot by itself show that a "
         "mitigation worked — the same rule §2 states. Read `Disparity (MAD)` and `Δ MAD`; "

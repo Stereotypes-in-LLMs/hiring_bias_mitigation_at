@@ -821,6 +821,19 @@ def test_phase2_ranks_by_disparity_reduction():
     assert ranked[0]["mad_reduction"] == pytest.approx(0.05)
 
 
+def test_phase2_ranks_a_gh200_run_against_the_gh200_baseline():
+    phase2 = _load_phase2()
+    spark, gh200 = _base_record(0.08, 0.75), _base_record(0.04, 0.75)
+    spark["meta"]["config_path"] = "configs/audit/m_uk_baseline.yaml"
+    gh200["meta"]["config_path"] = "configs/audit/m_uk_baseline_gh200.yaml"
+    gh200["run_name"] = "base--cscs"
+    run = _mit_record("a", "dpo", "adapter", 0.03, 0.75)
+    run["meta"]["config_path"] = "configs/audit/m_uk_dpo_a_gh200.yaml"
+
+    for order in ([gh200, spark, run], [spark, gh200, run]):
+        assert phase2.rank(order)[0]["baseline_mad"] == pytest.approx(0.04)
+
+
 def test_phase2_never_promotes_an_arm_that_damaged_the_model():
     """Cutting disparity by degrading the model is not a win, however large the cut."""
     phase2 = _load_phase2()
@@ -1021,6 +1034,45 @@ def test_set_stability_counts_only_sets_decided_in_full():
     result = compare(base, run, n_boot=50)
     assert result["sets"] == 1
     assert (result["fixed"], result["broken"]) == (1, 0)
+
+
+def test_set_stability_reads_a_gh200_run_against_the_gh200_baseline(tmp_path):
+    """Pairing by file name took only `<prefix>--baseline.parquet` as a baseline.
+
+    A GH200 adapter was then compared with the GB10 baseline, and `--baseline--cscs` itself
+    was read as a mitigated run. On a machine holding only the GH200 parquets, no row came
+    out at all.
+    """
+    import pandas as pd
+
+    from hiring_bias_mitigation.analysis.stability import stability_table
+
+    columns = ["pair_id", "condition", "protected_group", "protected_attr", "candidate_id",
+               "decision"]
+
+    def write(name, decisions):
+        rows = [("p1", "explicit", "g", attr, "c1", d) for attr, d in zip("ab", decisions)]
+        pd.DataFrame(rows, columns=columns).to_parquet(tmp_path / f"{name}.parquet")
+
+    def record(name, family, config):
+        return {"run_name": name,
+                "meta": {"model": "X/M", "lang": "uk", "mitigation": {"family": family},
+                         "config_path": f"configs/audit/{config}.yaml"}}
+
+    write("M--uk--baseline", ["hire", "hire"])            # GB10: stable
+    write("M--uk--baseline--cscs", ["hire", "reject"])    # GH200: unstable
+    write("M--uk--sft--x", ["hire", "hire"])              # GH200 adapter: stable
+    records = [
+        record("M--uk--baseline", "none", "m_uk_baseline"),
+        record("M--uk--baseline--cscs", "none", "m_uk_baseline_gh200"),
+        record("M--uk--sft--x", "sft", "m_uk_sft_x_gh200"),
+    ]
+
+    table = stability_table(tmp_path, records)
+    assert list(table["variant"]) == ["x"], "a baseline must not be read as a run"
+    row = table.iloc[0]
+    assert row["unstable_base_pct"] == 100.0, "should be the GH200 baseline, not GB10"
+    assert (row["fixed"], row["broken"]) == (1, 0)
 
 
 def test_set_stability_compares_the_same_variants_only():

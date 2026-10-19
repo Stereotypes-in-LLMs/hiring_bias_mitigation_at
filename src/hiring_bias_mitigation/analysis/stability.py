@@ -21,7 +21,6 @@ makes a set of failures look perfectly stable -- one excluded run read 41.7% -> 
 
 from __future__ import annotations
 
-import glob
 from pathlib import Path
 
 import pandas as pd
@@ -133,39 +132,49 @@ def compare(base_rows: pd.DataFrame, run_rows: pd.DataFrame, keys: list[str] | N
     }
 
 
-def stability_table(raw_dir: str | Path, usable: set[str], by_group: bool = False) -> pd.DataFrame:
+def stability_table(
+    raw_dir: str | Path, records: list[dict], by_group: bool = False
+) -> pd.DataFrame:
     """Every usable mitigated run against its own usable baseline, on matched variants.
+
+    `records` are the usable scored records; `eval.report.baseline_for` picks each run's
+    baseline, so this table pairs runs exactly as RESULTS.md does.
 
     `by_group=True` defines a set within one protected group, so instability is read per
     group -- whether the group the baseline flagged is the one being fixed.
     """
+    from ..eval.report import _family, baseline_for
     from ..eval.stats import benjamini_hochberg
 
     raw_dir = Path(raw_dir)
     keys = [*SET, "protected_group"] if by_group else SET
+    baselines = [r for r in records if _family(r) == "none"]
+    loaded: dict[str, pd.DataFrame] = {}
     rows = []
-    for base_path in sorted(glob.glob(str(raw_dir / "*--baseline.parquet"))):
-        base_name = Path(base_path).stem
-        if base_name not in usable:
+    for record in sorted(records, key=lambda r: r["run_name"]):
+        name = record["run_name"]
+        if _family(record) == "none" or "--smoke" in name:
             continue
-        prefix = base_name.rsplit("--baseline", 1)[0]
-        base_rows = load_rows(base_path)
-        for run_path in sorted(glob.glob(str(raw_dir / f"{prefix}--*.parquet"))):
-            name = Path(run_path).stem
-            if name == base_name or "--smoke" in name or name not in usable:
+        base = baseline_for(record, baselines)
+        base_path, run_path = (raw_dir / f"{base['run_name']}.parquet" if base else None,
+                               raw_dir / f"{name}.parquet")
+        if base_path is None or not base_path.exists() or not run_path.exists():
+            continue
+        if base["run_name"] not in loaded:
+            loaded[base["run_name"]] = load_rows(str(base_path))
+        base_rows = loaded[base["run_name"]]
+        model, lang, rest = name.split("--", 2)
+        family, _, variant = rest.partition("--")
+        run_rows = load_rows(str(run_path))
+        groups = sorted(run_rows["protected_group"].unique()) if by_group else [None]
+        for group in groups:
+            b = base_rows if group is None else base_rows[base_rows["protected_group"] == group]
+            r = run_rows if group is None else run_rows[run_rows["protected_group"] == group]
+            result = compare(b, r, keys)
+            if not result.get("sets"):
                 continue
-            model, lang, rest = name.split("--", 2)
-            family, _, variant = rest.partition("--")
-            run_rows = load_rows(run_path)
-            groups = sorted(run_rows["protected_group"].unique()) if by_group else [None]
-            for group in groups:
-                b = base_rows if group is None else base_rows[base_rows["protected_group"] == group]
-                r = run_rows if group is None else run_rows[run_rows["protected_group"] == group]
-                result = compare(b, r, keys)
-                if not result.get("sets"):
-                    continue
-                rows.append({"model": model, "lang": lang, "family": family,
-                             "variant": variant, "group": group or "all", **result})
+            rows.append({"model": model, "lang": lang, "family": family,
+                         "variant": variant, "group": group or "all", **result})
     table = pd.DataFrame(rows)
     if not table.empty:
         # Every test in the table is one family of comparisons; correct across all of them.

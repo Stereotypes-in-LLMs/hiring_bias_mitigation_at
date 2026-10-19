@@ -15,7 +15,7 @@ from pathlib import Path
 
 import pandas as pd
 
-from ..eval.report import load_records
+from ..eval.report import baseline_for, load_records
 
 #: Families whose runs carry a variant (a strategy, a method, an objective).
 VARIANT_KEYS = ("strategy", "method", "objective", "variant")
@@ -50,14 +50,21 @@ def load(results_dir: str | Path = "eval/results", drop_smoke: bool = True) -> l
 
 
 def run_level(records: list[dict]) -> pd.DataFrame:
-    """One row per run: the aggregate fairness and utility numbers."""
+    """One row per run: the aggregate fairness and utility numbers.
+
+    `baseline` names the run's own baseline (`eval.report.baseline_for`), the one
+    `with_baseline` joins it to.
+    """
+    baselines = [r for r in records if _family(r) == "none"]
     rows = []
     for record in records:
         overall = record["summary"].get("disparity", {}).get("overall", {})
         summary = record["summary"]
+        base = baseline_for(record, baselines)
         rows.append(
             {
                 "run": record["run_name"],
+                "baseline": base["run_name"] if base else None,
                 "model": _model_short(record),
                 "lang": record["meta"]["lang"],
                 "family": _family(record),
@@ -144,17 +151,18 @@ def attribute_level(records: list[dict]) -> pd.DataFrame:
 def with_baseline(frame: pd.DataFrame, value_columns: tuple[str, ...]) -> pd.DataFrame:
     """Joins each mitigated row to its own baseline and adds `<column>_delta`.
 
-    The join is on model and language, which is the comparison every figure in the paper
-    makes: a mitigation is read against the same model on the same benchmark, never against
-    another model.
+    The join is on the `baseline` column `run_level` writes: the same model and language on the
+    same serving stack, which is the comparison every figure in the paper makes. A mitigation
+    is never read against another model, nor against the same model served elsewhere. Joining
+    on model and language alone matched a run to every baseline of that pair and plotted it
+    once per baseline.
     """
     baselines = frame[frame["family"] == "none"]
-    keys = ["model", "lang"]
     merged = frame.merge(
-        baselines[keys + list(value_columns)].rename(
-            columns={c: f"{c}_baseline" for c in value_columns}
+        baselines[["run", *value_columns]].rename(
+            columns={"run": "baseline", **{c: f"{c}_baseline" for c in value_columns}}
         ),
-        on=keys,
+        on="baseline",
         how="left",
     )
     for column in value_columns:
