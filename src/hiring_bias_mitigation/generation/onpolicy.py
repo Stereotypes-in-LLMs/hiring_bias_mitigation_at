@@ -62,6 +62,7 @@ def attributed_prompts(batch: pd.DataFrame) -> list[str]:
 
 
 def _decisions(texts: list[str], lang: str) -> list[str]:
+    """ returns the decisions of the texts, e.g. ["hire", "reject", ""model refuses to decide","invalid output"] """
     return [parse_output(t, lang).decision for t in texts]
 
 
@@ -87,6 +88,7 @@ def select_negatives(
         decisions = _decisions(samples, lang)
         attributed_right.append(sum(d == reference for d in decisions) / max(1, len(decisions)))
         free_right_all.append(free_right)
+        # NOTE might have sampling noise, improve once we have enough data
         wrong = [j for j, d in enumerate(decisions) if d == flip(reference)]
         tipped_rows += tipped
         rows_with_wrong += bool(wrong)
@@ -128,7 +130,7 @@ def select_negatives(
         report["selected"] = {}
         return kept, report
     kept = (kept.sort_values(["_row", "sample_index"])
-                .drop_duplicates("_row", keep="first")
+                .drop_duplicates("_row", keep="first") # NOTE we can try to keep more samples from hire, not 1 for each row
                 .reset_index(drop=True))
     kept["rejected_strategy"] = [TIPPED if t else UNTIPPED for t in kept["tipped"]]
     report["selected"] = {k: int(v) for k, v in kept["rejected_strategy"].value_counts().items()}
@@ -296,7 +298,10 @@ def write_chunk(path: Path, start: int, prompts: list[str], samples: list[list[s
 
 def read_samples(directory: str | Path, prompts: list[str], chunk_size: int,
                  k: int) -> list[list[str]]:
-    """All samples in prompt order; refuses to return anything while a chunk is missing."""
+    """All samples in prompt order; refuses to return anything while a chunk is missing.
+        return e.g. :
+            '{"decision": "reject", "feedback": "Team-lead scope is unverified and ..."}'
+    """
     out: list[list[str]] = []
     missing = []
     for chunk_id, start in enumerate(range(0, len(prompts), chunk_size)):

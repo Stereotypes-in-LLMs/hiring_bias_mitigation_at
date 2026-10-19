@@ -72,7 +72,7 @@ def stage_prepare(cfg: dict, out: Path) -> None:
     lang = str(cfg.get("lang", "en"))
     invariant = pd.read_parquet(_source(cfg) / "raw" / f"{lang}_invariant.parquet")
     rows, invariant_report = OP.pool_rows(invariant, lang)
-    rows = OP.filter_rows(rows, cfg.get("row_filter"))
+    rows = OP.filter_rows(rows, cfg.get("row_filter")) # 35,826 rows, 2,992 pairs, 85.8% reject -> ITERATIVE_DPO.md
     free = OP.pair_free_prompts(rows)
     prompts = pd.DataFrame({
         "kind": ["attr_free"] * len(free) + ["attributed"] * len(rows),
@@ -83,8 +83,8 @@ def stage_prepare(cfg: dict, out: Path) -> None:
     existing = out / "prompts.parquet"
     unchanged = (existing.exists()
                  and pd.read_parquet(existing)["prompt"].tolist() == prompts["prompt"].tolist())
-    if not unchanged:
-        prompts.to_parquet(existing, index=False)
+    if not unchanged: # Resume from checkpoint
+        prompts.to_parquet(existing, index=False) 
     model = OP.merged_student(cfg)
     info = {"merged_checkpoint": str(model), "row_filter": cfg.get("row_filter"),
             "rows": len(rows), "pairs": len(free),

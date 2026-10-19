@@ -111,10 +111,12 @@ def filter_invariant(
 ) -> tuple[pd.DataFrame, dict]:
     """Keeps variants whose rationale is invariant in the sense the training needs.
 
-    The verdict must match the reference (that is the counterfactual-consistency property),
-    the rationale must not name the attribute (that is the leakage property), and it must not
-    editorialise about the attribute's irrelevance (that would teach the student to announce
-    its neutrality instead of simply being neutral).
+    1. The verdict must match the reference (that is the counterfactual-consistency property),
+    2. the rationale must not name the attribute (that is the leakage property), 
+    3. the chosen response must not mention the protected attribute, 
+    even to say it is irrelevant to hiring. The reasoning should focus only on the candidate's qualifications and job requirements
+
+    NOTE mention attribute is a hard check can not detect proxy words
     """
     stats = FilterStats()
     kept = []
