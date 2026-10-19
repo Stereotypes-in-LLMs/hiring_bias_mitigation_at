@@ -231,3 +231,79 @@ def test_a_local_student_is_merged_with_its_parents_not_linked_as_sft(tmp_path, 
     assert merged == tmp_path / "m"
     assert calls == ["outputs/dpo/r2em/checkpoint-100"]
     assert not (tmp_path / "outputs" / "sft").exists()
+
+
+# ---- attribute coverage: more attributes per pair, the pair's own chosen text --------------
+
+def _gender_pool(texts: dict[tuple[str, str], str] | None = None) -> pd.DataFrame:
+    """Two pairs with v1's shape: 2 gender attributes x 2 conditions, plus one military row."""
+    texts = texts or {}
+    rows = []
+    for pid, ref, attrs in (("p0", "hire", ("Male", "Female")),
+                            ("p1", "reject", ("Agender", "Queer"))):
+        base = {"pair_id": pid, "candidate_id": f"c-{pid}", "job_id": f"j-{pid}", "lang": "en",
+                "cv": f"CV of {pid}: eight years of Django.", "job_description": "Django role.",
+                "reference_decision": ref, "reference_feedback": "Reference text."}
+        for attr in attrs:
+            for cond in ("explicit", "implicit"):
+                text = texts.get((pid, cond), f"{pid} {cond}: eight years of Django meet the role.")
+                rows.append({**base, "protected_group": "gender", "protected_attr": attr,
+                             "condition": cond, "group_label": "gender", "profile": "x",
+                             "chosen_decision": ref, "chosen_feedback": text})
+        rows.append({**base, "protected_group": "military_status", "protected_attr": "Civilian",
+                     "condition": "explicit", "group_label": "military status", "profile": "x",
+                     "chosen_decision": ref, "chosen_feedback": f"{pid} military text, fine."})
+    return pd.DataFrame(rows)
+
+
+def test_new_attribute_rows_are_unused_attributes_with_the_pairs_own_text():
+    pool = _gender_pool()
+    new, report = OP.add_attribute_rows(pool, "gender", k=2, seed=7)
+    again, _ = OP.add_attribute_rows(pool, "gender", k=2, seed=7)
+    assert new.equals(again)                                      # reproducible
+    assert report["planned"] == report["built"] == report["kept"] == len(new) == 8
+    used = pool.groupby("pair_id")["protected_attr"].agg(set)
+    for row in new.to_dict("records"):
+        assert row["protected_attr"] not in used[row["pair_id"]]
+        assert row["source_attr"] in used[row["pair_id"]]
+        assert row["chosen_decision"] == row["reference_decision"]
+        same = pool[(pool.pair_id == row["pair_id"]) & (pool.condition == row["condition"])
+                    & (pool.protected_group == "gender")]
+        assert row["chosen_feedback"] in set(same["chosen_feedback"])
+        assert row["profile"].startswith(f"Candidate's gender: {row['protected_attr']}\n") \
+            if row["condition"] == "explicit" else row["profile"].endswith(row["cv"])
+    assert new.groupby(["pair_id", "protected_attr"]).size().eq(2).all()   # both conditions
+    assert set(new.columns) >= set(pool.columns) | {"source_attr"}
+
+
+def test_gendered_texts_are_never_reused_and_the_leak_filter_runs_on_the_new_attribute():
+    pool = _gender_pool({("p0", "implicit"): "She has eight years of Django for the role.",
+                         ("p1", "explicit"): "Strong Android work, but the role needs Django."})
+    new, report = OP.add_attribute_rows(pool, "gender", k=18, seed=1)
+    assert report["lost_before_filter"] == {"source_has_gendered_pronoun": 18}
+    assert not ((new.pair_id == "p0") & (new.condition == "implicit")).any()
+    # "android" carries the Androgynous stem: that row is dropped, as filter_invariant would
+    assert report["filter"]["dropped_by_reason"] == {"invariant_attribute_leak": 1}
+    leaked = new[(new.pair_id == "p1") & (new.condition == "explicit")]
+    assert "Androgynous" not in set(leaked["protected_attr"])
+    assert report["yield_by_attribute"]["Androgynous"] < 1.0
+
+
+def test_the_split_comes_from_split_of_then_topup_of_then_the_run_itself(tmp_path, monkeypatch):
+    import importlib.util
+    from pathlib import Path
+
+    spec = importlib.util.spec_from_file_location(
+        "generate_onpolicy_full",
+        Path(__file__).resolve().parents[1] / "scripts" / "generate_onpolicy_full.py")
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    monkeypatch.setenv("HBM_OUTPUT_ROOT", str(tmp_path))
+    for name in ("pool", "base"):
+        (tmp_path / name).mkdir()
+        pd.DataFrame({"candidate_id": [name]}).to_parquet(tmp_path / name / "rows.parquet")
+    own = pd.DataFrame({"candidate_id": ["own"]})
+    both = {"split_of": "pool", "topup_of": "base"}
+    assert module._split_rows(both, own)["candidate_id"][0] == "pool"
+    assert module._split_rows({"topup_of": "base"}, own)["candidate_id"][0] == "base"
+    assert module._split_rows({}, own) is own

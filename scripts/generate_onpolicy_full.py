@@ -24,6 +24,11 @@ with more samples per prompt, e.g. the hire rows at k=32 because the pool is 86%
 train/validation split comes from the base run's rows, so a candidate is on the same side in
 both runs, and its balance stage merges the base run's pairs with its own before balancing.
 
+An attribute-coverage run (`add_attributes: {group, k, seed}`) samples only new rows: `k` more
+attributes of one group per pair, with the pair's own chosen text reused
+(onpolicy.add_attribute_rows). Its `split_of` names the run whose rows.parquet (the whole pool)
+sets the train/validation split, so its candidates sit on the same side as in that run.
+
 Only `judge_strategies` (default: student_tipped) are judged and kept. Rows the student also
 gets wrong without the attribute are counted in sample_report.json but are not
 attribute-driven, so they do not train invariance.
@@ -68,11 +73,29 @@ def _topup_base(cfg: dict) -> Path | None:
     return Path(resolve_output_path(cfg["topup_of"])) if cfg.get("topup_of") else None
 
 
+def _source_label(cfg: dict) -> str:
+    added = cfg.get("add_attributes")
+    if added:
+        return (f"v1 en pool + {added['k']} more {added['group']} attributes per pair "
+                "(chosen text reused), student samples")
+    return "v1 en pool, student samples"
+
+
+def _split_rows(cfg: dict, rows: pd.DataFrame) -> pd.DataFrame:
+    """The rows the train/validation split is drawn from: `split_of`'s, else the top-up base's,
+    else this run's own. A run over a slice or an extension of the pool must use the pool's."""
+    base = cfg.get("split_of") or cfg.get("topup_of")
+    return pd.read_parquet(Path(resolve_output_path(base)) / "rows.parquet") if base else rows
+
+
 def stage_prepare(cfg: dict, out: Path) -> None:
     lang = str(cfg.get("lang", "en"))
     invariant = pd.read_parquet(_source(cfg) / "raw" / f"{lang}_invariant.parquet")
     rows, invariant_report = OP.pool_rows(invariant, lang)
     rows = OP.filter_rows(rows, cfg.get("row_filter"))
+    added = None
+    if cfg.get("add_attributes"):
+        rows, added = OP.add_attribute_rows(rows, lang=lang, **cfg["add_attributes"])
     free = OP.pair_free_prompts(rows)
     prompts = pd.DataFrame({
         "kind": ["attr_free"] * len(free) + ["attributed"] * len(rows),
@@ -88,7 +111,8 @@ def stage_prepare(cfg: dict, out: Path) -> None:
     model = OP.merged_student(cfg)
     info = {"merged_checkpoint": str(model), "row_filter": cfg.get("row_filter"),
             "rows": len(rows), "pairs": len(free),
-            "prompts": len(prompts), "invariant_filter": invariant_report}
+            "prompts": len(prompts), "invariant_filter": invariant_report,
+            "add_attributes": added}
     (out / "prepare.json").write_text(_json(info), encoding="utf-8")
     log.info("prepared %d rows over %d pairs: %d prompts", len(rows), len(free), len(prompts))
 
@@ -162,11 +186,13 @@ def stage_judge(cfg: dict, out: Path) -> None:
                                                                    min_plausibility)
         entry["filters"]["chosen_judge_dropped"] = entry["filters"]["chosen_judge"]["n_input"] \
             - entry["filters"]["chosen_judge"]["n_kept"]
-        pairs = N.build_pairs(kept, cfg["teacher_model"], "v1 en pool, student samples")
+        pairs = N.build_pairs(kept, cfg["teacher_model"], _source_label(cfg))
         if len(pairs):
             pairs["rejected_generator"] = sample_report["student"]
-            for column in ("free_right_rate", "sample_index", "n_wrong_samples"):
-                pairs[column] = kept[column].values
+            # source_attr: an attribute-coverage row's chosen text was written for this attribute
+            for column in ("free_right_rate", "sample_index", "n_wrong_samples", "source_attr"):
+                if column in kept.columns:
+                    pairs[column] = kept[column].values
         pairs.to_parquet(out / f"candidates_{strategy}.parquet", index=False)
         entry.update({"n_kept": len(pairs), "yield": len(pairs) / len(rows) if len(rows) else 0.0,
                       "separability": N.separability(pairs), "pairs": N._pair_summary(pairs)})
@@ -175,8 +201,7 @@ def stage_judge(cfg: dict, out: Path) -> None:
 
     candidates = pd.concat(all_pairs, ignore_index=True)
     candidates.to_parquet(out / "dpo_v2_candidates.parquet", index=False)
-    base = _topup_base(cfg)
-    split_rows = pd.read_parquet(base / "rows.parquet") if base else rows
+    split_rows = _split_rows(cfg, rows)
     val_ids = N.validation_candidates(split_rows, v1_validation_candidates(_source(cfg)),
                                       float(cfg.get("val_fraction", 0.05)),
                                       int(cfg.get("seed", 42)))
