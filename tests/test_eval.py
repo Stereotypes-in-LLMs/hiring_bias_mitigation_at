@@ -651,22 +651,19 @@ def test_vllm_backend_passes_engine_kwargs_to_the_engine(monkeypatch):
     assert "gdn_prefill_backend" not in seen
 
 
-def test_vllm_backend_draws_n_distinct_samples_per_prompt(monkeypatch):
-    """On-policy negatives need k samples of the student per prompt. Repeating the prompt k
-    times under one fixed seed would return k copies of the same answer; asking vLLM for n
-    samples in one request draws k different ones, still reproducibly."""
+def _fake_vllm(monkeypatch) -> list:
+    """Stands in for vLLM. Returns the list every `LLM.generate` call appends its
+    sampling params to, a single SamplingParams or one per prompt, as passed."""
     import sys
     import types
 
     import transformers
 
-    from hiring_bias_mitigation.eval import backends as BK
-
-    seen = {}
+    calls = []
 
     class FakeParams:
         def __init__(self, **kwargs):
-            seen["params"] = kwargs
+            self.__dict__.update(kwargs)
 
     class Completion:
         def __init__(self, text):
@@ -681,7 +678,10 @@ def test_vllm_backend_draws_n_distinct_samples_per_prompt(monkeypatch):
             pass
 
         def generate(self, prompts, params, **kwargs):
-            return [Request(p, seen["params"]["n"]) for p in prompts]
+            calls.append(params)
+            per_prompt = params if isinstance(params, list) else [params] * len(prompts)
+            assert len(per_prompt) == len(prompts)
+            return [Request(p, sp.n) for p, sp in zip(prompts, per_prompt)]
 
     fake_vllm = types.ModuleType("vllm")
     fake_vllm.LLM = FakeLLM
@@ -693,8 +693,76 @@ def test_vllm_backend_draws_n_distinct_samples_per_prompt(monkeypatch):
 
     monkeypatch.setattr(transformers.AutoTokenizer, "from_pretrained",
                         staticmethod(lambda *args, **kwargs: Tok()))
+    return calls
+
+
+def test_vllm_backend_draws_n_distinct_samples_per_prompt(monkeypatch):
+    """On-policy negatives need k samples of the student per prompt. Repeating the prompt k
+    times under one fixed seed would return k copies of the same answer; asking vLLM for n
+    samples in one request draws k different ones, still reproducibly."""
+    from hiring_bias_mitigation.eval import backends as BK
+
+    calls = _fake_vllm(monkeypatch)
     backend = BK.build_backend({"model": "m", "backend": "vllm",
                                 "generation": {"temperature": 1.0, "seed": 7}})
     out = backend.generate_samples(["a", "b"], n=3)
     assert out == [["a#0", "a#1", "a#2"], ["b#0", "b#1", "b#2"]]
-    assert seen["params"]["n"] == 3 and seen["params"]["seed"] == 7
+    assert [p.n for p in calls[0]] == [3, 3]
+
+
+def test_vllm_samples_seed_each_prompt_from_its_own_text(monkeypatch):
+    """One SamplingParams(seed=42, n=8) shared by every prompt gave sample j of every prompt
+    the same random stream: vLLM seeds child request j with seed + j and keys its noise on
+    (seed, token position). Two attribute variants of a pair with the same token length then
+    drew the same sample j 57% of the time in onpolicy-full (check of 2026-10-19), and a
+    prompt sampled again by the same model replayed its earlier samples."""
+    from hiring_bias_mitigation.eval import backends as BK
+
+    calls = _fake_vllm(monkeypatch)
+    free = "Job: ward nurse\nCV: ten years on a surgical ward"
+    attributed = free + "\nMilitary status: veteran"
+    backend = BK.build_backend({"model": "m", "backend": "vllm",
+                                "generation": {"temperature": 1.0, "seed": 42}})
+    backend.generate_samples([free, attributed], n=8)
+
+    params = calls[0]
+    assert isinstance(params, list) and [p.n for p in params] == [8, 8]
+    seeds = [p.seed for p in params]
+    assert seeds == [BK.per_prompt_seed(42, free), BK.per_prompt_seed(42, attributed)]
+    # The children of a request run on seed .. seed + n - 1, so two prompts' ranges must not
+    # overlap, and seed + n must fit the int64 vLLM's sampler state stores it in.
+    assert abs(seeds[0] - seeds[1]) >= 8
+    assert all(s >= 0 and s + 8 < 2**63 for s in seeds)
+
+
+def test_vllm_sample_seeds_reproduce_across_chunks_and_runs(monkeypatch):
+    """A prompt's seed is a function of the base seed and its text alone -- not its position
+    in a chunk or which prompts share the call -- so a resumed or re-sharded run redraws the
+    same samples, and a run given another base seed draws independent ones."""
+    from hiring_bias_mitigation.eval import backends as BK
+
+    calls = _fake_vllm(monkeypatch)
+    cfg = {"model": "m", "backend": "vllm", "generation": {"temperature": 1.0, "seed": 42}}
+    BK.build_backend(cfg).generate_samples(["a", "b"], n=4)
+    BK.build_backend(cfg).generate_samples(["c", "d", "b"], n=4)
+    BK.build_backend({**cfg, "generation": {"temperature": 1.0, "seed": 43}}
+                     ).generate_samples(["b"], n=4)
+    assert calls[0][1].seed == calls[1][2].seed
+    assert calls[2][0].seed != calls[0][1].seed
+    assert len({calls[0][0].seed, calls[0][1].seed, calls[1][0].seed, calls[1][1].seed}) == 4
+    # Pinned: a change to the hash silently changes every sample a config draws.
+    assert BK.per_prompt_seed(42, "a") == 2721530003284284081
+
+
+def test_vllm_greedy_decoding_carries_no_seed(monkeypatch):
+    """Greedy decoding has no random stream to seed. The audit path (`generate`) keeps its
+    single SamplingParams, and greedy sampling sets no per-prompt seed."""
+    from hiring_bias_mitigation.eval import backends as BK
+
+    calls = _fake_vllm(monkeypatch)
+    backend = BK.build_backend({"model": "m", "backend": "vllm"})
+    backend.generate(["a", "b"])
+    backend.generate_samples(["a", "b"], n=2)
+    assert not isinstance(calls[0], list)
+    assert calls[0].seed is None and calls[0].temperature == 0.0
+    assert [p.seed for p in calls[1]] == [None, None]
