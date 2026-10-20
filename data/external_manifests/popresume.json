@@ -1,0 +1,91 @@
+{
+  "schema_version": 1,
+  "slug": "popresume",
+  "name": "PopResume",
+  "provenance": "Hand-maintained: no repo script regenerates this file. Written on 2026-10-19 from $HBM_EXTERNAL_ROOT/popresume/MANIFEST.json, the acquirer's full manifest (outside git). bytes and sha256 were measured on the verified raw files and equal that manifest wherever it lists the same file; extracted members were also checked against the archive they come from. A tree_sha256 is scripts/fetch_external_data.py::tree_digest of the directory.",
+  "retrieved": "2026-10-19",
+  "upstream": [
+    "https://huggingface.co/datasets/sumin-yu/PopResume",
+    "https://github.com/sumin-yu/PopResume",
+    "https://arxiv.org/abs/2603.22714"
+  ],
+  "fetch": [
+    {
+      "id": "repo",
+      "kind": "git",
+      "url": "https://github.com/sumin-yu/PopResume",
+      "commit": "ca7a66eeeca4282d80963e96dc541fce6c64ac95",
+      "dest": "github_repo",
+      "note": "the public code repository: generation and scoring code, content pools and 5 JDs, no resumes; it has no licence file"
+    }
+  ],
+  "files": [
+    {
+      "path": "github_repo/README.md",
+      "bytes": 5896,
+      "sha256": "83d27774c67226b7c0eb7ab9cb7dcc12ea07f4ac63f080cf3392a62016144bd6",
+      "from": "repo"
+    },
+    {
+      "path": "github_repo/2_scoring/job_info_v2/accountants_auditors_job.txt",
+      "bytes": 338,
+      "sha256": "36c5f4ab201bbeeeb1e5f2e4aafa6f18f9545343a6e856e912d87bd89d8f7b7d",
+      "from": "repo"
+    },
+    {
+      "path": "github_repo/2_scoring/job_info_v2/construction_laborers_job.txt",
+      "bytes": 283,
+      "sha256": "478cdcb2c111171ca00ff7ac498e48dd286f3847fba63f46301cdf90feddb465",
+      "from": "repo"
+    },
+    {
+      "path": "github_repo/2_scoring/job_info_v2/elementary_middle_school_teachers_job.txt",
+      "bytes": 333,
+      "sha256": "3d7fc6411f5e4ed3d0678452f219e1b77bc3dbf65d9e189b34b4e73a1ec8fc52",
+      "from": "repo"
+    },
+    {
+      "path": "github_repo/2_scoring/job_info_v2/registered_nurses_job.txt",
+      "bytes": 308,
+      "sha256": "1b0e0b7271894f6ac8f66b2fa90b1bc867707ab31686c49e26aeec878b8dde22",
+      "from": "repo"
+    },
+    {
+      "path": "github_repo/2_scoring/job_info_v2/software_developers_job.txt",
+      "bytes": 274,
+      "sha256": "3309bca1fec926110e03262858c2407273c5a2a3d2283b7864e8d1d6a6b582d1",
+      "from": "repo"
+    },
+    {
+      "path": "github_repo/1_data_generation/sources/job_spec_deterministic.json",
+      "bytes": 1881,
+      "sha256": "bc229773621888ad062ce3acc14cf1124b1f78a700eef2f5d30cf3b3e5b4d3bf",
+      "from": "repo"
+    }
+  ],
+  "references": [
+    {
+      "path": "paper/arxiv_2603.22714.pdf",
+      "url": "https://arxiv.org/pdf/2603.22714v2",
+      "bytes": 1688533,
+      "sha256": "44e18013f51bb5010f21df0a9574e3acdf2763e9938ac91d8f5b7d595fe185ac"
+    }
+  ],
+  "depends_on": {},
+  "stage": {
+    "script": "scripts/external/stage_popresume.py",
+    "tables": [
+      "jobs"
+    ]
+  },
+  "blocked": {
+    "reason": "the resumes (Hugging Face sumin-yu/PopResume, text config 12.8 MB) are gated with manual approval by the authors, and unauthenticated requests get HTTP 401 GatedRepo. Only the 5 public JDs are fetched and staged.",
+    "steps": [
+      "Log in to huggingface.co, open https://huggingface.co/datasets/sumin-yu/PopResume, review the conditions, agree to share your contact information and request access; wait for the authors' approval (status at https://huggingface.co/settings/gated-repos).",
+      "Create a read token at https://huggingface.co/settings/tokens (classic Read, or fine-grained with 'Read access to contents of all public gated repos you can access') and export HF_TOKEN=hf_... in your shell (never commit it), or run `hf auth login`.",
+      "Download only the text config (skip the ~15.9 GB of images): `hf download sumin-yu/PopResume --repo-type dataset --include 'data/text/*' README.md --local-dir <external root>/popresume/raw/hf`.",
+      "Record the downloaded files' bytes and sha256 in data/external_manifests/popresume.json and port a CV stager into scripts/external/stage_popresume.py; the acquirer's draft (_scripts/popresume/stage_popresume_text.py) was tested only on fabricated rows."
+    ]
+  },
+  "notes": []
+}

@@ -1,0 +1,90 @@
+{
+  "schema_version": 1,
+  "slug": "onet",
+  "name": "O*NET 31.0 Database",
+  "provenance": "Hand-maintained: no repo script regenerates this file. Written on 2026-10-19 from $HBM_EXTERNAL_ROOT/onet/MANIFEST.json, the acquirer's full manifest (outside git). bytes and sha256 were measured on the verified raw files and equal that manifest wherever it lists the same file; extracted members were also checked against the archive they come from. A tree_sha256 is scripts/fetch_external_data.py::tree_digest of the directory.",
+  "retrieved": "2026-10-19",
+  "upstream": [
+    "https://www.onetcenter.org/database.html",
+    "https://www.onetcenter.org/license_db.html"
+  ],
+  "fetch": [
+    {
+      "id": "zip",
+      "kind": "http",
+      "url": "https://www.onetcenter.org/dl_files/database/db_31_0_text.zip",
+      "dest": "db_31_0_text.zip",
+      "extract_to": "extracted",
+      "note": "O*NET publishes no checksum; the sha256 is our own"
+    }
+  ],
+  "files": [
+    {
+      "path": "db_31_0_text.zip",
+      "bytes": 13183034,
+      "sha256": "6883548adf5fde64cf6f801b35d15519c9225f2732c3cab0e281c652d16b23a9",
+      "from": "zip"
+    },
+    {
+      "path": "extracted/db_31_0_text/Occupation Data.txt",
+      "bytes": 265794,
+      "sha256": "63e6029d3d30ff5c7cf39b5304a733b77a409e01c65ae7095fe92f6d18d74a66",
+      "from": "zip"
+    },
+    {
+      "path": "extracted/db_31_0_text/Job Zones.txt",
+      "bytes": 27874,
+      "sha256": "1112ff4c077817fe650b28c65bfe30cc1436b92f96e7922fc903f05da83bc216",
+      "from": "zip"
+    },
+    {
+      "path": "extracted/db_31_0_text/Task Statements.txt",
+      "bytes": 2772538,
+      "sha256": "aee1788c7ce2ebf19c1700bc4a1d7aa69a59965736d56a521945256df3f68d08",
+      "from": "zip"
+    },
+    {
+      "path": "extracted/db_31_0_text/Job Titles.txt",
+      "bytes": 2397744,
+      "sha256": "95e4b2ca0be4b37d0dcf79588c5c039500cd6ffbf1b0bb5e85b02cdb53c8b1b8",
+      "from": "zip"
+    },
+    {
+      "path": "extracted/db_31_0_text/Sample of Reported Titles.txt",
+      "bytes": 310850,
+      "sha256": "f012e8d5add676958a09c017eb53724b90429b34a4a75fba158bfb76361db4ff",
+      "from": "zip"
+    },
+    {
+      "path": "extracted/db_31_0_text/Essential Skills.txt",
+      "bytes": 1567178,
+      "sha256": "91ef60f7e43231136d08e8234f1624883a0ee7b951510d11851c693a2f8edea9",
+      "from": "zip"
+    },
+    {
+      "path": "extracted/db_31_0_text/Knowledge.txt",
+      "bytes": 5710599,
+      "sha256": "8a1ae01ed9c54de80a9049a635b43668c7f8b67cf7dbd2b349d795e6c6a7d624",
+      "from": "zip"
+    },
+    {
+      "path": "extracted/db_31_0_text/Education.txt",
+      "bytes": 1150604,
+      "sha256": "cd4469484b162ea36e8fe3f83e3de0638878349421cc4d71b828de3ebe06784c",
+      "from": "zip"
+    }
+  ],
+  "references": [],
+  "depends_on": {},
+  "stage": {
+    "script": "scripts/external/stage_onet.py",
+    "tables": [
+      "occupations",
+      "job_titles"
+    ]
+  },
+  "blocked": null,
+  "notes": [
+    "The CSV release (db_31_0_csv.zip) was fetched only to cross-check row counts and is not needed for staging. Derived content must carry the CC BY 4.0 USDOL/ETA attribution and change notice."
+  ]
+}

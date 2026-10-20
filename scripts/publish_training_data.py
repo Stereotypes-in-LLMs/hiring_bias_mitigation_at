@@ -6,6 +6,11 @@ a benchmark candidate or job would contaminate every mitigation number, so a lea
 error here even though the generator already asserted it. The card is generated from the
 files, so row counts cannot drift from what is uploaded.
 
+Every file is also checked for rows from unpublishable sources (`generation/sources.py`):
+this card says Djinni and MIT, so an external row here would be published under the wrong
+licence. A file without a `source` column is V1 Djinni data. --allow-unpublishable-sources
+overrides the check.
+
     PUSH_TO_HUB=true python scripts/publish_training_data.py --dry-run
     PUSH_TO_HUB=true python scripts/publish_training_data.py
 """
@@ -21,6 +26,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
 
 from hiring_bias_mitigation.data.benchmark import assert_no_leakage  # noqa: E402
+from hiring_bias_mitigation.generation.sources import check_publishable  # noqa: E402
 from hiring_bias_mitigation.utils.config import REPO_ROOT, resolve_output_path  # noqa: E402
 from hiring_bias_mitigation.utils.logging import get_logger  # noqa: E402
 
@@ -208,6 +214,10 @@ def main() -> None:
     parser.add_argument("--repo-id", default=DEFAULT_REPO)
     parser.add_argument("--private", action="store_true")
     parser.add_argument("--dry-run", action="store_true")
+    parser.add_argument(
+        "--allow-unpublishable-sources", action="store_true",
+        help="publish rows from sources marked publishable=False in data/external.py anyway",
+    )
     args = parser.parse_args()
 
     if os.environ.get("PUSH_TO_HUB", "").strip().lower() not in {"true", "1", "yes"}:
@@ -221,6 +231,8 @@ def main() -> None:
         for f in splits.values():
             frame = pd.read_parquet(root / f)
             assert_no_leakage(frame, f"publish_training_data:{f}")
+            check_publishable(frame, f"publish_training_data:{f}",
+                              allow=args.allow_unpublishable_sources)
             counts[f] = len(frame)
     card = build_card(counts, root)
     card_path = REPO_ROOT / "reports" / "hf_training_data_card.md"

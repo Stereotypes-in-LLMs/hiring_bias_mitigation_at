@@ -1,0 +1,57 @@
+{
+  "schema_version": 1,
+  "slug": "faire",
+  "name": "FAIRE",
+  "provenance": "Hand-maintained: no repo script regenerates this file. Written on 2026-10-19 from $HBM_EXTERNAL_ROOT/faire/MANIFEST.json, the acquirer's full manifest (outside git). bytes and sha256 were measured on the verified raw files and equal that manifest wherever it lists the same file; extracted members were also checked against the archive they come from. A tree_sha256 is scripts/fetch_external_data.py::tree_digest of the directory.",
+  "retrieved": "2026-10-19",
+  "upstream": [
+    "https://github.com/athenawen/FAIRE-Fairness-Assessment-In-Resume-Evaluation",
+    "https://arxiv.org/abs/2504.01420"
+  ],
+  "fetch": [
+    {
+      "id": "repo",
+      "kind": "git",
+      "url": "https://github.com/athenawen/FAIRE-Fairness-Assessment-In-Resume-Evaluation",
+      "commit": "330ac23b586010df7234f258e91e5c5c3c88fbd0",
+      "dest": "FAIRE"
+    }
+  ],
+  "files": [
+    {
+      "path": "FAIRE/README.md",
+      "bytes": 1307,
+      "sha256": "26cd57d74fcfbd80792c6f7a01e8a19425a03cc6c90e063ae5d165595f71a6a4",
+      "from": "repo"
+    },
+    {
+      "path": "FAIRE/Resumes.xlsx",
+      "bytes": 700189,
+      "sha256": "a1af16420f9c542152f1d4b6b06305c9eec04ede98d9092b98a01ef0762a7f34",
+      "from": "repo"
+    }
+  ],
+  "references": [
+    {
+      "path": "arxiv/arxiv_2504.01420v1.pdf",
+      "url": "https://arxiv.org/pdf/2504.01420v1",
+      "bytes": 1265532,
+      "sha256": "5a2333d2229f36dd4c74b80be410867e25f1f0c58a26f566d1de445207c1dc18"
+    }
+  ],
+  "depends_on": {
+    "kaggle_resume": "kaggle_raw"
+  },
+  "stage": {
+    "script": "scripts/external/stage_faire.py",
+    "tables": [
+      "cvs",
+      "jobs",
+      "pairs"
+    ]
+  },
+  "blocked": null,
+  "notes": [
+    "Staging reads kaggle_resume's Resume.csv to tie each FAIRE base CV to its Kaggle ID (depends_on). The notebook Resume_Bias_Test.ipynb is not needed and is never run."
+  ]
+}

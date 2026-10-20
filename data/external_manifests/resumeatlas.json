@@ -1,0 +1,67 @@
+{
+  "schema_version": 1,
+  "slug": "resumeatlas",
+  "name": "ResumeAtlas",
+  "provenance": "Hand-maintained: no repo script regenerates this file. Written on 2026-10-19 from $HBM_EXTERNAL_ROOT/resumeatlas/MANIFEST.json, the acquirer's full manifest (outside git). bytes and sha256 were measured on the verified raw files and equal that manifest wherever it lists the same file; extracted members were also checked against the archive they come from. A tree_sha256 is scripts/fetch_external_data.py::tree_digest of the directory.",
+  "retrieved": "2026-10-19",
+  "upstream": [
+    "https://github.com/noran-mohamed/Resume-Classification-Dataset",
+    "https://huggingface.co/datasets/ahmedheakl/resume-atlas",
+    "https://arxiv.org/abs/2406.18125"
+  ],
+  "fetch": [
+    {
+      "id": "lfs_raw",
+      "kind": "http",
+      "url": "https://media.githubusercontent.com/media/noran-mohamed/Resume-Classification-Dataset/53db09770ccb661a49fb2c3970ec7b2e83e5fe51/Dataset.csv",
+      "dest": "github_lfs/Dataset.csv",
+      "note": "the git LFS object behind Dataset.csv at commit 53db0977; its sha256 is the LFS pointer's oid"
+    },
+    {
+      "id": "lfs_pre",
+      "kind": "http",
+      "url": "https://media.githubusercontent.com/media/noran-mohamed/Resume-Classification-Dataset/53db09770ccb661a49fb2c3970ec7b2e83e5fe51/Preprocessed_Data.csv",
+      "dest": "github_lfs/Preprocessed_Data.csv",
+      "note": "byte-identical to train.csv on HF (ahmedheakl/resume-atlas @ 3f80ca91)"
+    }
+  ],
+  "files": [
+    {
+      "path": "github_lfs/Dataset.csv",
+      "bytes": 65235679,
+      "sha256": "59ba0dcff6fa640c0f7d35edf7f97f0f1eaa789fd72eb6eb793198e5d326c057",
+      "from": "lfs_raw"
+    },
+    {
+      "path": "github_lfs/Preprocessed_Data.csv",
+      "bytes": 53573912,
+      "sha256": "c71b0d6d88e75412aefb3998d289e4af8d9c07a9b26e8a974d6a2bac485480c2",
+      "from": "lfs_pre"
+    }
+  ],
+  "references": [
+    {
+      "path": "github_repo/MIT-LICENSE.txt",
+      "url": "https://raw.githubusercontent.com/noran-mohamed/Resume-Classification-Dataset/53db09770ccb661a49fb2c3970ec7b2e83e5fe51/MIT-LICENSE.txt",
+      "bytes": 1072,
+      "sha256": "74e587e533f4f609a2f9e3c0fedd355c7f7683907a699d3bc8956e3755cd97ee"
+    },
+    {
+      "path": "paper/arxiv_2406.18125.pdf",
+      "url": "https://arxiv.org/pdf/2406.18125v2",
+      "bytes": 622384,
+      "sha256": "4242a8a2c1cfc0fb3d0fc92b8cbf8502341502e75e07c40b4663f9f955dfc0d5"
+    }
+  ],
+  "depends_on": {},
+  "stage": {
+    "script": "scripts/external/stage_resumeatlas.py",
+    "tables": [
+      "cvs"
+    ]
+  },
+  "blocked": null,
+  "notes": [
+    "The original resume images (Kaggle youssefkhalil/resumes-images-datasets) need a Kaggle account and are not fetched; staging uses the released OCR text."
+  ]
+}

@@ -1,0 +1,82 @@
+# Hand-written -- NOT produced by generate_experiment_configs.py, so it survives a regeneration.
+#
+# DRAFT PROPOSAL. NOT RUN. It needs the user's go-ahead before any GPU time is spent on it.
+#
+# A multi-source teacher run. It adds English external CVs and JDs to the training data, in
+# occupations that Djinni (Ukrainian IT) does not cover. The settings are copied from
+# configs/generation/teacher.yaml (teacher, decoding, groups, conditions,
+# attributes_per_pair, filters, seed). The differences are the pool and the artifacts dir:
+#
+#   pool_sources      rjdb + kaggle_linkedin only. Djinni is NOT regenerated: the V1
+#                     generations in artifacts/semisynthetic-v1 are reused as they are. A
+#                     training data config would combine the two artifacts dirs. The candidate
+#                     ids cannot collide, because every external id is prefixed "<slug>:".
+#   languages         en only. The external sources are English, and build_pool skips them
+#                     for uk with a warning.
+#   artifacts_dir     artifacts/semisynthetic-v4/external, so the V1 dumps are never touched.
+#                     The resume check refuses a dump made for a different pool.
+#
+# Teacher cost (calls = passes x pairs x variants), counted from the pool the dry run built:
+#   pairs per pair-source          rjdb 1,500 + kaggle_linkedin 1,500 = 3,000 pairs
+#   variants per pair              3 groups x 2 attributes x 2 conditions = 12
+#   pass 1 reference               3,000 calls (1 per pair)
+#   pass 2 invariant               3,000 x 12 = 36,000 calls
+#   pass 3 biased                  3,000 x 12 = 36,000 calls
+#   total                          75,000 calls at most. Passes 2-3 run only on pairs whose
+#                                  reference passed its filter, so the real count is lower.
+#   That is the same as one language of teacher.yaml: 3,000 pairs x 25 = 75,000 calls.
+#
+# The kaggle_linkedin count is set by the CVs. 770 of 2,484 Kaggle CVs survive cleaning, the
+# markers, the headline rule and the FAIRE holdout, so the source can give at most 1,540
+# pairs at 2 JDs each. 1,500 uses 750 CVs. The rjdb count is a choice: 41,345 of 50,000 train
+# triples are eligible. The funnel is $HBM_OUTPUT_ROOT/external_data/_pool_dryrun/funnel_en.json,
+# written by this command (CPU only, about 3.5 minutes):
+#   python scripts/build_external_pool.py --config configs/generation/teacher_external_draft.yaml
+#
+# Open decisions, each the user's to make:
+#   * rjdb_include_weakened. true also pairs each matched CV's weakened rewrite with the same
+#     JD. pairs_per_source counts pool rows, so the cost stays the same and there are fewer
+#     distinct people. The dry run with --rjdb-include-weakened true gives 828 RJDB people,
+#     as 828 matched rows plus 672 weakened rows. Only 34,152 of the 41,345 weakened CVs
+#     survive cleaning and the 400-6000 character bound. RJDB matched pairs are near-trivial
+#     fits (the CV often copies the JD's skill list), so expect the teacher to say hire on
+#     most of them. The weakened rows are the only harder RJDB cases.
+#   * Licences. Every external source is publishable=False in data/external.py. The publish
+#     scripts refuse these rows unless --allow-unpublishable-sources is given. Training on
+#     them is a separate decision: RJDB is GPT-4 output under OpenAI's terms, and Kaggle and
+#     LinkedIn are scrapes whose terms were not checked.
+teacher_model: Qwen/Qwen3.5-122B-A10B-GPTQ-Int4
+backend: vllm
+dtype: auto
+max_model_len: 8192
+gpu_memory_utilization: 0.68
+max_num_seqs: 64
+artifacts_dir: artifacts/semisynthetic-v4/external
+dataset_name: hiring-bias-mitigation-semisynthetic-external
+languages:
+- en
+pool_sources:
+- rjdb
+- kaggle_linkedin
+pairs_per_source:
+  rjdb: 1500
+  kaggle_linkedin: 1500
+rjdb_include_weakened: false
+protected_groups:
+- military_status
+- gender
+- religion
+conditions:
+- explicit
+- implicit
+jobs_per_candidate: 2
+attributes_per_pair: 2
+rejected_source: teacher_biased
+balance_decisions: true
+val_fraction: 0.05
+seed: 42
+generation:
+  max_new_tokens: 320
+  temperature: 0.7
+  top_p: 0.9
+  seed: 42

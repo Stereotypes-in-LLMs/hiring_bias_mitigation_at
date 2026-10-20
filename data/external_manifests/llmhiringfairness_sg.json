@@ -1,0 +1,92 @@
+{
+  "schema_version": 1,
+  "slug": "llmhiringfairness_sg",
+  "name": "LLMHiringFairnessSG",
+  "provenance": "Hand-maintained: no repo script regenerates this file. Written on 2026-10-19 from $HBM_EXTERNAL_ROOT/llmhiringfairness_sg/MANIFEST.json, the acquirer's full manifest (outside git). bytes and sha256 were measured on the verified raw files and equal that manifest wherever it lists the same file; extracted members were also checked against the archive they come from. A tree_sha256 is scripts/fetch_external_data.py::tree_digest of the directory.",
+  "retrieved": "2026-10-19",
+  "upstream": [
+    "https://github.com/Social-AI-Studio/LLMHiringFairnessSG",
+    "https://arxiv.org/abs/2603.05189"
+  ],
+  "fetch": [
+    {
+      "id": "repo",
+      "kind": "git",
+      "url": "https://github.com/Social-AI-Studio/LLMHiringFairnessSG",
+      "commit": "29673abba3e68d868ce87e9fb11eb2055cd4952e",
+      "dest": "LLMHiringFairnessSG"
+    }
+  ],
+  "files": [
+    {
+      "path": "LLMHiringFairnessSG/LICENSE",
+      "bytes": 18656,
+      "sha256": "9e5f1b3c610b9c2da5c313bf81d577a7d1acec686bdb0384edefa6df0f90cd94",
+      "from": "repo"
+    },
+    {
+      "path": "LLMHiringFairnessSG/README.md",
+      "bytes": 8421,
+      "sha256": "bfece8b33d42201b34aedc786496ce208a16356f3685f1de5c7c8917699a0d30",
+      "from": "repo"
+    },
+    {
+      "path": "LLMHiringFairnessSG/data/jds_structured.csv",
+      "bytes": 699587,
+      "sha256": "166d3217f1f9b78fa222075ea281c101145737be2db7d44a23d02abc9b764a28",
+      "from": "repo"
+    },
+    {
+      "path": "LLMHiringFairnessSG/demography.json",
+      "bytes": 12444,
+      "sha256": "3a765d8baefcce62f67ff3e7a700b9d0da17aa42915badfa8d506324c6619cf5",
+      "from": "repo"
+    },
+    {
+      "path": "LLMHiringFairnessSG/dataset/resumes",
+      "bytes": 12924074,
+      "n_files": 4100,
+      "tree_sha256": "7c2321896e7cff7e7a21219ef0bbdb3db0e38816b3d2f0e6b5a1dce847ba9b76",
+      "from": "repo"
+    },
+    {
+      "path": "LLMHiringFairnessSG/dataset/ablated_resumes",
+      "bytes": 62271492,
+      "n_files": 20500,
+      "tree_sha256": "1c24c6fc0720057df8df334fc86f6fd0131dc8392f4fe43db3919f9b13b7bf58",
+      "from": "repo"
+    },
+    {
+      "path": "LLMHiringFairnessSG/dataset/neutral_resume_templates",
+      "bytes": 281285,
+      "n_files": 100,
+      "tree_sha256": "21c2fe3c5cfb9c7c7aef82c2dc3d105622b00df6fe02397be3d371fbf8ea5e99",
+      "from": "repo"
+    }
+  ],
+  "references": [
+    {
+      "path": "paper/2603.05189v3.pdf",
+      "url": "https://arxiv.org/pdf/2603.05189v3",
+      "bytes": 3325481,
+      "sha256": "3f5a20fbc49f9daa752ba8b088a6aea837aff8159b24c50b867ad148588611e4"
+    }
+  ],
+  "depends_on": {},
+  "stage": {
+    "script": "scripts/external/stage_llmhiringfairness_sg.py",
+    "tables": [
+      "cvs",
+      "jobs",
+      "pairs",
+      "cvs_ablated",
+      "cvs_v1_templates",
+      "variant_diffs",
+      "cue_inventory"
+    ]
+  },
+  "blocked": null,
+  "notes": [
+    "data/jds.csv is not read by staging, although it is the only file with 'Remarks' for job_095-099 (see PROFILE.md)."
+  ]
+}

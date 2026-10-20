@@ -1,0 +1,67 @@
+{
+  "schema_version": 1,
+  "slug": "vanetik_kogan",
+  "name": "Vacancy-Resume Matching (Vanetik & Kogan)",
+  "provenance": "Hand-maintained: no repo script regenerates this file. Written on 2026-10-19 from $HBM_EXTERNAL_ROOT/vanetik_kogan/MANIFEST.json, the acquirer's full manifest (outside git). bytes and sha256 were measured on the verified raw files and equal that manifest wherever it lists the same file; extracted members were also checked against the archive they come from. A tree_sha256 is scripts/fetch_external_data.py::tree_digest of the directory.",
+  "retrieved": "2026-10-19",
+  "upstream": [
+    "https://github.com/NataliaVanetik/vacancy-resume-matching-dataset",
+    "https://doi.org/10.3390/info14080468"
+  ],
+  "fetch": [
+    {
+      "id": "repo",
+      "kind": "git",
+      "url": "https://github.com/NataliaVanetik/vacancy-resume-matching-dataset",
+      "commit": "7ee8f043c6e31ee94cb67f5e60b069901b533adf",
+      "dest": "vacancy-resume-matching-dataset"
+    }
+  ],
+  "files": [
+    {
+      "path": "vacancy-resume-matching-dataset/LICENSE",
+      "bytes": 35149,
+      "sha256": "3972dc9744f6499f0f9b2dbf76696f2ae7ad8af9b23dde66d6af86c9dfb36986",
+      "from": "repo"
+    },
+    {
+      "path": "vacancy-resume-matching-dataset/README.md",
+      "bytes": 907,
+      "sha256": "a6d37215e689b907468f6238d8c7e87f0d79ce928001d9fb20dd3bb83c61ca49",
+      "from": "repo"
+    },
+    {
+      "path": "vacancy-resume-matching-dataset/5_vacancies.csv",
+      "bytes": 17998,
+      "sha256": "e14d2e5052e8bb4884514b066b17be0bf789f4f0bd79d942e6d7a49e101dbaa4",
+      "from": "repo"
+    },
+    {
+      "path": "vacancy-resume-matching-dataset/annotations-for-the-first-30-vacancies.txt",
+      "bytes": 1432,
+      "sha256": "938ff4089918807809f8920e16d4433d2267fe8104f9641b477163f4a157293b",
+      "from": "repo"
+    },
+    {
+      "path": "vacancy-resume-matching-dataset/CV",
+      "bytes": 2051129,
+      "n_files": 65,
+      "tree_sha256": "f755338afbd920b6b1323b18bab0ca26125ee7a0066f83ed81d71fafce04f507",
+      "from": "repo"
+    }
+  ],
+  "references": [],
+  "depends_on": {},
+  "stage": {
+    "script": "scripts/external/stage_vanetik_kogan.py",
+    "tables": [
+      "cvs",
+      "jobs",
+      "pairs"
+    ]
+  },
+  "blocked": null,
+  "notes": [
+    "The raw CV/*.docx carry names in docProps/core.xml; raw/ must not be redistributed. The MDPI paper refuses scripted access and is not fetched."
+  ]
+}
