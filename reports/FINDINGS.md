@@ -1,7 +1,7 @@
 # Baseline audit — findings
 
 *Synthesis of the ten baseline runs. Written by hand from the generated analysis
-([`ANALYSIS.md`](ANALYSIS.md)), the measurements ([`RESULTS.md`](RESULTS.md)) and direct
+([`ANALYSIS.md`](archive/phase1/ANALYSIS.md)), the measurements ([`RESULTS.md`](RESULTS.md)) and direct
 reading of the raw generations. Metric definitions: [`docs/METRICS.md`](../docs/METRICS.md).*
 
 ## What was run
@@ -37,7 +37,7 @@ Three conditions together; none is sufficient alone.
    or |Cohen's *h*| ≥ 0.20. At 161,550 rows a one-point gap is significant because *n* is
    large.
 
-Thresholds are judgement calls, stated in `ANALYSIS.md` and overridable on the command line.
+Thresholds are judgement calls, stated in `archive/phase1/ANALYSIS.md` and overridable on the command line.
 
 ---
 

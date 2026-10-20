@@ -57,7 +57,7 @@ whose decision is not constant across the attribute's variants.
 | # | Claim | Number | Evidence |
 |---|---|---|---|
 | X1 | A comparison between a baseline and a mitigated run must be restricted to matched rows, cells **and attribute variants** | unmatched: every adapter "fixed" 33–63 sets vs 0–3 broken, p ≈ 10⁻¹⁰; matched: a handful each | Lessons 1–3 |
-| X2 | The serving stack is part of the measurement | HF vs vLLM agreement: base 98.6–98.9%, same adapter through vLLM's LoRA path **38–83%**; merged weights restore 97.4–98.7% | Lesson 4, [`adapter_diagnostic--*.json`](.) |
+| X2 | The serving stack is part of the measurement | HF vs vLLM agreement: base 98.6–98.9%, same adapter through vLLM's LoRA path **38–83%**; merged weights restore 97.4–98.7% | Lesson 4, [`adapter_diagnostic--*.json`](archive/phase1/) |
 | X3 | A value normalised for analysis must not become a training target | Ukrainian targets carried `"reject"` where the prompt asks `відхилити`; both Ukrainian adapters learned it, parse failures stayed 0% | Lesson 5 |
 | X4 | Counterfactual set stability on matched variants separates real effects from artefacts that aggregate metrics hide | MAD moves 1/450 per corrected decision; set stability sees every flip | `../docs/METRICS.md` |
 
@@ -67,7 +67,7 @@ whose decision is not constant across the attribute's variants.
 
 | Table | Source |
 |---|---|
-| Baseline disparity per model × language × group | `RESULTS.md` §3, [`analysis.json`](analysis.json) |
+| Baseline disparity per model × language × group | `RESULTS.md` §3, [`analysis.json`](archive/phase1/analysis.json) |
 | Mitigation summary: Δ unstable sets, CI, fixed : broken, Δ utility | [`set_stability.csv`](set_stability.csv) + [`mitigation_decision_table.csv`](mitigation_decision_table.csv) |
 | Per-group breakdown | [`set_stability_by_group.csv`](set_stability_by_group.csv) |
 | Operating-point control | [`operating_point/*.json`](operating_point) |

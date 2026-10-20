@@ -142,7 +142,8 @@ as results.
 `enable_planned.sh`, `experiment_runs.csv`, `set_stability*.csv`,
 `mitigation_decision_table.csv`, `training_curves.csv`, everything under `figures/`,
 `eval/results/index.json`, `reports/reference_metrics.csv`, `reports/reference_metrics/`,
-`reports/comparisons.csv`, and every generated config. `FINDINGS.md`,
+`reports/comparisons.csv`, and every generated config. The phase-1 versions of the
+analysis and plan outputs are kept unchanged in `reports/archive/phase1/`. `FINDINGS.md`,
 `MITIGATION_FINDINGS.md`, `PAPER_KIT.md`, the model cards and `docs/*.md` are written by hand
 from those files, and each number in them names the file it came from.
 
