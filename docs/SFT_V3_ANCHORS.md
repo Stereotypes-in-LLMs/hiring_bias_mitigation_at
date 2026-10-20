@@ -356,6 +356,52 @@ Three readouts were added after the platform check failed and were not pre-regis
 
 The per-pair votes are in `artifacts/semisynthetic-v3/anchors/pool_votes_seed43.parquet` (23,936 draws) and `pool_votes_seed43_anchors.parquet` on Daint.
 
+### The vote anchors' targets
+
+The stage ran as job 5103710, taking 7 min 15 s on one GH200 node in the debug partition (nid006567), at commit b74dcda with no uncommitted changes. It read the third addendum, sha256 030bbbb2c1fa, kept as `reports/sft_v3_anchors/PREREG_vote_targets.md`. vLLM used its V2 runner with one seed per prompt, 2,304 distinct seeds. All numbers below are from `reports/sft_v3_anchors/vote_targets.md`.
+
+**The anchors.** Recomputed from the vote's draws with this branch's code, they equal the saved file. 192 pairs change, all from reject to hire, and the pool's hire share goes from 0.1417 to 0.2059. 72 ties keep v1's reject.
+
+**The targets.** All 2,304 regenerated targets pass `filters.filter_invariant`: yield 1.000 in every group and condition. That meets the expected 0.95 and the 0.80 floor.
+
+| targets for the same 2,304 variants | v1 anchor (reject) | vote anchor (hire), regenerated |
+|---|---|---|
+| kept | 2,304 (1.000) | 2,304 (1.000) |
+| same-pair variant pairs with an identical rationale | 0.355 | 0.044 |
+| rationales that repeat the quoted reference verbatim | 0.092 | 0.086 |
+| raw outputs in a code fence | 0 | 483 (0.210) |
+| median rationale length, words | 19 | 21 |
+
+- The expected drop in identical rationales holds: 0.044 against v1's 0.355. The coupled draws were what made v1's variants of one pair repeat each other.
+- 21% of the raw outputs are fenced, more than the 13% of Daint's anchor draws. The SFT target is rebuilt from the parsed decision and feedback, so no fence reaches training.
+
+**Earlier training sets.** Rows whose target the vote anchor flips. Every flip goes from reject to hire.
+
+| set | rows | flipped |
+|---|---|---|
+| SFT v1 targets, before balancing | 35,826 | 2,297 |
+| DPO r1 | 2,278 | 100 |
+| DPO r2 | 1,618 | 59 |
+| DPO r2em | 2,362 | 49 |
+| DPO it2 (not trained) | 229 | 19 |
+| GRPO grpo-02 | 3,000 | 117 |
+| RFT rft-01 | 2,400 | 47 |
+
+On the reviewed pairs, descriptively, the vote anchor hires 66 of the 124 clear-hire targets and rejects 49 of the 54 clear-reject targets and controls.
+
+Raw cases, the same variant under each anchor (`en_invariant_vote_changed.parquet` against v1's `en_invariant.parquet`):
+
+- **iOS developer, 6 of 8 hire votes; War veteran, explicit.**
+  - v1: `{"decision": "reject", "feedback": "Missing required experience in CI/CD, Unit Testing, and modern frameworks like SwiftUI, MVVM, or RxSwift."}`
+  - vote: `{"decision": "hire", "feedback": "Strong iOS, Swift, and Objective-C experience with full lifecycle, publishing, and core data skills matches key requirements."}`
+- **Business Unit Manager, 6 of 8; War veteran, explicit.**
+  - v1: `{"decision": "reject", "feedback": "Profile lacks explicit client-facing leadership and eCommerce experience required to grow the business unit and manage key accounts."}`
+  - vote: `{\n"decision": "hire",\n"feedback": "Proven experience leading multiple agile teams, managing complex programs, and driving process improvements aligns perfectly with the Business Unit Manager requirements."\n}`
+
+The outputs are on Daint under `artifacts/semisynthetic-v3/raw/`: `en_invariant_vote_changed.parquet` (all 2,304, with prompt seeds), `en_invariant_vote_changed_kept.parquet` and `en_invariant_vote_changed.meta.json`. The log is `logs/xw-sft-v3-anchors-5103710.out`.
+
+Not done, as the addendum says: the SFT-v3 data set, training, and preference data on the vote anchors.
+
 ## Reading
 
 - **Fact: the edited prompts (stage 0a and the control).** These comparisons all ran on Daint.
@@ -428,3 +474,11 @@ python scripts/sft_v3_anchors.py --stage enrichment   # CPU
 ```
 
 `pool_votes.md` was regenerated from the job's draws to add the three readouts marked as not pre-registered: single draws and side-wise enrichment on 2026-10-16, output format on 2026-10-18. Every readout the job wrote is unchanged.
+
+The vote anchors' targets were job 5103710:
+
+```bash
+REPO=$XW/hiring_bias_mitigation_at-voteanchors scripts/cscs/submit.sh -p debug -t 00:20:00 \
+  scripts/cscs/sft_v3_anchors.sbatch vote_targets
+python scripts/sft_v3_anchors.py --stage vote_readout   # CPU, reads the job's output
+```
