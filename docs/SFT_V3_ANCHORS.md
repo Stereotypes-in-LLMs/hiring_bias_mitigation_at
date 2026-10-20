@@ -440,6 +440,36 @@ The outputs are on Daint under `artifacts/semisynthetic-v3/raw/`: `en_invariant_
 
 Not done, as the addendum says: the SFT-v3 data set, training, and preference data on the vote anchors.
 
+### The SFT-v3 data sets
+
+The stage ran on CPU on 2026-10-20, on a Mac at commit 6f7ad8e with no uncommitted changes. The outputs were then copied to Daint, and the sha256 values match. It read the fourth addendum, sha256 c4b4d40a7d1f, kept as `reports/sft_v3_anchors/PREREG_vote_sft.md`. All numbers below are from `reports/sft_v3_anchors/vote_sft.md`.
+
+**Control.** v1's split rebuilt from raw equals the published `sft_train` and `sft_validation`, train and validation both. v1's balance is reproduced: 63,932 rejects and 7,830 hires, cut to 7,830 each.
+
+**The changed rows.** 2,297 of the regenerated targets replace v1 rows in the pooled invariant set. 277 of those variants were in v1's split: 253 in train and 24 in validation, against the roughly 280 expected.
+
+| variant | split | rows (v1) | English rows | English hire share (v1) | rows identical to v1 | completion changed | variant not in v1 | candidates shared with v1 |
+|---|---|---|---|---|---|---|---|---|
+| swap | train | 14,890 (14,890) | 8,419 | 0.603 (0.573) | 14,637 | 253 | 0 | 2,755 of 2,755 |
+| swap | validation | 770 (770) | 455 | 0.607 (0.554) | 746 | 24 | 0 | 145 of 145 |
+| rebalanced | train | 19,268 (14,890) | 11,615 | 0.610 (0.573) | 8,200 | 247 | 10,821 | 2,593 of 2,825 |
+| rebalanced | validation | 986 (770) | 504 | 0.571 (0.554) | 27 | 0 | 959 | 6 of 148 |
+
+- **`sft_v3_swap`** differs from v1 in 277 completions, all from reject to hire, and in nothing else. The English training rows move from 57.3% to 60.3% hire. The 253 training rows spread over every group and condition, 35 to 53 each.
+- **`sft_v3_rebalanced`** re-runs v1's procedure:
+  - The balance keeps 10,127 hires and draws 10,127 of 61,635 rejects. The data grow 29%, and the English training rows grow 38%.
+  - Only 8,200 of its 19,268 training rows are v1's unchanged.
+  - The candidate split moved with the new row set. Only 6 of its 148 validation candidates were v1 validation candidates.
+- v1's English training rows were already 57.3% hire, not 50%. The balance is joint over English and Ukrainian, and Ukraine's rows lean reject.
+
+Raw case, a swapped training row (English, military status "Participant in combat actions", implicit). The prompt is unchanged.
+- v1: `{"decision": "reject", "feedback": "Role requires automation skills in Selenium, RestAssured, and Python, plus API testing. Your profile highlights only manual testing experience, lacking these critical technical requirements."}`
+- swap: `{"decision": "hire", "feedback": "Strong match with 4+ years in healthcare QA, covering web testing, documentation, and strategy. Manual expertise aligns well with core role requirements."}`
+
+The data sets are on Daint under `artifacts/semisynthetic-v3/sft_v3_swap/` and `sft_v3_rebalanced/`, each holding `sft_train.parquet`, `sft_validation.parquet` and `sft_v3.meta.json`. v1's fetched inputs are in `artifacts/semisynthetic-v1-hub/`, with `PROVENANCE.json` giving the repository, the revision and each file's sha256.
+
+Not done: training, and a data config for either variant.
+
 ## Reading
 
 - **Fact: the edited prompts (stage 0a and the control).** These comparisons all ran on Daint.
@@ -519,4 +549,10 @@ The vote anchors' targets were job 5103710:
 REPO=$XW/hiring_bias_mitigation_at-voteanchors scripts/cscs/submit.sh -p debug -t 00:20:00 \
   scripts/cscs/sft_v3_anchors.sbatch vote_targets
 python scripts/sft_v3_anchors.py --stage vote_readout   # CPU, reads the job's output
+```
+
+The SFT-v3 data sets need no GPU. They need v1's inputs in `artifacts/semisynthetic-v1-hub/` (see its `PROVENANCE.json`):
+
+```bash
+python scripts/sft_v3_anchors.py --stage vote_sft
 ```
