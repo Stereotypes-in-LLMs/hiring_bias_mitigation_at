@@ -242,7 +242,7 @@ HBM_OUTPUT_ROOT=$XW python scripts/v3_additional_data.py --config $CFG --stage a
 
 ### Pre-registration
 
-Written on 2026-10-20 at about 16:10 CEST. At that point SFT-v3 was not trained and no on-policy sample was drawn. At about 15:45 the user chose DPO's start point: SFT-v3 on all the new data for one epoch ("use all new data train 1 epoch"). No SFT-v3 checkpoint existed under `outputs/sft/`, so this round trains it first. The user asked to stop after this section is committed and before any job is submitted ("stop after commit before run"). Then, before any job, the branch was rebased onto `main` at 6f4b7e9 ("rebase first"), so every job of this round runs with `main`'s cost recorder (`docs/COST.md`).
+Written on 2026-10-20 at about 16:10 CEST. At that point SFT-v3 was not trained and no on-policy sample was drawn. At about 15:45 the user chose DPO's start point: SFT-v3 on all the new data for one epoch ("use all new data train 1 epoch"). No SFT-v3 checkpoint existed under `outputs/sft/`, so this round trains it first. The user asked to stop after this section is committed and before any job is submitted ("stop after commit before run"). Then, before any job, the branch was rebased onto `main`, last at 4ffe188 ("rebase first", "rebase include GPU monitor then run SFT"). Every job of this round therefore runs with `main`'s cost recorder and its GPU monitor (`utils/cost.py`, `docs/COST.md`), which samples NVML every 10 s.
 
 #### Question
 
