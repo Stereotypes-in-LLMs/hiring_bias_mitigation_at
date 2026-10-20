@@ -97,6 +97,7 @@ def setup(tmp_path, monkeypatch):
         "stop": {"max_undecided_draw_share": 0.05, "max_unanchored_share": 0.10,
                  "min_invariant_yield": 0.80, "min_biased_yield": 0.20},
         "assemble": {"sft_v3_dir": str(v3), "dpo_cap_per_pair": 2,
+                     "teacher_biased_dpo": False,
                      "exclude": {"djinni_new_extra_markers": True,
                                  "rjdb_template_residue": True}},
     }
@@ -127,22 +128,28 @@ def test_generate_report_assemble(setup):
     assert report["vote"]["all"]["anchored"] == 8
     assert report["vote"]["by"]["rjdb"]["anchor_hire_share"] == 0.5
 
-    with pytest.raises(SystemExit):                     # v1_dpo has not been built
-        mod.stage_assemble(cfg)
-    mod.stage_assemble(cfg, allow_partial=True)
+    mod.stage_assemble(cfg)
+    # Default: SFT and the on-policy input only; no teacher-biased DPO is written.
+    assert not list(out.glob("*dpo*"))
+    onpolicy = pd.read_parquet(out / "raw" / "en_invariant.parquet")
+    assert list(onpolicy.columns[:18]) == mod.V1_INVARIANT_COLUMNS
+    assert set(onpolicy["pool_source"]) == {"djinni_new", "rjdb"}
+    cfg["assemble"]["teacher_biased_dpo"] = True
+    mod.stage_assemble(cfg)
     new_train = pd.read_parquet(out / "additional_sft_train.parquet")
     new_val = pd.read_parquet(out / "additional_sft_validation.parquet")
     combined = pd.read_parquet(out / "sft_train.parquet")
-    dpo_train = pd.read_parquet(out / "additional_dpo_train.parquet")
-    capped = pd.read_parquet(out / "dpo_capped_train.parquet")
-    balanced = pd.read_parquet(out / "dpo_capped_balanced_train.parquet")
+    dpo_train = pd.read_parquet(out / "teacher_biased_dpo_train.parquet")
+    capped = pd.read_parquet(out / "teacher_biased_dpo_capped_train.parquet")
+    balanced = pd.read_parquet(out / "teacher_biased_dpo_capped_balanced_train.parquet")
     assert capped.groupby("pair_id").size().max() <= 2
     assert balanced["decision"].value_counts().nunique() == 1      # as many hire as reject
     assert set(balanced["pair_id"]) <= set(capped["pair_id"])
     assert {"anchor_hire_votes", "anchor_unstable", "anchor_changed", "reference_decision",
             "pool_source"} <= set(capped.columns)
     gen = json.loads((out / "generation_report.json").read_text())
-    assert gen["splits"]["dpo_train"]["dpo_capped_balanced"]["decision_contrast_share"] == 1.0
+    assert gen["splits"]["teacher_biased_dpo_train"]["teacher_biased_dpo_capped_balanced"][
+        "decision_contrast_share"] == 1.0
     assert not set(new_train["candidate_id"]) & set(new_val["candidate_id"])
     assert set(new_train["pool_source"]) <= {"djinni_new", "rjdb"}
     # The publish guard's names: new Djinni rows are Djinni.
@@ -193,8 +200,9 @@ def test_v1_dpo_reads_the_vote_anchor_and_keeps_sft_v3s_split(setup, tmp_path):
                      "vote_targets": str(tmp_path / "regen.parquet"),
                      "v1_biased": str(tmp_path / "biased.parquet")}
     mod.stage_v1_dpo(cfg)
-    val = pd.read_parquet(out / "v1_dpo_validation.parquet")      # v1-b is in SFT-v3's validation
-    assert len(val) == 1 and len(pd.read_parquet(out / "v1_dpo_train.parquet")) == 0
+    val = pd.read_parquet(out / "teacher_biased_v1_dpo_validation.parquet")   # v1-b: validation
+    assert len(val) == 1
+    assert len(pd.read_parquet(out / "teacher_biased_v1_dpo_train.parquet")) == 0
     row = val.iloc[0]
     assert json.loads(row["chosen"])["decision"] == "hire"         # the regenerated target
     assert json.loads(row["rejected"])["decision"] == "reject" and row["rejected_flipped_decision"]
@@ -258,3 +266,35 @@ def test_a_job_without_the_biased_pass_still_reads_the_stop_conditions(setup):
     assert not (out / "parts" / "rjdb-000" / "biased.parquet").exists()
     check = json.loads((out / "parts" / "rjdb-000" / "stop_check.json").read_text())
     assert "invariant_yield" in check["readout"] and "biased_yield" not in check["readout"]
+
+
+def test_r2em_drops_rows_the_vote_overturns_and_its_legacy_pool(setup, tmp_path):
+    mod, cfg, _, out = setup
+    r2 = tmp_path / "r2em"
+    r2.mkdir()
+
+    def row(pair, decision, pool):
+        other = "reject" if decision == "hire" else "hire"
+        return {"prompt": f"p-{pair}-{pool}",
+                "chosen": json.dumps({"decision": decision, "feedback": "f"}),
+                "rejected": json.dumps({"decision": other, "feedback": "g"}),
+                "decision": decision, "lang": "en", "candidate_id": f"c-{pair}",
+                "job_id": "j", "pair_id": pair, "source": pool, "reference_decision": decision}
+
+    pd.DataFrame([row("a", "reject", "round1"),           # the vote hires a: conflicting
+                  row("b", "hire", "round1"),             # agrees with the vote
+                  row("c", "reject", "legacy")]).to_parquet(r2 / "dpo_round2_train.parquet")
+    pd.DataFrame([row("b", "hire", "round1")]).to_parquet(r2 / "dpo_round2_validation.parquet")
+    pd.DataFrame({"pair_id": ["a", "b", "c"], "new_decision": ["hire", "hire", "reject"],
+                  "hire_votes": [7, 8, 0], "decided": [8, 8, 8],
+                  "changed": [True, False, False],
+                  "source": ["vote"] * 3}).to_parquet(tmp_path / "votes.parquet")
+    cfg["r2em"] = {"dir": str(r2), "name": "dpo_round2",
+                   "vote_anchors": str(tmp_path / "votes.parquet"),
+                   "drop_conflicting": True, "drop_legacy": True}
+    mod.stage_r2em(cfg)
+    train = pd.read_parquet(out / "r2em_v3_train.parquet")
+    assert train["pair_id"].tolist() == ["b"]
+    assert train["r2em_pool"].tolist() == ["round1"] and train["source"].tolist() == ["djinni"]
+    report = json.loads((out / "r2em_v3_report.json").read_text())
+    assert report["train"]["conflicting_with_vote"] == 1 and report["train"]["legacy"] == 1

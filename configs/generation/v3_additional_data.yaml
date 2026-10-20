@@ -68,8 +68,13 @@ split:
 assemble:
   # The new SFT rows are appended to this set, which stays exactly as built.
   sft_v3_dir: artifacts/semisynthetic-v3/sft_v3_swap
-  # The DPO views: at most this many rows per pool pair (dpo_capped), and the same with hire
-  # and reject equal within each pool source (dpo_capped_balanced).
+  # Teacher-biased DPO (v1's negatives, D3 = 1.000) is ruled out for training (user,
+  # 2026-10-20); true writes it as teacher_biased_* for comparison only. DPO for training is
+  # r2em (r2em: below) plus on-policy pairs from scripts/generate_onpolicy_full.py, which reads
+  # this directory's raw/en_invariant.parquet.
+  teacher_biased_dpo: false
+  # The teacher-biased views: at most this many rows per pool pair, and the same with hire and
+  # reject equal within each pool source.
   dpo_cap_per_pair: 2
   # Pairs dropped at assembly on their CV (scripts/v3_additional_data.py quality_exclusions).
   exclude:
@@ -94,3 +99,12 @@ v1_dpo:
   v1_invariant: artifacts/semisynthetic-v1/raw/en_invariant.parquet
   vote_targets: artifacts/semisynthetic-v3/raw/en_invariant_vote_changed.parquet
   v1_biased: artifacts/semisynthetic-v3/additional/v1_inputs/en_biased.parquet
+
+r2em:
+  # V3's DPO set = r2em + new on-policy pairs (user, 2026-10-20). r2em made consistent with the
+  # vote anchors (scripts/v3_additional_data.py --stage r2em).
+  dir: artifacts/semisynthetic-v2/round2-error-mass
+  name: dpo_round2
+  vote_anchors: artifacts/semisynthetic-v3/anchors/pool_votes_seed43_anchors.parquet
+  drop_conflicting: true    # chosen verdict the vote overturns: 49 train, 20 validation rows
+  drop_legacy: true         # v1's biased-teacher negatives: 42 train, 3 validation rows

@@ -693,7 +693,11 @@ def direction_readout(dpo: pd.DataFrame, seed: int, max_rows: int = 6000) -> dic
 
 
 def stage_v1_dpo(cfg: dict) -> None:
-    """V1's pairs' DPO rows on the vote anchors, from v1's raw passes; CPU only.
+    """V1's pairs' teacher-biased DPO rows on the vote anchors, from v1's raw passes; CPU only.
+
+    Not for training: v1's biased-teacher negatives separate from chosen by wording (D3 =
+    1.000), which is why r2em replaced them, and the user ruled them out on 2026-10-20. The
+    files are named `teacher_biased_*` and kept only as a comparison.
 
     `synth.BIASED_PROMPT` does not quote the anchor, so v1's biased generations stand for every
     V1 pair, including the 192 whose verdict the vote changed; only `filter_biased`'s flip check
@@ -729,9 +733,11 @@ def stage_v1_dpo(cfg: dict) -> None:
               ["candidate_id"])
     is_val = dpo["candidate_id"].isin(val)
     out = _out(cfg)
-    _write_parquet(dpo[~is_val].reset_index(drop=True), out / "v1_dpo_train.parquet")
-    _write_parquet(dpo[is_val].reset_index(drop=True), out / "v1_dpo_validation.parquet")
-    _write_json(out / "v1_dpo_report.json", {
+    _write_parquet(dpo[~is_val].reset_index(drop=True),
+                   out / "teacher_biased_v1_dpo_train.parquet")
+    _write_parquet(dpo[is_val].reset_index(drop=True),
+                   out / "teacher_biased_v1_dpo_validation.parquet")
+    _write_json(out / "teacher_biased_v1_dpo_report.json", {
         "built": datetime.now(timezone.utc).isoformat(), "code": _code(), "inputs": spec,
         "pairs": len(keep), "changed_pairs": len(changed), "invariant": rep_inv,
         "biased": rep_b, "rows": len(dpo), "train": int((~is_val).sum()),
@@ -745,17 +751,70 @@ def stage_v1_dpo(cfg: dict) -> None:
     log.info("v1_dpo: %d rows (%s)", len(dpo), dpo["decision"].value_counts().to_dict())
 
 
+V1_INVARIANT_COLUMNS = [
+    "pair_id", "candidate_id", "job_id", "cv", "job_description", "job_position",
+    "primary_keyword", "candidate_years", "job_required_years", "lang", "reference_decision",
+    "reference_feedback", "protected_group", "protected_attr", "condition", "group_label",
+    "profile", "raw_output",
+]
+
+
+def stage_r2em(cfg: dict) -> None:
+    """r2em's DPO pairs, made consistent with the vote anchors; CPU only.
+
+    V3's DPO set is r2em plus new on-policy pairs drawn the same way (user, 2026-10-20). r2em
+    was built on V1's pairs with v1's anchors, so a row whose chosen verdict the vote overturns
+    would push DPO against the anchor SFT-v3 trains on (49 train and 20 validation rows, all
+    chosen reject where the vote hires); its `legacy` rows are v1's biased-teacher negatives
+    (42 and 3). Both are dropped by default (`r2em:` in the config). r2em's own pool label,
+    which it wrote into `source`, becomes `r2em_pool`; `source` and `pool_source` then follow
+    `provenance`. Rows keep r2em's split.
+    """
+    require_output_root()
+    spec = cfg["r2em"]
+    votes = pd.read_parquet(resolve_output_path(spec["vote_anchors"]))
+    by_pair = votes.set_index("pair_id")["new_decision"]
+    out, report = _out(cfg), {"inputs": spec}
+    for split in ("train", "validation"):
+        rows = pd.read_parquet(Path(resolve_output_path(spec["dir"]))
+                               / f"{spec['name']}_{split}.parquet")
+        rows = rows.rename(columns={"source": "r2em_pool"})
+        if not rows["pair_id"].isin(by_pair.index).all():
+            raise ValueError("r2em: a pair is outside the vote")
+        conflict = rows["pair_id"].map(by_pair) != rows["decision"]
+        legacy = rows["r2em_pool"] == "legacy"
+        drop = ((conflict & bool(spec["drop_conflicting"]))
+                | (legacy & bool(spec["drop_legacy"])))
+        kept = provenance(with_anchor(rows[~drop].reset_index(drop=True), votes), "djinni_v1")
+        assert_no_leakage(kept, f"v3_additional_data.r2em.{split}")
+        _write_parquet(kept, out / f"r2em_v3_{split}.parquet")
+        report[split] = {"rows": len(rows), "conflicting_with_vote": int(conflict.sum()),
+                         "legacy": int(legacy.sum()), "dropped": int(drop.sum()),
+                         "kept": len(kept),
+                         "kept_on_unstable_anchors": int(kept["anchor_unstable"].sum()),
+                         "contrast": contrast(kept)}
+    _write_json(out / "r2em_v3_report.json", {
+        "built": datetime.now(timezone.utc).isoformat(), "code": _code(), **report})
+    log.info("r2em: %s", {s: (report[s]["rows"], report[s]["kept"])
+                          for s in ("train", "validation")})
+
+
 def stage_assemble(cfg: dict, allow_partial: bool = False) -> None:
+    """SFT for training, the on-policy DPO build's input, and optionally teacher-biased DPO.
+
+    DPO for training is not assembled here: it is r2em (`--stage r2em`) plus pairs drawn by
+    `scripts/generate_onpolicy_full.py` with this directory as `source_artifacts_dir`, once the
+    SFT model DPO starts from exists. This stage writes what that build reads:
+    `raw/en_invariant.parquet` (v1's columns, new pairs only) and `sft_validation.parquet`,
+    whose candidates it keeps in validation.
+    """
     require_output_root()
     pool, done = _voted_parts(cfg)
-    missing = [f"{p}/{n}" for p in done for n in ("invariant", "biased")
-               if not _paths(cfg, p, n)[0].exists()]
+    missing = [f"{p}/invariant" for p in done if not _paths(cfg, p, "invariant")[0].exists()]
+    if missing and not allow_partial:
+        raise SystemExit(f"assemble: voted parts without an invariant pass {missing}. Finish "
+                         "them, or pass --allow-partial to assemble what is there.")
     out = _out(cfg)
-    no_v1 = not (out / "v1_dpo_train.parquet").exists()
-    if (missing or no_v1) and not allow_partial:
-        raise SystemExit(f"assemble: voted parts without every pass {missing}"
-                         f"{'; v1_dpo not built' if no_v1 else ''}. Finish them, or pass "
-                         "--allow-partial to assemble what is there.")
     kept, reports = _filtered(cfg, done)
     if not kept["invariant"]:
         raise SystemExit("assemble: no invariant pass yet")
@@ -776,27 +835,17 @@ def stage_assemble(cfg: dict, allow_partial: bool = False) -> None:
         sources_balanced.append(rows)
     sft = pd.concat(sources_balanced, ignore_index=True)
     sft = provenance(with_anchor(sft, anchors), sft["source"])
-    dpo = D.build_dpo_dataset(invariant, biased)
-    dpo = provenance(with_anchor(dpo, anchors), dpo["source"]) if len(dpo) else dpo
+    assert_no_leakage(sft, "v3_additional_data.assemble.sft")
+    if not sft["pair_id"].isin(set(pool["pair_id"])).all():
+        raise ValueError("assemble: sft has a row outside the pool")
     val = validation_candidates(cfg, pool)
     base = Path(resolve_output_path(cfg["assemble"]["sft_v3_dir"]))
     splits: dict[str, dict] = {}
-    new: dict[str, dict[str, pd.DataFrame]] = {}
-    for name, frame in (("sft", sft), ("dpo", dpo)):
-        if frame.empty:
-            continue
-        # The pool passed the external text holdout; the ids are re-checked here.
-        assert_no_leakage(frame, f"v3_additional_data.assemble.{name}")
-        if not frame["pair_id"].isin(set(pool["pair_id"])).all():
-            raise ValueError(f"assemble: {name} has a row outside the pool")
-        is_val = frame["candidate_id"].isin(val)
-        new[name] = {"train": frame[~is_val].reset_index(drop=True),
-                     "validation": frame[is_val].reset_index(drop=True)}
-        for split, rows in new[name].items():
-            _write_parquet(rows, out / f"additional_{name}_{split}.parquet")
-        splits[f"additional_{name}"] = {s: len(r) for s, r in new[name].items()}
-
-    for split, rows in new.get("sft", {}).items():
+    is_val = sft["candidate_id"].isin(val)
+    new = {"train": sft[~is_val].reset_index(drop=True),
+           "validation": sft[is_val].reset_index(drop=True)}
+    for split, rows in new.items():
+        _write_parquet(rows, out / f"additional_sft_{split}.parquet")
         # SFT-v3's swap set, unchanged, with the new rows after it.
         v3 = pd.read_parquet(base / f"sft_{split}.parquet")
         if set(v3["candidate_id"]) & set(rows["candidate_id"]):
@@ -810,45 +859,58 @@ def stage_assemble(cfg: dict, allow_partial: bool = False) -> None:
                 f"{s} {d}": int(n) for (s, d), n in
                 combined.groupby(["pool_source", "decision"]).size().items()}}
 
-    # DPO and KTO: V1's pairs on the vote anchors (stage v1_dpo) and the new pairs, together.
-    cap = int(cfg["assemble"]["dpo_cap_per_pair"])
-    for split in ("train", "validation"):
-        v1_path = out / f"v1_dpo_{split}.parquet"
-        frames = [pd.read_parquet(v1_path)] if v1_path.exists() else []
-        if "dpo" in new:
-            frames.append(new["dpo"][split])
-        if not frames:
-            continue
-        both = pd.concat(frames, ignore_index=True)
-        views = {"dpo": both, "dpo_capped": capped(both, cap, int(cfg["seed"]))}
-        views["dpo_capped_balanced"] = balanced(views["dpo_capped"], int(cfg["seed"]))
-        for name, frame in views.items():
-            _write_parquet(frame, out / f"{name}_{split}.parquet")
-        _write_parquet(D.build_kto_dataset(both), out / f"kto_{split}.parquet")
-        splits[f"dpo_{split}"] = {"includes_v1_pairs": v1_path.exists(),
-                                  **{name: contrast(frame) for name, frame in views.items()}}
-        if split == "train":
-            splits["direction_checks_train"] = {
-                name: direction_readout(frame, int(cfg["seed"]))
-                for name, frame in views.items() if name != "dpo" and len(frame)}
+    # The on-policy build's input: every kept pair's raw invariant rows, in v1's schema.
+    raw = pd.concat([pd.read_parquet(_paths(cfg, p, "invariant")[0]) for p in done
+                     if _paths(cfg, p, "invariant")[0].exists()], ignore_index=True)
+    raw = raw[~raw["pair_id"].isin(excluded)].reset_index(drop=True)
+    raw = provenance(raw[[*V1_INVARIANT_COLUMNS, "source"]], raw["source"])
+    _write_parquet(raw, out / "raw" / "en_invariant.parquet")
+    splits["onpolicy_input"] = {"rows": len(raw), "pairs": int(raw["pair_id"].nunique()),
+                                "by_pool_source": raw["pool_source"].value_counts().to_dict()}
+
+    # Teacher-biased DPO: opt-in, named for what it is, and never a training view by default.
+    if cfg["assemble"].get("teacher_biased_dpo"):
+        dpo = D.build_dpo_dataset(invariant, biased)
+        dpo = provenance(with_anchor(dpo, anchors), dpo["source"]) if len(dpo) else dpo
+        cap = int(cfg["assemble"]["dpo_cap_per_pair"])
+        is_val = dpo["candidate_id"].isin(val)
+        for split, rows in (("train", dpo[~is_val]), ("validation", dpo[is_val])):
+            v1_path = out / f"teacher_biased_v1_dpo_{split}.parquet"
+            frames = [pd.read_parquet(v1_path)] if v1_path.exists() else []
+            both = pd.concat([*frames, rows], ignore_index=True)
+            views = {"teacher_biased_dpo": both,
+                     "teacher_biased_dpo_capped": capped(both, cap, int(cfg["seed"]))}
+            views["teacher_biased_dpo_capped_balanced"] = balanced(
+                views["teacher_biased_dpo_capped"], int(cfg["seed"]))
+            for name, frame in views.items():
+                _write_parquet(frame, out / f"{name}_{split}.parquet")
+            splits[f"teacher_biased_dpo_{split}"] = {
+                name: contrast(frame) for name, frame in views.items()}
+            if split == "train":
+                splits["teacher_biased_direction_checks_train"] = {
+                    name: direction_readout(frame, int(cfg["seed"]))
+                    for name, frame in views.items() if len(frame)}
+    r2em = {s: (out / f"r2em_v3_{s}.parquet").exists() for s in ("train", "validation")}
     _write_json(out / "generation_report.json", {
         "built": datetime.now(timezone.utc).isoformat(), "code": _code(),
         "teacher_model": cfg["teacher_model"], "parts": done, "sft_v3_dir": str(base),
         "balance_new_sft_rows_by_source": balance, "quality_exclusions": exclusion_report,
-        "dpo_cap_per_pair": cap, "splits": splits,
-        "filters": reports, "validation_candidates": len(val)})
-    log.info("assemble: %s", {k: v for k, v in splits.items() if not k.startswith("dpo_")})
+        "splits": splits, "filters": reports, "validation_candidates": len(val),
+        "r2em_v3_built": r2em,
+        "parts_without_biased_pass": [p for p in done
+                                      if not _paths(cfg, p, "biased")[0].exists()]})
+    log.info("assemble: %s", {k: v for k, v in splits.items() if not k.startswith("teacher")})
 
 
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__.split("\n")[0])
     parser.add_argument("--config", required=True)
     parser.add_argument("--stage", required=True,
-                        choices=["pool", "generate", "report", "v1_dpo", "assemble"])
+                        choices=["pool", "generate", "report", "v1_dpo", "r2em", "assemble"])
     parser.add_argument("--parts", nargs="+", default=["all"])
     parser.add_argument("--passes", nargs="+", default=list(PASSES), choices=PASSES)
     parser.add_argument("--allow-partial", action="store_true",
-                        help="assemble even when a voted part lacks a pass or v1_dpo is missing")
+                        help="assemble even when a voted part lacks its invariant pass")
     args = parser.parse_args()
     cfg = load_config(args.config)
     cfg["_path"] = args.config
@@ -856,6 +918,7 @@ def main() -> None:
      "generate": lambda: stage_generate(cfg, args.parts, args.passes),
      "report": lambda: stage_report(cfg),
      "v1_dpo": lambda: stage_v1_dpo(cfg),
+     "r2em": lambda: stage_r2em(cfg),
      "assemble": lambda: stage_assemble(cfg, args.allow_partial)}[args.stage]()
 
 
