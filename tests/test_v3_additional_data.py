@@ -253,7 +253,7 @@ def test_quality_exclusions_drop_contradicting_djinni_cvs_and_rjdb_residue():
 
 
 def test_a_job_without_the_biased_pass_still_reads_the_stop_conditions(setup):
-    mod, cfg, teacher, out = setup
+    mod, cfg, _, out = setup
     mod.stage_generate(cfg, ["rjdb-000"], ["votes", "invariant"])
     assert not (out / "parts" / "rjdb-000" / "biased.parquet").exists()
     check = json.loads((out / "parts" / "rjdb-000" / "stop_check.json").read_text())
