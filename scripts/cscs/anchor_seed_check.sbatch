@@ -32,10 +32,13 @@ echo "host $(hostname) | job ${SLURM_JOB_ID:-none} | commit $(git rev-parse --sh
 step "two arms on the classic runner: shared seed 42, then per-prompt seeds"
 $PY scripts/anchor_seed_check.py
 
-step "runner check: the log must not say 'Using V2 Model Runner'"
+step "runner check: vLLM's workers must not have logged the V2 runner"
+# Matches vLLM's logger line ("[gpu_worker.py:479] Using V2 Model Runner") and nothing this
+# script echoes. Job 5103584 grepped the bare phrase, matched this step's own heading, and
+# exited 4 although both arms had run on the classic runner.
 LOG=$XW/logs/${SLURM_JOB_NAME:-xw-anchor-seed}-${SLURM_JOB_ID:-none}.out
-if grep -q "Using V2 Model Runner" "$LOG"; then
+if grep -qE '\] Using V2 Model Runner' "$LOG"; then
   echo "FATAL: the V2 runner ran; both arms are invalid for this check"; exit 4
 fi
-echo "no 'Using V2 Model Runner' line in $LOG"
+echo "no V2-runner line from vLLM in $LOG"
 echo "STAGE anchor-seed-check OK"
