@@ -11,7 +11,7 @@
 #   4. the arm's reference row, with the standard's verdict printed
 #
 #   AUDIT=configs/audit/<arm>_gh200.yaml \
-#   AGAINST=configs/audit/qwen3.5-9b_en_sft_en_only_gh200.yaml \
+#   AGAINST=configs/audit/qwen3.5-9b_en_sft_v3_additional_gh200.yaml \
 #     scripts/cscs/submit.sh scripts/cscs/evaluate_arm.sbatch
 #
 # AGAINST=base compares an adapter with its own base (SFT against the base model). For any other

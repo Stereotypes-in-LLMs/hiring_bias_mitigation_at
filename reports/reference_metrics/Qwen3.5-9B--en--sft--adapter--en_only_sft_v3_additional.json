@@ -49,7 +49,7 @@
   "primary_conforms": true,
   "primary_other_comparisons": "Qwen3.5-9B--en--sft--adapter--en_only_cscs--base",
   "raw_sha256": "15863af88ae90cf8",
-  "code_commit": "b1cc95f",
-  "code_uncommitted": false,
-  "computed_at": "2026-10-20T21:01:44Z"
+  "code_commit": "a8226ea",
+  "code_uncommitted": true,
+  "computed_at": "2026-10-20T21:10:46Z"
 }
