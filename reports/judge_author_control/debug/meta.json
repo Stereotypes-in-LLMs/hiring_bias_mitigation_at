@@ -1,0 +1,134 @@
+{
+  "inputs": {
+    "semisynthetic-v2/onpolicy-full/raw/student_judge.parquet": "225297b642ed10dbde19d423bd4469fda59260df13455b70e57438e282e5d660",
+    "semisynthetic-v2/onpolicy-full/raw/chosen_judge.parquet": "69e91b04d12bf7625bb4fc5e67fb3a007a962450fbea932045d63ffea574392c",
+    "semisynthetic-v2/onpolicy-full/judge_control-debug/control_judge.parquet": "94bb8963d7541f4388a6301c51c218c1995b2b13d59b5b15f55a971cb87abb01",
+    "semisynthetic-v2/onpolicy-full/judge_control-debug/retest_chosen_judge.parquet": "78744bad15e1cc1c2b261149db3234b0df57eba4400ddbabb8570b75579a40c5",
+    "semisynthetic-v2/onpolicy-full/judge_control-debug/retest_rejected_judge.parquet": "8d2616adf0c6a5794f296c5e94ce377a8a153e6d107931db5a08c8fbb68af7e4",
+    "semisynthetic-v2/onpolicy-full/judge_control-debug/control_selected.parquet": "9ef41a69888310b7e8d30f256ba4e45363570aec316ba99957cd60c4b176ade6",
+    "artifacts/semisynthetic-v2/onpolicy-full/select": {
+      "rows": 64,
+      "rows_with_a_correct_sample": 63,
+      "correct_samples": 382,
+      "filters": {
+        "n_input": 382,
+        "n_kept": 381,
+        "yield": 0.9974,
+        "dropped_by_reason": {
+          "negative_length_mismatch": 1
+        }
+      },
+      "rows_with_a_control": 63,
+      "by_cell": {
+        "gender | explicit | hire": {
+          "rows": 4,
+          "with_control": 4
+        },
+        "gender | explicit | reject": {
+          "rows": 11,
+          "with_control": 11
+        },
+        "gender | implicit | hire": {
+          "rows": 1,
+          "with_control": 1
+        },
+        "gender | implicit | reject": {
+          "rows": 9,
+          "with_control": 9
+        },
+        "military_status | explicit | hire": {
+          "rows": 2,
+          "with_control": 2
+        },
+        "military_status | explicit | reject": {
+          "rows": 7,
+          "with_control": 7
+        },
+        "military_status | implicit | hire": {
+          "rows": 1,
+          "with_control": 1
+        },
+        "military_status | implicit | reject": {
+          "rows": 10,
+          "with_control": 9
+        },
+        "religion | explicit | hire": {
+          "rows": 1,
+          "with_control": 1
+        },
+        "religion | explicit | reject": {
+          "rows": 6,
+          "with_control": 6
+        },
+        "religion | implicit | hire": {
+          "rows": 2,
+          "with_control": 2
+        },
+        "religion | implicit | reject": {
+          "rows": 10,
+          "with_control": 10
+        }
+      }
+    },
+    "semisynthetic-v2/onpolicy-hire32/raw/student_judge.parquet": "09c43313c577bbc26ded748cbdc8ca51a64adeb18b9ac8b63e7afe0575e31d56",
+    "semisynthetic-v2/onpolicy-hire32/raw/chosen_judge.parquet": "70c69fa3a9e60b2a2309f133487bcadda65f473d4a2f6c4aacbd6c22c97d8399",
+    "semisynthetic-v2/onpolicy-hire32/judge_control-debug/control_judge.parquet": "ac92af8ffe8f8fd9c15dc8535d75b75bd06ca6128af94cb3e4b94fbec9793670",
+    "semisynthetic-v2/onpolicy-hire32/judge_control-debug/retest_chosen_judge.parquet": "e0f5772d27fa256ceeceb7222cb8370ff4ebea9945034b468ee8a934db1fcf77",
+    "semisynthetic-v2/onpolicy-hire32/judge_control-debug/retest_rejected_judge.parquet": "c1e974a39f4bd870efa461c0787ddc9cfbde3959eeae6cd573c3bf9be15d4b06",
+    "semisynthetic-v2/onpolicy-hire32/judge_control-debug/control_selected.parquet": "90c96abb7159bc3319ec8f488e4fb452b8688f7227db77f339316333d14354af",
+    "artifacts/semisynthetic-v2/onpolicy-hire32/select": {
+      "rows": 64,
+      "rows_with_a_correct_sample": 64,
+      "correct_samples": 1816,
+      "filters": {
+        "n_input": 1816,
+        "n_kept": 1812,
+        "yield": 0.9978,
+        "dropped_by_reason": {
+          "negative_length_mismatch": 2,
+          "negative_attribute_leak": 2
+        }
+      },
+      "rows_with_a_control": 64,
+      "by_cell": {
+        "gender | explicit | hire": {
+          "rows": 9,
+          "with_control": 9
+        },
+        "gender | implicit | hire": {
+          "rows": 12,
+          "with_control": 12
+        },
+        "military_status | explicit | hire": {
+          "rows": 6,
+          "with_control": 6
+        },
+        "military_status | implicit | hire": {
+          "rows": 16,
+          "with_control": 16
+        },
+        "religion | explicit | hire": {
+          "rows": 14,
+          "with_control": 14
+        },
+        "religion | implicit | hire": {
+          "rows": 7,
+          "with_control": 7
+        }
+      }
+    }
+  },
+  "configs": [
+    "configs/generation/negatives_v2_onpolicy_full_gh200.yaml",
+    "configs/generation/negatives_v2_onpolicy_hire_gh200.yaml"
+  ],
+  "tag": "debug",
+  "prereg_sha256": "c3ffe45c0d30674f6336419d9d2e957ba0c63b71c8074bdcb8985959f2f8672a",
+  "code": {
+    "commit": "d599257fce0cb37263f6fcfadce93caba4502c36",
+    "uncommitted": [
+      "scripts/cscs/judge_author_control.sbatch",
+      "scripts/judge_author_control.py"
+    ]
+  }
+}
