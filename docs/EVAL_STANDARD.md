@@ -112,10 +112,10 @@ not backfilled (user, 2026-10-20). Read from `reports/reference_metrics.csv` and
 
 | Arm | Decision, pp [95% CI] | TPR vs reference | Agreement vs reference | Undecided | Merge kept | Verdict |
 |---|---|---|---|---|---|---|
-| DPO r2em-100 against SFT | -0.96 [-1.96, +0.04] | +0.66 | +0.06 | 0% | not recorded | not better: the interval reaches 0 |
-| SFT against the base | -9.23, no interval | +24.10 | +3.71 | 0% | not recorded | undecided: no interval |
+| DPO r2em-100 against SFT | -0.96 [-1.96, +0.04] | +0.66 | +0.06 | 0% | 90.56% | not better: the interval reaches 0 |
+| SFT against the base | -9.23, no interval | +24.10 | +3.71 | 0% | 99.68% | undecided: no interval |
 
-The merges of both adapters predate the measurement; `docs/GRPO_PILOT.md` reports 91% kept for
-r2em-100, measured by the GRPO trainer's function. `merge_adapter.py --retention-only` on Daint
-records it for the table. r2em-100 was also picked over checkpoint 148 with audit numbers in view
+Merge retention was measured on the merges the audits served by
+`scripts/cscs/merge_retention.sbatch` (job 5105237): r2em-100's own adapter kept 90.56% of its
+update, in line with the 91% of `docs/GRPO_PILOT.md`, and SFT 99.68%. r2em-100 was also picked over checkpoint 148 with audit numbers in view
 (`docs/ITERATIVE_DPO.md`), so under rule 3 it is exploratory in any case.

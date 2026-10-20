@@ -18,7 +18,7 @@
   "agree_gpt4o_pct": 82.5475040257649,
   "tpr_vs_gpt4o_pct": 65.82608695652173,
   "fpr_vs_gpt4o_pct": 9.091787439613526,
-  "merge_kept_pct": null,
+  "merge_kept_pct": 99.67536893211225,
   "flip_reject_to_hire_pct": 1.3423126259849734,
   "flip_hire_to_reject_pct": 5.688554491564068,
   "flip_any_pct": 2.588235294117647,
@@ -49,7 +49,7 @@
   "primary_conforms": true,
   "primary_other_comparisons": null,
   "raw_sha256": "3114facd75569a81",
-  "code_commit": "118faea",
+  "code_commit": "ceb175d",
   "code_uncommitted": false,
-  "computed_at": "2026-10-20T10:45:08Z"
+  "computed_at": "2026-10-20T11:45:49Z"
 }
