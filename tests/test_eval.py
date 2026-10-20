@@ -755,14 +755,74 @@ def test_vllm_sample_seeds_reproduce_across_chunks_and_runs(monkeypatch):
 
 
 def test_vllm_greedy_decoding_carries_no_seed(monkeypatch):
-    """Greedy decoding has no random stream to seed. The audit path (`generate`) keeps its
-    single SamplingParams, and greedy sampling sets no per-prompt seed."""
+    """Greedy decoding has no random stream to seed. Audits are greedy by default, so the
+    greedy request must stay exactly what it was: one SamplingParams without a seed for the
+    whole call, from both entry points, whatever the seed settings say."""
     from hiring_bias_mitigation.eval import backends as BK
 
     calls = _fake_vllm(monkeypatch)
     backend = BK.build_backend({"model": "m", "backend": "vllm"})
     backend.generate(["a", "b"])
     backend.generate_samples(["a", "b"], n=2)
-    assert not isinstance(calls[0], list)
-    assert calls[0].seed is None and calls[0].temperature == 0.0
-    assert [p.seed for p in calls[1]] == [None, None]
+    BK.build_backend({"model": "m", "backend": "vllm",
+                      "generation": {"seed": 7, "shared_seed": True}}).generate(["a", "b"])
+    assert not any(isinstance(c, list) for c in calls)
+    assert all(c.seed is None and c.temperature == 0.0 for c in calls)
+    assert [c.n for c in calls] == [1, 2, 1]
+
+
+def test_vllm_generate_seeds_each_prompt_from_its_own_text(monkeypatch):
+    """The teacher's sampled passes (teacher.yaml, T=0.7) went through `generate` with one
+    SamplingParams(seed=42) for every prompt. Under vLLM's V2 runner that gives prompts of
+    equal token length the same noise; under the classic runner, every prompt the same noise
+    at each decode step, and the v1 anchors look like one draw shared by all 3,000 prompts
+    (check of 2026-10-19). Each prompt now gets its own request with its own seed."""
+    from hiring_bias_mitigation.eval import backends as BK
+
+    calls = _fake_vllm(monkeypatch)
+    free = "Job: ward nurse\nCV: ten years on a surgical ward"
+    attributed = free + "\nMilitary status: veteran"
+    backend = BK.build_backend({"model": "m", "backend": "vllm", "generation": {
+        "max_new_tokens": 320, "temperature": 0.7, "top_p": 0.9, "seed": 42}})
+    out = backend.generate([free, attributed])
+
+    assert out == [f"{free}#0", f"{attributed}#0"]
+    params = calls[0]
+    assert isinstance(params, list) and len(params) == 2
+    assert [p.seed for p in params] == [BK.per_prompt_seed(42, free),
+                                        BK.per_prompt_seed(42, attributed)]
+    assert [(p.n, p.temperature, p.top_p, p.max_tokens) for p in params] == [(1, 0.7, 0.9, 320)] * 2
+
+
+def test_vllm_generate_seeds_reproduce_across_chunks_and_runs(monkeypatch):
+    """The audit resumes in chunks of 4,000 prompts and the teacher's passes are redone in
+    full, so a prompt's seed must not depend on its chunk or neighbours. A run given another
+    base seed draws independent text."""
+    from hiring_bias_mitigation.eval import backends as BK
+
+    calls = _fake_vllm(monkeypatch)
+    cfg = {"model": "m", "backend": "vllm", "generation": {"temperature": 0.7, "seed": 42}}
+    BK.build_backend(cfg).generate(["a", "b"])
+    BK.build_backend(cfg).generate(["c", "d", "b"])
+    BK.build_backend({**cfg, "generation": {"temperature": 0.7, "seed": 43}}).generate(["b"])
+    assert calls[0][1].seed == calls[1][2].seed == BK.per_prompt_seed(42, "b")
+    assert calls[2][0].seed == BK.per_prompt_seed(43, "b") != calls[0][1].seed
+    assert len({calls[0][0].seed, calls[0][1].seed, calls[1][0].seed, calls[1][1].seed}) == 4
+
+
+def test_vllm_shared_seed_replays_the_old_request(monkeypatch):
+    """`generation.shared_seed: true` sends the request a sampled run sent before per-prompt
+    seeds: one SamplingParams with the base seed for the whole call, from both entry points.
+    Without it the run's record says so, so a stored artifact shows which scheme drew it."""
+    from hiring_bias_mitigation.eval import backends as BK
+
+    calls = _fake_vllm(monkeypatch)
+    old = {"temperature": 0.7, "top_p": 0.9, "seed": 42, "shared_seed": True}
+    backend = BK.build_backend({"model": "m", "backend": "vllm", "generation": old})
+    backend.generate(["a", "b"])
+    backend.generate_samples(["a", "b"], n=8)
+    assert not any(isinstance(c, list) for c in calls)
+    assert [(c.seed, c.n, c.temperature, c.top_p) for c in calls] == [(42, 1, 0.7, 0.9),
+                                                                      (42, 8, 0.7, 0.9)]
+    assert BK.GenerationConfig(**old).as_dict()["shared_seed"] is True
+    assert BK.GenerationConfig().as_dict()["shared_seed"] is False
