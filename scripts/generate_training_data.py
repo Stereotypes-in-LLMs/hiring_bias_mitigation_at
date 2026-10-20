@@ -16,6 +16,12 @@ Three teacher passes per language (see `generation/synth.py` for why each exists
 Every pass is filtered before the next one runs, so a pair whose anchor was unusable never
 costs a variant generation. Outputs land under $HBM_OUTPUT_ROOT as parquet plus a dataset
 card; `scripts/push_dataset_to_hub.py` publishes them, and nothing publishes automatically.
+
+The pool is Djinni unless the config says otherwise (see `generation/sources.py`):
+
+    pool_sources: [djinni, rjdb, kaggle_linkedin]   # default [djinni]
+    pairs_per_source: {rjdb: 1500, kaggle_linkedin: 1500}
+    rjdb_include_weakened: false
 """
 
 from __future__ import annotations
@@ -48,13 +54,7 @@ log = get_logger("generate_training_data")
 
 def generate_for_language(cfg: dict, lang: str, backend, out_dir: Path) -> tuple[dict, dict]:
     """Returns (per-language frames, filter report)."""
-    pool_cfg = PL.PoolConfig(
-        lang=lang,
-        n_pairs=int(cfg.get("n_pairs_per_language", 1500)),
-        jobs_per_candidate=int(cfg.get("jobs_per_candidate", 3)),
-        seed=cfg.get("seed", 42),
-    )
-    pairs = PL.build_pool(pool_cfg)
+    pairs, pool_funnel = PL.build_pool_with_report(PL.pool_config(cfg, lang))
     if pairs.empty:
         raise SystemExit(f"no pairs matched for {lang}; loosen the matcher in generation/pool.py")
 
@@ -70,9 +70,11 @@ def generate_for_language(cfg: dict, lang: str, backend, out_dir: Path) -> tuple
     )
 
     report: dict[str, dict] = {}
+    if pool_funnel:
+        report["pool"] = pool_funnel
 
-    raw_reference = _cached_raw(out_dir, f"{lang}_reference")
-    if raw_reference is None or len(raw_reference) != len(pairs):
+    raw_reference = _cached_raw(out_dir, f"{lang}_reference", pairs)
+    if raw_reference is None:
         log.info("[%s] pass 1/3 — reference decisions for %d pairs", lang, len(pairs))
         raw_reference = backend.generate(SY.reference_prompts(pairs, lang))
     anchored, report["reference"] = F.filter_reference(raw_reference, pairs, lang)
@@ -81,8 +83,8 @@ def generate_for_language(cfg: dict, lang: str, backend, out_dir: Path) -> tuple
         raise SystemExit(f"[{lang}] every reference generation was filtered out; see {out_dir}")
 
     variants = SY.build_variant_frame(anchored, synth_cfg)
-    raw_invariant = _cached_raw(out_dir, f"{lang}_invariant")
-    if raw_invariant is None or len(raw_invariant) != len(variants):
+    raw_invariant = _cached_raw(out_dir, f"{lang}_invariant", variants)
+    if raw_invariant is None:
         log.info("[%s] pass 2/3 — invariant responses for %d variants", lang, len(variants))
         raw_invariant = backend.generate(SY.invariant_prompts(variants, lang))
     invariant, report["invariant"] = F.filter_invariant(raw_invariant, variants, lang)
@@ -90,8 +92,8 @@ def generate_for_language(cfg: dict, lang: str, backend, out_dir: Path) -> tuple
 
     biased = pd.DataFrame()
     if synth_cfg.rejected_source in ("teacher_biased", "both"):
-        raw_biased = _cached_raw(out_dir, f"{lang}_biased")
-        if raw_biased is None or len(raw_biased) != len(variants):
+        raw_biased = _cached_raw(out_dir, f"{lang}_biased", variants)
+        if raw_biased is None:
             log.info("[%s] pass 3/3 — biased responses for %d variants", lang, len(variants))
             raw_biased = backend.generate(SY.biased_prompts(variants, lang))
         biased, report["biased"] = F.filter_biased(raw_biased, variants, lang)
@@ -100,20 +102,58 @@ def generate_for_language(cfg: dict, lang: str, backend, out_dir: Path) -> tuple
     return {"invariant": invariant, "biased": biased, "pairs": pairs}, report
 
 
-def _cached_raw(out_dir: Path, name: str) -> list[str] | None:
-    """The raw generations of a finished pass, if it already ran.
+#: The columns that say which prompt a raw generation answered. A pass's dump must carry the
+#: same values, row for row, as the frame the current run would generate from.
+RESUME_KEY = ("pair_id", "protected_group", "protected_attr", "condition")
+
+
+def _cached_raw(out_dir: Path, name: str, frame: pd.DataFrame) -> list[str] | None:
+    """The raw generations of a finished pass, if it already ran for exactly these rows.
 
     A full generation run is a day of GPU. Interrupting it -- a power cut, a reboot, a
     deliberate stop -- must not mean repeating the passes that finished, so each pass checks
     for its own dump first. The dump is written only after the pass completes, so a partial
     pass leaves no file and is redone in full rather than resumed mid-way.
+
+    The generations are positional: output i answers row i of the frame the pass was built
+    from. This used to compare only the row count, so a pool changed between runs in the same
+    artifacts dir silently reused the generations of other pairs whenever the count happened
+    to match. Now the dump's own `RESUME_KEY` columns must equal the current frame's, in
+    order, or this refuses. That catches a new source, a new seed, or a revised filter
+    upstream. Refusing beats regenerating over the dump, because the dump is a day of GPU and
+    may be the one that is wanted.
     """
+    import pyarrow.parquet as pq
+
     path = out_dir / "raw" / f"{name}.parquet"
     if not path.exists():
         return None
-    frame = pd.read_parquet(path, columns=["raw_output"])
-    log.info("resuming: %s already generated (%d rows) -- skipping", name, len(frame))
-    return frame["raw_output"].tolist()
+    key = [c for c in RESUME_KEY if c in frame.columns]
+    present = set(pq.read_schema(path).names)
+    missing = [c for c in key if c not in present]
+    if "pair_id" not in key or missing:
+        raise SystemExit(
+            f"{path}: cannot check that this dump belongs to the current pool -- it lacks "
+            f"{missing or ['pair_id']}. Use a fresh artifacts_dir, or move the dump aside."
+        )
+    cached = pd.read_parquet(path, columns=["raw_output", *key])
+    mine = frame[key].astype(str).reset_index(drop=True)
+    theirs = cached[key].astype(str).reset_index(drop=True)
+    if not mine.equals(theirs):
+        differ = (
+            int((mine != theirs).any(axis=1).idxmax()) if len(mine) == len(theirs)
+            else min(len(mine), len(theirs))
+        )
+        raise SystemExit(
+            f"{path} was generated for a different pool: {len(theirs)} cached rows against "
+            f"{len(mine)} now, first difference at row {differ} (pair_id "
+            f"{theirs['pair_id'].get(differ, '-')!r} cached, {mine['pair_id'].get(differ, '-')!r} "
+            f"now). Reusing it would pair these generations with the wrong prompts. Point "
+            f"artifacts_dir somewhere new, or delete the dump to regenerate the {name} pass."
+        )
+    log.info("resuming: %s already generated (%d rows, pair ids match) -- skipping",
+             name, len(cached))
+    return cached["raw_output"].tolist()
 
 
 def _dump_raw(out_dir: Path, name: str, frame: pd.DataFrame, raw: list[str]) -> None:
@@ -141,18 +181,18 @@ def main() -> None:
     languages = [args.lang] if args.lang else list(cfg.get("languages", ("en", "uk")))
 
     if args.dry_run:
+        # The same PoolConfig as a real run. This used to leave jobs_per_candidate at its
+        # default of 3, so the dry run reported a pool the generator would not build.
         for lang in languages:
-            pool = PL.build_pool(
-                PL.PoolConfig(
-                    lang=lang,
-                    n_pairs=int(cfg.get("n_pairs_per_language", 1500)),
-                    seed=cfg.get("seed", 42),
-                )
-            )
+            pool = PL.build_pool(PL.pool_config(cfg, lang))
+            if pool.empty:
+                print(f"{lang}: 0 pairs")
+                continue
             print(
                 f"{lang}: {len(pool)} pairs, {pool['candidate_id'].nunique()} candidates, "
                 f"{pool['job_id'].nunique()} jobs, "
-                f"median CV {int(pool['cv'].str.len().median())} chars"
+                f"median CV {int(pool['cv'].str.len().median())} chars, "
+                f"by source {pool['source'].value_counts().to_dict()}"
             )
         return
 
@@ -230,6 +270,7 @@ def main() -> None:
                 "protected_groups": list(cfg.get("protected_groups", [])),
                 "conditions": list(cfg.get("conditions", [])),
                 "rejected_source": cfg.get("rejected_source", "teacher_biased"),
+                **_pool_keys(cfg),
                 "splits": splits,
                 "filters": reports,
                 "seed": cfg.get("seed", 42),
@@ -249,8 +290,20 @@ def main() -> None:
         groups=list(cfg.get("protected_groups", [])),
         languages=languages,
         n_rows=sum(splits.values()),
+        sources=tuple(cfg.get("pool_sources", ("djinni",))),
     )
     log.info("artifacts written to %s", out_dir)
+
+
+def _pool_keys(cfg: dict) -> dict:
+    """The pool keys for the report, only when they differ from V1's Djinni-only pool."""
+    if tuple(cfg.get("pool_sources", ("djinni",))) == ("djinni",):
+        return {}
+    return {
+        "pool_sources": list(cfg["pool_sources"]),
+        "pairs_per_source": dict(cfg.get("pairs_per_source") or {}),
+        "rjdb_include_weakened": bool(cfg.get("rjdb_include_weakened", False)),
+    }
 
 
 if __name__ == "__main__":

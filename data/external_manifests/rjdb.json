@@ -1,0 +1,84 @@
+{
+  "schema_version": 1,
+  "slug": "rjdb",
+  "name": "RJDB (Megagon Labs)",
+  "provenance": "Hand-maintained: no repo script regenerates this file. Written on 2026-10-19 from $HBM_EXTERNAL_ROOT/rjdb/MANIFEST.json, the acquirer's full manifest (outside git). bytes and sha256 were measured on the verified raw files and equal that manifest wherever it lists the same file; extracted members were also checked against the archive they come from. A tree_sha256 is scripts/fetch_external_data.py::tree_digest of the directory.",
+  "retrieved": "2026-10-19",
+  "upstream": [
+    "https://github.com/megagonlabs/rjdb",
+    "https://arxiv.org/abs/2311.06383"
+  ],
+  "fetch": [
+    {
+      "id": "repo",
+      "kind": "git",
+      "url": "https://github.com/megagonlabs/rjdb",
+      "commit": "5a8e7069f7dfc1f26ded969340ab4a1648fb0c7f",
+      "dest": "repo"
+    },
+    {
+      "id": "train",
+      "kind": "gdrive",
+      "file_id": "1BBizKz7Cow8i-a--AxQE2Ct2TAdNb2zf",
+      "dest": "gdrive/train.jsonl",
+      "note": "the train split is not in the repo; data/README.md links this public Drive file"
+    }
+  ],
+  "files": [
+    {
+      "path": "repo/LICENSE",
+      "bytes": 20131,
+      "sha256": "7abe19ec9bb73b36141b999b861d24ad855e808bafe0f81e84cce28556f6c297",
+      "from": "repo"
+    },
+    {
+      "path": "repo/README.md",
+      "bytes": 4941,
+      "sha256": "32e706c1b04dd09236bbee4fd8c59957bd555fbe6dd79f07d18dfd5fbfbab8fe",
+      "from": "repo"
+    },
+    {
+      "path": "repo/data/README.md",
+      "bytes": 1371,
+      "sha256": "a832ab57fe4cd6583aaa378242cd8e1d9a0ba6d180e976099a46d4da0908a090",
+      "from": "repo"
+    },
+    {
+      "path": "repo/data/dev.jsonl",
+      "bytes": 8390956,
+      "sha256": "5fa1b661f843b7774ee531d1f740273608b17506e22e640fc18bb595f54ad902",
+      "from": "repo"
+    },
+    {
+      "path": "repo/data/test.jsonl",
+      "bytes": 3479069,
+      "sha256": "82a1ca9db0785aff0aaa6990765ba95f83ca43ff91d03c04c97026f28ac0e016",
+      "from": "repo"
+    },
+    {
+      "path": "gdrive/train.jsonl",
+      "bytes": 172302421,
+      "sha256": "ad719d414b134a88b1b9a0a5071ec73587683f3a423e3c941d6aa06c4b452b5a",
+      "from": "train"
+    }
+  ],
+  "references": [
+    {
+      "path": "arxiv/2311.06383v1.pdf",
+      "url": "https://arxiv.org/pdf/2311.06383v1",
+      "bytes": 352044,
+      "sha256": "72bccfde03f1ed27e0331ca152ff4c8294c99b2fb652401d2f0f1986ab48cc37"
+    }
+  ],
+  "depends_on": {},
+  "stage": {
+    "script": "scripts/external/stage_rjdb.py",
+    "tables": [
+      "cvs",
+      "jobs",
+      "pairs"
+    ]
+  },
+  "blocked": null,
+  "notes": []
+}

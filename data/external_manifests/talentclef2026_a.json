@@ -1,0 +1,59 @@
+{
+  "schema_version": 1,
+  "slug": "talentclef2026_a",
+  "name": "TalentCLEF 2026 Task A",
+  "provenance": "Hand-maintained: no repo script regenerates this file. Written on 2026-10-19 from $HBM_EXTERNAL_ROOT/talentclef2026_a/MANIFEST.json, the acquirer's full manifest (outside git). bytes and sha256 were measured on the verified raw files and equal that manifest wherever it lists the same file; extracted members were also checked against the archive they come from. A tree_sha256 is scripts/fetch_external_data.py::tree_digest of the directory.",
+  "retrieved": "2026-10-19",
+  "upstream": [
+    "https://zenodo.org/records/19652670",
+    "https://ceur-ws.org/Vol-4283/paper474.pdf"
+  ],
+  "fetch": [
+    {
+      "id": "zip",
+      "kind": "zenodo",
+      "record": "19652670",
+      "file": "TaskA.zip",
+      "md5": "431ec3b693ae1ba24fe04793f9c1f750",
+      "dest": "TaskA.zip",
+      "extract_to": "extracted",
+      "note": "record 19652670 is version 0.3.0, the latest of concept 17625261; the md5 is the one Zenodo publishes"
+    }
+  ],
+  "files": [
+    {
+      "path": "TaskA.zip",
+      "bytes": 3753484,
+      "sha256": "3437ef0437b0f603a15c5e3f8e62e3450ba24cb2bbbdbc5ad328829bbce0e179",
+      "from": "zip"
+    },
+    {
+      "path": "extracted/TaskA",
+      "bytes": 7704221,
+      "n_files": 1998,
+      "tree_sha256": "07099264b3fe2473363885c04051b47c6a38ccdb999fea8ecd08a95992d3cc95",
+      "from": "zip"
+    }
+  ],
+  "references": [
+    {
+      "path": "docs/paper474.pdf",
+      "url": "https://ceur-ws.org/Vol-4283/paper474.pdf",
+      "bytes": 544629,
+      "sha256": "945c36512b5b1837947d39edb9a6200dd92e5d5ec4c7ecb87c7a1ba7adcaa906"
+    }
+  ],
+  "depends_on": {},
+  "stage": {
+    "script": "scripts/external/stage_talentclef2026_a.py",
+    "tables": [
+      "cvs",
+      "jobs",
+      "pairs"
+    ]
+  },
+  "blocked": null,
+  "notes": [
+    "The test qrels are not public (organisers or Codabench competition 14226)."
+  ]
+}

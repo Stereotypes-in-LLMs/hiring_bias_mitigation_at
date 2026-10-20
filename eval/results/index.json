@@ -341,6 +341,15 @@
     "reference_agreement": 0.7314814814814815,
     "n_tests": 15
   },
+  "Qwen3.5-9B--en--grpo--adapter--en_only_grpo_pilot": {
+    "model": "Qwen/Qwen3.5-9B",
+    "lang": "en",
+    "mitigation": "grpo",
+    "n_prompts": 31050,
+    "population_acceptance_rate": 0.19948470209339775,
+    "reference_agreement": 0.8043156199677939,
+    "n_tests": 136
+  },
   "Qwen3.5-9B--en--prompt--counterfactual_invariance": {
     "model": "Qwen/Qwen3.5-9B",
     "lang": "en",
@@ -474,6 +483,15 @@
     "n_prompts": 31050,
     "population_acceptance_rate": 0.28003220611916263,
     "reference_agreement": 0.825475040257649,
+    "n_tests": 136
+  },
+  "Qwen3.5-9B--en--sft--adapter--en_only_rft": {
+    "model": "Qwen/Qwen3.5-9B",
+    "lang": "en",
+    "mitigation": "sft",
+    "n_prompts": 31050,
+    "population_acceptance_rate": 0.23690821256038647,
+    "reference_agreement": 0.8088244766505636,
     "n_tests": 136
   },
   "Qwen3.5-9B--en--sft--adapter--en_only_v2_ckpt250": {

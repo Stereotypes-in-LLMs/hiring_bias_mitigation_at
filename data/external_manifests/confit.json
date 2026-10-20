@@ -1,0 +1,58 @@
+{
+  "schema_version": 1,
+  "slug": "confit",
+  "name": "ConFit / IntelliPro",
+  "provenance": "Hand-maintained: no repo script regenerates this file. Written on 2026-10-19 from $HBM_EXTERNAL_ROOT/confit/MANIFEST.json, the acquirer's full manifest (outside git). bytes and sha256 were measured on the verified raw files and equal that manifest wherever it lists the same file; extracted members were also checked against the archive they come from. A tree_sha256 is scripts/fetch_external_data.py::tree_digest of the directory.",
+  "retrieved": "2026-10-19",
+  "upstream": [
+    "https://github.com/jasonyux/ConFit"
+  ],
+  "fetch": [
+    {
+      "id": "repo",
+      "kind": "git",
+      "url": "https://github.com/jasonyux/ConFit",
+      "commit": "1187bf4273aa27f2c562a43ec4bb5316876b7198",
+      "dest": "ConFit",
+      "note": "the public release: code plus label files; every text cell is a placeholder"
+    }
+  ],
+  "files": [
+    {
+      "path": "ConFit/README.md",
+      "bytes": 12163,
+      "sha256": "5aa72280e79279b1b32745505066ead8b3e75829309a50278c6e655a75c1e274",
+      "from": "repo"
+    },
+    {
+      "path": "ConFit/dataset/IntelliPro/train_labeled_data.jsonl",
+      "bytes": 377469,
+      "sha256": "b5106acd5cf9525a3c3c549f8106ef7e61d858ba13b68303bc1a4a3103bec40e",
+      "from": "repo"
+    },
+    {
+      "path": "ConFit/dataset/IntelliPro/valid_classification_data.jsonl",
+      "bytes": 6706,
+      "sha256": "2fd960ee6c1f2b60a6a147d67bdd0047c4311575cdb0d110edb8d600a731d0d0",
+      "from": "repo"
+    },
+    {
+      "path": "ConFit/dataset/IntelliPro/test_classification_data.jsonl",
+      "bytes": 6698,
+      "sha256": "2c038894a7d139300d7a7dc0bd781c4738f458cf4b81db761cbe3f8ed4654850",
+      "from": "repo"
+    }
+  ],
+  "references": [],
+  "depends_on": {},
+  "stage": null,
+  "blocked": {
+    "reason": "the public release has no real resume or job text: every text cell is a placeholder such as [[RESUME_TEXT]], so there is nothing to stage.",
+    "steps": [
+      "For IntelliPro text, contact the authors (Xiao Yu / Zhou Yu per the README; no address is given) and request access under their data-use terms.",
+      "For AliTianChi text, obtain the original Tianchi competition data with your own Tianchi account and accept its terms.",
+      "Either text source joins onto the released label files on the existing user_id / jd_no keys. Any ingestion must hard-reject cells matching ^\\[\\[[A-Z_]+\\]\\]$: the placeholders pass the project's length and marker filters."
+    ]
+  },
+  "notes": []
+}

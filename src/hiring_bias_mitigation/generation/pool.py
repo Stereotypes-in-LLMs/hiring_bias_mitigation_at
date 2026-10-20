@@ -15,12 +15,17 @@ Two filters run before matching, and both matter for what the generated data mea
   scored as bias.
 * CVs that are too short to support a hiring judgement are dropped. A two-line CV makes every
   decision arbitrary, which is noise in the training signal rather than a hard case.
+
+English external sources (RJDB, Kaggle resumes x LinkedIn postings) can be added beside Djinni
+with `PoolConfig.sources`. They are built in `generation/sources.py`, which says how each is
+cleaned, filtered and matched. The default is Djinni alone, and that pool is the V1 pool:
+the same pairs, in the same order, with three provenance columns added.
 """
 
 from __future__ import annotations
 
 import re
-from dataclasses import dataclass
+from dataclasses import dataclass, field, replace
 
 import pandas as pd
 
@@ -85,6 +90,31 @@ class PoolConfig:
     max_cv_chars: int = MAX_CV_CHARS
     experience_tolerance_years: float = 3.0
     require_same_keyword: bool = True
+    #: Pool sources, from `sources.POOL_SOURCES`. Djinni is built first, then each external
+    #: source in this order, each with its own seeded generator.
+    sources: tuple[str, ...] = ("djinni",)
+    #: Pairs per external source, which is required for each one. "djinni" may be given too,
+    #: and then overrides `n_pairs` for Djinni.
+    pairs_per_source: dict[str, int] = field(default_factory=dict)
+    #: RJDB only. Also pair each matched CV's weakened rewrite with the same JD.
+    rjdb_include_weakened: bool = False
+
+
+def pool_config(cfg: dict, lang: str) -> PoolConfig:
+    """The pool a generation config asks for. With none of the pool keys set, it is V1's pool.
+
+    The generator and the external dry run both build their PoolConfig here, so a dry run
+    reports the pool that the generator would build.
+    """
+    return PoolConfig(
+        lang=lang,
+        n_pairs=int(cfg.get("n_pairs_per_language", 1500)),
+        jobs_per_candidate=int(cfg.get("jobs_per_candidate", 3)),
+        seed=cfg.get("seed", 42),
+        sources=tuple(cfg.get("pool_sources", ("djinni",))),
+        pairs_per_source={str(k): int(v) for k, v in (cfg.get("pairs_per_source") or {}).items()},
+        rjdb_include_weakened=bool(cfg.get("rjdb_include_weakened", False)),
+    )
 
 
 def load_djinni(lang: str) -> tuple[pd.DataFrame, pd.DataFrame]:
@@ -220,5 +250,59 @@ def _rng(seed: int):
 
 
 def build_pool(cfg: PoolConfig) -> pd.DataFrame:
-    candidates, jobs = load_djinni(cfg.lang)
-    return match_pairs(filter_candidates(candidates, cfg), filter_jobs(jobs, cfg), cfg)
+    return build_pool_with_report(cfg)[0]
+
+
+def build_pool_with_report(cfg: PoolConfig) -> tuple[pd.DataFrame, dict]:
+    """The pool, and the external sources' filter funnel ({} for a Djinni-only pool).
+
+    Djinni is built exactly as before. External sources follow, each from
+    `sources.build_external`, and are skipped with a warning for a language other than
+    English. Whenever an external row is present, the combined frame is checked against the
+    external holdout on the way out. Rows that copy a held-out text are dropped and counted.
+    `external.assert_no_external_leakage` and `benchmark.assert_no_leakage` must then both
+    pass. The builders already drop leaking external candidates, so in practice the drop here
+    only removes Djinni rows. It is also the guard against a builder that misses a leak.
+    """
+    from ..data import external as X
+    from . import sources as S
+
+    external = S.external_sources(cfg.sources)
+    frames: list[pd.DataFrame] = []
+    if "djinni" in cfg.sources:
+        n_djinni = int(cfg.pairs_per_source.get("djinni", cfg.n_pairs))
+        djinni_cfg = cfg if n_djinni == cfg.n_pairs else replace(cfg, n_pairs=n_djinni)
+        candidates, jobs = load_djinni(cfg.lang)
+        djinni = match_pairs(filter_candidates(candidates, djinni_cfg), filter_jobs(jobs, cfg),
+                             djinni_cfg)
+        frames.append(djinni.assign(source="djinni", occupation=djinni.get("primary_keyword", ""),
+                                    cv_variant="original"))
+    if not external:
+        return (frames[0] if frames else pd.DataFrame(columns=S.POOL_COLUMNS)), {}
+
+    root = X.external_root()
+    rows, funnel = S.build_external(cfg, root)
+    parts = [f for f in (*frames, rows) if not f.empty]
+    pool = pd.concat(parts, ignore_index=True) if parts else pd.DataFrame(columns=S.POOL_COLUMNS)
+    if not rows.empty:
+        leaks = X.find_external_leaks(pool, root=root)
+        if not leaks.empty:
+            bad = leaks["row"].unique()
+            by_pool = {str(k): int(v) for k, v in pool.loc[bad, "source"].value_counts().items()}
+            by_held_out = {
+                str(k): int(v)
+                for k, v in leaks["match"].str.split(":", n=1).str[0].value_counts().items()
+            }
+            log.warning("pool %s: dropped %d row(s) that copy the external holdout; pool sources "
+                        "%s, held-out sources copied %s", cfg.lang, len(bad), by_pool, by_held_out)
+            funnel.setdefault("pool", {}).update(holdout_leaks_dropped_by_pool_source=by_pool,
+                                                 holdout_leaks_by_held_out_source=by_held_out)
+            pool = pool.drop(index=bad).reset_index(drop=True)
+        X.assert_no_external_leakage(pool, "generation.pool.build_pool", root=root)
+        assert_no_leakage(pool, "generation.pool.build_pool")
+    funnel.setdefault("pool", {})["rows_by_source"] = {
+        str(k): int(v) for k, v in pool["source"].value_counts().items()
+    }
+    log.info("pool %s: %d pairs, by source %s", cfg.lang, len(pool),
+             funnel["pool"]["rows_by_source"])
+    return pool, funnel

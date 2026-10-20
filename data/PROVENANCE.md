@@ -106,3 +106,20 @@ publishing. `tests/test_generation.py` verifies each guard actually fires.
 The guard excludes every held-out **candidate** and every held-out **job**, not merely the
 exact held-out pair: a CV seen during training under a different job is still a CV the
 mitigated model has memorised.
+
+## External sources (not vendored)
+
+Eleven sources beside Djinni were profiled and independently verified on 2026-10-19: candidate
+training-pool text (RJDB, the Kaggle resume dataset, ResumeAtlas, LinkedIn postings), external
+evaluation sets (FAIRE, LLMHiringFairnessSG, TalentCLEF 2026 Task A, Vanetik-Kogan, and
+PopResume, whose CVs are gated), an occupational rubric (O*NET 31.0) and one release with no
+usable text (ConFit). None of them is under `data/`: they carry several different licences,
+and some carry terms that restrict redistribution. Their raw and staged copies live under
+`$HBM_EXTERNAL_ROOT` (default `$HBM_OUTPUT_ROOT/external_data`).
+
+`docs/EXTERNAL_DATA.md` is the provenance record for all of them: what each source is, its
+measured counts, what its labels are and are not, the claims that were checked, cross-source
+contamination, and the licence and terms questions to settle before anything derived from them
+is published. `src/hiring_bias_mitigation/data/external.py` is the registry (roles, held-out
+splits, `publishable`) and holds the text-based external holdout, the counterpart of the
+id-based guard above.

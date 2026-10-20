@@ -25,6 +25,11 @@ Two kinds, and the difference is not cosmetic:
 Refuses to run unless PUSH_TO_HUB=true is set, and prints what it is about to publish first:
 this pushes real (anonymised) CV text and model-generated hiring judgements to a public
 endpoint, which is not something to do by accident. Pass --private for a private repo.
+
+Also refuses any row whose `source` is not publishable (`generation/sources.py`). Djinni rows
+may be published, and a file without a `source` column is Djinni. Every external training
+source is unpublishable until its licence is settled. --allow-unpublishable-sources
+overrides this, and should only be used once that decision has been made.
 """
 
 from __future__ import annotations
@@ -37,6 +42,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
 
 from hiring_bias_mitigation.data.benchmark import assert_no_leakage  # noqa: E402
+from hiring_bias_mitigation.generation.sources import check_publishable  # noqa: E402
 from hiring_bias_mitigation.utils.config import resolve_output_path  # noqa: E402
 from hiring_bias_mitigation.utils.logging import get_logger  # noqa: E402
 
@@ -54,6 +60,10 @@ def main() -> None:
     parser.add_argument("--repo-id", required=True)
     parser.add_argument("--private", action="store_true")
     parser.add_argument("--yes", action="store_true", help="skip the confirmation prompt")
+    parser.add_argument(
+        "--allow-unpublishable-sources", action="store_true",
+        help="publish rows from sources marked publishable=False in data/external.py anyway",
+    )
     args = parser.parse_args()
 
     if os.environ.get("PUSH_TO_HUB", "").strip().lower() not in {"true", "1", "yes"}:
@@ -78,6 +88,8 @@ def main() -> None:
         frame = pd.read_parquet(path)
         if args.kind == "training":
             assert_no_leakage(frame, f"push_dataset_to_hub:{path.name}")
+        check_publishable(frame, f"push_dataset_to_hub:{path.name}",
+                          allow=args.allow_unpublishable_sources)
         total += len(frame)
         print(f"  {path.name}: {len(frame):,} rows")
     if args.kind == "eval":

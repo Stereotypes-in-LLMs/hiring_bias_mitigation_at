@@ -72,6 +72,19 @@ def _completion(decision: str, feedback: str, lang: str = "en") -> str:
     )
 
 
+def _source(row: dict) -> str:
+    """The pool source of a training row. V1 frames have no `source` column and are Djinni.
+
+    Every row carries it, because the publish scripts decide per row whether it may be
+    published (`sources.check_publishable`). Rows from different sources have different
+    licences, and a dataset is assembled from all of them.
+    """
+    value = row.get("source")
+    if value is None or (isinstance(value, float) and value != value) or str(value) == "":
+        return "djinni"
+    return str(value)
+
+
 def build_sft_dataset(invariant: pd.DataFrame) -> pd.DataFrame:
     """(prompt, completion) rows from the filtered invariant generations."""
     if invariant.empty:
@@ -93,6 +106,7 @@ def build_sft_dataset(invariant: pd.DataFrame) -> pd.DataFrame:
                 "candidate_id": row["candidate_id"],
                 "job_id": row["job_id"],
                 "pair_id": row["pair_id"],
+                "source": _source(row),
             }
         )
     out = pd.DataFrame(rows)
@@ -139,6 +153,7 @@ def build_dpo_dataset(invariant: pd.DataFrame, biased: pd.DataFrame) -> pd.DataF
                 "candidate_id": row["candidate_id"],
                 "job_id": row["job_id"],
                 "pair_id": row["pair_id"],
+                "source": _source(row),
             }
         )
     out = pd.DataFrame(rows)
@@ -177,7 +192,7 @@ def build_kto_dataset(dpo: pd.DataFrame) -> pd.DataFrame:
 
     carry = [
         c for c in ("lang", "protected_group", "protected_attr", "condition",
-                    "candidate_id", "job_id", "pair_id")
+                    "candidate_id", "job_id", "pair_id", "source")
         if c in dpo.columns
     ]
     frames = []
@@ -186,6 +201,8 @@ def build_kto_dataset(dpo: pd.DataFrame) -> pd.DataFrame:
         part = part.assign(label=label)
         frames.append(part)
     out = pd.concat(frames, ignore_index=True)
+    if "source" not in out.columns:
+        out["source"] = "djinni"
     # Interleave rather than concatenate: a run that stops early should have seen both labels.
     return out.sample(frac=1.0, random_state=42).reset_index(drop=True)
 
@@ -307,6 +324,7 @@ def write_dataset_card(
     groups: list[str],
     languages: list[str],
     n_rows: int,
+    sources: tuple[str, ...] = ("djinni",),
 ) -> Path:
     from ..data.benchmark import holdout_ids
 
@@ -328,7 +346,35 @@ def write_dataset_card(
         generation=json.dumps(generation, ensure_ascii=False),
         generated_on=date.today().isoformat(),
     )
+    if tuple(sources) != ("djinni",):
+        text = _external_card(text, sources)
     path = Path(path)
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(text, encoding="utf-8")
     return path
+
+
+def _external_card(text: str, sources: tuple[str, ...]) -> str:
+    """The card for a pool with external sources. It must not claim Djinni's MIT licence.
+
+    The Djinni-only card is unchanged. For any other pool the licence becomes `other`, and a
+    section lists each source's own licence line and publish flag from `data/external.py`.
+    The publish scripts refuse rows whose flag is no (`sources.check_publishable`).
+    """
+    from ..data.external import source as staged_source
+    from .sources import POOL_SOURCES
+
+    lines = ["## Sources", "",
+             "This dataset is not Djinni-only. Rows carry a `source` column; licences differ by "
+             "source, and rows from a source marked unpublishable must not be redistributed.", ""]
+    for name in sources:
+        if name == "djinni":
+            lines.append("- `djinni`: Djinni Recruitment Dataset, MIT.")
+            continue
+        for slug in POOL_SOURCES.get(name, (name,)):
+            spec = staged_source(slug)
+            lines.append(f"- `{name}` <- {spec.name} ({spec.url}): {spec.license}. "
+                         f"Publishable: {'yes' if spec.publishable else 'no'}.")
+    text = text.replace("license: mit\n", "license: other\n", 1)
+    anchor = "## Contamination control"
+    return text.replace(anchor, "\n".join(lines) + "\n\n" + anchor, 1)

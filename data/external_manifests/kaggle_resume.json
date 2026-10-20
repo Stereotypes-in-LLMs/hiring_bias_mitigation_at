@@ -1,0 +1,54 @@
+{
+  "schema_version": 1,
+  "slug": "kaggle_resume",
+  "name": "Resume Dataset (Kaggle, snehaanbhawal)",
+  "provenance": "Hand-maintained: no repo script regenerates this file. Written on 2026-10-19 from $HBM_EXTERNAL_ROOT/kaggle_resume/MANIFEST.json, the acquirer's full manifest (outside git). bytes and sha256 were measured on the verified raw files and equal that manifest wherever it lists the same file; extracted members were also checked against the archive they come from. A tree_sha256 is scripts/fetch_external_data.py::tree_digest of the directory.",
+  "retrieved": "2026-10-19",
+  "upstream": [
+    "https://www.kaggle.com/datasets/snehaanbhawal/resume-dataset",
+    "https://github.com/Sbhawal/resumeScraper"
+  ],
+  "fetch": [
+    {
+      "id": "zip",
+      "kind": "kaggle",
+      "dataset": "snehaanbhawal/resume-dataset",
+      "dest": "resume-dataset.zip",
+      "extract_to": "extracted",
+      "note": "dataset version 1; Kaggle publishes no checksum"
+    }
+  ],
+  "files": [
+    {
+      "path": "resume-dataset.zip",
+      "bytes": 65529677,
+      "sha256": "b12c4ab34df707ad2cc64312c016509cad9b6c93b0baed7a6a2c7cbd6b2b7aa4",
+      "from": "zip"
+    },
+    {
+      "path": "extracted/Resume/Resume.csv",
+      "bytes": 56273235,
+      "sha256": "816a7cd985a9a41e3ce8d1e83cb7e1beb1e854a89c1cf1fd0d75494faaa0559d",
+      "from": "zip"
+    },
+    {
+      "path": "extracted/data/data",
+      "bytes": 62016120,
+      "n_files": 2484,
+      "tree_sha256": "84ac5b85778c466edc5c19c9fd14c243076451c4923ecdb3d32f4d739c5dd80e",
+      "from": "zip"
+    }
+  ],
+  "references": [],
+  "depends_on": {},
+  "stage": {
+    "script": "scripts/external/stage_kaggle_resume.py",
+    "tables": [
+      "cvs"
+    ]
+  },
+  "blocked": null,
+  "notes": [
+    "The uploader's scraper repo (Sbhawal/resumeScraper @ 6373d2dc71744f734a8876ae1de4a764960e777d) was read for provenance only and is not fetched; staging does not need it."
+  ]
+}

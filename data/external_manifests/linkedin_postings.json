@@ -1,0 +1,83 @@
+{
+  "schema_version": 1,
+  "slug": "linkedin_postings",
+  "name": "LinkedIn Job Postings 2023-2024 (Kaggle, arshkon)",
+  "provenance": "Hand-maintained: no repo script regenerates this file. Written on 2026-10-19 from $HBM_EXTERNAL_ROOT/linkedin_postings/MANIFEST.json, the acquirer's full manifest (outside git). bytes and sha256 were measured on the verified raw files and equal that manifest wherever it lists the same file; extracted members were also checked against the archive they come from. A tree_sha256 is scripts/fetch_external_data.py::tree_digest of the directory.",
+  "retrieved": "2026-10-19",
+  "upstream": [
+    "https://www.kaggle.com/datasets/arshkon/linkedin-job-postings",
+    "https://github.com/ArshKA/LinkedIn-Job-Scraper"
+  ],
+  "fetch": [
+    {
+      "id": "zip",
+      "kind": "kaggle",
+      "dataset": "arshkon/linkedin-job-postings",
+      "dest": "linkedin-job-postings.zip",
+      "extract_to": "extracted",
+      "note": "dataset version 13 (lastUpdated 2024-08-19); Kaggle publishes no checksum"
+    }
+  ],
+  "files": [
+    {
+      "path": "linkedin-job-postings.zip",
+      "bytes": 166472808,
+      "sha256": "4890ecccfdbd6b7ec0e57af6012cae2e960ba74c10702f5957be365469acc7a4",
+      "from": "zip"
+    },
+    {
+      "path": "extracted/postings.csv",
+      "bytes": 516843769,
+      "sha256": "de33f27c8d1b226014e0cede003404e9b0acb66db718671fda9b3e3538eca6ea",
+      "from": "zip"
+    },
+    {
+      "path": "extracted/jobs/job_industries.csv",
+      "bytes": 2506014,
+      "sha256": "5ed3e44b863fcdeb7defa10f069e269e60c3a171b4f4940a7cd6ddbc3b2e482d",
+      "from": "zip"
+    },
+    {
+      "path": "extracted/jobs/job_skills.csv",
+      "bytes": 3506651,
+      "sha256": "c81484f0f353e371e931b8302c6c1f69518dbb503363ef6f90311d11ca29b25d",
+      "from": "zip"
+    },
+    {
+      "path": "extracted/jobs/benefits.csv",
+      "bytes": 1925812,
+      "sha256": "99492fd6f15d8c2f84fb376e2309346c8ebe4ba0510b5e69bd6c56520a1d7762",
+      "from": "zip"
+    },
+    {
+      "path": "extracted/mappings/industries.csv",
+      "bytes": 12734,
+      "sha256": "4efdb86cc87a2bb380eb6c3eed95879b287ffc22863a9c1be633a49c0552ecd4",
+      "from": "zip"
+    },
+    {
+      "path": "extracted/mappings/skills.csv",
+      "bytes": 679,
+      "sha256": "1732c4cb6a8b43696d708caf74fc85bdd45e8527b64163c9a4e7c257c631e1d5",
+      "from": "zip"
+    },
+    {
+      "path": "extracted/companies/company_industries.csv",
+      "bytes": 782404,
+      "sha256": "7f018c3ab8697266be349b1b4dfc8ea06db1723155b3a2504104aae23df3a68a",
+      "from": "zip"
+    }
+  ],
+  "references": [],
+  "depends_on": {},
+  "stage": {
+    "script": "scripts/external/stage_linkedin_postings.py",
+    "tables": [
+      "jobs"
+    ]
+  },
+  "blocked": null,
+  "notes": [
+    "The zip's other members (companies.csv, company_specialities.csv, employee_counts.csv, salaries.csv) are extracted but not read by staging."
+  ]
+}

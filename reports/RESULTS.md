@@ -1,11 +1,11 @@
 # Hiring Bias Mitigation — Results
 
-*Generated 2026-10-19 16:42 from `eval/results/` by `scripts/make_report.py`. Do not edit by hand.*
+*Generated 2026-10-20 10:15 from `eval/results/` by `scripts/make_report.py`. Do not edit by hand.*
 
 **Models:** Qwen3.5-4B, Qwen3.5-9B, gemma-4-12B-it, gemma-4-E4B-it, lapa-v0.1.2-instruct  
 **Languages:** en, uk  
 **Protected groups:** military_status, gender, religion (+ intersections: military_status_x_gender, military_status_x_religion)  
-**Runs:** 75
+**Runs:** 77
 
 **How to read every metric in this report: [`docs/METRICS.md`](../docs/METRICS.md)** — definitions, how to read each number, and what each one does not capture.
 
@@ -15,7 +15,7 @@ Benchmark, attribute lists, injection templates and the attribute-free reference
 
 Decoding is reported for every run (audit-study reporting requirement 5). Greedy decoding is the default: it removes sampling variance so that a difference between two runs is attributable to the mitigation rather than to the decoder. Runs with `n>1` are the ones that deliberately measure that variance instead.
 
-**Internal probes, not reported as results:** `Qwen3.5-9B--en--dpo--adapter--en_only_dpo_decision`, `Qwen3.5-9B--en--dpo--adapter--en_only_dpo_v2_ckpt50`, `Qwen3.5-9B--en--dpo--adapter--en_only_v2neg_r1_step100`, `Qwen3.5-9B--en--dpo--adapter--en_only_v2neg_r1_step300`, `Qwen3.5-9B--en--dpo--adapter--en_only_v2neg_r2_step102`, `Qwen3.5-9B--en--dpo--adapter--en_only_v2neg_r2_step50`, `Qwen3.5-9B--en--dpo--adapter--en_only_v2neg_r2em_step100`, `Qwen3.5-9B--en--dpo--adapter--en_only_v2neg_r2em_step148`, `Qwen3.5-9B--en--dpo--adapter--en_only_v2neg_r2em_step50`, `Qwen3.5-9B--en--sft--adapter--en_only_v2_ckpt250`. Preference optimisation (DPO/KTO) and the decision-weighted SFT variant ran on Qwen3.5-9B English only; the findings documents carry them as future work, not as an arm of the study.
+**Internal probes, not reported as results:** `Qwen3.5-9B--en--dpo--adapter--en_only_dpo_decision`, `Qwen3.5-9B--en--dpo--adapter--en_only_dpo_v2_ckpt50`, `Qwen3.5-9B--en--dpo--adapter--en_only_v2neg_r1_step100`, `Qwen3.5-9B--en--dpo--adapter--en_only_v2neg_r1_step300`, `Qwen3.5-9B--en--dpo--adapter--en_only_v2neg_r2_step102`, `Qwen3.5-9B--en--dpo--adapter--en_only_v2neg_r2_step50`, `Qwen3.5-9B--en--dpo--adapter--en_only_v2neg_r2em_step100`, `Qwen3.5-9B--en--dpo--adapter--en_only_v2neg_r2em_step148`, `Qwen3.5-9B--en--dpo--adapter--en_only_v2neg_r2em_step50`, `Qwen3.5-9B--en--grpo--adapter--en_only_grpo_pilot`, `Qwen3.5-9B--en--sft--adapter--en_only_v2_ckpt250`. Preference optimisation (DPO/KTO) and the decision-weighted SFT variant ran on Qwen3.5-9B English only; the findings documents carry them as future work, not as an arm of the study.
 
 | Run | Model | Lang | Mitigation | Variant | Prompts | Decoding | Seed |
 |---|---|---|---|---|---:|---|---:|
@@ -57,6 +57,7 @@ Decoding is reported for every run (audit-study reporting requirement 5). Greedy
 | `Qwen3.5-9B--en--dpo--adapter--en_only_v2neg_r2em_step148` | Qwen3.5-9B | en | dpo | adapter | 31,050 | greedy | 42 |
 | `Qwen3.5-9B--en--dpo--adapter--en_only_v2neg_r2em_step50` | Qwen3.5-9B | en | dpo | adapter | 31,050 | greedy | 42 |
 | `Qwen3.5-9B--en--embedding--leace` | Qwen3.5-9B | en | embedding | leace | 2,700 | greedy | 42 |
+| `Qwen3.5-9B--en--grpo--adapter--en_only_grpo_pilot` | Qwen3.5-9B | en | grpo | adapter | 31,050 | greedy | 42 |
 | `Qwen3.5-9B--en--prompt--counterfactual_invariance` | Qwen3.5-9B | en | prompt | counterfactual_invariance | 2,700 | greedy | 42 |
 | `Qwen3.5-9B--en--prompt--fairness_constitution` | Qwen3.5-9B | en | prompt | fairness_constitution | 2,700 | greedy | 42 |
 | `Qwen3.5-9B--en--prompt--ignore_personal_info` | Qwen3.5-9B | en | prompt | ignore_personal_info | 2,700 | greedy | 42 |
@@ -72,6 +73,7 @@ Decoding is reported for every run (audit-study reporting requirement 5). Greedy
 | `Qwen3.5-9B--en--scrub--llm` | Qwen3.5-9B | en | scrub | llm | 2,700 | greedy | 42 |
 | `Qwen3.5-9B--en--sft--adapter--en_only` | Qwen3.5-9B | en | sft | adapter | 31,050 | greedy | 42 |
 | `Qwen3.5-9B--en--sft--adapter--en_only_cscs` | Qwen3.5-9B | en | sft | adapter | 31,050 | greedy | 42 |
+| `Qwen3.5-9B--en--sft--adapter--en_only_rft` | Qwen3.5-9B | en | sft | adapter | 31,050 | greedy | 42 |
 | `Qwen3.5-9B--en--sft--adapter--en_only_v2_ckpt250` | Qwen3.5-9B | en | sft | adapter | 31,050 | greedy | 42 |
 | `Qwen3.5-9B--uk--baseline` | Qwen3.5-9B | uk | none | -- | 161,550 | greedy | 42 |
 | `Qwen3.5-9B--uk--embedding--leace` | Qwen3.5-9B | uk | embedding | leace | 31,050 | greedy | 42 |
@@ -283,6 +285,12 @@ Baseline values are in brackets where a matching unmitigated run exists; **↓ m
 | Qwen3.5-9B | en | dpo · adapter | religion | explicit | 9 | 0.3 (0.7) | 1.1 (1.8) | 0.009 (0.025) | 0.7 (1.3) | 2.0 (5.3) | -- | 81.0 (80.7) | 0.0 (0.0) |
 | Qwen3.5-9B | en | dpo · adapter | religion | implicit | 9 | 0.6 (1.9) | 2.2 (8.9) | 0.022 (0.162) | 1.3 (2.0) | 2.7 (24.7) | -- | 80.1 (69.5) | 0.0 (0.0) |
 | Qwen3.5-9B | en | embedding · leace | military_status | implicit | 5 | 3.4 (3.9) | 9.8 (12.2) | 0.149 (0.135) | 3.5 (3.8) | 27.3 (32.7) | 0.631 (0.643) | 72.4 (74.6) | 0.0 (0.0) |
+| Qwen3.5-9B | en | grpo · adapter | gender | explicit | 20 | 0.3 (0.9) | 1.1 (3.3) | 0.007 (0.028) | 0.5 (1.7) | 2.7 (10.0) | -- | 80.5 (81.6) | 0.0 (0.0) |
+| Qwen3.5-9B | en | grpo · adapter | gender | implicit | 20 | 0.2 (0.7) | 1.3 (3.3) | 0.022 (0.054) | 0.3 (1.2) | 2.7 (7.3) | -- | 80.4 (79.4) | 0.0 (0.0) |
+| Qwen3.5-9B | en | grpo · adapter | military_status | explicit | 5 | 0.3 (2.4) | 1.1 (5.8) | 0.008 (0.052) | 0.4 (2.6) | 1.3 (12.0) | -- | 80.8 (82.4) | 0.0 (0.0) |
+| Qwen3.5-9B | en | grpo · adapter | military_status | implicit | 5 | 0.4 (3.9) | 1.8 (12.2) | 0.017 (0.137) | 0.8 (3.9) | 2.0 (32.7) | -- | 80.8 (74.6) | 0.0 (0.0) |
+| Qwen3.5-9B | en | grpo · adapter | religion | explicit | 9 | 0.2 (0.7) | 0.7 (1.8) | 0.006 (0.025) | 0.3 (1.3) | 1.3 (5.3) | -- | 80.4 (80.7) | 0.0 (0.0) |
+| Qwen3.5-9B | en | grpo · adapter | religion | implicit | 9 | 0.2 (1.9) | 1.1 (8.9) | 0.007 (0.162) | 0.4 (2.0) | 1.3 (24.7) | -- | 80.0 (69.5) | 0.0 (0.0) |
 | Qwen3.5-9B | en | prompt · counterfactual_invariance | military_status | implicit | 5 | 2.7 (3.9) | 7.8 (12.2) | 0.108 (0.135) | 2.9 (3.8) | 20.7 (32.7) | 0.651 (0.643) | 74.5 (74.6) | 0.0 (0.0) |
 | Qwen3.5-9B | en | prompt · fairness_constitution | military_status | implicit | 5 | 2.7 (3.9) | 8.7 (12.2) | 0.107 (0.135) | 3.7 (3.8) | 12.7 (32.7) | 0.689 (0.643) | 83.8 (74.6) | 0.0 (0.0) |
 | Qwen3.5-9B | en | prompt · ignore_personal_info | gender | explicit | 20 | 0.8 (1.1) | 4.2 (4.0) | 0.030 (0.041) | 1.6 (1.8) | 11.3 (10.0) | 0.682 (0.677) | 81.3 (81.8) | 0.0 (0.0) |
@@ -323,6 +331,12 @@ Baseline values are in brackets where a matching unmitigated run exists; **↓ m
 | Qwen3.5-9B | en | sft · adapter | military_status | implicit | 5 | 0.4 (3.9) | 1.1 (12.2) | 0.011 (0.137) | 0.9 (3.9) | 4.0 (32.7) | -- | 82.0 (74.6) | 0.0 (0.0) |
 | Qwen3.5-9B | en | sft · adapter | religion | explicit | 9 | 0.3 (0.7) | 1.3 (1.8) | 0.005 (0.025) | 0.6 (1.3) | 4.0 (5.3) | -- | 83.3 (80.7) | 0.0 (0.0) |
 | Qwen3.5-9B | en | sft · adapter | religion | implicit | 9 | 0.4 (1.9) | 1.3 (8.9) | 0.016 (0.162) | 0.7 (2.0) | 4.0 (24.7) | -- | 81.8 (69.5) | 0.0 (0.0) |
+| Qwen3.5-9B | en | sft · adapter | gender | explicit | 20 | 0.3 (0.9) | 1.3 (3.3) | 0.007 (0.028) | 1.0 (1.7) | 4.0 (10.0) | -- | 81.5 (81.6) | 0.0 (0.0) |
+| Qwen3.5-9B | en | sft · adapter | gender | implicit | 20 | 0.4 (0.7) | 2.4 (3.3) | 0.028 (0.054) | 0.8 (1.2) | 4.7 (7.3) | -- | 80.2 (79.4) | 0.0 (0.0) |
+| Qwen3.5-9B | en | sft · adapter | military_status | explicit | 5 | 0.8 (2.4) | 3.1 (5.8) | 0.018 (0.052) | 1.1 (2.6) | 6.0 (12.0) | -- | 81.3 (82.4) | 0.0 (0.0) |
+| Qwen3.5-9B | en | sft · adapter | military_status | implicit | 5 | 0.2 (3.9) | 0.7 (12.2) | 0.005 (0.137) | 0.9 (3.9) | 1.3 (32.7) | -- | 81.1 (74.6) | 0.0 (0.0) |
+| Qwen3.5-9B | en | sft · adapter | religion | explicit | 9 | 0.4 (0.7) | 1.6 (1.8) | 0.012 (0.025) | 0.7 (1.3) | 4.7 (5.3) | -- | 81.1 (80.7) | 0.0 (0.0) |
+| Qwen3.5-9B | en | sft · adapter | religion | implicit | 9 | 0.5 (1.9) | 1.8 (8.9) | 0.017 (0.162) | 1.1 (2.0) | 4.0 (24.7) | -- | 80.5 (69.5) | 0.0 (0.0) |
 | Qwen3.5-9B | en | sft · adapter | gender | explicit | 20 | 0.3 (1.1) | 1.3 (4.0) | 0.009 (0.041) | 0.8 (1.8) | 3.3 (10.0) | 0.648 (0.677) | 81.6 (81.8) | 0.0 (0.0) |
 | Qwen3.5-9B | en | sft · adapter | gender | implicit | 20 | 0.4 (0.6) | 1.8 (4.0) | 0.026 (0.045) | 0.9 (1.2) | 3.3 (8.7) | 0.647 (0.671) | 80.4 (79.6) | 0.0 (0.0) |
 | Qwen3.5-9B | en | sft · adapter | military_status | explicit | 5 | 0.9 (2.4) | 2.7 (5.8) | 0.027 (0.051) | 1.2 (2.5) | 4.7 (11.3) | 0.654 (0.677) | 82.3 (82.4) | 0.0 (0.0) |
@@ -565,6 +579,7 @@ For ranking experiments against each other, nothing more. Groups are weighted **
 | Qwen3.5-9B | en | dpo · adapter | 0.4 (1.7) | 1.8 (5.9) | 0.013 (0.076) | 0.8 (2.1) | 2.9 (15.3) | -- | 83.0 (78.8) | 0.0 (0.0) |
 | Qwen3.5-9B | en | dpo · adapter | 0.5 (1.7) | 1.8 (5.9) | 0.019 (0.076) | 0.9 (2.1) | 2.3 (15.3) | -- | 81.0 (78.8) | 0.0 (0.0) |
 | Qwen3.5-9B | en | embedding · leace | 3.4 (1.9) | 9.8 (7.8) | 0.149 (0.078) | 3.5 (2.4) | 27.3 (19.7) | 0.634 (0.662) | 73.1 (78.0) | 0.0 (0.0) |
+| Qwen3.5-9B | en | grpo · adapter | 0.3 (1.7) | 1.2 (5.9) | 0.011 (0.076) | 0.4 (2.1) | 1.9 (15.3) | -- | 80.4 (78.8) | 0.0 (0.0) |
 | Qwen3.5-9B | en | prompt · counterfactual_invariance | 2.7 (1.9) | 7.8 (7.8) | 0.108 (0.078) | 2.9 (2.4) | 20.7 (19.7) | 0.653 (0.662) | 74.9 (78.0) | 0.0 (0.0) |
 | Qwen3.5-9B | en | prompt · fairness_constitution | 2.7 (1.9) | 8.7 (7.8) | 0.107 (0.078) | 3.7 (2.4) | 12.7 (19.7) | 0.689 (0.662) | 83.9 (78.0) | 0.0 (0.0) |
 | Qwen3.5-9B | en | prompt · ignore_personal_info | 1.2 (1.9) | 4.8 (7.8) | 0.058 (0.078) | 2.0 (2.4) | 10.7 (19.7) | 0.678 (0.662) | 80.0 (78.0) | 0.0 (0.0) |
@@ -580,6 +595,7 @@ For ranking experiments against each other, nothing more. Groups are weighted **
 | Qwen3.5-9B | en | scrub · llm | 0.7 (1.9) | 2.7 (7.8) | 0.024 (0.078) | 2.7 (2.4) | 6.7 (19.7) | 0.673 (0.662) | 80.8 (78.0) | 0.0 (0.0) |
 | Qwen3.5-9B | en | sft · adapter | 0.5 (1.9) | 1.6 (7.8) | 0.016 (0.078) | 0.9 (2.4) | 3.2 (19.7) | 0.654 (0.662) | 82.5 (78.0) | 0.0 (0.0) |
 | Qwen3.5-9B | en | sft · adapter | 0.4 (1.7) | 1.7 (5.9) | 0.015 (0.076) | 0.8 (2.1) | 4.0 (15.3) | -- | 82.5 (78.8) | 0.0 (0.0) |
+| Qwen3.5-9B | en | sft · adapter | 0.4 (1.7) | 1.8 (5.9) | 0.014 (0.076) | 0.9 (2.1) | 4.1 (15.3) | -- | 80.9 (78.8) | 0.0 (0.0) |
 | Qwen3.5-9B | en | sft · adapter | 0.5 (1.9) | 2.0 (7.8) | 0.020 (0.078) | 1.0 (2.4) | 4.1 (19.7) | 0.649 (0.662) | 81.4 (78.0) | 0.0 (0.0) |
 | lapa-v0.1.2-instruct | en | sft · adapter | 0.2 (5.0) | 0.9 (23.1) | 0.007 (0.148) | 0.5 (5.7) | 1.9 (13.2) | 0.633 (0.558) | 80.6 (49.5) | 0.0 (0.0) |
 | Qwen3.5-4B | uk | none | 4.3 | 20.0 | 0.110 | 5.4 | 34.6 | 0.601 | 74.8 | 0.0 |
@@ -2841,6 +2857,7 @@ Each row is one mitigated run against its own unmitigated baseline (same model, 
 | Qwen3.5-9B | en | dpo | adapter | 6 | 0.4 (1.7) | -1.3 | 1.8 (9.8) | 0.013 (0.076) | 0.8 (2.1) | -- | 83.0 (78.8) | 0.0 (0.0) | 0.0 (0.8) | -4 (4→0) | -2 (2→0) |
 | Qwen3.5-9B | en | dpo | adapter | 6 | 0.5 (1.7) | -1.3 | 2.7 (9.8) | 0.019 (0.076) | 0.9 (2.1) | -- | 80.9 (78.8) | 0.0 (0.0) | 0.0 (0.8) | -4 (4→0) | -2 (2→0) |
 | Qwen3.5-9B | en | embedding | leace | 1 | 3.4 (3.9) | -0.5 | 6.9 (9.6) | 0.149 (0.135) | 3.5 (3.8) | 0.631 (0.643) | 72.4 (74.6) | 0.0 (0.0) | 5.1 (8.4) | +1 (2→3) | +0 (1→1) |
+| Qwen3.5-9B | en | grpo | adapter | 6 | 0.3 (1.7) | -1.5 | 1.8 (9.8) | 0.011 (0.076) | 0.4 (2.1) | -- | 80.4 (78.8) | 0.0 (0.0) | 0.2 (0.8) | -4 (4→0) | -2 (2→0) |
 | Qwen3.5-9B | en | prompt | counterfactual_invariance | 1 | 2.7 (3.9) | -1.2 | 7.8 (9.6) | 0.108 (0.135) | 2.9 (3.8) | 0.651 (0.643) | 74.5 (74.6) | 0.0 (0.0) | 0.8 (8.4) | -1 (2→1) | -1 (1→0) |
 | Qwen3.5-9B | en | prompt | fairness_constitution | 1 | 2.7 (3.9) | -1.1 | 8.7 (9.6) | 0.107 (0.135) | 3.7 (3.8) | 0.689 (0.643) | 83.8 (74.6) | 0.0 (0.0) | 0.8 (8.4) | -2 (2→0) | -1 (1→0) |
 | Qwen3.5-9B | en | prompt | ignore_personal_info | 6 | 1.2 (1.7) | -0.5 | 6.7 (9.6) | 0.058 (0.077) | 2.0 (2.1) | 0.678 (0.663) | 80.0 (78.9) | 0.0 (0.0) | 0.3 (1.1) | -4 (4→0) | -3 (3→0) |
@@ -2856,6 +2873,7 @@ Each row is one mitigated run against its own unmitigated baseline (same model, 
 | Qwen3.5-9B | en | scrub | llm | 1 | 0.7 (3.9) | -3.2 | 2.7 (9.6) | 0.024 (0.135) | 2.7 (3.8) | 0.672 (0.643) | 80.6 (74.6) | 0.0 (0.0) | 0.1 (8.4) | -2 (2→0) | -1 (1→0) |
 | Qwen3.5-9B | en | sft | adapter | 6 | 0.5 (1.7) | -1.3 | 2.7 (9.6) | 0.016 (0.077) | 0.9 (2.1) | 0.654 (0.663) | 82.5 (78.9) | 0.0 (0.0) | 0.2 (1.1) | -4 (4→0) | -3 (3→0) |
 | Qwen3.5-9B | en | sft | adapter | 6 | 0.4 (1.7) | -1.3 | 2.9 (9.8) | 0.015 (0.076) | 0.8 (2.1) | -- | 82.5 (78.8) | 0.0 (0.0) | 0.0 (0.8) | -4 (4→0) | -2 (2→0) |
+| Qwen3.5-9B | en | sft | adapter | 6 | 0.4 (1.7) | -1.3 | 2.7 (9.8) | 0.014 (0.076) | 0.9 (2.1) | -- | 80.9 (78.8) | 0.0 (0.0) | 0.1 (0.8) | -4 (4→0) | -2 (2→0) |
 | Qwen3.5-9B | en | sft | adapter | 6 | 0.5 (1.7) | -1.2 | 2.4 (9.6) | 0.020 (0.077) | 1.0 (2.1) | 0.649 (0.663) | 81.3 (78.9) | 0.0 (0.0) | 0.2 (1.1) | -4 (4→0) | -3 (3→0) |
 | lapa-v0.1.2-instruct | en | sft | adapter | 6 | 0.2 (4.1) | -3.8 | 1.6 (22.0) | 0.007 (0.128) | 0.5 (4.9) | 0.633 (0.566) | 80.6 (50.9) | 0.0 (0.0) | 0.2 (1.1) | -15 (15→0) | -20 (20→0) |
 | Qwen3.5-4B | uk | prompt | counterfactual_invariance | 6 | 4.0 (4.1) | -0.1 | 19.8 (17.3) | 0.104 (0.101) | 4.8 (4.9) | 0.611 (0.608) | 73.6 (74.9) | 0.0 (0.0) | 1.9 (2.4) | -2 (19→17) | -2 (18→16) |
@@ -2895,18 +2913,20 @@ Only sets decided in full in **both** runs count, so a run with parse failures i
 
 Per-group results are in `reports/set_stability_by_group.csv`.
 
-**This table covers 8 of 63 usable mitigated runs.** 55 have no generations under `/ritom/scratch/cscs/zhang/xw/outputs/raw`, or no baseline with generations there, and are left out, not found stable. The Benjamini–Hochberg correction runs over these 8 tests only, so a p-value here is not comparable with the same run's p-value in a table over a different set of runs, such as `reports/set_stability.csv` written on another machine.
+**This table covers 10 of 65 usable mitigated runs.** 55 have no generations under `/ritom/scratch/cscs/zhang/xw/outputs/raw`, or no baseline with generations there, and are left out, not found stable. The Benjamini–Hochberg correction runs over these 10 tests only, so a p-value here is not comparable with the same run's p-value in a table over a different set of runs, such as `reports/set_stability.csv` written on another machine.
 
 | Model | Lang | Mitigation | Variant | Sets | Variants/set | Unstable % | Δ pp | 95% CI | Fixed | Broken | p (FDR) |
 |---|---|---|---|---:|---:|---:|---:|---|---:|---:|---:|
-| Qwen3.5-9B | en | dpo | adapter--en_only_v2neg_r1_step100 | 900 | 34 | 5.3 (16.8) | -11.4 • | [-15.3, -7.7] | 130 | 27 | 1.8e-16 |
-| Qwen3.5-9B | en | dpo | adapter--en_only_v2neg_r2_step102 | 900 | 34 | 5.4 (16.8) | -11.3 • | [-15.1, -7.4] | 130 | 28 | 2.6e-16 |
-| Qwen3.5-9B | en | dpo | adapter--en_only_v2neg_r1_step300 | 900 | 34 | 5.6 (16.8) | -11.2 • | [-15.0, -7.4] | 133 | 32 | 2.1e-15 |
+| Qwen3.5-9B | en | dpo | adapter--en_only_v2neg_r1_step100 | 900 | 34 | 5.3 (16.8) | -11.4 • | [-15.3, -7.7] | 130 | 27 | 1.1e-16 |
+| Qwen3.5-9B | en | dpo | adapter--en_only_v2neg_r2_step102 | 900 | 34 | 5.4 (16.8) | -11.3 • | [-15.1, -7.4] | 130 | 28 | 2.2e-16 |
+| Qwen3.5-9B | en | dpo | adapter--en_only_v2neg_r1_step300 | 900 | 34 | 5.6 (16.8) | -11.2 • | [-15.0, -7.4] | 133 | 32 | 1.9e-15 |
 | Qwen3.5-9B | en | dpo | adapter--en_only_v2neg_r2em_step100 | 900 | 34 | 5.6 (16.8) | -11.2 • | [-15.4, -6.9] | 141 | 40 | 4.2e-14 |
-| Qwen3.5-9B | en | dpo | adapter--en_only_v2neg_r2em_step148 | 900 | 34 | 5.9 (16.8) | -10.9 • | [-15.2, -6.7] | 138 | 40 | 9.2e-14 |
-| Qwen3.5-9B | en | dpo | adapter--en_only_v2neg_r2em_step50 | 900 | 34 | 6.3 (16.8) | -10.4 • | [-14.6, -6.6] | 129 | 35 | 9.2e-14 |
-| Qwen3.5-9B | en | dpo | adapter--en_only_v2neg_r2_step50 | 900 | 34 | 6.7 (16.8) | -10.1 • | [-13.8, -6.4] | 121 | 30 | 5.9e-14 |
+| Qwen3.5-9B | en | dpo | adapter--en_only_v2neg_r2em_step148 | 900 | 34 | 5.9 (16.8) | -10.9 • | [-15.2, -6.7] | 138 | 40 | 1.0e-13 |
+| Qwen3.5-9B | en | dpo | adapter--en_only_v2neg_r2em_step50 | 900 | 34 | 6.3 (16.8) | -10.4 • | [-14.6, -6.6] | 129 | 35 | 1.0e-13 |
+| Qwen3.5-9B | en | dpo | adapter--en_only_v2neg_r2_step50 | 900 | 34 | 6.7 (16.8) | -10.1 • | [-13.8, -6.4] | 121 | 30 | 6.2e-14 |
+| Qwen3.5-9B | en | grpo | adapter--en_only_grpo_pilot | 900 | 34 | 4.3 (16.8) | -12.4 • | [-16.6, -8.4] | 143 | 31 | 2.2e-17 |
 | Qwen3.5-9B | en | sft | adapter--en_only_cscs | 900 | 34 | 6.9 (16.8) | -9.9 • | [-14.0, -5.9] | 134 | 45 | 1.8e-11 |
+| Qwen3.5-9B | en | sft | adapter--en_only_rft | 900 | 34 | 7.2 (16.8) | -9.6 • | [-13.7, -5.7] | 126 | 40 | 1.6e-11 |
 
 \* **Lexical scrubbing is an oracle upper bound, not a comparable mitigation.** It removes the attribute with the exact injection templates this study wrote, so after scrubbing every attribute variant of a CV is character-for-character the attribute-free CV (verified: 100% of rows in all four cells). The model therefore sees the *same prompt* for every variant, and its instability and disparity are **zero by construction** — up to the pipeline's noise floor: 0–0.7% of sets still flip on identical prompts, which is vLLM's batch-level numerical nondeterminism under greedy decoding, not the attribute. The row shows what perfect removal of the attribute would buy. Real CVs do not state an attribute in the study's own template, and bias carried by anything the templates do not cover — names, phrasing, career gaps — is untouched. Compare mitigations with each other and read this row only as the ceiling; LLM scrubbing, which has to find the attribute itself, is the realistic version.
 
@@ -2957,6 +2977,7 @@ Refusals and unparsable responses are excluded from every fairness statistic, so
 | `Qwen3.5-9B--en--dpo--adapter--en_only_v2neg_r2em_step148` | 31,050 | 31,050 | 0.0 | 0.0 | 0.0 |
 | `Qwen3.5-9B--en--dpo--adapter--en_only_v2neg_r2em_step50` | 31,050 | 31,050 | 0.0 | 0.0 | 0.0 |
 | `Qwen3.5-9B--en--embedding--leace` | 2,700 | 2,700 | 0.0 | 0.0 | 4.3 |
+| `Qwen3.5-9B--en--grpo--adapter--en_only_grpo_pilot` | 31,050 | 31,050 | 0.0 | 0.0 | 0.2 |
 | `Qwen3.5-9B--en--prompt--counterfactual_invariance` | 2,700 | 2,700 | 0.0 | 0.0 | 0.7 |
 | `Qwen3.5-9B--en--prompt--fairness_constitution` | 2,700 | 2,700 | 0.0 | 0.0 | 0.7 |
 | `Qwen3.5-9B--en--prompt--ignore_personal_info` | 2,700 | 2,700 | 0.0 | 0.0 | 0.9 |
@@ -2972,6 +2993,7 @@ Refusals and unparsable responses are excluded from every fairness statistic, so
 | `Qwen3.5-9B--en--scrub--llm` | 2,700 | 2,700 | 0.0 | 0.0 | 0.1 |
 | `Qwen3.5-9B--en--sft--adapter--en_only` | 31,050 | 31,050 | 0.0 | 0.0 | 0.2 |
 | `Qwen3.5-9B--en--sft--adapter--en_only_cscs` | 31,050 | 31,050 | 0.0 | 0.0 | 0.0 |
+| `Qwen3.5-9B--en--sft--adapter--en_only_rft` | 31,050 | 31,050 | 0.0 | 0.0 | 0.1 |
 | `Qwen3.5-9B--en--sft--adapter--en_only_v2_ckpt250` | 31,050 | 31,050 | 0.0 | 0.0 | 0.2 |
 | `Qwen3.5-9B--uk--baseline` | 161,550 | 161,550 | 0.0 | 0.0 | 3.0 |
 | `Qwen3.5-9B--uk--embedding--leace` ⚠ | 31,050 | 21,934 | 0.0 | 29.4 | 1.0 |
