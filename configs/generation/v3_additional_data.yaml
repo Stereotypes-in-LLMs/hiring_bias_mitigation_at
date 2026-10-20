@@ -68,8 +68,13 @@ split:
 assemble:
   # The new SFT rows are appended to this set, which stays exactly as built.
   sft_v3_dir: artifacts/semisynthetic-v3/sft_v3_swap
-  # The 10k DPO view: at most this many rows per pool pair, then hire and reject balanced.
+  # The DPO views: at most this many rows per pool pair (dpo_capped), and the same with hire
+  # and reject equal within each pool source (dpo_capped_balanced).
   dpo_cap_per_pair: 2
+  # Pairs dropped at assembly on their CV (scripts/v3_additional_data.py quality_exclusions).
+  exclude:
+    djinni_new_extra_markers: true   # names, pronouns, maternity leave: V1's list misses them
+    rjdb_template_residue: true      # "Details not provided", "[insert ...]"
 
 teacher_model: Qwen/Qwen3.5-122B-A10B-GPTQ-Int4
 serving:                    # the vote and judge runs' serving on a GH200 node

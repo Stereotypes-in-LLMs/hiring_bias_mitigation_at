@@ -96,7 +96,9 @@ def setup(tmp_path, monkeypatch):
         "split": {"val_fraction": 0.25},
         "stop": {"max_undecided_draw_share": 0.05, "max_unanchored_share": 0.10,
                  "min_invariant_yield": 0.80, "min_biased_yield": 0.20},
-        "assemble": {"sft_v3_dir": str(v3), "dpo_cap_per_pair": 2},
+        "assemble": {"sft_v3_dir": str(v3), "dpo_cap_per_pair": 2,
+                     "exclude": {"djinni_new_extra_markers": True,
+                                 "rjdb_template_residue": True}},
     }
     teacher = FakeTeacher()
     from hiring_bias_mitigation.eval import backends as BK
@@ -217,3 +219,34 @@ def test_a_source_that_crosses_a_stop_condition_gets_no_further_part(setup):
     assert (out / "parts" / "djinni_new-000" / "biased.parquet").exists()   # other sources run
     meta = json.loads((out / "parts" / "rjdb-000" / "votes.meta.json").read_text())
     assert meta["engine_load_seconds"] is not None and meta["pass_sha256"]
+
+
+def test_balanced_view_balances_each_pool_source_on_its_own():
+    """A hire-heavy source must not supply another source's hire side."""
+    mod = _load()
+    rows = pd.DataFrame({
+        "pool_source": ["rjdb"] * 6 + ["djinni_new"] * 6,
+        "decision": ["hire"] * 5 + ["reject"] + ["hire"] + ["reject"] * 5,
+        "pair_id": [f"p{i}" for i in range(12)],
+    })
+    out = mod.balanced(rows, seed=0)
+    per = out.groupby(["pool_source", "decision"]).size().to_dict()
+    assert per == {("djinni_new", "hire"): 1, ("djinni_new", "reject"): 1,
+                   ("rjdb", "hire"): 1, ("rjdb", "reject"): 1}
+
+
+def test_quality_exclusions_drop_contradicting_djinni_cvs_and_rjdb_residue():
+    mod = _load()
+    cfg = {"assemble": {"exclude": {"djinni_new_extra_markers": True,
+                                    "rjdb_template_residue": True}}}
+    pairs = pd.DataFrame({
+        "pair_id": ["a", "b", "c", "d"],
+        "source": ["djinni_new", "djinni_new", "rjdb", "kaggle_linkedin"],
+        "cv": ["She led the data team for five years.", "Led the data team for five years.",
+               "Education: Details not provided.", "Company Name City , State"],
+    })
+    excluded, report = mod.quality_exclusions(cfg, pairs)
+    assert report["djinni_new_extra_marker"] == 1 and report["rjdb_template_residue"] == 1
+    assert excluded == {"a", "c"}            # Kaggle's anonymisation placeholders are kept
+    cfg["assemble"]["exclude"] = {}
+    assert mod.quality_exclusions(cfg, pairs)[0] == set()

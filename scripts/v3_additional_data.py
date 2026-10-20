@@ -51,6 +51,7 @@ import argparse
 import hashlib
 import json
 import os
+import re
 import subprocess
 import sys
 import time
@@ -547,7 +548,11 @@ def contrast(dpo: pd.DataFrame) -> dict:
             "chosen_rejected": {f"{c}>{r}": int(n) for (c, r), n in pairs.value_counts().items()},
             "decision_contrast_share": float((dpo["decision"].to_numpy()
                                               != rejected.to_numpy()).mean()) if len(dpo) else None,
-            "by_pool_source": dpo["pool_source"].value_counts().to_dict()}
+            "by_pool_source": dpo["pool_source"].value_counts().to_dict(),
+            "by_pool_source_and_contrast": {
+                f"{s} {c}>{r}": int(n) for (s, c, r), n in
+                pd.Series(list(zip(dpo["pool_source"], dpo["decision"], rejected)), dtype=object)
+                .value_counts().items()} if len(dpo) else {}}
 
 
 def capped(dpo: pd.DataFrame, cap: int, seed: int) -> pd.DataFrame:
@@ -565,14 +570,67 @@ def capped(dpo: pd.DataFrame, cap: int, seed: int) -> pd.DataFrame:
 
 
 def balanced(rows: pd.DataFrame, seed: int) -> pd.DataFrame:
-    """As many hire as reject rows, the larger side drawn down at random."""
+    """As many hire as reject rows within each pool source, the larger side drawn down.
+
+    Balancing the pooled rows would let a source with a high hire share (RJDB's matched CVs
+    were written to fit their JD) supply the hire side, and leave the Djinni rows -- the
+    benchmark's own kind -- reject-heavy: an operating-point shift by source.
+    """
     rng = np.random.default_rng(seed)
-    sides = rows.groupby("decision")
-    n = int(sides.size().min()) if rows["decision"].nunique() == 2 else 0
-    if not n:
+    kept = []
+    for _, source_rows in rows.groupby("pool_source", sort=True):
+        sides = source_rows.groupby("decision")
+        n = int(sides.size().min()) if source_rows["decision"].nunique() == 2 else 0
+        kept.extend(g.iloc[rng.permutation(len(g))[:n]] for _, g in sides if n)
+    if not kept:
         return rows.iloc[:0]
-    out = pd.concat([g.iloc[rng.permutation(len(g))[:n]] for _, g in sides], ignore_index=True)
+    out = pd.concat(kept, ignore_index=True)
     return out.iloc[rng.permutation(len(out))].reset_index(drop=True)
+
+
+#: RJDB's GPT-4 template left in a CV ("Education: Details not provided", "[insert company name
+#: here]"), which the teacher reads as a fact about the candidate, e.g. a missing degree.
+RJDB_TEMPLATE_RESIDUE = re.compile(
+    r"(?i)\b(?:not provided|not specified|if not applicable|please disregard)\b|\[insert")
+
+
+def quality_exclusions(cfg: dict, pairs: pd.DataFrame) -> tuple[set[str], dict]:
+    """Pairs the teacher has answered but training should not use, decided on their CV.
+
+    * `djinni_new` CVs pass V1's marker list only (`pool._MARKERS`), which misses names,
+      third-person pronouns and maternity leave; those contradict an injected gender. Here they
+      meet the external sources' list (`sources.has_external_extra_marker`). V1's own rows, in
+      SFT-v3's sets, keep V1's filter (about the same 3.3% would fail it there too).
+    * RJDB CVs with template residue (`RJDB_TEMPLATE_RESIDUE`).
+
+    Dropping at assembly keeps every generated part valid; the cost is the GPU time spent on
+    about 3-4% of these sources' pairs.
+    """
+    rules = cfg["assemble"].get("exclude", {})
+    djinni = (pairs["source"] == "djinni_new") & bool(rules.get("djinni_new_extra_markers"))
+    marker = djinni & pairs["cv"].map(S.has_external_extra_marker)
+    rjdb = (pairs["source"] == "rjdb") & bool(rules.get("rjdb_template_residue"))
+    residue = rjdb & pairs["cv"].str.contains(RJDB_TEMPLATE_RESIDUE)
+    report = {"rules": rules, "djinni_new_extra_marker": int(marker.sum()),
+              "rjdb_template_residue": int(residue.sum()),
+              "pairs_checked_by_source": pairs["source"].value_counts().to_dict()}
+    return set(pairs.loc[marker | residue, "pair_id"]), report
+
+
+def direction_readout(dpo: pd.DataFrame, seed: int, max_rows: int = 6000) -> dict:
+    """`direction_check`'s surface checks (D1-D3, D5, D6) overall and per pool source.
+
+    D1 fails by construction here: v1's biased rejected keeps the reject verdict on reject
+    rows. D3 is the wording shortcut; v1's English set separates at 1.000.
+    """
+    from hiring_bias_mitigation.generation import direction_check as DC
+
+    def one(rows):
+        return DC.surface_report(DC.subsample(rows, max_rows, seed), seed=seed)["overall"]
+
+    return {"overall": one(dpo),
+            "by_pool_source": {s: one(g.reset_index(drop=True))
+                               for s, g in dpo.groupby("pool_source", sort=True)}}
 
 
 def stage_v1_dpo(cfg: dict) -> None:
@@ -646,9 +704,18 @@ def stage_assemble(cfg: dict, allow_partial: bool = False) -> None:
     biased = pd.concat(kept["biased"], ignore_index=True) if kept["biased"] else pd.DataFrame()
     anchors = pd.concat([part_anchors(cfg, p, pool[pool["part"] == p].reset_index(drop=True))
                          for p in done], ignore_index=True)
+    excluded, exclusion_report = quality_exclusions(cfg, pool[pool["part"].isin(done)])
+    invariant = invariant[~invariant["pair_id"].isin(excluded)]
+    biased = biased[~biased["pair_id"].isin(excluded)] if len(biased) else biased
 
-    sft, balance = F.balance_decisions(D.build_sft_dataset(invariant), seed=int(cfg["seed"]),
-                                       column="decision")
+    # Each pool source is balanced on its own, as v1 balanced its one source.
+    built = D.build_sft_dataset(invariant)
+    balance, sources_balanced = {}, []
+    for source, rows in built.groupby("source", sort=True):
+        rows, balance[source] = F.balance_decisions(rows.reset_index(drop=True),
+                                                    seed=int(cfg["seed"]), column="decision")
+        sources_balanced.append(rows)
+    sft = pd.concat(sources_balanced, ignore_index=True)
     sft = provenance(with_anchor(sft, anchors), sft["source"])
     dpo = D.build_dpo_dataset(invariant, biased)
     dpo = provenance(with_anchor(dpo, anchors), dpo["source"]) if len(dpo) else dpo
@@ -701,10 +768,15 @@ def stage_assemble(cfg: dict, allow_partial: bool = False) -> None:
         _write_parquet(D.build_kto_dataset(both), out / f"kto_{split}.parquet")
         splits[f"dpo_{split}"] = {"includes_v1_pairs": v1_path.exists(),
                                   **{name: contrast(frame) for name, frame in views.items()}}
+        if split == "train":
+            splits["direction_checks_train"] = {
+                name: direction_readout(frame, int(cfg["seed"]))
+                for name, frame in views.items() if name != "dpo" and len(frame)}
     _write_json(out / "generation_report.json", {
         "built": datetime.now(timezone.utc).isoformat(), "code": _code(),
         "teacher_model": cfg["teacher_model"], "parts": done, "sft_v3_dir": str(base),
-        "balance_new_sft_rows": balance, "dpo_cap_per_pair": cap, "splits": splits,
+        "balance_new_sft_rows_by_source": balance, "quality_exclusions": exclusion_report,
+        "dpo_cap_per_pair": cap, "splits": splits,
         "filters": reports, "validation_candidates": len(val)})
     log.info("assemble: %s", {k: v for k, v in splits.items() if not k.startswith("dpo_")})
 
