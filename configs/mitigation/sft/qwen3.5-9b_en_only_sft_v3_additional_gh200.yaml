@@ -18,6 +18,8 @@
 #   eval       a seeded 1,000 of the 3,527 validation rows every 250 steps, and greedy decisions
 #              on 64 of them; a full pass every 100 steps, as v1, would add about 2.7 hours
 #   resume     a checkpoint every 250 steps, all kept (686 MB each), so a cut job resumes
+# Warmup is v1's warmup_ratio 0.03, converted to 118 of the 3,923 steps. That needs
+# training_common to count all four ranks; job 5107507, before that fix, warmed up for 471.
 # The job's cost is recorded under the arm sft_v3 (docs/COST.md):
 #   HBM_COST_ARM=sft_v3 REPO=$PWD \
 #   CONFIG=configs/mitigation/sft/qwen3.5-9b_en_only_sft_v3_additional_gh200.yaml \
