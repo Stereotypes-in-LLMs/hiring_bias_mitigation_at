@@ -5,6 +5,7 @@
     python scripts/v3_additional_data.py --config $CFG --stage generate --parts rjdb-000 rjdb-001
     python scripts/v3_additional_data.py --config $CFG --stage generate --parts all
     python scripts/v3_additional_data.py --config $CFG --stage report      # CPU
+    python scripts/v3_additional_data.py --config $CFG --stage v1_dpo      # CPU
     python scripts/v3_additional_data.py --config $CFG --stage assemble    # CPU
 
 SFT-v3 (docs/SFT_V3_ANCHORS.md) is v1's construction with two changes: the 8-draw vote's
@@ -33,10 +34,13 @@ earlier new pair's is dropped, because two copies of one prompt would draw ident
 so is a prompt that cannot fit `max_model_len`. `generate` loads the teacher once and runs
 every pass for each part it is given; each pass of each part is its own file, written
 atomically and skipped when its prompts are already done, so a job cut by the time limit loses
-at most the pass in flight. `assemble` builds v1's SFT, DPO and KTO sets from the new kept
-rows, splits them by candidate (a seeded 5% of each source's candidates in validation), and
-writes them twice: alone (`additional_*`), and appended to SFT-v3's swap set (`sft_*`), whose
-rows, order and split stay exactly as built.
+at most the pass in flight. `v1_dpo` builds V1's pairs' DPO rows on the vote anchors from v1's
+raw passes (CPU). `assemble` builds v1's SFT and DPO sets from the new kept rows, split by
+candidate (a seeded 5% of each source's candidates in validation), and writes:
+`additional_{sft,dpo}_*` (new rows alone); `sft_*` (SFT-v3's swap set, rows, order and split
+exactly as built, with the new rows after it); `dpo_*` and `kto_*` (V1's pairs and the new
+pairs); and `dpo_capped_*`, at most `dpo_cap_per_pair` rows per pool pair, hire and reject
+balanced.
 """
 
 from __future__ import annotations
@@ -385,6 +389,94 @@ def validation_candidates(cfg: dict, frame: pd.DataFrame) -> set[str]:
     return val
 
 
+def _decision(completions: pd.Series) -> pd.Series:
+    return completions.map(lambda c: json.loads(c)["decision"])
+
+
+def with_anchor(dpo: pd.DataFrame, anchors: pd.DataFrame) -> pd.DataFrame:
+    """DPO rows with the chosen decision and their pair's vote, so a view can filter on them."""
+    cols = anchors[["pair_id", "hire_votes", "unstable"]].rename(
+        columns={"hire_votes": "anchor_hire_votes", "unstable": "anchor_unstable"})
+    out = dpo.merge(cols, on="pair_id", how="left", validate="many_to_one")
+    if out["anchor_hire_votes"].isna().any():
+        raise ValueError("a DPO row has no anchor")
+    return out.assign(decision=_decision(out["chosen"]))
+
+
+def capped_balanced(dpo: pd.DataFrame, cap: int, seed: int) -> tuple[pd.DataFrame, dict]:
+    """At most `cap` rows per pool pair, then as many hire as reject rows.
+
+    A pair's 12 variants share one CV and one JD, so its DPO rows are near-duplicates of each
+    other; the cap spreads the set over more pairs. Within a pair, rows of different protected
+    groups are taken first. The larger decision side is then drawn down at random to the
+    smaller, as `filters.balance_decisions` does for SFT.
+    """
+    rng = np.random.default_rng(seed)
+    shuffled = dpo.iloc[rng.permutation(len(dpo))].copy()
+    shuffled["_group_rank"] = shuffled.groupby(["pair_id", "protected_group"]).cumcount()
+    shuffled = shuffled.sort_values(["pair_id", "_group_rank"], kind="stable")
+    capped = shuffled.groupby("pair_id").head(cap).drop(columns="_group_rank")
+    sides = capped.groupby("decision")
+    n = int(sides.size().min()) if capped["decision"].nunique() == 2 else 0
+    out = (pd.concat([g.iloc[rng.permutation(len(g))[:n]] for _, g in sides], ignore_index=True)
+           if n else capped.iloc[:0])
+    out = out.iloc[rng.permutation(len(out))].reset_index(drop=True)
+    return out, {"rows_before": len(dpo), "rows_after_cap": len(capped),
+                 "by_decision_after_cap": capped["decision"].value_counts().to_dict(),
+                 "per_side": n, "rows": len(out), "pairs": int(out["pair_id"].nunique())}
+
+
+def stage_v1_dpo(cfg: dict) -> None:
+    """V1's pairs' DPO rows on the vote anchors, from v1's raw passes; CPU only.
+
+    `synth.BIASED_PROMPT` does not quote the anchor, so v1's biased generations stand for every
+    V1 pair, including the 192 whose verdict the vote changed; only `filter_biased`'s flip check
+    reads the anchor, and it is re-run against the vote's. The chosen side is SFT-v3's: v1's
+    invariant targets on unchanged pairs and job 5103710's regenerated targets on changed ones.
+    Both sides go through the current filters, with the whole-word attribute matcher. The split
+    is SFT-v3's: a candidate in `sft_v3_swap`'s validation is in validation here.
+    """
+    require_output_root()
+    spec = cfg["v1_dpo"]
+    anchors = pd.read_parquet(resolve_output_path(spec["vote_anchors"]))
+    changed = set(anchors.loc[anchors["changed"], "pair_id"])
+    keep = set(anchors["pair_id"])
+    inv = pd.read_parquet(resolve_output_path(spec["v1_invariant"]))
+    inv = inv[inv["pair_id"].isin(keep) & ~inv["pair_id"].isin(changed)]
+    regen = pd.read_parquet(resolve_output_path(spec["vote_targets"]))
+    regen = regen[regen["pair_id"].isin(changed)].drop(columns=["v1_reference_decision", "seed"])
+    chosen_raw = pd.concat([inv, regen[inv.columns]], ignore_index=True)
+    invariant, rep_inv = F.filter_invariant(chosen_raw["raw_output"].tolist(),
+                                            chosen_raw.drop(columns=["raw_output"]), LANG)
+    by_pair = anchors.set_index("pair_id")
+    biased_raw = pd.read_parquet(resolve_output_path(spec["v1_biased"]))
+    biased_raw = biased_raw[biased_raw["pair_id"].isin(keep)].copy()
+    biased_raw["reference_decision"] = biased_raw["pair_id"].map(by_pair["new_decision"])
+    biased_raw["reference_feedback"] = biased_raw["pair_id"].map(by_pair["new_feedback"])
+    biased, rep_b = F.filter_biased(biased_raw["raw_output"].tolist(),
+                                    biased_raw.drop(columns=["raw_output"]), LANG)
+    dpo = with_anchor(D.build_dpo_dataset(invariant, biased), anchors)
+    dpo["source"] = "djinni_v1"
+    assert_no_leakage(dpo, "v3_additional_data.v1_dpo")
+    base = Path(resolve_output_path(cfg["assemble"]["sft_v3_dir"]))
+    val = set(pd.read_parquet(base / "sft_validation.parquet", columns=["candidate_id"])
+              ["candidate_id"])
+    is_val = dpo["candidate_id"].isin(val)
+    out = _out(cfg)
+    _write_parquet(dpo[~is_val].reset_index(drop=True), out / "v1_dpo_train.parquet")
+    _write_parquet(dpo[is_val].reset_index(drop=True), out / "v1_dpo_validation.parquet")
+    _write_json(out / "v1_dpo_report.json", {
+        "built": datetime.now(timezone.utc).isoformat(), "code": _code(), "inputs": spec,
+        "pairs": len(keep), "changed_pairs": len(changed), "invariant": rep_inv,
+        "biased": rep_b, "rows": len(dpo), "train": int((~is_val).sum()),
+        "validation": int(is_val.sum()),
+        "by_decision": dpo["decision"].value_counts().to_dict(),
+        "rejected_flipped_share": float(dpo["rejected_flipped_decision"].mean()),
+        "rejected_mentions_attribute_share": float(dpo["rejected_mentions_attribute"].mean()),
+        "rows_on_unstable_anchors": int(dpo["anchor_unstable"].sum())})
+    log.info("v1_dpo: %d rows (%s)", len(dpo), dpo["decision"].value_counts().to_dict())
+
+
 def stage_assemble(cfg: dict) -> None:
     require_output_root()
     pool, done = _voted_parts(cfg)
@@ -393,16 +485,19 @@ def stage_assemble(cfg: dict) -> None:
         raise SystemExit("assemble: no invariant pass yet")
     invariant = pd.concat(kept["invariant"], ignore_index=True)
     biased = pd.concat(kept["biased"], ignore_index=True) if kept["biased"] else pd.DataFrame()
+    anchors = pd.concat([part_anchors(cfg, p, pool[pool["part"] == p].reset_index(drop=True))
+                         for p in done], ignore_index=True)
 
     sft, balance = F.balance_decisions(D.build_sft_dataset(invariant), seed=int(cfg["seed"]),
                                        column="decision")
     dpo = D.build_dpo_dataset(invariant, biased)
-    kto = D.build_kto_dataset(dpo)
+    dpo = with_anchor(dpo, anchors) if len(dpo) else dpo
     val = validation_candidates(cfg, pool)
     out = _out(cfg)
     base = Path(resolve_output_path(cfg["assemble"]["sft_v3_dir"]))
     splits: dict[str, dict] = {}
-    for name, frame in (("sft", sft), ("dpo", dpo), ("kto", kto)):
+    new: dict[str, dict[str, pd.DataFrame]] = {}
+    for name, frame in (("sft", sft), ("dpo", dpo)):
         if frame.empty:
             continue
         # The pool passed the external text holdout; the ids are re-checked here.
@@ -410,38 +505,57 @@ def stage_assemble(cfg: dict) -> None:
         if not frame["pair_id"].isin(set(pool["pair_id"])).all():
             raise ValueError(f"assemble: {name} has a row outside the pool")
         is_val = frame["candidate_id"].isin(val)
-        parts = {"train": frame[~is_val].reset_index(drop=True),
-                 "validation": frame[is_val].reset_index(drop=True)}
-        for split, rows in parts.items():
+        new[name] = {"train": frame[~is_val].reset_index(drop=True),
+                     "validation": frame[is_val].reset_index(drop=True)}
+        for split, rows in new[name].items():
             _write_parquet(rows, out / f"additional_{name}_{split}.parquet")
-        splits[f"additional_{name}"] = {s: len(r) for s, r in parts.items()}
-        if name == "sft":
-            # SFT-v3's swap set, unchanged, with the new rows after it.
-            for split, rows in parts.items():
-                v3 = pd.read_parquet(base / f"sft_{split}.parquet")
-                if set(v3["candidate_id"]) & set(rows["candidate_id"]):
-                    raise ValueError(f"assemble: a new candidate is already in SFT-v3 {split}")
-                combined = pd.concat([v3.assign(source=v3.get("source", "djinni")), rows],
-                                     ignore_index=True)
-                _write_parquet(combined, out / f"sft_{split}.parquet")
-                splits[f"sft_{split}"] = {
-                    "rows": len(combined), "sft_v3_rows": len(v3), "new_rows": len(rows),
-                    "by_source_and_decision": {f"{s} {d}": int(n) for (s, d), n in
-                                               combined.groupby(["source", "decision"]).size()
-                                               .items()}}
+        splits[f"additional_{name}"] = {s: len(r) for s, r in new[name].items()}
+
+    for split, rows in new.get("sft", {}).items():
+        # SFT-v3's swap set, unchanged, with the new rows after it.
+        v3 = pd.read_parquet(base / f"sft_{split}.parquet")
+        if set(v3["candidate_id"]) & set(rows["candidate_id"]):
+            raise ValueError(f"assemble: a new candidate is already in SFT-v3 {split}")
+        combined = pd.concat([v3.assign(source=v3.get("source", "djinni")), rows],
+                             ignore_index=True)
+        _write_parquet(combined, out / f"sft_{split}.parquet")
+        splits[f"sft_{split}"] = {
+            "rows": len(combined), "sft_v3_rows": len(v3), "new_rows": len(rows),
+            "by_source_and_decision": {f"{s} {d}": int(n) for (s, d), n in
+                                       combined.groupby(["source", "decision"]).size().items()}}
+
+    # DPO and KTO: V1's pairs on the vote anchors (stage v1_dpo) and the new pairs, together.
+    cap = int(cfg["assemble"]["dpo_cap_per_pair"])
+    for split in ("train", "validation"):
+        v1_path = out / f"v1_dpo_{split}.parquet"
+        frames = [pd.read_parquet(v1_path)] if v1_path.exists() else []
+        if "dpo" in new:
+            frames.append(new["dpo"][split])
+        if not frames:
+            continue
+        both = pd.concat(frames, ignore_index=True)
+        _write_parquet(both, out / f"dpo_{split}.parquet")
+        _write_parquet(D.build_kto_dataset(both), out / f"kto_{split}.parquet")
+        target, target_report = capped_balanced(both, cap, int(cfg["seed"]))
+        _write_parquet(target, out / f"dpo_capped_{split}.parquet")
+        splits[f"dpo_{split}"] = {
+            "rows": len(both), "includes_v1_pairs": v1_path.exists(),
+            "by_source_and_decision": {f"{s} {d}": int(n) for (s, d), n in
+                                       both.groupby(["source", "decision"]).size().items()},
+            "capped_balanced": target_report}
     _write_json(out / "generation_report.json", {
         "built": datetime.now(timezone.utc).isoformat(), "code": _code(),
         "teacher_model": cfg["teacher_model"], "parts": done, "sft_v3_dir": str(base),
-        "balance_new_rows": balance, "splits": splits, "filters": reports,
-        "validation_candidates": len(val)})
-    log.info("assemble: %s", splits)
+        "balance_new_sft_rows": balance, "dpo_cap_per_pair": cap, "splits": splits,
+        "filters": reports, "validation_candidates": len(val)})
+    log.info("assemble: %s", {k: v for k, v in splits.items() if not k.startswith("dpo_")})
 
 
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__.split("\n")[0])
     parser.add_argument("--config", required=True)
     parser.add_argument("--stage", required=True,
-                        choices=["pool", "generate", "report", "assemble"])
+                        choices=["pool", "generate", "report", "v1_dpo", "assemble"])
     parser.add_argument("--parts", nargs="+", default=["all"])
     parser.add_argument("--passes", nargs="+", default=list(PASSES), choices=PASSES)
     args = parser.parse_args()
@@ -450,6 +564,7 @@ def main() -> None:
     {"pool": lambda: stage_pool(cfg),
      "generate": lambda: stage_generate(cfg, args.parts, args.passes),
      "report": lambda: stage_report(cfg),
+     "v1_dpo": lambda: stage_v1_dpo(cfg),
      "assemble": lambda: stage_assemble(cfg)}[args.stage]()
 
 

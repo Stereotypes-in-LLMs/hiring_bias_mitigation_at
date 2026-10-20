@@ -23,17 +23,18 @@ def _load():
 
 
 class FakeTeacher:
-    """Hires every pair whose CV mentions Python; writes biased answers that flip."""
+    """Hires every pair whose CV mentions Python; its biased answers always flip that."""
 
     def __init__(self):
         self.generation = None
         self.calls = []
 
     def _answer(self, prompt: str) -> str:
-        if "simulating a biased hiring system" in prompt:
-            return json.dumps({"decision": "reject", "feedback": "We prefer a different kind of "
-                               "person for this team and its culture overall."})
         decision = "hire" if "Python" in prompt.split("Candidate profile")[-1] else "reject"
+        if "simulating a biased hiring system" in prompt:     # always the other verdict
+            return json.dumps({"decision": "reject" if decision == "hire" else "hire",
+                               "feedback": "We prefer a different kind of person for this "
+                               "team and its culture overall."})
         return json.dumps({"decision": decision, "feedback": "The candidate's experience and "
                            "skills were weighed against the stated requirements."})
 
@@ -93,7 +94,7 @@ def setup(tmp_path, monkeypatch):
         "passes": {p: {"max_new_tokens": 32, "temperature": 0.7, "top_p": 0.9, "seed": s}
                    for p, s in (("votes", 43), ("invariant", 42), ("biased", 42))},
         "split": {"val_fraction": 0.25},
-        "assemble": {"sft_v3_dir": str(v3)},
+        "assemble": {"sft_v3_dir": str(v3), "dpo_cap_per_pair": 2},
     }
     teacher = FakeTeacher()
     from hiring_bias_mitigation.eval import backends as BK
@@ -127,6 +128,10 @@ def test_generate_report_assemble(setup):
     new_val = pd.read_parquet(out / "additional_sft_validation.parquet")
     combined = pd.read_parquet(out / "sft_train.parquet")
     dpo_train = pd.read_parquet(out / "additional_dpo_train.parquet")
+    capped = pd.read_parquet(out / "dpo_capped_train.parquet")
+    assert capped.groupby("pair_id").size().max() <= 2
+    assert capped["decision"].value_counts().nunique() == 1        # as many hire as reject
+    assert {"anchor_hire_votes", "anchor_unstable"} <= set(capped.columns)
     assert not set(new_train["candidate_id"]) & set(new_val["candidate_id"])
     assert set(new_train["source"]) <= {"djinni_new", "rjdb"}
     # SFT-v3's swap rows come first, unchanged; the new rows follow.
@@ -142,3 +147,39 @@ def test_unknown_part_is_refused(setup):
     mod, cfg, _, _ = setup
     with pytest.raises(SystemExit):
         mod.stage_generate(cfg, ["nope-000"], list(mod.PASSES))
+
+
+def test_v1_dpo_reads_the_vote_anchor_and_keeps_sft_v3s_split(setup, tmp_path):
+    """The flip check uses the vote's verdict; changed pairs take the regenerated targets."""
+    mod, cfg, _, out = setup
+    key = {"candidate_id": "v1-b", "job_id": "j", "pair_id": "v1-b__j", "cv": "cv",
+           "job_description": "jd", "job_position": "", "primary_keyword": "",
+           "candidate_years": 0.0, "job_required_years": 0.0, "lang": "en",
+           "protected_group": "gender", "protected_attr": "Male", "condition": "explicit",
+           "group_label": "gender", "profile": "p", "reference_feedback": "v1 feedback"}
+    ok = json.dumps({"decision": "reject", "feedback": "The record lacks the core skills "
+                     "the role asks for in its requirements."})
+    hire = json.dumps({"decision": "hire", "feedback": "Strong record across every skill "
+                       "the role asks for in its requirements."})
+    pd.DataFrame([{**key, "reference_decision": "reject", "raw_output": ok}]).to_parquet(
+        tmp_path / "inv.parquet")
+    pd.DataFrame([{**key, "reference_decision": "hire", "raw_output": hire,
+                   "v1_reference_decision": "reject", "seed": 1}]).to_parquet(
+        tmp_path / "regen.parquet")
+    # v1's biased answer says reject: no flip against v1's reject, a flip against the vote's hire.
+    pd.DataFrame([{**key, "reference_decision": "reject", "raw_output": ok}]).to_parquet(
+        tmp_path / "biased.parquet")
+    pd.DataFrame({"pair_id": ["v1-b__j"], "new_decision": ["hire"],
+                  "new_feedback": ["vote feedback"], "changed": [True], "hire_votes": [7],
+                  "unstable": [True]}).to_parquet(tmp_path / "anchors.parquet")
+    cfg["v1_dpo"] = {"vote_anchors": str(tmp_path / "anchors.parquet"),
+                     "v1_invariant": str(tmp_path / "inv.parquet"),
+                     "vote_targets": str(tmp_path / "regen.parquet"),
+                     "v1_biased": str(tmp_path / "biased.parquet")}
+    mod.stage_v1_dpo(cfg)
+    val = pd.read_parquet(out / "v1_dpo_validation.parquet")      # v1-b is in SFT-v3's validation
+    assert len(val) == 1 and len(pd.read_parquet(out / "v1_dpo_train.parquet")) == 0
+    row = val.iloc[0]
+    assert json.loads(row["chosen"])["decision"] == "hire"         # the regenerated target
+    assert json.loads(row["rejected"])["decision"] == "reject" and row["rejected_flipped_decision"]
+    assert row["source"] == "djinni_v1" and bool(row["anchor_unstable"])

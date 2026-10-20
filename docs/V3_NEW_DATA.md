@@ -93,6 +93,23 @@ No model is trained or selected, and the benchmark is not read.
   - `additional_{sft,dpo,kto}_{train,validation}.parquet`: the new rows alone.
   - `sft_{train,validation}.parquet`: `sft_v3_swap` row for row, with the new rows after it. A data config can point at the directory with `data_kind: sft`.
 
+### V1's pairs in the DPO set, and the 10k view
+
+SFT-v3 built SFT data only. To reach the user's target of about 10,000 DPO pairs, `--stage v1_dpo` builds V1's pairs' DPO rows on the vote anchors, from v1's raw passes and on CPU:
+
+- **chosen** is SFT-v3's: v1's invariant targets on the 2,800 unchanged pairs, and job 5103710's regenerated targets on the 192 changed pairs;
+- **rejected** is v1's biased generations (`data/raw/en_biased.parquet` of the published dataset, at the revision `semisynthetic-v1-hub` records, sha256 8ef524e6...). `BIASED_PROMPT` does not quote the anchor, so those generations stand for the changed pairs too. Only `filter_biased`'s flip check reads the anchor, and it is re-run against the vote's;
+- the split is SFT-v3's: a candidate in `sft_v3_swap`'s validation is in validation.
+
+`--stage assemble` then writes:
+
+- `dpo_*` and `kto_*`: V1's pairs and the new pairs together;
+- `dpo_capped_*`: at most 2 rows per pool pair, rows of different protected groups first, then as many hire as reject rows.
+
+The second is the view meant for training. A pair's 12 variants share one CV and one JD, so without the cap the set would be thousands of near-duplicates of a few hundred pairs on the hire side.
+
+Sizing, from v1's English yields (`dpo_*.parquet`: 84.6% of hire-anchor variants and 50.5% of reject-anchor variants become DPO rows) and the vote's 21% hire share: 10,000 capped and balanced rows need about 2,500 hire pairs. V1's pairs give 616. The remainder, about 1,900 hire pairs, needs about 9,000 new pool pairs. Hence the first run's scope: `djinni_new` 000-002, `rjdb` 000-001 and `kaggle_linkedin` 000-001, 9,034 pairs (job 5104067).
+
 ### Known caveat: the DPO negatives
 
 These DPO pairs are v1's kind: `rejected` is the teacher asked to let the attribute drive the verdict. In v1, 91% of those named the attribute and 78% kept the chosen verdict, and DPO separated the pairs by wording within 50 steps (`generation/negatives_v2.py` docstring). The project's best DPO set since then, r2em, takes `rejected` from the SFT student's own attribute-tipped mistakes, judged by the teacher (`docs/V2_NEGATIVES_DPO_DATA.md`). Those negatives need the SFT model DPO starts from, so they can only be drawn after SFT-v3 is trained. The anchors and invariant targets made here are the inputs that on-policy build needs.
