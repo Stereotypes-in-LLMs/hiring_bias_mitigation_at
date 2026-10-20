@@ -1,0 +1,60 @@
+# Hand-written -- NOT produced by generate_experiment_configs.py, so it survives a regeneration.
+#
+# Gender coverage: pi1's own mistakes on NEW gender rows. v1 draws 2 of 20 gender attributes per
+# pair (synth.build_variant_frame), so each gender attribute has 526-624 English pool rows
+# against ~2,400 per military attribute. This run adds 2 more gender attributes per pair, both
+# conditions, with the pair's existing chosen text reused (onpolicy.add_attribute_rows): no new
+# teacher text. The local dry run on 2026-10-19 (seed 20261019) kept 11,916 of 11,968 planned
+# rows. Sampling, tipping, covert filters and the teacher judge are it2's (8da7716), with the
+# same student pi1 = r2em checkpoint-100, and the train/validation split is it2's.
+#   CONFIG=configs/generation/negatives_v2_onpolicy_gender_pi1_gh200.yaml \
+#     scripts/cscs/submit.sh -p debug -t 00:30:00 -J xw-gender scripts/cscs/onpolicy_full.sbatch sample
+#   ... judge, then CHECK_PAIRS=candidates ... check (the hire side is too thin to balance)
+source_artifacts_dir: artifacts/semisynthetic-v1
+artifacts_dir: artifacts/semisynthetic-v2/onpolicy-gender-pi1
+split_of: artifacts/semisynthetic-v2/onpolicy-it2
+add_attributes:
+  group: gender
+  k: 2
+  seed: 20261019
+lang: en
+seed: 42
+val_fraction: 0.05
+
+student_base: Qwen/Qwen3.5-9B
+student_adapter: outputs/dpo/qwen3.5-9b_en_only_dpo_v2neg_r2em/checkpoint-100
+samples_per_prompt: 8
+min_free_right: 0.5
+chunk_size: 512
+student_vllm:
+  gpu_memory_utilization: 0.70      # of 95.6 GiB usable; anything near 96 GB OOMs
+  max_model_len: 8192
+  max_num_seqs: 256
+  engine_kwargs:
+    gdn_prefill_backend: triton     # no CUDA toolkit on Daint for FlashInfer's JIT
+student_generation:
+  max_new_tokens: 200
+  temperature: 1.0
+  top_p: 1.0
+  seed: 42
+
+judge_strategies:
+- student_tipped
+max_length_delta_words: 10
+min_plausibility: 3
+n_samples: 20
+
+# The teacher, as judge only -- the same settings as batch-01 and it2.
+teacher_model: Qwen/Qwen3.5-122B-A10B-GPTQ-Int4
+backend: vllm
+dtype: auto
+max_model_len: 8192
+tensor_parallel_size: 4
+gpu_memory_utilization: 0.80
+max_num_seqs: 128
+engine_kwargs:
+  gdn_prefill_backend: triton
+judge_generation:
+  max_new_tokens: 160
+  temperature: 0.0
+  top_p: 1.0

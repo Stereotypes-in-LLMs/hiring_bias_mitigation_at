@@ -27,6 +27,7 @@ covert mistakes, not the most extreme one (cf. "Finding the Sweet Spot", 2025).
 from __future__ import annotations
 
 import os
+import re
 from pathlib import Path
 
 import pandas as pd
@@ -151,6 +152,105 @@ def filter_rows(rows: pd.DataFrame, row_filter: dict | None) -> pd.DataFrame:
     for column, value in row_filter.items():
         mask &= rows[column] == value
     return rows[mask].reset_index(drop=True)
+
+
+#: A rationale with one of these addresses one gender. Reused under another attribute it
+#: would contradict the profile, so it is never reused.
+GENDERED_PRONOUNS = re.compile(r"\b(?:she|her|hers|herself|he|him|his|himself)\b", re.IGNORECASE)
+#: The columns that describe one variant of a pair; every other pool column is the pair's.
+VARIANT_COLUMNS = ("protected_group", "protected_attr", "condition", "group_label", "profile",
+                   "chosen_decision", "chosen_feedback")
+
+
+def add_attribute_rows(
+    rows: pd.DataFrame,
+    group: str,
+    k: int,
+    seed: int,
+    lang: str = "en",
+    conditions: tuple[str, ...] = ("explicit", "implicit"),
+) -> tuple[pd.DataFrame, dict]:
+    """New pool rows for `k` more attributes of `group` per pair, reusing the pair's chosen text.
+
+    v1 draws the same 2 attributes per group for every pair (synth.build_variant_frame), so an
+    English gender attribute (1 of 20) has about 600 rows where a military one (1 of 5) has
+    about 2,400. The docstring there assumes every attribute "still appears thousands of
+    times"; for gender it does not.
+
+    The chosen side needs no new teacher call. The invariant pass pins its verdict to the
+    pair's reference and drops any text that names its own attribute (filters.filter_invariant),
+    so the pair's existing text for the same group and condition is reused. A text with a
+    gendered pronoun is never reused. The reused text then goes through filter_invariant again,
+    under the new attribute, exactly as v1's own rows did.
+
+    Draws use their own rng, not v1's seed-42 stream: pairs in sorted order, `k` new
+    attributes uniformly among those the pair lacks (sorted by list position), then one source
+    text per new attribute and condition. Returns only the rows that pass the filter, with the
+    pool's columns plus `source_attr` (whose text was reused), and a report.
+    """
+    import json
+
+    import numpy as np
+
+    from ..data.protected_groups import GROUP_LABELS, load_group
+    from .filters import filter_invariant
+    from .synth import build_profile
+
+    attributes = load_group(group, lang).attributes
+    rng = np.random.default_rng(seed)
+    in_group = rows[rows["protected_group"] == group]
+    used = in_group.groupby("pair_id")["protected_attr"].agg(set).to_dict()
+    sources = {key: part for key, part in in_group.groupby(["pair_id", "condition"])}
+    pair_fields = [c for c in rows.columns if c not in VARIANT_COLUMNS]
+    pairs = rows.drop_duplicates("pair_id").set_index("pair_id")
+
+    built, lost = [], {}
+    for pid in sorted(pairs.index):
+        free = [a for a in attributes if a not in used.get(pid, set())]
+        picked = sorted(int(i) for i in rng.choice(len(free), size=min(k, len(free)),
+                                                   replace=False))
+        base = pairs.loc[pid]
+        for index in picked:
+            attr = free[index]
+            for condition in conditions:
+                source = sources.get((pid, condition))
+                if source is None:
+                    lost["no_source_row_same_condition"] = lost.get(
+                        "no_source_row_same_condition", 0) + 1
+                    continue
+                usable = source[~source["chosen_feedback"].str.contains(GENDERED_PRONOUNS)]
+                if usable.empty:
+                    lost["source_has_gendered_pronoun"] = lost.get(
+                        "source_has_gendered_pronoun", 0) + 1
+                    continue
+                pick = usable.iloc[int(rng.integers(len(usable)))]
+                built.append({
+                    **{f: (pid if f == "pair_id" else base[f]) for f in pair_fields},
+                    "protected_group": group, "protected_attr": attr, "condition": condition,
+                    "group_label": GROUP_LABELS[group][lang],
+                    "profile": build_profile(base["cv"], group, attr, condition, lang),
+                    "source_attr": pick["protected_attr"],
+                    "source_feedback": pick["chosen_feedback"],
+                })
+
+    variants = pd.DataFrame(built)
+    report: dict = {"group": group, "k": k, "seed": seed,
+                    "planned": len(variants) + sum(lost.values()), "lost_before_filter": lost,
+                    "built": len(variants)}
+    if variants.empty:
+        report.update({"kept": 0, "filter": {}})
+        return variants, report
+    raw = [json.dumps({"decision": d, "feedback": f}, ensure_ascii=False)
+           for d, f in zip(variants["reference_decision"], variants["source_feedback"])]
+    kept, report["filter"] = filter_invariant(raw, variants, lang)
+    kept = kept.drop(columns=["source_feedback"], errors="ignore")
+    by_attr = variants.groupby("protected_attr").size()
+    kept_by_attr = kept.groupby("protected_attr").size().reindex(by_attr.index, fill_value=0)
+    report["kept"] = len(kept)
+    report["yield_by_attribute"] = {a: round(float(kept_by_attr[a] / n), 4)
+                                    for a, n in by_attr.items()}
+    log.info("%s: %d new rows kept of %d planned (k=%d)", group, len(kept), report["planned"], k)
+    return kept.reset_index(drop=True), report
 
 
 def merge_topup(base: pd.DataFrame, topup: pd.DataFrame,

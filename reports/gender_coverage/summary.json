@@ -1,0 +1,90 @@
+{
+  "base": "/private/tmp/claude-501/-Users-xinyangwu-projects-hiring-bias-mitigation-at/f47bb430-85b1-4ccb-9c31-2335ca3e1668/scratchpad/wf/it2",
+  "new": "/private/tmp/claude-501/-Users-xinyangwu-projects-hiring-bias-mitigation-at/f47bb430-85b1-4ccb-9c31-2335ca3e1668/scratchpad/gender_run",
+  "group": "gender",
+  "overall": {
+    "pairs": 2990,
+    "base_rows": 11918,
+    "base_tipped_wrong": 128,
+    "base_rate": 0.010740057056553114,
+    "new_rows": 11916,
+    "new_tipped_wrong": 124,
+    "new_rate": 0.010406176569318564,
+    "difference": -0.0003338804872345495,
+    "ci95": [
+      -0.0020267722716049283,
+      0.0014267863809773746
+    ],
+    "bootstrap": 10000
+  },
+  "by_condition": {
+    "explicit": {
+      "pairs": 2990,
+      "base_rows": 5960,
+      "base_tipped_wrong": 77,
+      "base_rate": 0.012919463087248322,
+      "new_rows": 5957,
+      "new_tipped_wrong": 73,
+      "new_rate": 0.01225449051536008,
+      "difference": -0.0006649725718882414,
+      "ci95": [
+        -0.0030134773678949806,
+        0.0016938512098907557
+      ],
+      "bootstrap": 10000
+    },
+    "implicit": {
+      "pairs": 2990,
+      "base_rows": 5958,
+      "base_tipped_wrong": 51,
+      "base_rate": 0.008559919436052367,
+      "new_rows": 5959,
+      "new_tipped_wrong": 51,
+      "new_rate": 0.008558482966940761,
+      "difference": -1.4364691116059564e-06,
+      "ci95": [
+        -0.0020151116910740565,
+        0.002011974115131808
+      ],
+      "bootstrap": 10000
+    }
+  },
+  "by_reference_decision": {
+    "hire": {
+      "pairs": 423,
+      "base_rows": 1689,
+      "base_tipped_wrong": 2,
+      "base_rate": 0.0011841326228537595,
+      "new_rows": 1686,
+      "new_tipped_wrong": 6,
+      "new_rate": 0.0035587188612099642,
+      "difference": 0.0023745862383562047,
+      "ci95": [
+        0.0,
+        0.006539098174720035
+      ],
+      "bootstrap": 10000
+    },
+    "reject": {
+      "pairs": 2567,
+      "base_rows": 10229,
+      "base_tipped_wrong": 126,
+      "base_rate": 0.012317919640238538,
+      "new_rows": 10230,
+      "new_tipped_wrong": 118,
+      "new_rate": 0.011534701857282503,
+      "difference": -0.0007832177829560343,
+      "ci95": [
+        -0.0027303577601313655,
+        0.0011563733407198924
+      ],
+      "bootstrap": 10000
+    }
+  },
+  "erring_pairs": {
+    "base": 57,
+    "new": 54,
+    "both": 42,
+    "new_error_rows_on_pairs_erring_in_base": 102
+  }
+}

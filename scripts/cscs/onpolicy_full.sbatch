@@ -19,6 +19,9 @@
 # is read from it:
 #   CONFIG=configs/generation/negatives_v2_onpolicy_hire_gh200.yaml scripts/cscs/submit.sh ...
 #
+# CHECK_PAIRS=candidates runs `check` on every judged pair, unbalanced, in $OUT/check_all/,
+# for a run whose hire side is too thin to balance (e.g. an attribute-coverage run).
+#
 #SBATCH --job-name=xw-v2-onpolicy-full
 #SBATCH --account=lp193
 #SBATCH --partition=normal
@@ -64,11 +67,19 @@ case "$STAGE" in
     step "direction check, GPU-free part"
     $PY scripts/check_preference_direction.py --batch "$OUT" ;;
   check)
-    step "balance: equal hire and reject per protected group inside each split"
-    $PY scripts/generate_onpolicy_full.py --config "$CONFIG" --stage balance
-    step "direction check on the balanced pairs; D4 on a 600-pair subsample (HF + PEFT)"
+    if [ "${CHECK_PAIRS:-balanced}" = candidates ]; then
+      step "every judged pair, unbalanced, copied to check_all/"
+      mkdir -p "$XW/$OUT/check_all"
+      cp "$XW/$OUT/dpo_v2_candidates.parquet" "$XW/$OUT/report.json" "$XW/$OUT/check_all/"
+      PAIRS="$XW/$OUT/check_all/dpo_v2_candidates.parquet"
+    else
+      step "balance: equal hire and reject per protected group inside each split"
+      $PY scripts/generate_onpolicy_full.py --config "$CONFIG" --stage balance
+      PAIRS="$OUT/balanced/dpo_v2_candidates.parquet"
+    fi
+    step "direction check on $PAIRS; D4 on a 600-pair subsample (HF + PEFT)"
     CUDA_VISIBLE_DEVICES=0 $PY scripts/check_preference_direction.py \
-      --pairs "$OUT/balanced/dpo_v2_candidates.parquet" \
+      --pairs "$PAIRS" \
       --student "$STUDENT" --also-base --batch-size 4 --student-sample 600 ;;
   *) echo "unknown stage $STAGE"; exit 2 ;;
 esac
