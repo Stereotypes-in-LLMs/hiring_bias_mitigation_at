@@ -113,7 +113,16 @@ not backfilled (user, 2026-10-20). Read from `reports/reference_metrics.csv` and
 | Arm | Decision, pp [95% CI] | TPR vs reference | Agreement vs reference | Undecided | Merge kept | Verdict |
 |---|---|---|---|---|---|---|
 | DPO r2em-100 against SFT | -0.96 [-1.96, +0.04] | +0.66 | +0.06 | 0% | 90.56% | not better: the interval reaches 0 |
+| DPO r2em-100 against the base, for reference | -10.23 [-12.39, -8.08] | +24.75 | +3.78 | 0% | 90.56% | better |
 | SFT against the base | -9.23, no interval | +24.10 | +3.71 | 0% | 99.68% | undecided: no interval |
+
+The standard decides a method trained after SFT against SFT; the row against the base model only
+shows how far the whole SFT + DPO chain moved from where it started. It comes from
+`compare-arms --against-which base`, the same matching and candidate bootstrap with the base
+pass of the SFT config as the reference arm: at r2em-100's hire rate of 28.4% the base model has
+13.0% unstable sets, against 2.8% for r2em-100. Read straight across the table rows, without
+matching, the gap is 5.96 pp, because the base model hires only 15.7% of prompts in its audit
+row and an operating point that low leaves fewer sets able to flip.
 
 Merge retention was measured on the merges the audits served by
 `scripts/cscs/merge_retention.sbatch` (job 5105237): r2em-100's own adapter kept 90.56% of its
