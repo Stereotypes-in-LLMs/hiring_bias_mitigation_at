@@ -1,0 +1,137 @@
+{
+  "validation": {
+    "graded": 391,
+    "expected": 391,
+    "missing": [],
+    "extra": [],
+    "problems": []
+  },
+  "by_set": {
+    "control_hire": {
+      "claude_hire": {
+        "n": 20,
+        "share": 0.95,
+        "ci_low": 0.85,
+        "ci_high": 1.0
+      },
+      "fit_counts": {
+        "1-2": 0,
+        "3": 4,
+        "4-5": 16
+      },
+      "decision_by_fit": {
+        "3/hire": 3,
+        "3/reject": 1,
+        "4-5/hire": 16
+      },
+      "agree_with_shared": {
+        "n": 20,
+        "share": 0.95,
+        "ci_low": 0.85,
+        "ci_high": 1.0
+      }
+    },
+    "control_reject": {
+      "claude_hire": {
+        "n": 20,
+        "share": 0.05,
+        "ci_low": 0.0,
+        "ci_high": 0.15
+      },
+      "fit_counts": {
+        "1-2": 16,
+        "3": 3,
+        "4-5": 1
+      },
+      "decision_by_fit": {
+        "1-2/reject": 16,
+        "3/reject": 3,
+        "4-5/hire": 1
+      },
+      "agree_with_shared": {
+        "n": 20,
+        "share": 0.95,
+        "ci_low": 0.85,
+        "ci_high": 1.0
+      }
+    },
+    "reverse": {
+      "claude_hire": {
+        "n": 14,
+        "share": 0.6428571428571429,
+        "ci_low": 0.35714285714285715,
+        "ci_high": 0.8571428571428571
+      },
+      "fit_counts": {
+        "1-2": 1,
+        "3": 6,
+        "4-5": 7
+      },
+      "decision_by_fit": {
+        "1-2/reject": 1,
+        "3/hire": 2,
+        "3/reject": 4,
+        "4-5/hire": 7
+      }
+    },
+    "target": {
+      "claude_hire": {
+        "n": 337,
+        "share": 0.7240356083086054,
+        "ci_low": 0.6765578635014837,
+        "ci_high": 0.7744807121661721
+      },
+      "fit_counts": {
+        "1-2": 34,
+        "3": 179,
+        "4-5": 124
+      },
+      "decision_by_fit": {
+        "1-2/reject": 34,
+        "3/hire": 120,
+        "3/reject": 59,
+        "4-5/hire": 124
+      }
+    }
+  },
+  "controls_agreement": {
+    "n": 40,
+    "share": 0.95,
+    "ci_low": 0.875,
+    "ci_high": 1.0
+  },
+  "target_by_student_confidence": {
+    "5/8": {
+      "n": 71,
+      "share": 0.704225352112676,
+      "ci_low": 0.6056338028169014,
+      "ci_high": 0.8028169014084507
+    },
+    "6-7/8": {
+      "n": 155,
+      "share": 0.7032258064516129,
+      "ci_low": 0.632258064516129,
+      "ci_high": 0.7741935483870968
+    },
+    "8/8": {
+      "n": 111,
+      "share": 0.7657657657657657,
+      "ci_low": 0.6846846846846847,
+      "ci_high": 0.8468468468468469
+    }
+  },
+  "target_by_sft_heldout": {
+    "False": {
+      "n": 297,
+      "share": 0.7306397306397306,
+      "ci_low": 0.680050505050505,
+      "ci_high": 0.7811447811447811
+    },
+    "True": {
+      "n": 40,
+      "share": 0.675,
+      "ci_low": 0.525,
+      "ci_high": 0.825
+    }
+  }
+}

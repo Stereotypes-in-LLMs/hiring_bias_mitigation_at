@@ -1,0 +1,42 @@
+{
+  "dpo_r1": {
+    "target_pairs_used": 0,
+    "rows": 0,
+    "rows_claude_hire": 0,
+    "rows_claude_clear_hire": 0,
+    "rows_claude_borderline": 0,
+    "rows_claude_clear_reject": 0
+  },
+  "dpo_r2": {
+    "target_pairs_used": 0,
+    "rows": 0,
+    "rows_claude_hire": 0,
+    "rows_claude_clear_hire": 0,
+    "rows_claude_borderline": 0,
+    "rows_claude_clear_reject": 0
+  },
+  "dpo_r2em": {
+    "target_pairs_used": 0,
+    "rows": 0,
+    "rows_claude_hire": 0,
+    "rows_claude_clear_hire": 0,
+    "rows_claude_borderline": 0,
+    "rows_claude_clear_reject": 0
+  },
+  "grpo_02": {
+    "target_pairs_used": 83,
+    "rows": 97,
+    "rows_claude_hire": 75,
+    "rows_claude_clear_hire": 39,
+    "rows_claude_borderline": 54,
+    "rows_claude_clear_reject": 4
+  },
+  "rft_01": {
+    "target_pairs_used": 88,
+    "rows": 111,
+    "rows_claude_hire": 78,
+    "rows_claude_clear_hire": 47,
+    "rows_claude_borderline": 51,
+    "rows_claude_clear_reject": 13
+  }
+}

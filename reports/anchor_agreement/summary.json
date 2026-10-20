@@ -1,0 +1,803 @@
+{
+  "question": "Do the training anchors (the v1 teacher's one attribute-free verdict per pair) disagree with the SFT student's own attribute-free decisions, and in which direction do the training sets' targets pull on those rows?",
+  "inputs": {
+    "pool": "artifacts/semisynthetic-v2/onpolicy-full",
+    "sft_source": "artifacts/semisynthetic-v1",
+    "hire_topup": "artifacts/semisynthetic-v2/onpolicy-hire32"
+  },
+  "definitions": {
+    "anchor": "rows.parquet reference_decision: the v1 teacher's attribute-free verdict, one sample per pair",
+    "student_hire_share": "hire samples / parsed samples on the pair's attribute-free prompt (SFT student, k samples at temperature 1)",
+    "student_majority": "hire if share > 0.5, reject if < 0.5, tie at 0.5",
+    "disagree": "student majority is the opposite verdict of the anchor; ties are neither agree nor disagree",
+    "af_error_mass": "sum over rows of the share of the student's attribute-free samples opposing the row's target (= anchor)",
+    "set_definition": "not used: this script works on pool pairs and training rows, not on benchmark counterfactual sets"
+  },
+  "code": {
+    "commit": "08052c8b7af96694b1eb0beae71f6caac4c22a46",
+    "uncommitted": [],
+    "this_script_tracked": false
+  },
+  "written": "2026-10-16T10:20:55+00:00",
+  "anchor_source": {
+    "config": "configs/generation/teacher.yaml",
+    "teacher_model": "Qwen/Qwen3.5-122B-A10B-GPTQ-Int4",
+    "generation": {
+      "max_new_tokens": 320,
+      "temperature": 0.7,
+      "top_p": 0.9,
+      "seed": 42
+    }
+  },
+  "student": {
+    "model": "Qwen/Qwen3.5-9B + Stereotypes-in-LLMs/qwen3.5-9b-hiring-debias-sft-en (merged)",
+    "samples_per_prompt": 8,
+    "generation": {
+      "max_new_tokens": 200,
+      "temperature": 1.0,
+      "top_p": 1.0,
+      "seed": 42
+    }
+  },
+  "sft_training_data_balance": {
+    "note": "v1 SFT rows by target verdict before and after balance_decisions, English and Ukrainian together (generation_report.json filters.balance)",
+    "balanced": true,
+    "before": {
+      "reject": 63932,
+      "hire": 7830
+    },
+    "after": {
+      "reject": 7830,
+      "hire": 7830
+    }
+  },
+  "samples": {
+    "pairs": 2992,
+    "samples": 23936,
+    "samples_per_pair": [
+      8
+    ],
+    "unparsed": 40
+  },
+  "pool": {
+    "pairs": 2992,
+    "anchor_hire_rate": 0.1417,
+    "student_hire_rate_samples": 0.2672,
+    "student_hire_rate_pair_mean": 0.2672,
+    "student_majority_hire_rate": 0.2477,
+    "counts": {
+      "hire": {
+        "hire": 404,
+        "reject": 14,
+        "tie": 6,
+        "none": 0
+      },
+      "reject": {
+        "hire": 337,
+        "reject": 2151,
+        "tie": 80,
+        "none": 0
+      }
+    },
+    "share_of_all_pairs": {
+      "hire": {
+        "hire": 0.135,
+        "reject": 0.0047,
+        "tie": 0.002,
+        "none": 0.0
+      },
+      "reject": {
+        "hire": 0.1126,
+        "reject": 0.7189,
+        "tie": 0.0267,
+        "none": 0.0
+      }
+    },
+    "share_of_anchor_side": {
+      "hire": {
+        "hire": 0.9528,
+        "reject": 0.033,
+        "tie": 0.0142,
+        "none": 0.0
+      },
+      "reject": {
+        "hire": 0.1312,
+        "reject": 0.8376,
+        "tie": 0.0312,
+        "none": 0.0
+      }
+    },
+    "anchor_reject_student_hire": 337,
+    "anchor_hire_student_reject": 14,
+    "ties": 86,
+    "agreement_excluding_ties": 0.8792,
+    "cohen_kappa_excluding_ties": 0.6289,
+    "student_hire_share_histogram": {
+      "hire": [
+        {
+          "student_hire_samples": "0/8",
+          "pairs": 1,
+          "share_of_side": 0.0024
+        },
+        {
+          "student_hire_samples": "1/8",
+          "pairs": 5,
+          "share_of_side": 0.0118
+        },
+        {
+          "student_hire_samples": "2/8",
+          "pairs": 3,
+          "share_of_side": 0.0071
+        },
+        {
+          "student_hire_samples": "3/8",
+          "pairs": 5,
+          "share_of_side": 0.0118
+        },
+        {
+          "student_hire_samples": "4/8",
+          "pairs": 6,
+          "share_of_side": 0.0142
+        },
+        {
+          "student_hire_samples": "5/8",
+          "pairs": 9,
+          "share_of_side": 0.0212
+        },
+        {
+          "student_hire_samples": "6/8",
+          "pairs": 14,
+          "share_of_side": 0.033
+        },
+        {
+          "student_hire_samples": "7/8",
+          "pairs": 61,
+          "share_of_side": 0.1439
+        },
+        {
+          "student_hire_samples": "7/7",
+          "pairs": 2,
+          "share_of_side": 0.0047
+        },
+        {
+          "student_hire_samples": "8/8",
+          "pairs": 318,
+          "share_of_side": 0.75
+        }
+      ],
+      "reject": [
+        {
+          "student_hire_samples": "0/7",
+          "pairs": 23,
+          "share_of_side": 0.009
+        },
+        {
+          "student_hire_samples": "0/8",
+          "pairs": 1765,
+          "share_of_side": 0.6873
+        },
+        {
+          "student_hire_samples": "1/8",
+          "pairs": 157,
+          "share_of_side": 0.0611
+        },
+        {
+          "student_hire_samples": "1/7",
+          "pairs": 2,
+          "share_of_side": 0.0008
+        },
+        {
+          "student_hire_samples": "2/8",
+          "pairs": 121,
+          "share_of_side": 0.0471
+        },
+        {
+          "student_hire_samples": "2/7",
+          "pairs": 6,
+          "share_of_side": 0.0023
+        },
+        {
+          "student_hire_samples": "3/8",
+          "pairs": 76,
+          "share_of_side": 0.0296
+        },
+        {
+          "student_hire_samples": "3/7",
+          "pairs": 1,
+          "share_of_side": 0.0004
+        },
+        {
+          "student_hire_samples": "4/8",
+          "pairs": 80,
+          "share_of_side": 0.0312
+        },
+        {
+          "student_hire_samples": "4/7",
+          "pairs": 2,
+          "share_of_side": 0.0008
+        },
+        {
+          "student_hire_samples": "5/8",
+          "pairs": 69,
+          "share_of_side": 0.0269
+        },
+        {
+          "student_hire_samples": "6/8",
+          "pairs": 64,
+          "share_of_side": 0.0249
+        },
+        {
+          "student_hire_samples": "6/7",
+          "pairs": 1,
+          "share_of_side": 0.0004
+        },
+        {
+          "student_hire_samples": "7/8",
+          "pairs": 90,
+          "share_of_side": 0.035
+        },
+        {
+          "student_hire_samples": "7/7",
+          "pairs": 3,
+          "share_of_side": 0.0012
+        },
+        {
+          "student_hire_samples": "8/8",
+          "pairs": 108,
+          "share_of_side": 0.0421
+        }
+      ]
+    },
+    "confident_opposition": {
+      "threshold": 0.875,
+      "anchor_reject_student_hire_share_at_least": 201,
+      "anchor_reject_pairs": 2568,
+      "anchor_hire_student_hire_share_at_most": 6,
+      "anchor_hire_pairs": 424
+    }
+  },
+  "pool_by_sft_exposure": {
+    "heldout_candidates_note": "candidate in a v1 *validation split: held out of the SFT student's training. The others are SFT training candidates; sft_train.parquet is not on disk, so row-level membership is not checked",
+    "sft_heldout": {
+      "pairs": 296,
+      "anchor_hire_rate": 0.1351,
+      "student_hire_rate_samples": 0.2797,
+      "student_hire_rate_pair_mean": 0.2793,
+      "student_majority_hire_rate": 0.2635,
+      "counts": {
+        "hire": {
+          "hire": 38,
+          "reject": 1,
+          "tie": 1,
+          "none": 0
+        },
+        "reject": {
+          "hire": 40,
+          "reject": 209,
+          "tie": 7,
+          "none": 0
+        }
+      },
+      "share_of_all_pairs": {
+        "hire": {
+          "hire": 0.1284,
+          "reject": 0.0034,
+          "tie": 0.0034,
+          "none": 0.0
+        },
+        "reject": {
+          "hire": 0.1351,
+          "reject": 0.7061,
+          "tie": 0.0236,
+          "none": 0.0
+        }
+      },
+      "share_of_anchor_side": {
+        "hire": {
+          "hire": 0.95,
+          "reject": 0.025,
+          "tie": 0.025,
+          "none": 0.0
+        },
+        "reject": {
+          "hire": 0.1562,
+          "reject": 0.8164,
+          "tie": 0.0273,
+          "none": 0.0
+        }
+      },
+      "anchor_reject_student_hire": 40,
+      "anchor_hire_student_reject": 1,
+      "ties": 8,
+      "agreement_excluding_ties": 0.8576,
+      "cohen_kappa_excluding_ties": 0.5724
+    },
+    "sft_training_candidates": {
+      "pairs": 2696,
+      "anchor_hire_rate": 0.1424,
+      "student_hire_rate_samples": 0.2659,
+      "student_hire_rate_pair_mean": 0.2659,
+      "student_majority_hire_rate": 0.2459,
+      "counts": {
+        "hire": {
+          "hire": 366,
+          "reject": 13,
+          "tie": 5,
+          "none": 0
+        },
+        "reject": {
+          "hire": 297,
+          "reject": 1942,
+          "tie": 73,
+          "none": 0
+        }
+      },
+      "share_of_all_pairs": {
+        "hire": {
+          "hire": 0.1358,
+          "reject": 0.0048,
+          "tie": 0.0019,
+          "none": 0.0
+        },
+        "reject": {
+          "hire": 0.1102,
+          "reject": 0.7203,
+          "tie": 0.0271,
+          "none": 0.0
+        }
+      },
+      "share_of_anchor_side": {
+        "hire": {
+          "hire": 0.9531,
+          "reject": 0.0339,
+          "tie": 0.013,
+          "none": 0.0
+        },
+        "reject": {
+          "hire": 0.1285,
+          "reject": 0.84,
+          "tie": 0.0316,
+          "none": 0.0
+        }
+      },
+      "anchor_reject_student_hire": 297,
+      "anchor_hire_student_reject": 13,
+      "ties": 78,
+      "agreement_excluding_ties": 0.8816,
+      "cohen_kappa_excluding_ties": 0.6353
+    }
+  },
+  "benchmark": {
+    "holdout_file": "data/benchmark/holdout_ids.json",
+    "checked": true,
+    "pool_candidates_in_benchmark": 0,
+    "pool_jobs_in_benchmark": 0,
+    "comparable_to_gpt4o_or_claude_review": false,
+    "why": "the pool excludes every benchmark candidate and job, so the anchors cannot be set beside GPT-4o's reference or the Claude blind review on the same CVs"
+  },
+  "hire_topup_check": {
+    "pairs": 424,
+    "samples": 13568,
+    "samples_per_pair": [
+      32
+    ],
+    "k8_outputs_on_topup_prompts": 3392,
+    "k8_outputs_repeated_verbatim_in_k32": 2843,
+    "anchor_hire_pairs_with_k32": 424,
+    "k32_majority": {
+      "hire": 407,
+      "reject": 15,
+      "tie": 2,
+      "none": 0
+    },
+    "k32_hire_rate_samples": 0.9299,
+    "k8_hire_rate_samples_same_pairs": 0.9333,
+    "k8_vs_k32_majority_agree": 417,
+    "k8_vs_k32_both_decided": 417,
+    "k8_reject_majority_confirmed_by_k32": 14,
+    "k8_reject_majority": 14
+  },
+  "by_training_set": [
+    {
+      "training_set": "pool_all_rows",
+      "anchor_side": "hire",
+      "rows": 5072,
+      "pairs": 424,
+      "student_majority_hire": 4832,
+      "student_majority_reject": 168,
+      "student_tie": 72,
+      "disagree_rows": 168,
+      "disagree_share": 0.0331,
+      "tie_share": 0.0142,
+      "pull_toward_reject_rows": 0,
+      "pull_toward_hire_rows": 168,
+      "net_toward_reject_rows": -168,
+      "confident_disagree_rows": 72,
+      "af_error_mass": 338.75,
+      "af_error_mean": 0.0668,
+      "data_kind": "pool",
+      "max_steps": null,
+      "num_train_epochs": null,
+      "af_error_mean_reject_minus_hire": null
+    },
+    {
+      "training_set": "pool_all_rows",
+      "anchor_side": "reject",
+      "rows": 30754,
+      "pairs": 2568,
+      "student_majority_hire": 4035,
+      "student_majority_reject": 25765,
+      "student_tie": 954,
+      "disagree_rows": 4035,
+      "disagree_share": 0.1312,
+      "tie_share": 0.031,
+      "pull_toward_reject_rows": 4035,
+      "pull_toward_hire_rows": 0,
+      "net_toward_reject_rows": 4035,
+      "confident_disagree_rows": 2404,
+      "af_error_mass": 4830.02,
+      "af_error_mean": 0.1571,
+      "data_kind": "pool",
+      "max_steps": null,
+      "num_train_epochs": null,
+      "af_error_mean_reject_minus_hire": null
+    },
+    {
+      "training_set": "pool_all_rows",
+      "anchor_side": "all",
+      "rows": 35826,
+      "pairs": 2992,
+      "student_majority_hire": 8867,
+      "student_majority_reject": 25933,
+      "student_tie": 1026,
+      "disagree_rows": 4203,
+      "disagree_share": 0.1173,
+      "tie_share": 0.0286,
+      "pull_toward_reject_rows": 4035,
+      "pull_toward_hire_rows": 168,
+      "net_toward_reject_rows": 3867,
+      "confident_disagree_rows": 2476,
+      "af_error_mass": 5168.77,
+      "af_error_mean": 0.1443,
+      "data_kind": "pool",
+      "max_steps": null,
+      "num_train_epochs": null,
+      "af_error_mean_reject_minus_hire": 0.0903
+    },
+    {
+      "training_set": "dpo_r1",
+      "anchor_side": "hire",
+      "rows": 1139,
+      "pairs": 237,
+      "student_majority_hire": 1111,
+      "student_majority_reject": 0,
+      "student_tie": 28,
+      "disagree_rows": 0,
+      "disagree_share": 0.0,
+      "tie_share": 0.0246,
+      "pull_toward_reject_rows": 0,
+      "pull_toward_hire_rows": 0,
+      "net_toward_reject_rows": 0,
+      "confident_disagree_rows": 0,
+      "af_error_mass": 96.62,
+      "af_error_mean": 0.0848,
+      "data_kind": "dpo_v2",
+      "max_steps": 300.0,
+      "num_train_epochs": 1.0,
+      "af_error_mean_reject_minus_hire": null
+    },
+    {
+      "training_set": "dpo_r1",
+      "anchor_side": "reject",
+      "rows": 1139,
+      "pairs": 428,
+      "student_majority_hire": 0,
+      "student_majority_reject": 1139,
+      "student_tie": 0,
+      "disagree_rows": 0,
+      "disagree_share": 0.0,
+      "tie_share": 0.0,
+      "pull_toward_reject_rows": 0,
+      "pull_toward_hire_rows": 0,
+      "net_toward_reject_rows": 0,
+      "confident_disagree_rows": 0,
+      "af_error_mass": 185.75,
+      "af_error_mean": 0.1631,
+      "data_kind": "dpo_v2",
+      "max_steps": 300.0,
+      "num_train_epochs": 1.0,
+      "af_error_mean_reject_minus_hire": null
+    },
+    {
+      "training_set": "dpo_r1",
+      "anchor_side": "all",
+      "rows": 2278,
+      "pairs": 665,
+      "student_majority_hire": 1111,
+      "student_majority_reject": 1139,
+      "student_tie": 28,
+      "disagree_rows": 0,
+      "disagree_share": 0.0,
+      "tie_share": 0.0123,
+      "pull_toward_reject_rows": 0,
+      "pull_toward_hire_rows": 0,
+      "net_toward_reject_rows": 0,
+      "confident_disagree_rows": 0,
+      "af_error_mass": 282.38,
+      "af_error_mean": 0.124,
+      "data_kind": "dpo_v2",
+      "max_steps": 300.0,
+      "num_train_epochs": 1.0,
+      "af_error_mean_reject_minus_hire": 0.0783
+    },
+    {
+      "training_set": "dpo_r2",
+      "anchor_side": "hire",
+      "rows": 809,
+      "pairs": 218,
+      "student_majority_hire": 786,
+      "student_majority_reject": 0,
+      "student_tie": 23,
+      "disagree_rows": 0,
+      "disagree_share": 0.0,
+      "tie_share": 0.0284,
+      "pull_toward_reject_rows": 0,
+      "pull_toward_hire_rows": 0,
+      "net_toward_reject_rows": 0,
+      "confident_disagree_rows": 0,
+      "af_error_mass": 75.62,
+      "af_error_mean": 0.0935,
+      "data_kind": "dpo_v2",
+      "max_steps": -1.0,
+      "num_train_epochs": 1.0,
+      "af_error_mean_reject_minus_hire": null
+    },
+    {
+      "training_set": "dpo_r2",
+      "anchor_side": "reject",
+      "rows": 809,
+      "pairs": 363,
+      "student_majority_hire": 0,
+      "student_majority_reject": 809,
+      "student_tie": 0,
+      "disagree_rows": 0,
+      "disagree_share": 0.0,
+      "tie_share": 0.0,
+      "pull_toward_reject_rows": 0,
+      "pull_toward_hire_rows": 0,
+      "net_toward_reject_rows": 0,
+      "confident_disagree_rows": 0,
+      "af_error_mass": 121.46,
+      "af_error_mean": 0.1501,
+      "data_kind": "dpo_v2",
+      "max_steps": -1.0,
+      "num_train_epochs": 1.0,
+      "af_error_mean_reject_minus_hire": null
+    },
+    {
+      "training_set": "dpo_r2",
+      "anchor_side": "all",
+      "rows": 1618,
+      "pairs": 581,
+      "student_majority_hire": 786,
+      "student_majority_reject": 809,
+      "student_tie": 23,
+      "disagree_rows": 0,
+      "disagree_share": 0.0,
+      "tie_share": 0.0142,
+      "pull_toward_reject_rows": 0,
+      "pull_toward_hire_rows": 0,
+      "net_toward_reject_rows": 0,
+      "confident_disagree_rows": 0,
+      "af_error_mass": 197.09,
+      "af_error_mean": 0.1218,
+      "data_kind": "dpo_v2",
+      "max_steps": -1.0,
+      "num_train_epochs": 1.0,
+      "af_error_mean_reject_minus_hire": 0.0566
+    },
+    {
+      "training_set": "dpo_r2em",
+      "anchor_side": "hire",
+      "rows": 1181,
+      "pairs": 254,
+      "student_majority_hire": 1150,
+      "student_majority_reject": 3,
+      "student_tie": 28,
+      "disagree_rows": 3,
+      "disagree_share": 0.0025,
+      "tie_share": 0.0237,
+      "pull_toward_reject_rows": 0,
+      "pull_toward_hire_rows": 3,
+      "net_toward_reject_rows": -3,
+      "confident_disagree_rows": 2,
+      "af_error_mass": 100.88,
+      "af_error_mean": 0.0854,
+      "data_kind": "dpo_round2",
+      "max_steps": -1.0,
+      "num_train_epochs": 1.0,
+      "af_error_mean_reject_minus_hire": null
+    },
+    {
+      "training_set": "dpo_r2em",
+      "anchor_side": "reject",
+      "rows": 1181,
+      "pairs": 328,
+      "student_majority_hire": 0,
+      "student_majority_reject": 1181,
+      "student_tie": 0,
+      "disagree_rows": 0,
+      "disagree_share": 0.0,
+      "tie_share": 0.0,
+      "pull_toward_reject_rows": 0,
+      "pull_toward_hire_rows": 0,
+      "net_toward_reject_rows": 0,
+      "confident_disagree_rows": 0,
+      "af_error_mass": 98.36,
+      "af_error_mean": 0.0833,
+      "data_kind": "dpo_round2",
+      "max_steps": -1.0,
+      "num_train_epochs": 1.0,
+      "af_error_mean_reject_minus_hire": null
+    },
+    {
+      "training_set": "dpo_r2em",
+      "anchor_side": "all",
+      "rows": 2362,
+      "pairs": 582,
+      "student_majority_hire": 1150,
+      "student_majority_reject": 1184,
+      "student_tie": 28,
+      "disagree_rows": 3,
+      "disagree_share": 0.0013,
+      "tie_share": 0.0119,
+      "pull_toward_reject_rows": 0,
+      "pull_toward_hire_rows": 3,
+      "net_toward_reject_rows": -3,
+      "confident_disagree_rows": 2,
+      "af_error_mass": 199.23,
+      "af_error_mean": 0.0843,
+      "data_kind": "dpo_round2",
+      "max_steps": -1.0,
+      "num_train_epochs": 1.0,
+      "af_error_mean_reject_minus_hire": -0.0021
+    },
+    {
+      "training_set": "grpo_02",
+      "anchor_side": "hire",
+      "rows": 1500,
+      "pairs": 277,
+      "student_majority_hire": 1466,
+      "student_majority_reject": 0,
+      "student_tie": 34,
+      "disagree_rows": 0,
+      "disagree_share": 0.0,
+      "tie_share": 0.0227,
+      "pull_toward_reject_rows": 0,
+      "pull_toward_hire_rows": 0,
+      "net_toward_reject_rows": 0,
+      "confident_disagree_rows": 0,
+      "af_error_mass": 110.88,
+      "af_error_mean": 0.0739,
+      "data_kind": "grpo",
+      "max_steps": -1.0,
+      "num_train_epochs": 1.0,
+      "af_error_mean_reject_minus_hire": null
+    },
+    {
+      "training_set": "grpo_02",
+      "anchor_side": "reject",
+      "rows": 1500,
+      "pairs": 938,
+      "student_majority_hire": 97,
+      "student_majority_reject": 1375,
+      "student_tie": 28,
+      "disagree_rows": 97,
+      "disagree_share": 0.0647,
+      "tie_share": 0.0187,
+      "pull_toward_reject_rows": 97,
+      "pull_toward_hire_rows": 0,
+      "net_toward_reject_rows": 97,
+      "confident_disagree_rows": 58,
+      "af_error_mass": 239.45,
+      "af_error_mean": 0.1596,
+      "data_kind": "grpo",
+      "max_steps": -1.0,
+      "num_train_epochs": 1.0,
+      "af_error_mean_reject_minus_hire": null
+    },
+    {
+      "training_set": "grpo_02",
+      "anchor_side": "all",
+      "rows": 3000,
+      "pairs": 1215,
+      "student_majority_hire": 1563,
+      "student_majority_reject": 1375,
+      "student_tie": 62,
+      "disagree_rows": 97,
+      "disagree_share": 0.0323,
+      "tie_share": 0.0207,
+      "pull_toward_reject_rows": 97,
+      "pull_toward_hire_rows": 0,
+      "net_toward_reject_rows": 97,
+      "confident_disagree_rows": 58,
+      "af_error_mass": 350.32,
+      "af_error_mean": 0.1168,
+      "data_kind": "grpo",
+      "max_steps": -1.0,
+      "num_train_epochs": 1.0,
+      "af_error_mean_reject_minus_hire": 0.0857
+    },
+    {
+      "training_set": "rft_01",
+      "anchor_side": "hire",
+      "rows": 1200,
+      "pairs": 263,
+      "student_majority_hire": 1171,
+      "student_majority_reject": 0,
+      "student_tie": 29,
+      "disagree_rows": 0,
+      "disagree_share": 0.0,
+      "tie_share": 0.0242,
+      "pull_toward_reject_rows": 0,
+      "pull_toward_hire_rows": 0,
+      "net_toward_reject_rows": 0,
+      "confident_disagree_rows": 0,
+      "af_error_mass": 88.75,
+      "af_error_mean": 0.074,
+      "data_kind": "rft",
+      "max_steps": -1.0,
+      "num_train_epochs": 1.0,
+      "af_error_mean_reject_minus_hire": null
+    },
+    {
+      "training_set": "rft_01",
+      "anchor_side": "reject",
+      "rows": 1200,
+      "pairs": 942,
+      "student_majority_hire": 111,
+      "student_majority_reject": 1051,
+      "student_tie": 38,
+      "disagree_rows": 111,
+      "disagree_share": 0.0925,
+      "tie_share": 0.0317,
+      "pull_toward_reject_rows": 111,
+      "pull_toward_hire_rows": 0,
+      "net_toward_reject_rows": 111,
+      "confident_disagree_rows": 56,
+      "af_error_mass": 128.88,
+      "af_error_mean": 0.1074,
+      "data_kind": "rft",
+      "max_steps": -1.0,
+      "num_train_epochs": 1.0,
+      "af_error_mean_reject_minus_hire": null
+    },
+    {
+      "training_set": "rft_01",
+      "anchor_side": "all",
+      "rows": 2400,
+      "pairs": 1205,
+      "student_majority_hire": 1282,
+      "student_majority_reject": 1051,
+      "student_tie": 67,
+      "disagree_rows": 111,
+      "disagree_share": 0.0462,
+      "tie_share": 0.0279,
+      "pull_toward_reject_rows": 111,
+      "pull_toward_hire_rows": 0,
+      "net_toward_reject_rows": 111,
+      "confident_disagree_rows": 56,
+      "af_error_mass": 217.62,
+      "af_error_mean": 0.0907,
+      "data_kind": "rft",
+      "max_steps": -1.0,
+      "num_train_epochs": 1.0,
+      "af_error_mean_reject_minus_hire": 0.0334
+    }
+  ],
+  "outputs": {
+    "pairs": "reports/anchor_agreement/pairs.csv",
+    "by_training_set": "reports/anchor_agreement/by_training_set.csv",
+    "summary": "reports/anchor_agreement/summary.json"
+  }
+}
