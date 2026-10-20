@@ -1,0 +1,13 @@
+condition,ref_condition,repeats,jobs,generate_s_median,generate_s_min,generate_s_max,ref_generate_s_median,time_saved_median,time_saved_min,time_saved_max,speedup_x_median,requests_per_s_median,output_tokens_per_s_median,gpu_s_per_1k_requests_generate_only_median,prefix_cache_hit_rate_median,gpu_energy_kwh_median
+cacheoff-prefix,cacheoff-shuffle,2,5106727,382.886,379.099,386.673,371.9175,-0.0296,-0.0357,-0.0235,0.9715,40.55,1479.2,24.65,,0.0584
+cacheoff-prefix,cacheon-prefix,2,5106727,382.886,379.099,386.673,332.693,-0.1511,-0.1719,-0.1302,0.869,40.55,1479.2,24.65,,0.0584
+cacheoff-prefix,cacheon-shuffle,2,5106727,382.886,379.099,386.673,350.6705,-0.0922,-0.1174,-0.067,0.916,40.55,1479.2,24.65,,0.0584
+cacheoff-shuffle,cacheoff-prefix,2,5106727,371.9175,366.037,377.798,382.886,0.0288,0.023,0.0345,1.0295,41.75,1523.8,23.95,,0.0608
+cacheoff-shuffle,cacheon-prefix,2,5106727,371.9175,366.037,377.798,332.693,-0.1182,-0.145,-0.0913,0.8945,41.75,1523.8,23.95,,0.0608
+cacheoff-shuffle,cacheon-shuffle,2,5106727,371.9175,366.037,377.798,350.6705,-0.061,-0.0918,-0.0302,0.9435,41.75,1523.8,23.95,,0.0608
+cacheon-prefix,cacheoff-prefix,2,5106727,332.693,329.964,335.422,382.886,0.131,0.1152,0.1467,1.151,46.665,1702.65,21.45,0.1586,0.051
+cacheon-prefix,cacheoff-shuffle,2,5106727,332.693,329.964,335.422,371.9175,0.1051,0.0836,0.1266,1.118,46.665,1702.65,21.45,0.1586,0.051
+cacheon-prefix,cacheon-shuffle,2,5106727,332.693,329.964,335.422,350.6705,0.0512,0.0464,0.056,1.054,46.665,1702.65,21.45,0.1586,0.051
+cacheon-shuffle,cacheoff-prefix,2,5106727,350.6705,346.035,355.306,382.886,0.084,0.0628,0.1051,1.092,44.28,1615.45,22.6,0.0775,0.057
+cacheon-shuffle,cacheoff-shuffle,2,5106727,350.6705,346.035,355.306,371.9175,0.0567,0.0293,0.0841,1.061,44.28,1615.45,22.6,0.0775,0.057
+cacheon-shuffle,cacheon-prefix,2,5106727,350.6705,346.035,355.306,332.693,-0.054,-0.0593,-0.0487,0.949,44.28,1615.45,22.6,0.0775,0.057

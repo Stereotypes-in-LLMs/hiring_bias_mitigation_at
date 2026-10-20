@@ -65,3 +65,4 @@ job_id,job_name,partition,state,start,end,elapsed_h,nodes,gpus,node_h,gpu_h_allo
 5104067,xw-v3-additional,normal,CANCELLED,2026-10-20 11:52:22,2026-10-20 14:07:58,2.26,1,4,2.26,9.04,4.532,/ritom/scratch/cscs/zhang/xw/hiring_bias_mitigation_at-v3additional,log,9.04,
 5105237,xw-merge-retention,debug,COMPLETED,2026-10-20 13:43:58,2026-10-20 13:45:50,0.0311,1,4,0.0311,0.1244,0.021,/ritom/scratch/cscs/zhang/xw/hiring_bias_mitigation_at,log,0.1244,
 5105355,xw-v3-additional,normal,COMPLETED,2026-10-20 14:24:22,2026-10-20 15:12:12,0.7972,1,4,0.7972,3.1889,1.401,/ritom/scratch/cscs/zhang/xw/hiring_bias_mitigation_at-v3additional,log,3.1889,
+5106727,xw-throughput-b,normal,COMPLETED,2026-10-20 16:13:14,2026-10-20 16:30:48,0.2928,1,4,0.2928,1.1711,0.604,/ritom/scratch/cscs/zhang/xw/hiring_bias_mitigation_at-throughput,records,1.0988,0.0723

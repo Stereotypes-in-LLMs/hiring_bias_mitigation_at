@@ -100,7 +100,8 @@ STEP_COLUMNS = (
     "output_tokens", "load_s", "generate_s", "params_trainable", "params_total",
     "params_modified", "train_steps", "global_step", "train_runtime_s", "train_flos",
     "train_rows", "train_tokens_per_epoch", "effective_batch", "world_size", "precision",
-    "torch_peak_gib", "checkpoint_times", "run_name", "n_prompts", "served_model", "recipe",
+    "torch_peak_gib", "checkpoint_times", "run_name", "n_prompts", "served_model",
+    "prefix_cache_queries", "prefix_cache_hits", "recipe",
     "host", "commit", "dirty", "software", "gpu_driver", "command", "record",
 )
 JOB_COLUMNS = (
@@ -303,6 +304,8 @@ def record_step(record: dict, jobs: dict[str, dict], now: datetime) -> dict:
         "run_name": facts.get("run_name") or facts.get("output_dir") or "",
         "n_prompts": facts.get("n_prompts"),
         "served_model": facts.get("served_model"),
+        "prefix_cache_queries": facts.get("prefix_cache_queries"),
+        "prefix_cache_hits": facts.get("prefix_cache_hits"),
         "host": record.get("host", ""),
         "commit": code.get("commit", ""),
         "dirty": code.get("dirty"),
@@ -552,6 +555,8 @@ def throughput_table(steps: list[dict]) -> list[dict]:
         wall, gen = float(s["wall_s"] or 0), _number(s.get("generate_s"))
         gpus = _number(s.get("n_gpus")) or 0
         out_tokens = _number(s.get("output_tokens"))
+        # vLLM's counters, in prompt tokens; only an engine with stat logging on keeps them.
+        queries, hits = _number(s.get("prefix_cache_queries")), _number(s.get("prefix_cache_hits"))
         rows.append({
             "job_id": s["job_id"], "stage": s["stage"], "label": s["label"], "arm": s["arm"],
             "config": s["config"], "run_name": s["run_name"], "gpu_model": s["gpu_model"],
@@ -563,6 +568,10 @@ def throughput_table(steps: list[dict]) -> list[dict]:
             "gpu_s_per_1k_requests": round(gpus * wall / requests * 1000, 1),
             "gpu_s_per_1k_requests_generate_only":
                 round(gpus * gen / requests * 1000, 1) if gen else None,
+            "prefix_cache_queries": s.get("prefix_cache_queries"),
+            "prefix_cache_hits": s.get("prefix_cache_hits"),
+            "prefix_cache_hit_rate":
+                round(hits / queries, 4) if queries and hits is not None else None,
         })
     return rows
 

@@ -103,7 +103,7 @@ cannot be imported in an older checkout, prints a line on stderr and runs the co
 | `by_stage.csv` | stage: `gpu_h_measured` and `gpu_h_reconstructed` in separate columns; then `idle` and the total allocation |
 | `by_arm.csv` | arm: GPU-hours by stage, `shared_gpu_h`, `recipe_gpu_h`, `excluded_gpu_h` |
 | `checkpoints.csv` | saved checkpoint of a recorded training run: GPU-hours to reach it, earlier segments included |
-| `throughput.csv` | generation step: requests, tokens, `requests_per_s` over `generate_s`, GPU-seconds per thousand requests |
+| `throughput.csv` | generation step: requests, tokens, `requests_per_s` over `generate_s`, GPU-seconds per thousand requests, and vLLM's `prefix_cache_hit_rate` (hit / queried prompt tokens) when the engine ran with `disable_log_stats: false` |
 | `params.csv` | adapter under `outputs/`: trained parameters against the base model's text parameters |
 | `COST.md` | the tables above with the gaps listed |
 
