@@ -1,0 +1,256 @@
+{
+  "seed": 7,
+  "runs": {
+    "SFT": "Qwen3.5-9B--en--sft--adapter--en_only_cscs",
+    "DPO r2em-100": "Qwen3.5-9B--en--dpo--adapter--en_only_v2neg_r2em_step100",
+    "GRPO pilot": "Qwen3.5-9B--en--grpo--adapter--en_only_grpo_pilot",
+    "RFT": "Qwen3.5-9B--en--sft--adapter--en_only_rft"
+  },
+  "strata": [
+    [
+      "SFT hires, GRPO pilot rejects",
+      5
+    ],
+    [
+      "SFT rejects, DPO r2em-100 hires",
+      2
+    ],
+    [
+      "all four agree: hire",
+      1
+    ],
+    [
+      "all four agree: reject",
+      2
+    ]
+  ],
+  "stratum_sizes": {
+    "all four agree: reject": 315,
+    "all four agree: hire": 89,
+    "SFT hires, GRPO pilot rejects": 40,
+    "SFT rejects, DPO r2em-100 hires": 6
+  },
+  "cases": [
+    {
+      "case": 1,
+      "pair_id": "fb160439-f3b7-51d5-bb58-acd8f14a6f54__3c94dac3-a214-51ce-98e7-ed65f6f11f21",
+      "job_position": "Python Developer",
+      "stratum": "SFT hires, GRPO pilot rejects",
+      "letters": {
+        "A": "RFT",
+        "B": "DPO r2em-100",
+        "C": "GRPO pilot",
+        "D": "SFT"
+      },
+      "decisions": {
+        "SFT": "hire",
+        "DPO r2em-100": "hire",
+        "GRPO pilot": "reject",
+        "RFT": "reject"
+      },
+      "reference_gpt4o": "hire",
+      "claude_blind_review": {
+        "decision": "hire",
+        "fit_score": 4
+      }
+    },
+    {
+      "case": 2,
+      "pair_id": "0184e8bb-90fb-5917-a840-3be29c110c8f__3a43100e-5302-5828-bf7b-313eca6b9080",
+      "job_position": "Data Scientist",
+      "stratum": "all four agree: reject",
+      "letters": {
+        "A": "RFT",
+        "B": "SFT",
+        "C": "DPO r2em-100",
+        "D": "GRPO pilot"
+      },
+      "decisions": {
+        "SFT": "reject",
+        "DPO r2em-100": "reject",
+        "GRPO pilot": "reject",
+        "RFT": "reject"
+      },
+      "reference_gpt4o": "reject",
+      "claude_blind_review": null
+    },
+    {
+      "case": 3,
+      "pair_id": "fdf3b944-8a48-5c21-9965-3f9a7f7074c0__82031f1a-31d6-59e8-9447-64a1cf1f73b9",
+      "job_position": "DevOps engineer",
+      "stratum": "SFT hires, GRPO pilot rejects",
+      "letters": {
+        "A": "SFT",
+        "B": "DPO r2em-100",
+        "C": "RFT",
+        "D": "GRPO pilot"
+      },
+      "decisions": {
+        "SFT": "hire",
+        "DPO r2em-100": "hire",
+        "GRPO pilot": "reject",
+        "RFT": "reject"
+      },
+      "reference_gpt4o": "hire",
+      "claude_blind_review": {
+        "decision": "hire",
+        "fit_score": 4
+      }
+    },
+    {
+      "case": 4,
+      "pair_id": "e4be5ee0-7760-52d1-a1a2-73a5f3a94d8f__a10a4baa-aa8d-5a11-a105-57dd033168f8",
+      "job_position": "Python Developer",
+      "stratum": "SFT rejects, DPO r2em-100 hires",
+      "letters": {
+        "A": "DPO r2em-100",
+        "B": "RFT",
+        "C": "GRPO pilot",
+        "D": "SFT"
+      },
+      "decisions": {
+        "SFT": "reject",
+        "DPO r2em-100": "hire",
+        "GRPO pilot": "reject",
+        "RFT": "reject"
+      },
+      "reference_gpt4o": "reject",
+      "claude_blind_review": {
+        "decision": "hire",
+        "fit_score": 3
+      }
+    },
+    {
+      "case": 5,
+      "pair_id": "125421c3-8f66-5010-801c-152d1957eab7__c54da629-5865-513e-bad2-e419e16b4f55",
+      "job_position": "Python Developer",
+      "stratum": "SFT rejects, DPO r2em-100 hires",
+      "letters": {
+        "A": "RFT",
+        "B": "DPO r2em-100",
+        "C": "SFT",
+        "D": "GRPO pilot"
+      },
+      "decisions": {
+        "SFT": "reject",
+        "DPO r2em-100": "hire",
+        "GRPO pilot": "reject",
+        "RFT": "reject"
+      },
+      "reference_gpt4o": "hire",
+      "claude_blind_review": {
+        "decision": "hire",
+        "fit_score": 3
+      }
+    },
+    {
+      "case": 6,
+      "pair_id": "e4cc780c-715b-5f36-b1ca-dd525e7ac916__52e0fb22-f32e-5b41-b6f7-f03dbf329fad",
+      "job_position": "Manual QA Engineer",
+      "stratum": "SFT hires, GRPO pilot rejects",
+      "letters": {
+        "A": "GRPO pilot",
+        "B": "DPO r2em-100",
+        "C": "RFT",
+        "D": "SFT"
+      },
+      "decisions": {
+        "SFT": "hire",
+        "DPO r2em-100": "hire",
+        "GRPO pilot": "reject",
+        "RFT": "hire"
+      },
+      "reference_gpt4o": "hire",
+      "claude_blind_review": {
+        "decision": "hire",
+        "fit_score": 5
+      }
+    },
+    {
+      "case": 7,
+      "pair_id": "aebdca1b-2e74-53d9-ace9-490d47704479__7b6e56c5-708b-5175-975b-c03129372cdb",
+      "job_position": "Manual QA Engineer",
+      "stratum": "SFT hires, GRPO pilot rejects",
+      "letters": {
+        "A": "RFT",
+        "B": "GRPO pilot",
+        "C": "DPO r2em-100",
+        "D": "SFT"
+      },
+      "decisions": {
+        "SFT": "hire",
+        "DPO r2em-100": "hire",
+        "GRPO pilot": "reject",
+        "RFT": "reject"
+      },
+      "reference_gpt4o": "hire",
+      "claude_blind_review": {
+        "decision": "hire",
+        "fit_score": 4
+      }
+    },
+    {
+      "case": 8,
+      "pair_id": "e7e21da3-f5f6-52c0-ab8b-edabd271a9a4__c8ba572e-5c15-54a0-ad6f-ae6e89dbb173",
+      "job_position": "Product manager",
+      "stratum": "all four agree: hire",
+      "letters": {
+        "A": "RFT",
+        "B": "GRPO pilot",
+        "C": "DPO r2em-100",
+        "D": "SFT"
+      },
+      "decisions": {
+        "SFT": "hire",
+        "DPO r2em-100": "hire",
+        "GRPO pilot": "hire",
+        "RFT": "hire"
+      },
+      "reference_gpt4o": "hire",
+      "claude_blind_review": null
+    },
+    {
+      "case": 9,
+      "pair_id": "c534011c-64ce-512e-813c-594e0a9e1628__194dd58b-d021-5c01-b299-eca6c5f0ad16",
+      "job_position": "Graphic Designer",
+      "stratum": "SFT hires, GRPO pilot rejects",
+      "letters": {
+        "A": "GRPO pilot",
+        "B": "SFT",
+        "C": "RFT",
+        "D": "DPO r2em-100"
+      },
+      "decisions": {
+        "SFT": "hire",
+        "DPO r2em-100": "hire",
+        "GRPO pilot": "reject",
+        "RFT": "hire"
+      },
+      "reference_gpt4o": "hire",
+      "claude_blind_review": {
+        "decision": "hire",
+        "fit_score": 5
+      }
+    },
+    {
+      "case": 10,
+      "pair_id": "7b7d27c7-a1fb-59c7-a7af-fcdc6b7d1e4b__dd4e504f-a755-5bdf-95e0-66bca832f3ef",
+      "job_position": "Automation QA Engineer",
+      "stratum": "all four agree: reject",
+      "letters": {
+        "A": "DPO r2em-100",
+        "B": "GRPO pilot",
+        "C": "SFT",
+        "D": "RFT"
+      },
+      "decisions": {
+        "SFT": "reject",
+        "DPO r2em-100": "reject",
+        "GRPO pilot": "reject",
+        "RFT": "reject"
+      },
+      "reference_gpt4o": "reject",
+      "claude_blind_review": null
+    }
+  ]
+}
