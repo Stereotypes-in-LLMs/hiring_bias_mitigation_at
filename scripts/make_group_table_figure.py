@@ -1,10 +1,10 @@
 # ruff: noqa: E501  (bilingual caption strings)
 """Renders one protected group's full comparison table as an image, in English and Ukrainian.
 
-Every mitigation on one model and language, against the baseline on the same rows, with every
-metric: counterfactual set stability (paired, matched variants, candidate-clustered CI), then
-the report's disparity and utility measures recomputed over the same cells. The lexical
-scrubber is starred and footnoted as the oracle upper bound it is.
+Every mitigation on one model and language, against its own baseline (same serving stack) on
+the same rows, with every metric: counterfactual set stability (paired, matched variants,
+candidate-clustered CI), then the report's disparity and utility measures recomputed over the
+same cells. The lexical scrubber is starred and footnoted as the oracle upper bound it is.
 
     python scripts/make_group_table_figure.py --model Qwen3.5-9B --lang en --group military_status
     # -> figures/{en,uk}/table_<group>_<model>_<lang>.png (+ .pdf, + .csv)
@@ -25,7 +25,9 @@ import pandas as pd  # noqa: E402
 from hiring_bias_mitigation.analysis import stability as S  # noqa: E402
 from hiring_bias_mitigation.analysis.stability import _decision  # noqa: E402
 from hiring_bias_mitigation.eval.report import (  # noqa: E402
+    _family,
     _restricted_metrics,
+    baseline_for,
     load_records,
 )
 from hiring_bias_mitigation.utils.config import REPO_ROOT, resolve_output_path  # noqa: E402
@@ -111,22 +113,42 @@ def arm_name(record: dict, lang: str) -> str:
 
 
 def build(model: str, lang: str, group: str) -> pd.DataFrame:
+    """One row per arm x condition, each against its own baseline (`eval.report.baseline_for`).
+
+    Taking `<model>--<lang>--baseline` for every arm compared the GH200 adapters with the GB10
+    baseline and read `--baseline--cscs` as an arm. Each machine holds only the generations
+    it produced, so an arm whose generations, or its baseline's, are not here is left out and
+    named on stderr rather than failing the whole table.
+    """
     raw_dir = Path(resolve_output_path("outputs/raw"))
-    records = {r["run_name"]: r for r in load_records(REPO_ROOT / "eval" / "results")}
-    base_name = f"{model}--{lang}--baseline"
-    base_rec = records[base_name]
-    base_rows = S.load_rows(str(raw_dir / f"{base_name}.parquet"))
-    base_dec = pd.read_parquet(raw_dir / f"{base_name}.parquet",
-                               columns=["protected_group", "condition", "decision"])
+    records = load_records(REPO_ROOT / "eval" / "results")
+    baselines = [r for r in records if _family(r) == "none"]
+    generations: dict[str, tuple[pd.DataFrame, pd.DataFrame]] = {}
+
+    def baseline_generations(name):
+        if name not in generations:
+            path = raw_dir / f"{name}.parquet"
+            generations[name] = (S.load_rows(str(path)), pd.read_parquet(
+                path, columns=["protected_group", "condition", "decision"]))
+        return generations[name]
 
     def hire(frame, cond):
         d = frame[(frame.protected_group == group) & (frame.condition == cond)].decision.map(_decision)
         return 100 * (d == "hire").mean()
 
-    out = []
-    for name, rec in sorted(records.items()):
-        if not name.startswith(f"{model}--{lang}--") or name == base_name or "--smoke" in name:
+    out, left_out = [], []
+    for rec in sorted(records, key=lambda r: r["run_name"]):
+        name = rec["run_name"]
+        if (not name.startswith(f"{model}--{lang}--") or _family(rec) == "none"
+                or "--smoke" in name
+                or not any(f"{group}::{cond}" in rec["groups"] for cond in ("implicit", "explicit"))):
             continue
+        base_rec = baseline_for(rec, baselines)
+        if base_rec is None or not all((raw_dir / f"{r['run_name']}.parquet").exists()
+                                       for r in (rec, base_rec)):
+            left_out.append(name)
+            continue
+        base_rows, base_dec = baseline_generations(base_rec["run_name"])
         for cond in ("implicit", "explicit"):
             cell = f"{group}::{cond}"
             if cell not in rec["groups"]:
@@ -138,7 +160,8 @@ def build(model: str, lang: str, group: str) -> pd.DataFrame:
             dec = pd.read_parquet(raw_dir / f"{name}.parquet",
                                   columns=["protected_group", "condition", "decision"])
             out.append({
-                "run": name, "record": rec, "condition": cond, "sets": st["sets"],
+                "run": name, "baseline": base_rec["run_name"], "record": rec,
+                "condition": cond, "sets": st["sets"],
                 "unstable": st["unstable_run_pct"], "unstable_base": st["unstable_base_pct"],
                 "delta": st["unstable_run_pct"] - st["unstable_base_pct"],
                 "ci_low": st["ci_low"], "ci_high": st["ci_high"],
@@ -155,6 +178,9 @@ def build(model: str, lang: str, group: str) -> pd.DataFrame:
                                                    "attribute_mention_rate")},
                 "hire": hire(dec, cond), "hire_base": hire(base_dec, cond),
             })
+    if left_out:
+        print(f"left out, no generations for the run or its baseline under {raw_dir}: "
+              + ", ".join(left_out), file=sys.stderr)
     return pd.DataFrame(out)
 
 

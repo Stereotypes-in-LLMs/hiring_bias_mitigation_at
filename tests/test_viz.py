@@ -130,6 +130,54 @@ def test_baseline_join_takes_one_baseline_from_the_runs_own_stack():
     assert rows.iloc[0]["mad_pp_baseline"] == pytest.approx(3.0)
 
 
+def test_group_table_reads_each_arm_against_its_own_stacks_baseline(tmp_path, monkeypatch,
+                                                                     capsys):
+    """`make_group_table_figure.py` took `<model>--<lang>--baseline` for every arm.
+
+    That bracketed the GH200 adapters with the GB10 baseline, read `--baseline--cscs` as an
+    arm, and crashed on the first arm whose generations were on the other machine.
+    """
+    import importlib.util
+    import json
+    from pathlib import Path
+
+    spec = importlib.util.spec_from_file_location(
+        "make_group_table_figure",
+        Path(__file__).resolve().parents[1] / "scripts" / "make_group_table_figure.py")
+    figure = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(figure)
+
+    results, raw = tmp_path / "eval" / "results", tmp_path / "root" / "outputs" / "raw"
+    results.mkdir(parents=True)
+    raw.mkdir(parents=True)
+    monkeypatch.setattr(figure, "REPO_ROOT", tmp_path)
+    monkeypatch.setenv("HBM_OUTPUT_ROOT", str(tmp_path / "root"))
+
+    cell = {"protected_group": "g", "condition": "explicit", "lang": "en", "n_attributes": 2,
+            "population": {}, "effect_sizes": {}, "attributes": []}
+    columns = ["pair_id", "condition", "protected_group", "protected_attr", "candidate_id",
+               "decision"]
+    for name, family, config, decisions in (
+        ("M--en--baseline", "none", "m_en_baseline", ["hire", "hire"]),
+        ("M--en--baseline--cscs", "none", "m_en_baseline_gh200", ["hire", "reject"]),
+        ("M--en--sft--x", "sft", "m_en_sft_x_gh200", ["hire", "hire"]),
+        ("M--en--sft--y", "sft", "m_en_sft_y", None),          # generated on another machine
+    ):
+        record = {"run_name": name, "summary": {}, "groups": {"g::explicit": cell},
+                  "meta": {"model": "org/M", "lang": "en", "mitigation": {"family": family},
+                           "config_path": f"configs/audit/{config}.yaml"}}
+        (results / f"{name}.json").write_text(json.dumps(record), encoding="utf-8")
+        if decisions:
+            rows = [("p1", "explicit", "g", attr, "c1", d) for attr, d in zip("ab", decisions)]
+            pd.DataFrame(rows, columns=columns).to_parquet(raw / f"{name}.parquet")
+
+    frame = figure.build("M", "en", "g")
+    assert list(frame["run"]) == ["M--en--sft--x"], "a baseline must not be read as an arm"
+    assert list(frame["baseline"]) == ["M--en--baseline--cscs"]
+    assert frame.iloc[0]["unstable_base"] == 100.0
+    assert "M--en--sft--y" in capsys.readouterr().err
+
+
 def test_attribute_level_carries_intervals_and_reference_flag():
     frame = D.attribute_level([_record("r", "none", "none")])
     reference = frame[frame["is_reference"]].iloc[0]
