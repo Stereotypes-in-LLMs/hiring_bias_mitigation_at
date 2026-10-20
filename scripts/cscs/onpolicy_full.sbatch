@@ -33,6 +33,9 @@
 
 set -euo pipefail
 source /ritom/scratch/cscs/zhang/xw/hiring_bias_mitigation_at/scripts/cscs/env.sh
+# An env.sh without `cost` (main before the recorder, an older checkout): run the step
+# unrecorded rather than fail.
+type cost > /dev/null 2>&1 || cost() { shift 2; "$@"; }
 [ -x "$PY" ] || { echo "FATAL: no venv at $XW/venv -- run scripts/cscs/build_env.sbatch first"; exit 3; }
 export HF_HUB_OFFLINE=1
 STAGE=${1:?stage: sample | judge | check}
@@ -46,11 +49,12 @@ echo "host $(hostname) | job ${SLURM_JOB_ID:-none} | stage $STAGE | commit $(git
 case "$STAGE" in
   sample)
     step "prepare: pool rows, prompts, merged student"
-    $PY scripts/generate_onpolicy_full.py --config "$CONFIG" --stage prepare
+    cost datagen prepare $PY scripts/generate_onpolicy_full.py --config "$CONFIG" --stage prepare
     step "sample: one process per GPU"
     pids=(); fail=0
     for g in 0 1 2 3; do
-      CUDA_VISIBLE_DEVICES=$g $PY scripts/sample_student.py --config "$CONFIG" --shard $g --shards 4 \
+      CUDA_VISIBLE_DEVICES=$g cost datagen sample \
+        $PY scripts/sample_student.py --config "$CONFIG" --shard $g --shards 4 \
         > "$XW/logs/xw-v2-onpolicy-full-${SLURM_JOB_ID:-local}-gpu$g.log" 2>&1 &
       pids+=($!)
     done
@@ -58,14 +62,14 @@ case "$STAGE" in
     for g in 0 1 2 3; do echo "--- gpu$g"; grep -E "shard|Error|Traceback" "$XW/logs/xw-v2-onpolicy-full-${SLURM_JOB_ID:-local}-gpu$g.log" | tail -n 2; done
     [ "$fail" -eq 0 ] || { echo "FATAL: a sampling process failed -- see the gpu logs"; exit 1; }
     step "collect"
-    $PY scripts/generate_onpolicy_full.py --config "$CONFIG" --stage collect ;;
+    cost datagen collect $PY scripts/generate_onpolicy_full.py --config "$CONFIG" --stage collect ;;
   judge)
     step "collect (idempotent)"
     $PY scripts/generate_onpolicy_full.py --config "$CONFIG" --stage collect > /dev/null
     step "judge: teacher on four GPUs"
-    $PY scripts/generate_onpolicy_full.py --config "$CONFIG" --stage judge
+    cost datagen judge $PY scripts/generate_onpolicy_full.py --config "$CONFIG" --stage judge
     step "direction check, GPU-free part"
-    $PY scripts/check_preference_direction.py --batch "$OUT" ;;
+    cost datagen direction-check $PY scripts/check_preference_direction.py --batch "$OUT" ;;
   check)
     if [ "${CHECK_PAIRS:-balanced}" = candidates ]; then
       step "every judged pair, unbalanced, copied to check_all/"
@@ -74,11 +78,11 @@ case "$STAGE" in
       PAIRS="$XW/$OUT/check_all/dpo_v2_candidates.parquet"
     else
       step "balance: equal hire and reject per protected group inside each split"
-      $PY scripts/generate_onpolicy_full.py --config "$CONFIG" --stage balance
+      cost datagen balance $PY scripts/generate_onpolicy_full.py --config "$CONFIG" --stage balance
       PAIRS="$OUT/balanced/dpo_v2_candidates.parquet"
     fi
     step "direction check on $PAIRS; D4 on a 600-pair subsample (HF + PEFT)"
-    CUDA_VISIBLE_DEVICES=0 $PY scripts/check_preference_direction.py \
+    CUDA_VISIBLE_DEVICES=0 cost datagen d4-check $PY scripts/check_preference_direction.py \
       --pairs "$PAIRS" \
       --student "$STUDENT" --also-base --batch-size 4 --student-sample 600 ;;
   *) echo "unknown stage $STAGE"; exit 2 ;;

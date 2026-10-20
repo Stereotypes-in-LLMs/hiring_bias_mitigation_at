@@ -21,6 +21,9 @@
 set -euo pipefail
 export REPO=/ritom/scratch/cscs/zhang/xw/hiring_bias_mitigation_at-seedcheck
 source "$REPO/scripts/cscs/env.sh"
+# An env.sh without `cost` (main before the recorder, an older checkout): run the step
+# unrecorded rather than fail.
+type cost > /dev/null 2>&1 || cost() { shift 2; "$@"; }
 [ -x "$PY" ] || { echo "FATAL: no venv at $XW/venv -- run scripts/cscs/build_env.sbatch first"; exit 3; }
 export HF_HUB_OFFLINE=1
 # The point of the check: the classic runner's per-request torch.Generator. vLLM 0.31 picks
@@ -30,7 +33,7 @@ cd "$REPO"
 echo "host $(hostname) | job ${SLURM_JOB_ID:-none} | commit $(git rev-parse --short HEAD) | dirty $(git status --porcelain | wc -l) | VLLM_USE_V2_MODEL_RUNNER=$VLLM_USE_V2_MODEL_RUNNER"
 
 step "two arms on the classic runner: shared seed 42, then per-prompt seeds"
-$PY scripts/anchor_seed_check.py
+cost datagen anchor-seed-check $PY scripts/anchor_seed_check.py
 
 step "runner check: vLLM's workers must not have logged the V2 runner"
 # Matches vLLM's logger line ("[gpu_worker.py:479] Using V2 Model Runner") and nothing this

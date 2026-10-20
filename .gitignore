@@ -7,6 +7,9 @@ __pycache__/
 outputs/
 logs/
 wandb/
+# Per-step cost records (utils/cost.py) when no $HBM_OUTPUT_ROOT is set; reports/cost/ is the
+# committed summary.
+/cost/
 *.egg-info/
 # Generated artifacts are large; push them to the Hub instead of git.
 artifacts/**/*.parquet

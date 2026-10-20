@@ -18,6 +18,9 @@
 
 set -euo pipefail
 source /ritom/scratch/cscs/zhang/xw/hiring_bias_mitigation_at/scripts/cscs/env.sh
+# An env.sh without `cost` (main before the recorder, an older checkout): run the step
+# unrecorded rather than fail.
+type cost > /dev/null 2>&1 || cost() { shift 2; "$@"; }
 [ -x "$PY" ] || { echo "FATAL: no venv at $XW/venv -- run scripts/cscs/build_env.sbatch first"; exit 3; }
 export HF_HUB_OFFLINE=1
 mkdir -p "$WANDB_DIR"
@@ -30,6 +33,6 @@ step "W&B: upload offline runs not synced yet"
 wandb_upload_offline
 
 step "DPO on 4 GPUs (DDP); resumes from the newest finished checkpoint if there is one"
-$PY -m torch.distributed.run --standalone --nproc_per_node=4 \
+cost train dpo $PY -m torch.distributed.run --standalone --nproc_per_node=4 \
   -m hiring_bias_mitigation.mitigation.dpo --config "$CONFIG"
 echo "STAGE dpo OK"

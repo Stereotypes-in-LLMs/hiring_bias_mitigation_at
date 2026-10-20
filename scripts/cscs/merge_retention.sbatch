@@ -18,6 +18,9 @@
 
 set -euo pipefail
 source /ritom/scratch/cscs/zhang/xw/hiring_bias_mitigation_at/scripts/cscs/env.sh
+# An env.sh without `cost` (main before the recorder, an older checkout): run the step
+# unrecorded rather than fail.
+type cost > /dev/null 2>&1 || cost() { shift 2; "$@"; }
 [ -x "$PY" ] || { echo "FATAL: no venv at $XW/venv -- run scripts/cscs/build_env.sbatch first"; exit 3; }
 export HF_HUB_OFFLINE=1
 read -r -a configs <<< "${CONFIGS:?set CONFIGS to the audit configs of the adapters to measure}"
@@ -25,7 +28,7 @@ cd "$REPO"
 echo "host $(hostname) | job ${SLURM_JOB_ID:-none} | commit $(git rev-parse --short HEAD 2>/dev/null || echo n/a)"
 
 step "measure the merges: ${configs[*]}"
-$PY scripts/merge_adapter.py --config "${configs[@]}" --retention-only
+cost eval merge-retention $PY scripts/merge_adapter.py --config "${configs[@]}" --retention-only
 
 step "refresh the reference rows"
 $PY scripts/reference_metrics.py --config "${configs[@]}" --show

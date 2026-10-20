@@ -206,7 +206,8 @@ def train(cfg: dict) -> C.TrainArtifacts:
         peft_config=peft,
         callbacks=C.early_stopping_callbacks(cfg, eval_ds is not None)
             + C.memory_guard_callbacks(cfg)
-            + decision_callbacks(cfg, splits, tokenizer, output_dir),
+            + decision_callbacks(cfg, splits, tokenizer, output_dir)
+            + C.cost_callbacks(),
         compute_loss_func=loss_fn,
     )
 

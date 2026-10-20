@@ -18,6 +18,9 @@
 
 set -euo pipefail
 source /ritom/scratch/cscs/zhang/xw/hiring_bias_mitigation_at/scripts/cscs/env.sh
+# An env.sh without `cost` (main before the recorder, an older checkout): run the step
+# unrecorded rather than fail.
+type cost > /dev/null 2>&1 || cost() { shift 2; "$@"; }
 [ -x "$PY" ] || { echo "FATAL: no venv at $XW/venv -- run scripts/cscs/build_env.sbatch first"; exit 3; }
 export HF_HUB_OFFLINE=1
 RUN=${RUN:-outputs/dpo/qwen3.5-9b_en_only_dpo_v2neg_r1}
@@ -31,7 +34,8 @@ wandb_upload_offline
 step "decision eval: one process per GPU"
 pids=(); fail=0
 for g in 0 1 2 3; do
-  CUDA_VISIBLE_DEVICES=$g $PY scripts/eval_dpo_checkpoints.py --run "$RUN" --shard $g --shards 4 \
+  CUDA_VISIBLE_DEVICES=$g cost eval decision-eval \
+    $PY scripts/eval_dpo_checkpoints.py --run "$RUN" --shard $g --shards 4 \
     > "$XW/logs/xw-dpo-eval-${SLURM_JOB_ID:-local}-gpu$g.log" 2>&1 &
   pids+=($!)
 done

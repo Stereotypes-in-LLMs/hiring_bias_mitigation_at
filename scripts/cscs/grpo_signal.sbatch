@@ -18,6 +18,9 @@
 set -euo pipefail
 REPO=${REPO:-/ritom/scratch/cscs/zhang/xw/hiring_bias_mitigation_at}
 source "$REPO/scripts/cscs/env.sh"
+# An env.sh without `cost` (main before the recorder, an older checkout): run the step
+# unrecorded rather than fail.
+type cost > /dev/null 2>&1 || cost() { shift 2; "$@"; }
 [ -x "$PY" ] || { echo "FATAL: no venv at $XW/venv"; exit 3; }
 export HF_HUB_OFFLINE=1
 export PYTHONPATH="$REPO/src${PYTHONPATH:+:$PYTHONPATH}"
@@ -27,7 +30,8 @@ echo "host $(hostname) | job ${SLURM_JOB_ID:-none} | commit $(git rev-parse --sh
 step "score checkpoints, one shard per GPU"
 pids=(); fail=0
 for g in 0 1 2 3; do
-  CUDA_VISIBLE_DEVICES=$g $PY scripts/grpo_signal_by_reference.py score --shard $g --num-shards 4 \
+  CUDA_VISIBLE_DEVICES=$g cost eval grpo-signal \
+    $PY scripts/grpo_signal_by_reference.py score --shard $g --num-shards 4 \
     > "$XW/logs/xw-grpo-signal-${SLURM_JOB_ID:-local}-gpu$g.log" 2>&1 &
   pids+=($!)
 done

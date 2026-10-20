@@ -18,6 +18,9 @@
 
 set -euo pipefail
 source /ritom/scratch/cscs/zhang/xw/hiring_bias_mitigation_at/scripts/cscs/env.sh
+# An env.sh without `cost` (main before the recorder, an older checkout): run the step
+# unrecorded rather than fail.
+type cost > /dev/null 2>&1 || cost() { shift 2; "$@"; }
 [ -x "$PY" ] || { echo "FATAL: no venv at $XW/venv -- run scripts/cscs/build_env.sbatch first"; exit 3; }
 export HF_HUB_OFFLINE=1
 read -r -a configs <<< "${CONFIGS:?set CONFIGS to up to four audit configs}"
@@ -29,7 +32,8 @@ step "audits: ${configs[*]}"
 pids=(); fail=0
 for g in "${!configs[@]}"; do
   name=$(basename "${configs[$g]}" .yaml)
-  CUDA_VISIBLE_DEVICES=$g $PY scripts/run_audit.py --config "${configs[$g]}" --no-similarity \
+  CUDA_VISIBLE_DEVICES=$g cost eval audit \
+    $PY scripts/run_audit.py --config "${configs[$g]}" --no-similarity \
     > "$XW/logs/xw-audit-${SLURM_JOB_ID:-local}-$name.log" 2>&1 &
   pids+=($!)
 done

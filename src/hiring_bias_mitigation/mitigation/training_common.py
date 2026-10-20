@@ -23,6 +23,7 @@ from __future__ import annotations
 import json
 import sys
 from dataclasses import dataclass
+from datetime import datetime
 from pathlib import Path
 
 from ..utils.config import require_output_root, resolve_output_path
@@ -544,6 +545,114 @@ def _memory_guard_class():
                 control.should_save = True
 
     return MemoryGuardCallback
+
+
+def _cost_callback_class():
+    """Built lazily so importing this module does not import transformers."""
+    from transformers import TrainerCallback
+
+    from ..utils import cost
+
+    class CostCallback(TrainerCallback):
+        """Puts what a training segment did into its step's cost record (utils/cost.py).
+
+        The parameters it trains against the model's total are the measured basis of any
+        "fewer parameters" claim; the optimizer steps, rows, tokens and samples per second say
+        what the step's GPU-hours bought; `checkpoint_times` gives the seconds from the start of
+        training to each saved checkpoint, so an audited checkpoint can be paired with what it
+        cost to reach. Rank 0 only. A segment resumed from a checkpoint counts its own steps,
+        from the first step it takes.
+        """
+
+        def __init__(self):
+            self.first_step: int | None = None
+            self.checkpoints: dict[str, str] = {}
+
+        def on_train_begin(self, args, state, control, model=None, train_dataloader=None,
+                           **kwargs):
+            if state.is_world_process_zero and model is not None:
+                params = list(model.parameters())
+                rows, tokens = _dataset_size(train_dataloader)
+                cost.note(
+                    params_total=sum(p.numel() for p in params),
+                    params_trainable=sum(p.numel() for p in params if p.requires_grad),
+                    world_size=args.world_size,
+                    per_device_batch=args.per_device_train_batch_size,
+                    gradient_accumulation=args.gradient_accumulation_steps,
+                    effective_batch=args.per_device_train_batch_size
+                    * args.gradient_accumulation_steps * args.world_size,
+                    precision="bf16" if args.bf16 else "fp16" if args.fp16 else "fp32",
+                    train_rows=rows,
+                    train_tokens_per_epoch=tokens,
+                    output_dir=str(args.output_dir),
+                )
+            return control
+
+        def on_save(self, args, state, control, **kwargs):
+            if state.is_world_process_zero:
+                self.checkpoints[str(state.global_step)] = (
+                    datetime.now().astimezone().isoformat(timespec="seconds"))
+                cost.note(checkpoint_times=dict(self.checkpoints))
+            return control
+
+        def on_step_end(self, args, state, control, **kwargs):
+            if self.first_step is None:
+                self.first_step = state.global_step - 1
+            return control
+
+        def on_train_end(self, args, state, control, **kwargs):
+            if state.is_world_process_zero:
+                final = next((e for e in reversed(state.log_history) if "train_runtime" in e),
+                             {})
+                taken = 0 if self.first_step is None else state.global_step - self.first_step
+                cost.note(
+                    global_step=state.global_step,
+                    train_steps=taken,
+                    train_runtime_s=final.get("train_runtime"),
+                    train_samples_per_s=final.get("train_samples_per_second"),
+                    train_flos=state.total_flos,
+                    torch_peak_gib=_torch_peak_gib(),
+                )
+            return control
+
+    return CostCallback
+
+
+def _dataset_size(dataloader) -> tuple[int | None, int | None]:
+    """Rows of the training set, and its tokens per epoch over every `*input_ids` column
+    (SFT's `input_ids`; DPO's prompt, chosen and rejected ids). None when unknown, e.g. for
+    GRPO, whose completions are generated during training."""
+    try:
+        dataset = dataloader.dataset
+        rows = len(dataset)
+    except Exception:
+        return None, None
+    try:
+        columns = [c for c in dataset.column_names if c.endswith("input_ids")]
+        tokens = sum(len(ids) for c in columns for ids in dataset[c]) if columns else None
+    except Exception:
+        tokens = None
+    return rows, tokens
+
+
+def _torch_peak_gib() -> float | None:
+    """This rank's peak allocated CUDA memory. NVML's device memory, in the record, also
+    counts what vLLM reserves up front, so for a colocated vLLM it says little."""
+    try:
+        import torch
+
+        if not torch.cuda.is_available():
+            return None
+        return round(torch.cuda.max_memory_allocated() / 2**30, 2)
+    except Exception:
+        return None
+
+
+def cost_callbacks() -> list:
+    """Training facts for the step's cost record; none when no step is being recorded."""
+    from ..utils import cost
+
+    return [_cost_callback_class()()] if cost.tracked() else []
 
 
 def memory_guard_callbacks(cfg: dict) -> list:

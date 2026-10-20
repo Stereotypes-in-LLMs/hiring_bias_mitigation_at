@@ -28,6 +28,7 @@ import time
 from dataclasses import dataclass, field
 from typing import Protocol
 
+from ..utils import cost
 from ..utils.logging import get_logger
 
 log = get_logger(__name__)
@@ -175,6 +176,10 @@ class VLLMBackend:
     def _load(self):
         if self._llm is not None:
             return
+        with cost.phase("load"):
+            self._start_engine()
+
+    def _start_engine(self):
         from transformers import AutoTokenizer
         from vllm import LLM
 
@@ -253,7 +258,9 @@ class VLLMBackend:
         params = self._sampling_params(prompts, n=1)
         wrapped = [_chat_wrap(self._tokenizer, p, self.chat_template_kwargs) for p in prompts]
         kwargs = {"lora_request": self._lora_request} if self._lora_request else {}
-        outputs = self._llm.generate(wrapped, params, **kwargs)
+        with cost.phase("generate"):
+            outputs = self._llm.generate(wrapped, params, **kwargs)
+        _count_vllm(outputs)
         return [o.outputs[0].text for o in outputs]
 
     def generate_samples(self, prompts: list[str], n: int) -> list[list[str]]:
@@ -287,7 +294,9 @@ class VLLMBackend:
         params = self._sampling_params(prompts, n=n)
         wrapped = [_chat_wrap(self._tokenizer, p, self.chat_template_kwargs) for p in prompts]
         kwargs = {"lora_request": self._lora_request} if self._lora_request else {}
-        outputs = self._llm.generate(wrapped, params, **kwargs)
+        with cost.phase("generate"):
+            outputs = self._llm.generate(wrapped, params, **kwargs)
+        _count_vllm(outputs)
         return [[c.text for c in o.outputs] for o in outputs]
 
     def close(self) -> None:
@@ -314,6 +323,10 @@ class TransformersBackend:
     def _load(self):
         if self._model is not None:
             return
+        with cost.phase("load"):
+            self._load_model()
+
+    def _load_model(self):
         import torch
         from transformers import AutoModelForCausalLM, AutoTokenizer
 
@@ -343,11 +356,16 @@ class TransformersBackend:
             self.activation_editor.attach(self._model)
 
     def generate(self, prompts: list[str]) -> list[str]:
+        self._load()
+        with cost.phase("generate"):
+            return self._generate(prompts)
+
+    def _generate(self, prompts: list[str]) -> list[str]:
         import torch
 
-        self._load()
         wrapped = [_chat_wrap(self._tokenizer, p, self.chat_template_kwargs) for p in prompts]
         results: list[str] = []
+        prompt_tokens = output_tokens = 0
         # vLLM prints its own progress bar; this loop printed nothing at all, so a run of tens
         # of thousands of prompts was hours of silence with no way to tell progress from a
         # hang, and no ETA to plan the queue around.
@@ -375,6 +393,11 @@ class TransformersBackend:
                         out[i][enc["input_ids"].shape[1] :], skip_special_tokens=True
                     )
                 )
+            if cost.tracked():
+                prompt_tokens += int(enc["attention_mask"].sum())
+                output_tokens += int(
+                    (out[:, enc["input_ids"].shape[1] :] != self._tokenizer.pad_token_id).sum()
+                )
             if index % log_every == 0 or index == n_batches - 1:
                 done = len(results)
                 elapsed = time.monotonic() - started
@@ -384,6 +407,8 @@ class TransformersBackend:
                     "transformers: %d/%d prompts (%.1f%%) %.2f prompt/s, eta %.1f min",
                     done, len(wrapped), 100 * done / len(wrapped), rate, remaining / 60,
                 )
+        cost.add(requests=len(wrapped), completions=len(wrapped),
+                 prompt_tokens=prompt_tokens, output_tokens=output_tokens)
         return results
 
     def close(self) -> None:
@@ -391,6 +416,22 @@ class TransformersBackend:
             self.activation_editor.detach()
         self._model = None
         _free_gpu()
+
+
+def _count_vllm(outputs) -> None:
+    """Requests and tokens of one vLLM call, for the step's cost record (utils/cost.py):
+    throughput and cost per thousand decisions are computed from them."""
+    if not cost.tracked():
+        return
+    try:
+        cost.add(
+            requests=len(outputs),
+            completions=sum(len(o.outputs) for o in outputs),
+            prompt_tokens=sum(len(o.prompt_token_ids or ()) for o in outputs),
+            output_tokens=sum(len(c.token_ids) for o in outputs for c in o.outputs),
+        )
+    except Exception as e:  # a renamed vLLM field must not stop a generation
+        log.warning("cost: could not count the tokens of a vLLM call: %r", e)
 
 
 def _free_gpu() -> None:

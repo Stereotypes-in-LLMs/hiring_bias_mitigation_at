@@ -19,6 +19,9 @@
 
 set -euo pipefail
 source /ritom/scratch/cscs/zhang/xw/hiring_bias_mitigation_at/scripts/cscs/env.sh
+# An env.sh without `cost` (main before the recorder, an older checkout): run the step
+# unrecorded rather than fail.
+type cost > /dev/null 2>&1 || cost() { shift 2; "$@"; }
 [ -x "$PY" ] || { echo "FATAL: no venv at $XW/venv -- run scripts/cscs/build_env.sbatch first"; exit 3; }
 export HF_HUB_OFFLINE=1
 STAGE=${1:?usage: build_balanced_dpo.sbatch judge|score}
@@ -30,13 +33,14 @@ echo "host $(hostname) | job ${SLURM_JOB_ID:-none} | commit $(git rev-parse --sh
 case "$STAGE" in
   judge)
     step "judge: paraphrased attribute references, teacher on four GPUs"
-    $PY scripts/build_balanced_dpo.py judge --artifacts-dir "$ARTIFACTS" \
+    cost datagen judge $PY scripts/build_balanced_dpo.py judge --artifacts-dir "$ARTIFACTS" \
       --tensor-parallel-size 4 --gpu-memory-utilization 0.80 --max-num-seqs 128 \
       --gdn-prefill-backend triton
     ;;
   score)
     step "score: SFT decision margins ($STUDENT)"
-    CUDA_VISIBLE_DEVICES=0 $PY scripts/build_balanced_dpo.py score --artifacts-dir "$ARTIFACTS" \
+    CUDA_VISIBLE_DEVICES=0 cost datagen score \
+      $PY scripts/build_balanced_dpo.py score --artifacts-dir "$ARTIFACTS" \
       --student "$STUDENT" --batch-size 4
     ;;
   *)

@@ -22,6 +22,9 @@
 
 set -euo pipefail
 source /ritom/scratch/cscs/zhang/xw/hiring_bias_mitigation_at/scripts/cscs/env.sh
+# An env.sh without `cost` (main before the recorder, an older checkout): run the step
+# unrecorded rather than fail.
+type cost > /dev/null 2>&1 || cost() { shift 2; "$@"; }
 [ -x "$PY" ] || { echo "FATAL: no venv at $XW/venv -- run scripts/cscs/build_env.sbatch first"; exit 3; }
 export HF_HUB_OFFLINE=1
 read -r -a validations <<< "${VALIDATE:-}"
@@ -39,7 +42,7 @@ on_gpus() {
   local cmd=$1; shift
   local entries=("$@") pids=() fail=0 g log
   for g in "${!entries[@]}"; do
-    CUDA_VISIBLE_DEVICES=$g $PY scripts/operating_point_control.py "$cmd" \
+    CUDA_VISIBLE_DEVICES=$g cost eval "$cmd" $PY scripts/operating_point_control.py "$cmd" \
       --config "${entries[$g]%%:*}" --which "${entries[$g]##*:}" \
       > "$XW/logs/xw-opc-${SLURM_JOB_ID:-local}-$cmd-gpu$g.log" 2>&1 &
     pids+=($!)
@@ -66,10 +69,11 @@ for c in "${compares[@]}"; do
   run=${c%%:*}; ref=${c##*:}
   if [ "$ref" = base ]; then
     step "compare $run against its base"
-    $PY scripts/operating_point_control.py compare --config "$run"
+    cost eval compare $PY scripts/operating_point_control.py compare --config "$run"
   else
     step "compare $run against $ref at matched hire rate"
-    $PY scripts/operating_point_control.py compare-arms --config "$run" --against "$ref"
+    cost eval compare $PY scripts/operating_point_control.py compare-arms --config "$run" \
+      --against "$ref"
   fi
 done
 echo "STAGE opc OK"

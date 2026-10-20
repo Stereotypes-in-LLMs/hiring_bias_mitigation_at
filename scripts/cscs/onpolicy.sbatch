@@ -22,6 +22,9 @@
 
 set -euo pipefail
 source /ritom/scratch/cscs/zhang/xw/hiring_bias_mitigation_at/scripts/cscs/env.sh
+# An env.sh without `cost` (main before the recorder, an older checkout): run the step
+# unrecorded rather than fail.
+type cost > /dev/null 2>&1 || cost() { shift 2; "$@"; }
 [ -x "$PY" ] || { echo "FATAL: no venv at $XW/venv -- run scripts/cscs/build_env.sbatch first"; exit 3; }
 export HF_HUB_OFFLINE=1
 STAGE=${1:?stage: sample | judge | check}
@@ -35,15 +38,17 @@ nvidia-smi --query-gpu=index,name,memory.total --format=csv
 case "$STAGE" in
   sample)
     step "sample: merge, sanity check, student samples, selection"
-    CUDA_VISIBLE_DEVICES=0 $PY scripts/generate_onpolicy_negatives.py --config "$CONFIG" --stage sample ;;
+    CUDA_VISIBLE_DEVICES=0 cost datagen sample \
+      $PY scripts/generate_onpolicy_negatives.py --config "$CONFIG" --stage sample ;;
   judge)
     step "judge: teacher judgements, candidates, compare/"
-    $PY scripts/generate_onpolicy_negatives.py --config "$CONFIG" --stage judge
+    cost datagen judge $PY scripts/generate_onpolicy_negatives.py --config "$CONFIG" --stage judge
     step "direction check, GPU-free part, on compare/"
-    $PY scripts/check_preference_direction.py --pairs "$COMPARE" ;;
+    cost datagen direction-check $PY scripts/check_preference_direction.py --pairs "$COMPARE" ;;
   check)
     step "D4 on compare/: SFT student and base model (HF + PEFT)"
-    CUDA_VISIBLE_DEVICES=0 $PY scripts/check_preference_direction.py --pairs "$COMPARE" \
+    CUDA_VISIBLE_DEVICES=0 cost datagen d4-check \
+      $PY scripts/check_preference_direction.py --pairs "$COMPARE" \
       --student "$STUDENT" --also-base --batch-size 4 ;;
   *) echo "unknown stage $STAGE"; exit 2 ;;
 esac

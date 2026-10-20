@@ -29,6 +29,7 @@ import pandas as pd
 from ..data import benchmark as B
 from ..data import prompts as P
 from ..data.injection import build_eval_set
+from ..utils import cost
 from ..utils.config import resolve_output_path, sanitize
 from ..utils.logging import get_logger
 from ..utils.seed import set_seed
@@ -297,6 +298,10 @@ def run_audit(cfg: dict) -> tuple[pd.DataFrame, dict]:
         "wall_seconds": round(time.time() - started, 1),
         "config_path": cfg.get("_config_path"),
     }
+    # Joins the step's cost record to eval/results/<run>.json; the backend counted the
+    # requests this step actually generated (a resumed run skips its cached chunks).
+    cost.note(run_name=meta["run_name"], n_prompts=meta["n_prompts"],
+              backend=meta["backend"], served_model=meta["served_model"])
     return parsed, meta
 
 
