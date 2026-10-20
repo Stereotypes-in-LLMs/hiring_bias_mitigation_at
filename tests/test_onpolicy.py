@@ -278,11 +278,13 @@ def test_new_attribute_rows_are_unused_attributes_with_the_pairs_own_text():
 
 def test_gendered_texts_are_never_reused_and_the_leak_filter_runs_on_the_new_attribute():
     pool = _gender_pool({("p0", "implicit"): "She has eight years of Django for the role.",
-                         ("p1", "explicit"): "Strong Android work, but the role needs Django."})
+                         ("p1", "explicit"): "Strong Django work; being androgynous is beside "
+                                             "the point for the role."})
     new, report = OP.add_attribute_rows(pool, "gender", k=18, seed=1)
     assert report["lost_before_filter"] == {"source_has_gendered_pronoun": 18}
     assert not ((new.pair_id == "p0") & (new.condition == "implicit")).any()
-    # "android" carries the Androgynous stem: that row is dropped, as filter_invariant would
+    # The text names Androgynous, so that row is dropped, as filter_invariant would. (This
+    # used "Android", which only the old prefix detector read as Androgynous; see 9e02ae2.)
     assert report["filter"]["dropped_by_reason"] == {"invariant_attribute_leak": 1}
     leaked = new[(new.pair_id == "p1") & (new.condition == "explicit")]
     assert "Androgynous" not in set(leaked["protected_attr"])
