@@ -85,34 +85,48 @@ Per 1,000 pairs, that is about 0.10 node-h of votes, 0.15 of invariant and 0.15 
 
 ### Splits and assembly
 
+Revised at about 13:40 CEST, during job 5104067. The per-source balancing and the exclusions come from the pre-run data-quality review. The DPO outputs come from the addendum below. The rest is as pre-registered.
+
 No model is trained or selected, and the benchmark is not read.
 
 - **Split.** A seeded 5% of each source's candidates go to validation. No new candidate is a V1 candidate, so SFT-v3's validation stays as built.
-- **Balancing.** SFT rows are balanced with `balance_decisions` over the new rows only, so SFT-v3's rows are untouched.
+- **Balancing.** Each pool source's SFT rows are balanced with `balance_decisions` on their own. Pooling them would let RJDB, whose matched CVs were written to fit their JD, supply the hire side and leave the new Djinni rows reject-heavy (data-quality review). SFT-v3's rows are untouched.
+- **Exclusions.** Some pairs are dropped at assembly, on their CV, after the teacher has answered them, so the generated parts stay valid (`assemble.exclude`):
+  - `djinni_new` CVs that fail the external sources' marker list. That list catches names, third-person pronouns and maternity leave, which V1's list misses and which contradict an injected gender. About 3.3% fail, the same rate as V1's own pairs, which keep V1's filter.
+  - RJDB CVs with template residue such as "Details not provided" or "[insert ...]".
 - **Outputs.**
-  - `additional_{sft,dpo,kto}_{train,validation}.parquet`: the new rows alone.
-  - `sft_{train,validation}.parquet`: `sft_v3_swap` row for row, with the new rows after it. A data config can point at the directory with `data_kind: sft`.
+  - `additional_sft_{train,validation}.parquet`: the new rows alone.
+  - `sft_{train,validation}.parquet`: `sft_v3_swap` row for row, with the new rows after it. A data config points at the directory with `data_kind: sft`.
+  - `raw/en_invariant.parquet` and `sft_validation.parquet`: the input of the on-policy DPO build below, in v1's columns.
+  - `r2em_v3_{train,validation}.parquet`: from `--stage r2em`, below.
+  - `teacher_biased_*`: only with `assemble.teacher_biased_dpo: true`, as a comparison.
 
-### V1's pairs in the DPO set, and the 10k view
+### Addendum: DPO is r2em plus on-policy pairs
 
-SFT-v3 built SFT data only. To reach the user's target of about 10,000 DPO pairs, `--stage v1_dpo` builds V1's pairs' DPO rows on the vote anchors, from v1's raw passes and on CPU:
+Written on 2026-10-20 at about 13:40 CEST, during job 5104067, after these readouts and the user's decision.
 
-- **chosen** is SFT-v3's: v1's invariant targets on the 2,800 unchanged pairs, and job 5103710's regenerated targets on the 192 changed pairs;
-- **rejected** is v1's biased generations (`data/raw/en_biased.parquet` of the published dataset, at the revision `semisynthetic-v1-hub` records, sha256 8ef524e6...). `BIASED_PROMPT` does not quote the anchor, so those generations stand for the changed pairs too. Only `filter_biased`'s flip check reads the anchor, and it is re-run against the vote's;
-- the split is SFT-v3's: a candidate in `sft_v3_swap`'s validation is in validation.
+**What was seen.** The biased teacher never answers hire: 0 of v1's 36,000 English biased generations, by anchor:
 
-`--stage assemble` then writes:
+- hire anchors: 4,343 reject, 757 refused;
+- reject anchors: 26,793 reject, 4,107 refused.
 
-- `dpo_*` and `kto_*`: V1's pairs and the new pairs together;
-- `dpo_capped_*`: at most 2 rows per pool pair, rows of different protected groups first, then as many hire as reject rows.
+So every `rejected` says reject. A hire-anchor row contrasts hire with reject, and a reject-anchor row contrasts two rejects that differ only in their rationale. On V1's pairs rebuilt on the vote anchors (`--stage v1_dpo`, 19,645 rows), both capped views separate at D3 = 1.000 (`direction_check.surface_report`, balanced AUC, gate 0.65), and D2 fails. These are the negatives r2em replaced.
 
-The second is the view meant for training. A pair's 12 variants share one CV and one JD, so without the cap the set would be thousands of near-duplicates of a few hundred pairs on the hire side.
+**The decision.** These DPO pairs are not for training. V3's DPO set is r2em plus new pairs built the r2em way: `rejected` is the student's own attribute-tipped mistake, judged by the teacher, sampled from the SFT model DPO starts from. That model is SFT-v3, so those pairs are drawn after SFT-v3 is trained, with `scripts/generate_onpolicy_full.py` and this directory as `source_artifacts_dir`.
 
-Sizing, from v1's English yields (`dpo_*.parquet`: 84.6% of hire-anchor variants and 50.5% of reject-anchor variants become DPO rows) and the vote's 21% hire share: 10,000 capped and balanced rows need about 2,500 hire pairs. V1's pairs give 616. The remainder, about 1,900 hire pairs, needs about 9,000 new pool pairs. Hence the first run's scope: `djinni_new` 000-002, `rjdb` 000-001 and `kaggle_linkedin` 000-001, 9,034 pairs (job 5104067).
+**What changed in the run.** The biased pass is skipped for the parts still to run. Job 5104067 is cancelled after `djinni_new-001`'s invariant pass, before its biased pass, and the remaining parts are resubmitted with `PASSES="votes invariant"`.
 
-### Known caveat: the DPO negatives
+- Parts with a biased pass on disk: `djinni_new-000`, `rjdb-000`, `kaggle_linkedin-000` and `kaggle_linkedin-001`. These are kept for comparison only.
+- The stop conditions are still read on each source's first part, without the biased yield where that pass did not run.
 
-These DPO pairs are v1's kind: `rejected` is the teacher asked to let the attribute drive the verdict. In v1, 91% of those named the attribute and 78% kept the chosen verdict, and DPO separated the pairs by wording within 50 steps (`generation/negatives_v2.py` docstring). The project's best DPO set since then, r2em, takes `rejected` from the SFT student's own attribute-tipped mistakes, judged by the teacher (`docs/V2_NEGATIVES_DPO_DATA.md`). Those negatives need the SFT model DPO starts from, so they can only be drawn after SFT-v3 is trained. The anchors and invariant targets made here are the inputs that on-policy build needs.
+**r2em on the vote anchors** (`--stage r2em`, `r2em_v3_report.json`). r2em was built on V1's pairs with v1's anchors. Two kinds of rows are dropped:
+
+- 49 train and 20 validation rows whose chosen verdict the vote overturns. All of them chose reject where the vote hires, so DPO would push against the anchor SFT-v3 trains on.
+- r2em's `legacy` rows, 42 train and 3 validation, which are v1's biased-teacher negatives.
+
+Kept: 2,271 train and 272 validation rows. Their contrasts are still symmetric: 1,139 hire over reject and 1,132 reject over hire in train.
+
+**Caveat.** r2em's negatives were sampled from SFT v1, and the new on-policy pairs will be sampled from SFT-v3. For a DPO run that starts from SFT-v3, the r2em part is off-policy. That mix is the user's choice, and the per-source readouts should keep the two parts apart.
 
 ## Result
 
