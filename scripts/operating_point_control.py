@@ -738,6 +738,26 @@ def main() -> None:
         cmd_validate(cfg, args.which, args.n, batch_size=args.batch_size)
     else:
         cmd_compare(cfg)
+    if args.cmd != "validate":
+        _refresh_reference_rows(cfg, getattr(args, "which", "adapter"))
+
+
+def _refresh_reference_rows(cfg: dict, which: str) -> None:
+    """Brings the reference-metrics rows up to date with what this command just wrote.
+
+    A margin pass fills a run's confidence columns and a comparison its matched-comparison
+    columns (docs/EVAL_STANDARD.md). A base pass belongs to the baselines of the config's
+    model and language. The rows are descriptive, so a failure is logged and never raised.
+    """
+    try:
+        from hiring_bias_mitigation.analysis import reference_metrics as RM
+
+        names = (RM.baselines_of(cfg["model"], cfg["lang"]) if which == "base"
+                 else [R.build_run_name(cfg)])
+        for path in RM.refresh(names):
+            log.info("refreshed %s", path)
+    except Exception as exc:  # noqa: BLE001 - reported, never silent
+        log.warning("reference metrics not refreshed: %s", exc)
 
 
 if __name__ == "__main__":

@@ -15,7 +15,7 @@ COMPOSE = docker compose
         build shell down status watch progress \
         enable-none enable-smoke enable-stage1 enable-core enable-full \
         local-setup local-benchmark local-audit local-generate local-prompt local-scrub \
-        local-embedding local-sft local-dpo local-report local-analyze local-plan local-test lint \
+        local-embedding local-sft local-dpo local-report local-analyze local-plan local-reference-metrics local-test lint \
         local-negatives-v2 local-direction-check
 
 help:
@@ -164,6 +164,10 @@ local-analyze:
 	$(DOTENV) uv run python scripts/analyze_results.py --json reports/analysis.json $(ARGS)
 
 # Enumerated experiment plan. Reads reports/analysis.json, so run local-analyze first.
+# One row of reference metrics per scored run that has a raw parquet. Reads only.
+local-reference-metrics:
+	$(DOTENV) uv run python scripts/reference_metrics.py --all
+
 local-plan:
 	$(DOTENV) uv run python scripts/make_experiment_matrix.py --csv reports/experiment_runs.csv
 

@@ -167,3 +167,72 @@ def test_d4_scores_a_dpo_adapter_on_sft_and_disables_it_down_to_sft(tmp_path):
         with model.disable_adapter():
             assert torch.allclose(model(tokens).logits, sft(tokens).logits, atol=1e-5)
     assert merged == [tmp_path / "sft"]
+
+
+def _bf16_base_and_lora(tmp_path, b_std):
+    """A two-layer bf16 base and one LoRA on it whose B has standard deviation `b_std`."""
+    torch = pytest.importorskip("torch")
+    peft = pytest.importorskip("peft")
+    from transformers import AutoModelForCausalLM, Qwen2Config
+
+    torch.manual_seed(0)
+    config = Qwen2Config(vocab_size=64, hidden_size=32, intermediate_size=64,
+                         num_hidden_layers=2, num_attention_heads=4, num_key_value_heads=2,
+                         max_position_embeddings=64)
+    AutoModelForCausalLM.from_config(config).to(torch.bfloat16).save_pretrained(tmp_path / "base")
+    model = peft.get_peft_model(
+        AutoModelForCausalLM.from_pretrained(tmp_path / "base", dtype=torch.bfloat16),
+        peft.LoraConfig(r=4, lora_alpha=8, target_modules=["q_proj", "v_proj"]))
+    for name, param in model.named_parameters():
+        if "lora_B" in name:
+            torch.nn.init.normal_(param, std=b_std)
+    model.save_pretrained(tmp_path / "lora")
+    return tmp_path / "base", tmp_path / "lora"
+
+
+def _load(base):
+    import torch
+    from transformers import AutoModelForCausalLM
+
+    return AutoModelForCausalLM.from_pretrained(base, dtype=torch.bfloat16)
+
+
+def test_a_measured_merge_writes_the_same_weights_as_a_plain_one(tmp_path):
+    base, lora = _bf16_base_and_lora(tmp_path, b_std=0.5)
+    import torch
+
+    retention = []
+    measured = MG.merge_chain(_load(base), [lora], retention).state_dict()
+    plain = MG.merge_chain(_load(base), [lora]).state_dict()
+    assert measured.keys() == plain.keys()
+    assert all(torch.equal(measured[k], plain[k]) for k in plain)
+    assert retention[0]["adapter"] == str(lora) and retention[0]["layers"] == 4
+
+
+def test_retention_is_near_one_for_a_large_update(tmp_path):
+    base, lora = _bf16_base_and_lora(tmp_path, b_std=0.5)
+    retention = []
+    MG.merge_chain(_load(base), [lora], retention)
+    assert 0.95 < retention[0]["kept_fraction"] < 1.05
+    assert retention[0]["unchanged"] < 0.5
+
+
+def test_a_tiny_update_is_rounded_away_by_a_bf16_merge(tmp_path):
+    base, lora = _bf16_base_and_lora(tmp_path, b_std=1e-6)
+    retention = []
+    MG.merge_chain(_load(base), [lora], retention)
+    assert retention[0]["kept_fraction"] < 0.2
+    assert retention[0]["unchanged"] > 0.9
+
+
+def test_recorded_retention_reads_either_file(tmp_path):
+    record = [{"adapter": "a", "kept_fraction": 0.9, "unchanged": 0.5, "layers": 4}]
+    (tmp_path / "m1").mkdir()
+    (tmp_path / "m1" / "merged_from.json").write_text(json.dumps({"merge_retention": record}))
+    (tmp_path / "m2").mkdir()
+    (tmp_path / "m2" / "merged_from.json").write_text(json.dumps({"adapters": ["a"]}))
+    (tmp_path / "m2" / "merge_retention.json").write_text(json.dumps({"merge_retention": record}))
+    (tmp_path / "m3").mkdir()
+    assert MG.recorded_retention(tmp_path / "m1") == record
+    assert MG.recorded_retention(tmp_path / "m2") == record
+    assert MG.recorded_retention(tmp_path / "m3") is None

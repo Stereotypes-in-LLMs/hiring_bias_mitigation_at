@@ -115,6 +115,19 @@ def main() -> None:
     path = record.to_json(Path(args.results_dir) / f"{run_name}.json")
     log.info("wrote %s", path)
 
+    # One row of reference metrics per run (docs/EVAL_STANDARD.md, docs/METRICS.md). They are
+    # descriptive, and the audit record above is already written, so a failure here is
+    # reported loudly and the audit still exits on its own merits.
+    try:
+        from hiring_bias_mitigation.analysis import reference_metrics as RM
+
+        row_path = RM.write_for_record(json.loads(path.read_text(encoding="utf-8")),
+                                       results_dir=Path(args.results_dir), raw_dir=raw_dir)
+        if row_path is not None:
+            log.info("wrote %s and %s", row_path, RM.TABLE)
+    except Exception as exc:  # noqa: BLE001 - reported, never silent
+        log.warning("reference metrics NOT written for %s: %s", run_name, exc)
+
     # Persist the one expensive derived column back into the artifact. Every later re-score
     # then costs seconds instead of an hour of sentence encoding, which is the difference
     # between "we can add a measure retroactively" and "we cannot afford to".

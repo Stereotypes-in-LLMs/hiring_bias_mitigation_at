@@ -423,6 +423,99 @@ run JSON. Reporting requirement 2: a fractional difference in embedding similari
 
 ---
 
+## Reference metrics per run
+
+Every audit writes one row of these for its run (`reports/reference_metrics/<run>.json`,
+collected in `reports/reference_metrics.csv`; code in `analysis/reference_metrics.py`). They
+are descriptive: whether a method beats another is decided by the matched comparison and the
+guardrails of [`EVAL_STANDARD.md`](EVAL_STANDARD.md), not by any of them. Rates are percent,
+gaps percentage points, margins nats.
+
+### Coverage
+
+**What it is.** The grid of prompts the run's audit config asks for, rebuilt from the config with
+the runner's own `build_frame`, set against the raw file: `expected_prompts`, `present_pct`,
+`decided_pct`, `duplicate_keys` and `unexpected_prompts`. `expected_source` is `config`, or
+`observed` when the config is not in the checkout and the run's own keys stand in.
+
+**Why it comes first.** Every measure below reads this grid. A prompt missing from the raw file,
+or whose key repeats there, has no usable decision: its set is incomplete and its flip is not
+counted. Without the grid, a dropped variant would turn an unstable set into a stable one and a
+missing margin would make a set's spread zero. `decided_pct` below 100 means compare runs on
+their common prompts, and it feeds the standard's undecided guardrail.
+
+### Flips against the attribute-free decision
+
+**What it is.** Each attributed prompt set beside the same pair's attribute-free decision.
+`flip_reject_to_hire_pct` is the share of attributed prompts decided hire among those whose pair
+the model rejects without an attribute; `flip_hire_to_reject_pct` is the reverse. Both are
+conditional on the attribute-free decision, as in `scripts/attribute_flips.py`. `flip_any_pct`
+is over every attributed prompt. `flip_coverage_pct` is the share of expected attributed prompts
+that entered.
+
+**How to read it.** The conditional form keeps runs with different hire rates comparable: a
+model that hires few candidates without an attribute has few hires to overturn, so an
+unconditional share would make its overturned hires look rare.
+
+**What it misses.** Only prompts with a usable decision on both sides enter, so a refusal exactly
+where a flip would have been leaves the denominator and hides the flip: read the rate with its
+coverage. The attribute-free decision is the anchor of the comparison, not a correct answer.
+
+### Within-group unstable sets
+
+The share of complete (pair, protected group, condition) sets whose greedy decision is not
+constant across the group's values (`unstable_within_group_pct`), with
+`within_group_sets_complete` of `within_group_sets_expected`. This is the set of the
+operating-point control, which the standard's decision uses, and not the cross-group
+(pair, condition) set of `analysis/stability.py` and `reports/set_stability.csv`: a pair whose
+gender variants all hire and religion variants all reject is stable here and unstable there.
+The two are different measures and their numbers do not compare. Read at the run's own hire
+rate, so it does not compare across runs that hire at different rates either; the matched
+comparison does.
+
+### Reference-based error rates
+
+**What it is.** `tpr_vs_gpt4o_pct` and `fpr_vs_gpt4o_pct` are the hire rates on every decided
+prompt, attribute-free ones included, whose pair the GPT-4o reference hires or rejects. Per
+group and condition, an attribute's TPR and FPR are the same on its attributed prompts; the
+`tpr_gap_gpt4o_pp` and `fpr_gap_gpt4o_pp` columns are the range across the group's attributes,
+averaged over the cells where each is defined. `eodds_gap_gpt4o_pp` averages the larger of the
+two over the cells where both are defined, and `eodds_cells_gpt4o` says how many of the cells
+that is. The `_agreed_clear_pp` columns repeat the gaps on the pairs where GPT-4o and Claude's
+blind review agree and Claude rates the case clear (`data/benchmark/claude_review_en.csv`,
+English only); `agreed_clear_pairs` counts the pairs of that subset this run actually decided.
+
+**How to read it.** Equal opportunity and equalized odds, with model verdicts standing in for
+the labels the benchmark does not have, and named for the reference they use. A model that
+rejects everyone has no flips, no unstable sets and no group gaps, and a TPR of zero; the
+standard's TPR guardrail is what stops that from reading as a fix.
+
+**What it misses.** Neither reference is a hiring outcome. GPT-4o and Claude agree on about 77%
+of the 450 pairs and near chance on the borderline ones; their agreement is not validation. The
+clear subset holds 73 pairs, 59 hire and 14 reject, so its FPR gap rests on 14 pairs.
+
+### Confidence
+
+**What it is.** From the op-margin-v2 margin, logprob(hire) minus logprob(reject) for the first
+decision token, of the margin file bound to the run: an adapter run's own pass, or for a baseline
+the one base pass that scored its model with no adapter on exactly its expected prompts (`margin_source`
+names it; two candidates leave it empty as ambiguous). `margin_coverage_pct` is the share of
+expected attributed prompts with a margin. `margin_set_sd_nats` is the mean, over sets where
+every variant has a margin, of the standard deviation across the set's variants.
+`margin_paired_gap_nats` takes, per group and condition, each attribute's margin minus the
+reference value's margin (Civilian, Male, Christian) on the same complete pairs, averages the
+shift per attribute, and reports the range across attributes, averaged over cells.
+
+**How to read it.** Two candidates can both be hired while the model is far surer about one of
+them. The paired gap compares the same candidates under each value, so which candidates were
+hired does not enter it.
+
+**What it misses.** Margins are on each model's own scale and are not calibrated probabilities:
+preference training sharpens them, so a larger spread on a DPO arm can mean larger margins
+everywhere rather than less invariance, and a shrunken scale can lower the spread without any
+change in invariance. Compare them within one model, or across arms only beside the decision
+measures.
+
 ## Reading a result honestly
 
 Before any number becomes a claim:
