@@ -1,0 +1,73 @@
+# Hand-written -- NOT produced by generate_experiment_configs.py, so it survives a regeneration.
+#
+# v3 additional data (docs/V3_NEW_DATA.md): the SFT-v3 pipeline of docs/SFT_V3_ANCHORS.md -- the
+# 8-draw vote's majority as the anchor, the whole-word mentions_attribute in every filter -- run as
+# v1's full construction (anchor, 12 variants, invariant pass, biased pass, SFT/DPO/KTO) on English
+# pairs V1 never used. V1's pairs keep their v3 anchors and targets. Run through
+# scripts/cscs/v3_additional_data.sbatch, one Slurm job at a time. The pool holds every pair that
+# passes the filters; which parts are generated is each job's list of parts.
+artifacts_dir: artifacts/semisynthetic-v3/additional
+lang: en
+seed: 42
+
+pool:
+  # V1's English pairs: not generated; new pairs must not repeat their candidates or texts.
+  v1_reference: artifacts/semisynthetic-v1/raw/en_reference.parquet
+  djinni_new:
+    n_pairs: 200000         # more than exist: every candidate V1 did not use, one job each
+    seed: 4242              # not V1's 42, so the order is not V1's continued
+  external:
+    seed: 42
+    jobs_per_candidate: 2   # kaggle_linkedin: two LinkedIn JDs per Kaggle CV
+    rjdb_include_weakened: false
+    pairs_per_source:       # more than exist: every eligible pair
+      rjdb: 60000
+      kaggle_linkedin: 4000
+  # max_model_len 8192 minus 320 new tokens and a chat-template margin. The invariant prompt
+  # adds the injected attribute, the quoted anchor and its instructions to the reference prompt.
+  max_prompt_tokens: 7600
+  invariant_overhead_tokens: 300
+
+# v1's variant grid (configs/generation/teacher.yaml): 3 groups x 2 attributes x 2 conditions.
+protected_groups: [military_status, gender, religion]
+conditions: [explicit, implicit]
+attributes_per_pair: 2
+
+generate:
+  part_size: 1500           # about 9 min of votes and 13 min per variant pass at Daint's rates
+
+vote_draws: 8
+passes:
+  votes:                    # v1's anchor decoding; base seed 43, as the Djinni vote (job 5073453)
+    max_new_tokens: 320
+    temperature: 0.7
+    top_p: 0.9
+    seed: 43
+  invariant:                # v1's decoding; per-prompt seed 42, as the vote targets (job 5103710)
+    max_new_tokens: 320
+    temperature: 0.7
+    top_p: 0.9
+    seed: 42
+  biased:
+    max_new_tokens: 320
+    temperature: 0.7
+    top_p: 0.9
+    seed: 42
+
+split:
+  val_fraction: 0.05        # of each source's candidates; none of them is a V1 candidate
+
+assemble:
+  # The new SFT rows are appended to this set, which stays exactly as built.
+  sft_v3_dir: artifacts/semisynthetic-v3/sft_v3_swap
+
+teacher_model: Qwen/Qwen3.5-122B-A10B-GPTQ-Int4
+serving:                    # the vote and judge runs' serving on a GH200 node
+  backend: vllm
+  tensor_parallel_size: 4
+  gpu_memory_utilization: 0.80
+  max_model_len: 8192
+  max_num_seqs: 128
+  dtype: auto
+  engine_kwargs:
+    gdn_prefill_backend: triton
