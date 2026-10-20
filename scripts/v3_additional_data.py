@@ -281,7 +281,9 @@ def stage_generate(cfg: dict, parts: list[str], passes: list[str]) -> None:
         return engine["llm"], generation
 
     try:
-        for part in part_order(wanted):
+        # Explicit parts run in the order given, so a job can put each source's first part
+        # first and have it read against the stop conditions while the rest runs.
+        for part in (known if parts == ["all"] else list(dict.fromkeys(wanted))):
             pairs = pool[pool["part"] == part].reset_index(drop=True)
             if "votes" in passes:
                 prompts = SY.reference_prompts(pairs, LANG)
