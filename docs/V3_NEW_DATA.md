@@ -145,6 +145,23 @@ Kept: 2,271 train and 272 validation rows. Their contrasts are still symmetric: 
 
 Outputs are under `artifacts/semisynthetic-v3/additional/`: `report.json`, `generation_report.json`, `r2em_v3_report.json` and `parts/<part>/`.
 
+**Compute.** Both jobs had one node, 4 GPUs (`sacct -j 5104067,5105355 -o ElapsedRaw,AllocTRES`):
+
+- 8,136 s and 2,870 s, so 3:03:26 in all: 3.06 node-h, or **12.23 allocated GPU-h**.
+- Energy: 16.3 and 5.0 MJ.
+
+By pass, from `parts/<part>/<pass>.meta.json`:
+
+| pass | GPU-h |
+|---|---|
+| votes | 3.44 |
+| invariant | 5.24 |
+| biased (not used for training) | 2.76 |
+| teacher loading | 0.68 |
+| job setup, stop checks and the report | about 0.1 |
+
+This is generation only: no training, and no CPU work on the login node. The cost ledger of `xinyang/cost-ledger` was not merged and recorded nothing.
+
 ### The vote, by source (`report.json`, `vote.by`)
 
 | source | pairs | anchored | per-draw hire | anchor hire | unanimous | unstable (at most 5 of 8) | undecided draws | fenced draws |
