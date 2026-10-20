@@ -158,9 +158,10 @@ def stage_judge(cfg: dict, out: Path) -> None:
     judge_generation = cfg.get("judge_generation")
     log.info("judging %d selected negatives and their chosen side", len(selected))
 
+    # NOTE teacher generate choosen,chosen 通过率（teacher 自己写的）0.9, rejected 通过率（学生写的）hire ~0.6
     teacher = BK.build_backend(N.teacher_backend_config(cfg))
     try:
-        rejected_raw = N._generate_cached(out / "raw" / "student_judge.parquet",
+        rejected_raw = N._generate_cached(out / "raw" / "student_judge.parquet",  # 断点续跑
                                           N.judge_prompts(selected, "rejected"), teacher,
                                           judge_generation, selected)
         chosen_raw = N._generate_cached(out / "raw" / "chosen_judge.parquet",
