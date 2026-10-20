@@ -1,0 +1,15 @@
+# Hand-written -- NOT produced by generate_experiment_configs.py.
+# Rejection-sampling SFT control (scripts/build_rft_data.py, data_kind rft): 2,400 attributed
+# English pool rows, each with the SFT student's first own right sample that passes the hard
+# filters as target; exactly half per reference verdict and equal error mass per half (the
+# hire half: 1,200 tipped rows; the reject half: 74 tipped). Every candidate of an existing
+# validation split is held out; 256 held-out rows for evaluation (the GRPO monitor's rows).
+name: en_only_v2_rft
+artifacts_dir: artifacts/semisynthetic-v2/rft-01
+seed: 42
+protected_groups:
+- military_status
+- gender
+- religion
+languages:
+- en

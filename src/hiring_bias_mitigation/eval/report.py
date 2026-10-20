@@ -464,7 +464,7 @@ def _is_probe(record: dict) -> bool:
     would be selective reporting -- and out of the write-ups. The report says which is which
     rather than leaving a reader to infer it from the run name.
     """
-    return _family(record) == "dpo" or "_v2_" in record["run_name"]
+    return _family(record) in ("dpo", "grpo") or "_v2_" in record["run_name"]
 
 
 def _probe_note(records: list[dict]) -> str:

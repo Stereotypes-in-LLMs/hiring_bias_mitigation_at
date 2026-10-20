@@ -132,12 +132,36 @@ def decision_token_count(tokenizer, sample: str = '{"decision": "reject"') -> in
     return len(tokenizer(sample, add_special_tokens=False)["input_ids"])
 
 
+def sft_config_candidates(cfg: dict, weight: float = 1.0) -> dict:
+    """SFTConfig fields this trainer sets, before version filtering. A field the config leaves
+    unset is left out rather than passed as None: TRL 1.15's SFTTrainer rejects
+    `loss_type=None` at construction (job 5066765), so TRL's own default has to apply."""
+    candidates = {
+        "max_length": cfg.get("max_seq_len", 2048),
+        "packing": False,
+        # Train on the response only. The prompt is a job ad and a CV the model is
+        # shown, not text it should learn to produce.
+        "completion_only_loss": True,
+        # TRL's default `chunked_nll` computes entropy from fields its own patched
+        # forward attaches (`outputs.num_valid_tokens`). A custom loss bypasses that
+        # forward, so the entropy branch then reads an attribute that is not there and
+        # the run dies on the first training step. `nll` is the same maths without the
+        # chunked lm_head projection, and it does not touch those fields.
+        "loss_type": "nll" if weight != 1.0 else cfg.get("loss_type"),
+    }
+    return {k: v for k, v in candidates.items() if v is not None}
+
+
 def train(cfg: dict) -> C.TrainArtifacts:
     from trl import SFTConfig, SFTTrainer
+
+    from .dpo import decision_callbacks
 
     set_seed(cfg.get("seed", 42))
     C.wandb_init(cfg)
     output_dir = C.resolve_run_dir(cfg)
+    if C.is_main_process():
+        C.wandb_resume(cfg, output_dir)
 
     # `data_kind` lets a variant arm read a different split without a new loader.
     splits = C.load_generated_dataset(cfg, cfg.get("data_kind", "sft"))
@@ -156,19 +180,7 @@ def train(cfg: dict) -> C.TrainArtifacts:
         **base_args.to_dict(),
         **C.supported_kwargs(
             SFTConfig,
-            {
-                "max_length": cfg.get("max_seq_len", 2048),
-                "packing": False,
-                # Train on the response only. The prompt is a job ad and a CV the model is
-                # shown, not text it should learn to produce.
-                "completion_only_loss": True,
-                # TRL's default `chunked_nll` computes entropy from fields its own patched
-                # forward attaches (`outputs.num_valid_tokens`). A custom loss bypasses that
-                # forward, so the entropy branch then reads an attribute that is not there and
-                # the run dies on the first training step. `nll` is the same maths without the
-                # chunked lm_head projection, and it does not touch those fields.
-                "loss_type": "nll" if weight != 1.0 else cfg.get("loss_type"),
-            },
+            sft_config_candidates(cfg, weight),
             "SFTConfig",
         ),
     )
@@ -193,7 +205,8 @@ def train(cfg: dict) -> C.TrainArtifacts:
         processing_class=tokenizer,
         peft_config=peft,
         callbacks=C.early_stopping_callbacks(cfg, eval_ds is not None)
-            + C.memory_guard_callbacks(cfg),
+            + C.memory_guard_callbacks(cfg)
+            + decision_callbacks(cfg, splits, tokenizer, output_dir),
         compute_loss_func=loss_fn,
     )
 
@@ -201,14 +214,24 @@ def train(cfg: dict) -> C.TrainArtifacts:
         "SFT %s on %d rows (%s)",
         cfg["base_model"], len(train_ds), "LoRA" if peft else "full fine-tune",
     )
-    trainer.train()
+    manifest = {"mitigation_family": "sft", "n_train": len(train_ds),
+                "n_eval": len(eval_ds) if eval_ds else 0,
+                "sft_checkpoint": cfg.get("sft_checkpoint")}
+    # A second SFT stage on top of an SFT adapter (`sft_checkpoint`) is merged with its parent
+    # by merge.adapter_chain, which reads the parent from this file: written before training
+    # too, so the checkpoints of a run cut by a time limit keep it.
+    if C.is_main_process():
+        C.write_run_manifest(cfg, output_dir, {**manifest, "status": "training"})
+    # `resume: true` continues from the newest finished checkpoint in output_dir, so a run
+    # longer than the partition's time limit is the same job submitted again.
+    resume = C.last_checkpoint(output_dir) if cfg.get("resume") else None
+    if resume:
+        log.info("resuming from %s", resume)
+    trainer.train(resume_from_checkpoint=resume)
     trainer.save_model(str(output_dir))
-    tokenizer.save_pretrained(str(output_dir))
-    C.write_run_manifest(
-        cfg, output_dir,
-        {"mitigation_family": "sft", "n_train": len(train_ds),
-         "n_eval": len(eval_ds) if eval_ds else 0},
-    )
+    if C.is_main_process():
+        tokenizer.save_pretrained(str(output_dir))
+        C.write_run_manifest(cfg, output_dir, {**manifest, "status": "done"})
     return C.TrainArtifacts(output_dir, len(train_ds), len(eval_ds) if eval_ds else 0)
 
 
@@ -219,6 +242,11 @@ def main() -> None:
     args = parser.parse_args()
     cfg = load_config(args.config)
     cfg.setdefault("stage", "sft")
+    # A second SFT stage (the rejection-sampling control) starts from an SFT adapter, local or
+    # on the Hub, exactly as dpo.main does: the loader merges it into its base before a fresh
+    # LoRA is fitted on top.
+    if cfg.get("sft_checkpoint"):
+        cfg["base_model"] = C.resolve_sft_checkpoint(cfg["sft_checkpoint"])
     artifacts = train(cfg)
     log.info("SFT complete -> %s", artifacts.output_dir)
 

@@ -1,0 +1,13 @@
+# Hand-written -- NOT produced by generate_experiment_configs.py.
+# GRPO pilot prompts (scripts/build_grpo_prompts.py, data_kind grpo): 3,000 attributed English
+# pool prompts, exactly half per reference verdict and half of each side attribute-tipped, every
+# candidate of an existing validation split held out; 256 held-out prompts for the monitor.
+name: en_only_grpo_01
+artifacts_dir: artifacts/semisynthetic-v2/grpo-01
+seed: 42
+protected_groups:
+- military_status
+- gender
+- religion
+languages:
+- en
