@@ -1,0 +1,53 @@
+{
+  "group_size": 8,
+  "prompts_per_step": 16,
+  "window": 25,
+  "log": "logs/xw-grpo-5066266.out",
+  "scores": "outputs/grpo_signal/qwen3.5-9b_en_only_grpo_pilot",
+  "mapping_check": {
+    "reconstructed_order": {
+      "accuracy_r": 0.8764626769070228,
+      "zero_variance_r": 0.8761667164933228,
+      "accuracy_mean_expected": 0.932878289119808,
+      "accuracy_mean_logged": 0.9412229946524064,
+      "zero_variance_mean_expected": 0.85752660222739,
+      "zero_variance_mean_logged": 0.8773395721925134
+    },
+    "shuffled_order_seed_12345": {
+      "accuracy_r": 0.25098458007664115,
+      "zero_variance_r": 0.6966630750216549,
+      "accuracy_mean_expected": 0.9364610948261455,
+      "accuracy_mean_logged": 0.9412229946524064,
+      "zero_variance_mean_expected": 0.8632301742972728,
+      "zero_variance_mean_logged": 0.8773395721925134
+    },
+    "prompts_per_step": [
+      16
+    ]
+  },
+  "code": {
+    "commit": "08052c8b7af96694b1eb0beae71f6caac4c22a46",
+    "uncommitted": [
+      "reports/anchor_agreement/",
+      "reports/blind_cases/",
+      "reports/claude_blind_review/",
+      "reports/claude_reference/",
+      "reports/grpo_signal/",
+      "reports/operating_point/Qwen3.5-9B--en--dpo--adapter--en_only_v2neg_r2em_step148--vs--Qwen3.5-9B--en--dpo--adapter--en_only_v2neg_r2_step102.json",
+      "reports/raw_vs_matched/",
+      "scripts/anchor_agreement.py",
+      "scripts/blind_cases.py",
+      "scripts/claude_reference.py",
+      "scripts/cscs/grpo_signal.sbatch",
+      "scripts/grpo_signal_by_reference.py",
+      "scripts/raw_vs_matched.py",
+      "src/hiring_bias_mitigation/viz/line_report.py",
+      "tests/test_anchor_agreement.py",
+      "tests/test_claude_reference.py",
+      "tests/test_grpo_signal_by_reference.py",
+      "tests/test_line_report.py",
+      "tests/test_raw_vs_matched.py"
+    ]
+  },
+  "missing_checkpoints": []
+}
