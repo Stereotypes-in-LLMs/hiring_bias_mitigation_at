@@ -16,6 +16,7 @@ _spec.loader.exec_module(V3)
 from hiring_bias_mitigation.data import prompts as P  # noqa: E402
 from hiring_bias_mitigation.data.benchmark import load_benchmark  # noqa: E402
 from hiring_bias_mitigation.data.injection import build_eval_set  # noqa: E402
+from hiring_bias_mitigation.generation import dataset as D  # noqa: E402
 from hiring_bias_mitigation.generation import synth as SY  # noqa: E402
 
 
@@ -304,3 +305,49 @@ def _seed_of(prompt):
     from hiring_bias_mitigation.eval.backends import per_prompt_seed
 
     return per_prompt_seed(42, prompt)
+
+
+def _invariant_rows(decision, feedback, langs=("en",)):
+    """Kept invariant targets for two pairs x two attributes, as filter_invariant returns them."""
+    return pd.DataFrame([{
+        "pair_id": p, "candidate_id": f"cand-{p}", "job_id": f"job-{p}", "lang": lang,
+        "cv": "Five years of Django and PostgreSQL.", "job_description": "Backend role, Django.",
+        "protected_group": "religion", "group_label": "religion", "protected_attr": attr,
+        "condition": "explicit", "reference_decision": decision, "reference_feedback": feedback,
+        "chosen_decision": decision, "chosen_feedback": feedback}
+        for lang in langs for p in ("a", "b") for attr in ("Jain", "Atheist")])
+
+
+def test_vote_targets_replace_changed_english_rows_in_place():
+    pool = _invariant_rows("reject", "Lacks the core backend experience.", langs=("en", "uk"))
+    targets = _invariant_rows("hire", GOOD).query("pair_id == 'a'")
+    out, replaced = V3.with_vote_targets(pool, targets)
+    assert replaced == 2 and len(out) == len(pool)
+    assert out[VARIANT_COLS].equals(pool[VARIANT_COLS])                 # order and rows kept
+    changed = (out["lang"] == "en") & (out["pair_id"] == "a")
+    assert (out.loc[changed, "chosen_decision"] == "hire").all()
+    assert (out.loc[changed, "chosen_feedback"] == GOOD).all()
+    assert out.loc[~changed].equals(pool.loc[~changed])                 # uk "a" untouched
+
+
+VARIANT_COLS = ["lang", "pair_id", "protected_attr", "condition"]
+
+
+def test_swap_changes_only_the_completion_of_changed_variants():
+    v1 = D.build_sft_dataset(_invariant_rows("reject", "Lacks the core backend experience."))
+    targets = _invariant_rows("hire", GOOD).query("pair_id == 'a'")
+    out, swapped = V3.swap_targets(v1, targets)
+    assert swapped == 2 and out[["prompt", *VARIANT_COLS]].equals(v1[["prompt", *VARIANT_COLS]])
+    changed = out["pair_id"] == "a"
+    assert (out.loc[changed, "decision"] == "hire").all()
+    assert all(json.loads(c) == {"decision": "hire", "feedback": GOOD}
+               for c in out.loc[changed, "completion"])
+    assert out.loc[~changed].equals(v1.loc[~changed])
+    r = V3.split_readout(out, v1)
+    assert (r["identical_to_v1"], r["variant_in_v1_completion_changed"],
+            r["variant_not_in_v1"]) == (2, 2, 0)
+    assert r["english_hire_share"] == 0.5 and r["v1_english_hire_share"] == 0.0
+
+    moved = targets.assign(cv="A different CV entirely.")             # a prompt that moved
+    with pytest.raises(ValueError):
+        V3.swap_targets(v1, moved)

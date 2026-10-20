@@ -31,6 +31,9 @@ user chose the pool-wide vote's majority as the anchor (the page's third addendu
                      seeded per prompt; skips if its output already covers these prompts
   vote_readout  CPU  those targets against v1's on the same variants, the anchors' readouts,
                      and the rows of earlier training sets whose target the vote flips
+  vote_sft      CPU  the SFT-v3 data sets (the page's fourth addendum): v1's split with the
+                     changed rows swapped, and v1's assembly re-run on the vote anchors; stops
+                     unless it first rebuilds v1's published split exactly
 
 Outputs: artifacts/semisynthetic-v3/ under $HBM_OUTPUT_ROOT (training data from the pool, never
 benchmark outputs) and reports/sft_v3_anchors/.
@@ -46,6 +49,7 @@ benchmark outputs) and reports/sft_v3_anchors/.
     python scripts/sft_v3_anchors.py --stage enrichment
     python scripts/sft_v3_anchors.py --stage vote_targets  # GPU, tensor parallel 4
     python scripts/sft_v3_anchors.py --stage vote_readout
+    python scripts/sft_v3_anchors.py --stage vote_sft
 """
 
 from __future__ import annotations
@@ -69,8 +73,10 @@ sys.path.insert(0, str(REPO_ROOT / "scripts"))
 import teacher_anchor_check as TA  # noqa: E402
 
 from hiring_bias_mitigation.data import prompts as P  # noqa: E402
+from hiring_bias_mitigation.data.benchmark import assert_no_leakage  # noqa: E402
 from hiring_bias_mitigation.data.injection import ATTR_FREE  # noqa: E402
 from hiring_bias_mitigation.eval import backends as BK  # noqa: E402
+from hiring_bias_mitigation.generation import dataset as D  # noqa: E402
 from hiring_bias_mitigation.generation import filters as F  # noqa: E402
 from hiring_bias_mitigation.generation import synth as SY  # noqa: E402
 from hiring_bias_mitigation.utils.config import (  # noqa: E402
@@ -101,6 +107,17 @@ PLATFORM_MAX_GAP, ENRICHMENT_MIN, SFT_RETRAIN_MIN_CHANGED = 0.03, 2.0, 0.10
 #: The vote anchors' regenerated targets (the page's third addendum): below this yield they are
 #: reported, and no SFT data is built from them.
 VOTE_MIN_YIELD = 0.80
+#: v1's published SFT split and Ukrainian raw pass (the page's fourth addendum). Never on Daint;
+#: fetched from the project's public dataset at the revision the Daint cache records.
+V1_HUB = "artifacts/semisynthetic-v1-hub"
+HUB_REPO = "Stereotypes-in-LLMs/hiring-bias-mitigation-synthetic-data"
+HUB_REVISION = "996e555e1cf0d3b327f2280be6ef9cee36fddbbd"
+SFT_V1 = {"train": f"{V1_HUB}/sft_train.parquet",
+          "validation": "artifacts/semisynthetic-v1/sft_validation.parquet"}
+SFT_V3 = {"swap": f"{OUT}/sft_v3_swap", "rebalanced": f"{OUT}/sft_v3_rebalanced"}
+VARIANT_KEY = ["pair_id", "protected_attr", "condition"]
+#: v1's assembly settings (configs/generation/teacher.yaml).
+V1_SEED, V1_VAL_FRACTION = 42, 0.05
 #: The arms whose data a follow-up would rebuild on vote anchors.
 REBUILD_CANDIDATES = ("DPO r2em", "GRPO grpo-02")
 DECISIVE = " Be decisive: a genuinely weak match is a reject."
@@ -801,6 +818,123 @@ def stage_vote_readout(args) -> None:
     print(render_vote_targets(summary))
 
 
+# ---- the SFT-v3 data sets (the page's fourth addendum) ---------------------------------------
+
+def v1_invariant_pool() -> pd.DataFrame:
+    """v1's filtered invariant targets, English then Ukrainian, as assemble_datasets made them.
+
+    The English filter has changed since (whole-word attribute matching keeps 51 more rows), so
+    the English rows are restricted to v1's own kept set, the pool every v2 arm was built on.
+    """
+    members = pd.read_parquet(resolve_output_path(POOL), columns=VARIANT_KEY)
+    members = members.set_index(VARIANT_KEY).index
+    frames = []
+    for lang, path in ((LANG, INVARIANT_V1), ("uk", f"{V1_HUB}/raw/uk_invariant.parquet")):
+        frame = pd.read_parquet(resolve_output_path(path))
+        raw = frame.pop("raw_output").tolist()
+        kept, _ = F.filter_invariant(raw, frame, lang)
+        if lang == LANG:
+            kept = kept[kept.set_index(VARIANT_KEY).index.isin(members)]
+        frames.append(kept)
+    return pd.concat(frames, ignore_index=True)
+
+
+def assemble_sft(invariant: pd.DataFrame) -> tuple[pd.DataFrame, pd.DataFrame, dict]:
+    """v1's SFT assembly: build, balance both languages together, split by candidate."""
+    sft, balance = F.balance_decisions(D.build_sft_dataset(invariant), seed=V1_SEED,
+                                       column="decision")
+    train, validation = D.train_val_split(sft, val_fraction=V1_VAL_FRACTION, seed=V1_SEED)
+    return train, validation, balance
+
+
+def with_vote_targets(invariant: pd.DataFrame, targets: pd.DataFrame) -> tuple[pd.DataFrame, int]:
+    """The pooled invariant rows with each changed English variant's target replaced in place."""
+    by_key = targets.set_index(VARIANT_KEY)
+    english = invariant.index[invariant["lang"] == LANG]
+    keys = pd.MultiIndex.from_frame(invariant.loc[english, VARIANT_KEY])
+    hit = keys.isin(by_key.index)
+    new = by_key.loc[keys[hit]]
+    out = invariant.copy()
+    for col in ("chosen_decision", "chosen_feedback", "reference_decision", "reference_feedback"):
+        out.loc[english[hit], col] = new[col].to_numpy()
+    return out, int(hit.sum())
+
+
+def swap_targets(split: pd.DataFrame, targets: pd.DataFrame) -> tuple[pd.DataFrame, int]:
+    """An SFT split with each changed variant's completion replaced; rows and order kept."""
+    rows = D.build_sft_dataset(targets).set_index(["lang", *VARIANT_KEY])
+    keys = pd.MultiIndex.from_frame(split[["lang", *VARIANT_KEY]])
+    hit = keys.isin(rows.index)
+    new = rows.loc[keys[hit]]
+    if not (new["prompt"].to_numpy() == split.loc[hit, "prompt"].to_numpy()).all():
+        raise ValueError("a changed variant's prompt differs from v1's; the swap would move it")
+    out = split.copy()
+    out.loc[hit, "completion"] = new["completion"].to_numpy()
+    out.loc[hit, "decision"] = new["decision"].to_numpy()
+    return out, int(hit.sum())
+
+
+def split_readout(new: pd.DataFrame, v1: pd.DataFrame) -> dict:
+    """One split against v1's: composition, and how many rows are v1's unchanged."""
+    key = ["lang", *VARIANT_KEY]
+    joined = new.merge(v1[[*key, "completion"]], on=key, how="left", suffixes=("", "_v1"))
+    english = new[new["lang"] == LANG]
+    return {
+        "rows": len(new), "v1_rows": len(v1),
+        "by_lang_and_decision": {f"{lang} {d}": int(n) for (lang, d), n in
+                                 new.groupby(["lang", "decision"]).size().items()},
+        "english_rows": len(english),
+        "english_hire_share": float((english["decision"] == "hire").mean()),
+        "v1_english_hire_share": float((v1.loc[v1["lang"] == LANG, "decision"] == "hire").mean()),
+        "identical_to_v1": int((joined["completion"] == joined["completion_v1"]).sum()),
+        "variant_in_v1_completion_changed": int((joined["completion_v1"].notna()
+                                                 & (joined["completion"]
+                                                    != joined["completion_v1"])).sum()),
+        "variant_not_in_v1": int(joined["completion_v1"].isna().sum()),
+        "candidates_shared_with_v1": len(set(new["candidate_id"]) & set(v1["candidate_id"])),
+        "candidates": int(new["candidate_id"].nunique())}
+
+
+def stage_vote_sft(args) -> None:
+    """Both SFT-v3 data sets, after the control rebuilds v1's published split exactly."""
+    require_output_root()
+    v1 = {split: pd.read_parquet(resolve_output_path(path)) for split, path in SFT_V1.items()}
+    targets = pd.read_parquet(_vote_raw_path("_kept.parquet"))
+    invariant = v1_invariant_pool()
+    train, validation, balance_v1 = assemble_sft(invariant)
+    control = {split: bool(list(rebuilt.columns) == list(v1[split].columns)
+                           and rebuilt.equals(v1[split]))
+               for split, rebuilt in (("train", train), ("validation", validation))}
+    if not all(control.values()):
+        raise SystemExit(f"the control does not rebuild v1's published SFT split: {control}")
+    swapped = {split: swap_targets(frame, targets) for split, frame in v1.items()}
+    pooled, replaced = with_vote_targets(invariant, targets)
+    train_r, validation_r, balance_r = assemble_sft(pooled)
+    variants = {"swap": {"train": swapped["train"][0], "validation": swapped["validation"][0]},
+                "rebalanced": {"train": train_r, "validation": validation_r}}
+    summary = {"control_equals_published": control, "balance_v1": balance_v1,
+               "targets": len(targets), "replaced_in_pool": replaced,
+               "swapped_rows": {split: n for split, (_, n) in swapped.items()},
+               "balance_rebalanced": balance_r, "variants": {},
+               "inputs": {"v1_split": SFT_V1, "hub": {"repo": HUB_REPO, "revision": HUB_REVISION},
+                          "targets": str(_vote_raw_path("_kept.parquet"))},
+               **provenance()}
+    for name, splits in variants.items():
+        out = Path(resolve_output_path(SFT_V3[name]))
+        out.mkdir(parents=True, exist_ok=True)
+        for split, frame in splits.items():
+            assert_no_leakage(frame, f"sft_v3_anchors.vote_sft.{name}.{split}")
+            frame.to_parquet(out / f"sft_{split}.parquet", index=False)
+        summary["variants"][name] = {"path": SFT_V3[name], **{
+            split: split_readout(frame, v1[split]) for split, frame in splits.items()}}
+        _write_json(out / "sft_v3.meta.json", {"variant": name, **{
+            k: summary[k] for k in ("targets", "replaced_in_pool", "inputs", "written",
+                                    "prereg_sha256", "code")}})
+    _write_json(REPORTS / "vote_sft.json", summary)
+    (REPORTS / "vote_sft.md").write_text(render_vote_sft(summary), encoding="utf-8")
+    print(render_vote_sft(summary))
+
+
 def stage_control(args) -> None:
     require_output_root()
     pairs = reviewed_pairs(load_labels())
@@ -1066,6 +1200,34 @@ def render_vote_targets(s: dict) -> str:
     return "\n".join(lines)
 
 
+def render_vote_sft(s: dict) -> str:
+    rows = [{"variant": name, "split": split, **{k: r[split][k] for k in (
+        "rows", "v1_rows", "english_rows", "english_hire_share", "v1_english_hire_share",
+        "identical_to_v1", "variant_in_v1_completion_changed", "variant_not_in_v1",
+        "candidates_shared_with_v1", "candidates")}}
+            for name, r in s["variants"].items() for split in ("train", "validation")]
+    lines = [
+        "# SFT-v3: the data sets on the vote anchors", "",
+        "Generated by `scripts/sft_v3_anchors.py --stage vote_sft`; regenerate it, do not edit it. "
+        f"Pre-registration: the fourth addendum of `docs/SFT_V3_ANCHORS.md` (sha256 "
+        f"{s['prereg_sha256'][:12]}).", "",
+        f"Control, v1's split rebuilt from raw equals the published files: "
+        f"**{s['control_equals_published']}**. v1's balance: {s['balance_v1']}.", "",
+        f"Vote targets: {s['targets']} regenerated, {s['replaced_in_pool']} replaced in v1's "
+        f"pooled invariant rows. Swapped rows in v1's split: {s['swapped_rows']}. Re-run "
+        f"balance: {s['balance_rebalanced']}.", "",
+        *_table(rows, ["variant", "split", "rows", "v1_rows", "english_rows",
+                       "english_hire_share", "v1_english_hire_share", "identical_to_v1",
+                       "variant_in_v1_completion_changed", "variant_not_in_v1",
+                       "candidates_shared_with_v1", "candidates"]), "",
+    ]
+    for name, r in s["variants"].items():
+        lines += [f"`{name}` ({r['path']}), rows by language and decision: "
+                  f"train {r['train']['by_lang_and_decision']}, validation "
+                  f"{r['validation']['by_lang_and_decision']}.", ""]
+    return "\n".join(lines)
+
+
 def render_compare(s: dict) -> str:
     arms = [{"arm": name, "C1 clear-hire targets hired": _criterion_cells(r)[0],
              "C2 clear-reject targets and controls rejected": _criterion_cells(r)[1],
@@ -1158,7 +1320,7 @@ def main() -> None:
                                      formatter_class=argparse.RawDescriptionHelpFormatter)
     parser.add_argument("--stage", choices=("labels", "select", "score", "generate", "gate",
                                             "control", "compare", "votes", "enrichment",
-                                            "vote_targets", "vote_readout"),
+                                            "vote_targets", "vote_readout", "vote_sft"),
                         required=True)
     parser.add_argument("--review", help="the blind review's graded_cases.csv (stage labels)")
     parser.add_argument("--reports", type=Path, default=REPORTS,
@@ -1169,7 +1331,7 @@ def main() -> None:
      "generate": stage_generate, "gate": stage_gate, "control": stage_control,
      "compare": stage_compare, "votes": stage_votes,
      "enrichment": stage_enrichment, "vote_targets": stage_vote_targets,
-     "vote_readout": stage_vote_readout}[args.stage](args)
+     "vote_readout": stage_vote_readout, "vote_sft": stage_vote_sft}[args.stage](args)
 
 
 if __name__ == "__main__":

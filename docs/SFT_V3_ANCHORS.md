@@ -206,6 +206,44 @@ So the v1 anchors are not samples of the teacher's decision. They are one draw s
 
 **Splits.** No model is selected, and the benchmark is not read.
 
+### Addendum: the SFT-v3 data sets
+
+Written on 2026-10-20 at about 11:00 CEST, after the vote anchors' targets (job 5103710) and the user's request to build SFT-v3 data on CPU, without training. The version of this page the stage runs with is kept as `reports/sft_v3_anchors/PREREG_vote_sft.md`.
+
+**How v1's SFT data was made.** `scripts/assemble_datasets.py` filtered the English and the Ukrainian invariant passes and concatenated them, English first. It then built the SFT rows and called `filters.balance_decisions(seed=42)` once on both languages together. That kept all 7,830 hires and drew 7,830 of the 63,932 rejects at random. Last, `train_val_split` split the rows by candidate (5%, seed 42): 14,890 train and 770 validation. The English SFT run trains on the English rows of that split.
+
+**What was seen before writing this (the control's feasibility).**
+- v1's `sft_train.parquet` and Ukrainian raw pass were never on Daint. Both were fetched from the project's public dataset, `Stereotypes-in-LLMs/hiring-bias-mitigation-synthetic-data`, at revision 996e555, the one Daint's cache records. They go to `artifacts/semisynthetic-v1-hub/`.
+- The current English filter keeps 51 more targets than v1's did (46 reject, 5 hire): the whole-word attribute matcher came later (9e02ae2). The Ukrainian filter keeps the same 35,936.
+- With the English rows restricted to v1's own kept set (the 35,826 rows of `onpolicy-full/rows.parquet`), this branch's code rebuilds the published `sft_train` and `sft_validation` exactly: same rows, same order, every column.
+
+**Question.** What do the SFT training data look like when the vote anchors replace v1's on the changed pairs? This is asked for two ways of applying them, and for each, how far the data move from v1's.
+
+**The changed rows.** Of the 2,304 regenerated targets, 2,297 belong to variants in v1's kept set. The other 7 are variants v1's older filter dropped, and they are left out so that only the anchor changes. A changed row keeps its prompt, which is built from the same variant. Only its completion and decision change.
+
+**Two variants.**
+- **`sft_v3_swap`.** v1's published split, row for row. Each row that belongs to one of the 2,297 variants gets the vote anchor's completion. Rows, order, the train/validation split and every other row stay as v1's. The hire share is no longer exactly 50%, because no rows are re-balanced.
+- **`sft_v3_rebalanced`.** v1's procedure re-run. The 2,297 targets are replaced in the pooled invariant rows, in place, and `balance_decisions` and `train_val_split` run with v1's seeds. All 10,127 hires are kept and 10,127 rejects are drawn again. Most reject rows and the validation candidates change.
+
+**Control.** v1's split as rebuilt by the stage. It must equal the published files.
+
+**Readouts, without thresholds.** For each variant against v1, for train and validation and for the English rows the English SFT run reads:
+- rows by language and decision, and the English hire share;
+- rows whose variant and completion are identical to v1's;
+- rows whose completion changed;
+- validation candidates shared with v1.
+
+**Expected.**
+- `sft_v3_swap`: 14,890 and 770 rows, as v1. About 12% of the 2,297 rows fall in v1's split (v1 kept 7,830 of 63,932 rejects), so roughly 280 rows change from reject to hire.
+- `sft_v3_rebalanced`: about 20,254 rows, 50% hire overall, with a larger English hire share than v1's.
+
+**Stop conditions.** No variant is written if any of these happens:
+- the control does not equal the published files;
+- a swapped row's prompt differs from the regenerated target's;
+- the benchmark leakage check fails.
+
+**Not in this addendum.** Training, a data config pointing at either variant, and the choice between them for stage 2.
+
 ## Result
 
 Stage 0a ran as job 5073299, taking 9 min 52 s on one GH200 node in the debug partition. The code was 67f4bb1 plus three untracked files:
