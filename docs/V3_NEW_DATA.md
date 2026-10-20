@@ -4,6 +4,8 @@ SFT-v3 (`docs/SFT_V3_ANCHORS.md`, branch `xinyang/sft-v3-vote-anchors`) changed 
 
 The code is `scripts/v3_additional_data.py`, `generation/vote.py` and `configs/generation/v3_additional_data.yaml`, run through `scripts/cscs/v3_additional_data.sbatch`. Outputs go to `artifacts/semisynthetic-v3/additional/` under `$HBM_OUTPUT_ROOT`.
 
+A second round, at the end of this page, trains SFT-v3 on the result and builds the on-policy part of V3's DPO set from it (user, 2026-10-20).
+
 ## Pre-registration
 
 Written on 2026-10-20 at about 11:00 CEST, before any generation, after the user asked for new data from the v3 pipeline ("这是 v3，换了 v1 anchor，调整了 mention_attribute 策略，用这个新管线生成新数据，之后我统一开始训练 v3 SFT，DPO").
@@ -235,3 +237,124 @@ REPO=$PWD PASSES="votes invariant" scripts/cscs/submit.sh -p normal -t 06:00:00 
 HBM_OUTPUT_ROOT=$XW python scripts/v3_additional_data.py --config $CFG --stage r2em        # CPU
 HBM_OUTPUT_ROOT=$XW python scripts/v3_additional_data.py --config $CFG --stage assemble    # CPU
 ```
+
+## Round 2: SFT-v3 and the on-policy part of V3's DPO set
+
+### Pre-registration
+
+Written on 2026-10-20 at about 16:10 CEST. At that point SFT-v3 was not trained and no on-policy sample was drawn. At about 15:45 the user chose DPO's start point: SFT-v3 on all the new data for one epoch ("use all new data train 1 epoch"). No SFT-v3 checkpoint existed under `outputs/sft/`, so this round trains it first. The user asked to stop after this section is committed and before any job is submitted ("stop after commit before run").
+
+#### Question
+
+Does r2em's construction work on the new pairs when SFT-v3 is the student? Usable means, for each pool source:
+
+- enough of SFT-v3's own covert, attribute-tipped mistakes on both decision sides to balance them by error mass;
+- pairs that pass D1 to D4 and D6 (`docs/DATA_EVALUATION.md`).
+
+The hypothesis is that it works on every source. On djinni_new and kaggle_linkedin, hire anchors are only 22% and 15% of rows, and the k=32 top-up is expected to make their hire side balanceable.
+
+#### The runs
+
+The jobs run one at a time on the `zhang` account, on the `normal` partition, from this worktree (`REPO=$PWD`):
+
+| # | job | config | output |
+|---|---|---|---|
+| 1 | `train_sft.sbatch` | `configs/mitigation/sft/qwen3.5-9b_en_only_sft_v3_additional_gh200.yaml` | `outputs/sft/qwen3.5-9b_en_only_sft_v3_additional` |
+| 2 | `onpolicy_full.sbatch sample` | `configs/generation/negatives_v3_onpolicy_full_gh200.yaml` | `artifacts/semisynthetic-v3/onpolicy-full`: rows, prompts, the merged student, 8 samples per prompt, the selected negatives |
+| 3 | `onpolicy_full.sbatch judge` | the same | the teacher's verdicts, candidates, split, the GPU-free direction check |
+| 4 | `onpolicy_full.sbatch sample` | `configs/generation/negatives_v3_onpolicy_hire_gh200.yaml` | `artifacts/semisynthetic-v3/onpolicy-hire32`: the hire rows of djinni_new and kaggle_linkedin at 32 samples |
+| 5 | `onpolicy_full.sbatch judge` | the same | as job 3 |
+| 6 | `build_balanced_dpo.sbatch score` | SFT-v3 | SFT-v3's decision margin on every candidate prompt |
+| 7 | direction checks | SFT-v3 and the base | D1 to D7 per pool source, D4 on 600 pairs per source |
+
+The merge, the candidate and build stages and the combine run on the login node, between jobs 5 and 7.
+
+**SFT-v3.** The recipe is SFT v1's, as the swap arm on `xinyang/sft-v3-vote-anchors` carries it: LoRA r 32 and alpha 64, lr 1e-4 cosine, effective batch 16 as 4 GPUs × 1 × 4. The data is `configs/data/en_only_sft_v3_additional.yaml`: 62,761 English training rows (the swap set's 8,419, then 54,342 new) and 3,527 validation rows. One epoch is 3,923 steps. Besides the data and the single epoch, three settings differ from the swap arm's:
+
+- **`max_seq_len` 3072, not 2048.** At 2048, 629 training rows would be cut at the end, and under a completion-only loss the end is the target. 624 of them are Kaggle × LinkedIn rows (of 5,017) and 5 are djinni_new rows. The longest row is 2,543 tokens (`reports/v3_new_data/sft_token_lengths.json`, from `scripts/sft_token_lengths.py`, which reads the rows through the trainer's own loader and chat template). At batch 1 there is no padding, so every row that fits in 2048 trains as before.
+- **No checkpoint selection.** There is no early stopping and no reload of the best checkpoint. The final adapter, after one epoch, is DPO's start point and reference, chosen now.
+- **Evaluation and checkpoints.** Every 250 steps the run evaluates on a seeded 1,000 of the validation rows and makes greedy decisions on 64 of them. It also saves a checkpoint every 250 steps and keeps all of them, so a cut job resumes.
+
+**On-policy pairs.** `scripts/generate_onpolicy_full.py` reads `raw/en_invariant.parquet` from `artifacts/semisynthetic-v3/additional`. v1's invariant filter keeps 102,465 rows over 8,549 pairs: djinni_new 51,150 rows, rjdb 33,283 and kaggle_linkedin 18,032.
+
+- **Full run.** 8 samples per prompt: 111,014 prompts, 888,112 samples.
+- **Top-up.** 32 samples per prompt on the hire-anchor rows of djinni_new and kaggle_linkedin: 14,158 rows over 1,181 pairs, so 15,339 prompts and 490,848 samples. RJDB's 18,734 hire rows are left out (the user's choice, at about 16:10). RJDB hires 56%, so its hire side is likely not the scarce one, and its rows would have been 57% of the top-up. With them it was 1,140,320 samples.
+
+Everything else is onpolicy-full's: the student's decoding (temperature 1.0, top-p 1.0, 200 new tokens), the selection (`min_free_right` 0.5, length delta at most 10 words), the judge (plausibility 3, the 122B teacher at temperature 0).
+
+Three code changes, each with a test in `tests/test_onpolicy.py`:
+
+- **`val_fraction: 0`** holds out exactly the candidates that `sft_validation.parquet` holds out (`generate_onpolicy_full.validation_ids`). The v1 configs' 0.05 adds a seeded 5% of the split rows' candidates. On v1's pool that draw was v1's own split, so it added nothing. The new pairs were split per pool source, so the same draw would hold out about 5% of the candidates SFT-v3 trained on.
+- **`pool_source`.** The judged pairs keep it (`generate_onpolicy_full.carry_row_columns`); `build_pairs` dropped it.
+- **A list in `row_filter`** matches any of its values (`onpolicy.filter_rows`). The top-up names its two sources this way.
+
+**Balance, as r2em did.** Each pool source's training pairs are balanced by error mass on their own, with `balanced_dpo.balance_error_mass` at r2em's parameters: tolerance 0.05, `min_keep` 0.5, seed 42 (`v2/round2-error-mass/dpo_round2_report.json`). The margins are SFT-v3's.
+
+- **Candidates.** The full run's pairs with the top-up's merged in (`onpolicy.merge_topup`, the full run's pair first), unbalanced. That is r2em's candidate set: r1 plus the surplus that r1's count balance dropped. There is no legacy pool.
+- **Validation.** Balanced by count within each pool source and protected group, the way stage 8 balanced r1's validation, which r2em kept.
+
+That needs code that is not written yet. It will be written before job 6, without changing the rule above:
+
+- a `merge` stage in `generate_onpolicy_full.py` that writes the merged, unbalanced pairs;
+- in `build_balanced_dpo.py`, `pool_source` kept through `normalise_pairs` and a `--balance-by pool_source` build; a `NAME` for `build_balanced_dpo.sbatch`;
+- a `dpo_v3` stage in `scripts/v3_additional_data.py`, and a job for the per-source checks.
+
+**Combine.** V3's DPO set is r2em_v3 (2,271 training and 272 validation rows) followed by the balanced on-policy pairs, as `dpo_v3_{train,validation}.parquet` beside r2em_v3, read through a new data config. Every row keeps its `pool_source` (r2em_v3's is `djinni_v1`), and a column names the part it came from.
+
+#### Control
+
+- **For the construction:** r2em's own stages, from SFT v1 on V1's pairs.
+  - Full run: 5,589 tipped negatives from 35,826 rows (15.6%); the judge kept 4,267 (`v2/onpolicy-full/sample_report.json`, `report.json`).
+  - Hire top-up: 2,111 from 5,072 hire rows (41.6%); the judge kept 1,224 (`v2/onpolicy-hire32/report.json`).
+  - Before balancing, the error mass was 758.15 on the reject side, over 3,098 pairs, and 106.41 on the hire side, over 1,181 (`dpo_round2_report.json`).
+- **For the direction checks:** r2em_v3, checked in the same job under SFT-v3 and the base. r2em's final set has never been direction-checked (`docs/DATA_EVALUATION.md`). This is its first readout, under the student it now serves.
+- **For the student:** SFT-v3's own attribute-free hire rate per source, from the full run's samples, since which side a student errs on follows from its operating point. When DPO is evaluated, it is compared with SFT-v3 at matched hire rate (`scripts/operating_point_control.py`). That comparison is not part of this round.
+
+#### Expected
+
+At r2em's rates:
+
+- the full run keeps about 12,200 pairs (102,465 × 0.119);
+- the top-up keeps about 3,400 (14,158 × 0.241), and about 1,900 of them are on rows the full run has no pair for (622 of 1,092 in r2em).
+
+Per source, the counts follow the sources' hire shares and the student's errors. Two things differ from r2em, so the rates may be well off, and these numbers are a scale, not a gate:
+
+- SFT-v3 trains one epoch where SFT v1 trained two;
+- it sees a different share of each source's rows, since each source was balanced 50/50 on its own.
+
+What would support the hypothesis:
+
+- every source balances by error mass at `min_keep` 0.5;
+- on every source, D1 = 1.0, D2 at most 5% lexical and 10% judge allusion, D3 balanced AUC at most 0.65, SFT-v3 preferring `chosen` on 50% to 90% of pairs (D4), and D6 between 0.4 and 0.6 after balancing.
+
+What would count against it: a source whose hire side cannot be balanced even with the top-up, or a source above 0.65 on D3, whose negatives would then carry a wording shortcut.
+
+#### Stop conditions
+
+- **SFT-v3.**
+  - `memory_floor_gb` 12 stops the run cleanly with a checkpoint.
+  - A job cut by its 10-hour limit is resubmitted once from its checkpoint; a second cut is reported first.
+  - The run stops if the loss diverges, or if at any evaluation after the first more than 5% of the greedy decisions on the 64 validation prompts are unreadable.
+- **Samples.** After the full run's sample job, a source with tipped negatives on fewer than 2% of its rows is reported before the judge runs. For comparison, the DPO student's round on V1's pool found 409 tipped rows against SFT's 5,614, and its pairs failed D6 at a hire share of 0.013 (`docs/DATA_EVALUATION.md`).
+- **Judge.** If the judge keeps under 40% of a run's selected negatives, that is reported before the next job (D7).
+- **Balance.** A source that `balance_error_mass` cannot balance at `min_keep` 0.5 stays out and is reported. Neither `min_keep` nor the tolerance is lowered without the user. If RJDB's hire side is what falls short, the remedy is a top-up on its hire rows, at the user's call.
+- **Checks.**
+  - D1 below 1.0 is a bug: the round stops.
+  - A source that fails D2, D3 or D4 is reported before the combine, and enters only if the user says so.
+- **Compute.** At most 40 allocated GPU-h for SFT-v3 and 60 for the whole round.
+
+#### Splits
+
+- **SFT-v3** trains on `sft_train`'s English rows and evaluates on `sft_validation`'s. No checkpoint is selected; the final adapter is used.
+- **The on-policy pairs** hold out exactly SFT-v3's validation candidates. r2em_v3 keeps r2em's split. The two parts share no candidate, because no new pair repeats a V1 candidate.
+- **DPO's checkpoint** is selected later on this set's validation split. The benchmark audit is the final test and is spent once, on the chosen checkpoint. Nothing in this round reads the benchmark.
+
+#### Compute estimate
+
+From past jobs on one GH200 node:
+
+- **SFT.** 47.0 M training tokens. The RFT control (job 5066776) trained 1.83 M tokens in 150 steps: 3.9 s per step at its end, and 855 s for all 150 steps with six evaluations. At those rates, one epoch takes 4 to 6 hours, plus about 25 minutes of evaluation.
+- **Sampling.** Job 5044997 drew 310,544 samples in 20 minutes, loading included. At that rate the full run takes about an hour and the top-up about 30 minutes; Kaggle's longer prompts may slow both.
+- **Judging.** Job 5045685's judge stage took 13 minutes for 11,178 rationales, about 5 of them loading the teacher (305 s in this round's generation jobs). At r2em's selection rates, the full run has about 32,000 rationales to judge and the top-up about 12,000, so the judge jobs take about 30 and 15 minutes.
+
+That is about 10 node-hours in all, or 40 allocated GPU-hours.

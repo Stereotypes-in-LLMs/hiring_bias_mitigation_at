@@ -144,13 +144,17 @@ def filter_rows(rows: pd.DataFrame, row_filter: dict | None) -> pd.DataFrame:
     """The rows matching every `column: value` of `row_filter`, re-indexed; None keeps all.
 
     A top-up run samples one slice of the pool harder (the hire rows at k=32). Its prompt keys
-    are positions in the filtered rows, which is why the index is reset.
+    are positions in the filtered rows, which is why the index is reset. A list value matches
+    any of its items: V3's top-up takes the hire rows of two pool sources only.
     """
     if not row_filter:
         return rows
     mask = pd.Series(True, index=rows.index)
     for column, value in row_filter.items():
-        mask &= rows[column] == value
+        if isinstance(value, (list, tuple)):
+            mask &= rows[column].isin(list(value))
+        else:
+            mask &= rows[column] == value
     return rows[mask].reset_index(drop=True)
 
 

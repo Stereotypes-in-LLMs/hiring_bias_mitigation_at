@@ -1,0 +1,67 @@
+# Hand-written -- NOT produced by generate_experiment_configs.py, so it survives a regeneration.
+#
+# Hire-side top-up of V3's onpolicy-full, as onpolicy-hire32 topped up v1's, on two of the three
+# pool sources (user, 2026-10-20). djinni_new hires 22% and kaggle_linkedin 15%, so their hire
+# side is likely the scarcer one when each pool source is balanced on its own
+# (docs/V3_NEW_DATA.md, round 2). RJDB hires 56%, and its 18,734 hire rows are left out: they
+# would be 57% of the top-up for a side that is likely not scarce there.
+#
+# The hire-anchor rows of the two sources that v1's invariant filter keeps are sampled again at
+# k=32, both prompts: 14,158 rows over 1,181 pairs (djinni_new 11,494 and 959, kaggle_linkedin
+# 2,664 and 222), so 15,339 prompts and 490,848 samples. Every hire row would have been 1,140,320.
+# The split follows the full run's (`topup_of`), and the merge keeps the full run's pair where
+# both runs have one (onpolicy.merge_topup). Against negatives_v2_onpolicy_hire_gh200.yaml only
+# the source, the rows, the outputs, the student and the split change.
+#   CONFIG=configs/generation/negatives_v3_onpolicy_hire_gh200.yaml REPO=$PWD \
+#     scripts/cscs/submit.sh -p normal -t 01:30:00 scripts/cscs/onpolicy_full.sbatch sample
+#   CONFIG=... REPO=$PWD scripts/cscs/submit.sh -p normal -t 01:00:00 \
+#     scripts/cscs/onpolicy_full.sbatch judge
+source_artifacts_dir: artifacts/semisynthetic-v3/additional
+artifacts_dir: artifacts/semisynthetic-v3/onpolicy-hire32
+topup_of: artifacts/semisynthetic-v3/onpolicy-full
+row_filter:
+  reference_decision: hire
+  pool_source: [djinni_new, kaggle_linkedin]   # a list matches any (onpolicy.filter_rows)
+lang: en
+seed: 42
+# SFT-v3's validation candidates, as in the full run (generate_onpolicy_full.validation_ids).
+val_fraction: 0
+
+student_base: Qwen/Qwen3.5-9B
+student_adapter: outputs/sft/qwen3.5-9b_en_only_sft_v3_additional
+samples_per_prompt: 32
+min_free_right: 0.5
+# 128 prompts x 32 samples: the same samples per chunk as the full run's 512 x 8.
+chunk_size: 128
+student_vllm:
+  gpu_memory_utilization: 0.70      # of 95.6 GiB usable; anything near 96 GB OOMs
+  max_model_len: 8192
+  max_num_seqs: 256                 # 8 prompts x 32 samples in flight
+  engine_kwargs:
+    gdn_prefill_backend: triton     # no CUDA toolkit on Daint for FlashInfer's JIT
+student_generation:
+  max_new_tokens: 200
+  temperature: 1.0
+  top_p: 1.0
+  seed: 42
+
+judge_strategies:
+- student_tipped
+max_length_delta_words: 10
+min_plausibility: 3
+n_samples: 20
+
+# The teacher, as judge only -- the same settings as onpolicy-full and batch-01.
+teacher_model: Qwen/Qwen3.5-122B-A10B-GPTQ-Int4
+backend: vllm
+dtype: auto
+max_model_len: 8192
+tensor_parallel_size: 4
+gpu_memory_utilization: 0.80
+max_num_seqs: 128
+engine_kwargs:
+  gdn_prefill_backend: triton
+judge_generation:
+  max_new_tokens: 160
+  temperature: 0.0
+  top_p: 1.0

@@ -163,6 +163,17 @@ def test_row_filter_keeps_matching_rows_and_none_keeps_all():
     assert OP.filter_rows(rows, None) is rows
 
 
+def test_a_row_filter_list_matches_any_of_its_values():
+    """V3's top-up takes the hire rows of djinni_new and kaggle_linkedin, not RJDB's."""
+    rows = pd.DataFrame({"pair_id": ["a", "b", "c", "d"],
+                         "pool_source": ["djinni_new", "rjdb", "kaggle_linkedin", "djinni_new"],
+                         "reference_decision": ["hire", "hire", "hire", "reject"]})
+    kept = OP.filter_rows(rows, {"reference_decision": "hire",
+                                 "pool_source": ["djinni_new", "kaggle_linkedin"]})
+    assert kept["pair_id"].tolist() == ["a", "c"]
+    assert kept.index.tolist() == [0, 1]
+
+
 def _cands(keys: list[tuple[str, str, str]], tag: str) -> pd.DataFrame:
     return pd.DataFrame([{"pair_id": p, "protected_attr": a, "condition": c, "rejected": tag}
                          for p, a, c in keys])
@@ -291,7 +302,7 @@ def test_gendered_texts_are_never_reused_and_the_leak_filter_runs_on_the_new_att
     assert report["yield_by_attribute"]["Androgynous"] < 1.0
 
 
-def test_the_split_comes_from_split_of_then_topup_of_then_the_run_itself(tmp_path, monkeypatch):
+def _onpolicy_full_script():
     import importlib.util
     from pathlib import Path
 
@@ -300,6 +311,11 @@ def test_the_split_comes_from_split_of_then_topup_of_then_the_run_itself(tmp_pat
         Path(__file__).resolve().parents[1] / "scripts" / "generate_onpolicy_full.py")
     module = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(module)
+    return module
+
+
+def test_the_split_comes_from_split_of_then_topup_of_then_the_run_itself(tmp_path, monkeypatch):
+    module = _onpolicy_full_script()
     monkeypatch.setenv("HBM_OUTPUT_ROOT", str(tmp_path))
     for name in ("pool", "base"):
         (tmp_path / name).mkdir()
@@ -309,3 +325,41 @@ def test_the_split_comes_from_split_of_then_topup_of_then_the_run_itself(tmp_pat
     assert module._split_rows(both, own)["candidate_id"][0] == "pool"
     assert module._split_rows({"topup_of": "base"}, own)["candidate_id"][0] == "base"
     assert module._split_rows({}, own) is own
+
+
+def test_val_fraction_0_holds_out_exactly_the_sources_validation_candidates(tmp_path,
+                                                                            monkeypatch):
+    """V3's new pairs were split per pool source, so a seeded draw on top of the candidates its
+    sft_validation.parquet holds out would also hold out ~5% of the candidates SFT-v3 trained
+    on (docs/V3_NEW_DATA.md). On v1's pool the draw was v1's own split and added nothing."""
+    import pytest
+
+    module = _onpolicy_full_script()
+    monkeypatch.setenv("HBM_OUTPUT_ROOT", str(tmp_path))
+    (tmp_path / "source").mkdir()
+    pinned = tmp_path / "source" / "sft_validation.parquet"
+    pd.DataFrame({"candidate_id": ["c0", "c1"]}).to_parquet(pinned)
+    rows = pd.DataFrame({"candidate_id": [f"c{i}" for i in range(100)]})
+    cfg = {"source_artifacts_dir": "source", "seed": 42}
+    assert module.validation_ids({**cfg, "val_fraction": 0}, rows) == {"c0", "c1"}
+    drawn = module.validation_ids({**cfg, "val_fraction": 0.05}, rows)
+    assert {"c0", "c1"} < drawn and len(drawn) >= 5
+    pinned.unlink()
+    with pytest.raises(ValueError, match="no candidate would be held out"):
+        module.validation_ids({**cfg, "val_fraction": 0}, rows)
+
+
+def test_judged_pairs_keep_the_rows_pool_source():
+    """build_pairs writes a fixed set of columns; V3's pairs are balanced and checked per pool
+    source, so the judge stage carries `pool_source` over from the rows it judged."""
+    module = _onpolicy_full_script()
+    pairs = pd.DataFrame({"prompt": ["a", "b"]})
+    kept = pd.DataFrame({"pool_source": ["rjdb", "djinni_new"], "free_right_rate": [1.0, 0.75],
+                         "protected_attr": ["x", "y"]})
+    module.carry_row_columns(pairs, kept)
+    assert pairs["pool_source"].tolist() == ["rjdb", "djinni_new"]
+    assert pairs["free_right_rate"].tolist() == [1.0, 0.75]
+    assert "protected_attr" not in pairs
+    v1_pairs = module.carry_row_columns(pd.DataFrame({"prompt": ["a"]}),
+                                        pd.DataFrame({"free_right_rate": [1.0]}))
+    assert "pool_source" not in v1_pairs

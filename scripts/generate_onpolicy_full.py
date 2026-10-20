@@ -29,6 +29,10 @@ attributes of one group per pair, with the pair's own chosen text reused
 (onpolicy.add_attribute_rows). Its `split_of` names the run whose rows.parquet (the whole pool)
 sets the train/validation split, so its candidates sit on the same side as in that run.
 
+`val_fraction: 0` holds out exactly the candidates of the source's validation files, with no
+seeded draw on top (`validation_ids`). On v1's pool the draw is v1's own split and adds nothing;
+a pool split some other way, such as V3's new pairs, needs the 0.
+
 Only `judge_strategies` (default: student_tipped) are judged and kept. Rows the student also
 gets wrong without the attribute are counted in sample_report.json but are not
 attribute-driven, so they do not train invariance.
@@ -148,6 +152,42 @@ def v1_validation_candidates(source: Path) -> set[str]:
     return ids
 
 
+#: Row columns a judged pair keeps beside build_pairs' own: the sampler's counts, the attribute
+#: an attribute-coverage row's chosen text was written for, and V3's pool source, by which V3's
+#: pairs are balanced and checked (docs/V3_NEW_DATA.md).
+CARRIED_COLUMNS = ("free_right_rate", "sample_index", "n_wrong_samples", "source_attr",
+                   "pool_source")
+
+
+def carry_row_columns(pairs: pd.DataFrame, kept: pd.DataFrame) -> pd.DataFrame:
+    """Copies CARRIED_COLUMNS from the judged rows onto their pairs, row for row."""
+    for column in CARRIED_COLUMNS:
+        if column in kept.columns:
+            pairs[column] = kept[column].values
+    return pairs
+
+
+def validation_ids(cfg: dict, rows: pd.DataFrame) -> set[str]:
+    """The candidates the judged pairs hold out.
+
+    Every candidate the source's validation files hold out, plus a seeded `val_fraction` of
+    the split rows' candidates. On v1's pool that draw is v1's own split (the same function,
+    seed and rows), so it adds nothing. V3's new pairs were split per pool source, so the same
+    draw would add about 5% of the candidates SFT-v3 trained on and take them out of DPO's
+    training split. `val_fraction: 0` skips the draw: DPO then holds out exactly the
+    candidates SFT held out.
+    """
+    pinned = v1_validation_candidates(_source(cfg))
+    fraction = float(cfg.get("val_fraction", 0.05))
+    if fraction <= 0:
+        if not pinned:
+            raise ValueError(f"val_fraction 0 but {_source(cfg)} has none of "
+                             f"{V1_VALIDATION_FILES}: no candidate would be held out")
+        return pinned
+    return N.validation_candidates(_split_rows(cfg, rows), pinned, fraction,
+                                   int(cfg.get("seed", 42)))
+
+
 def stage_judge(cfg: dict, out: Path) -> None:
     rows = pd.read_parquet(out / "rows.parquet")
     sample_report = json.loads((out / "sample_report.json").read_text())
@@ -191,10 +231,7 @@ def stage_judge(cfg: dict, out: Path) -> None:
         pairs = N.build_pairs(kept, cfg["teacher_model"], _source_label(cfg))
         if len(pairs):
             pairs["rejected_generator"] = sample_report["student"]
-            # source_attr: an attribute-coverage row's chosen text was written for this attribute
-            for column in ("free_right_rate", "sample_index", "n_wrong_samples", "source_attr"):
-                if column in kept.columns:
-                    pairs[column] = kept[column].values
+            carry_row_columns(pairs, kept)
         pairs.to_parquet(out / f"candidates_{strategy}.parquet", index=False)
         entry.update({"n_kept": len(pairs), "yield": len(pairs) / len(rows) if len(rows) else 0.0,
                       "separability": N.separability(pairs), "pairs": N._pair_summary(pairs)})
@@ -203,10 +240,7 @@ def stage_judge(cfg: dict, out: Path) -> None:
 
     candidates = pd.concat(all_pairs, ignore_index=True)
     candidates.to_parquet(out / "dpo_v2_candidates.parquet", index=False)
-    split_rows = _split_rows(cfg, rows)
-    val_ids = N.validation_candidates(split_rows, v1_validation_candidates(_source(cfg)),
-                                      float(cfg.get("val_fraction", 0.05)),
-                                      int(cfg.get("seed", 42)))
+    val_ids = validation_ids(cfg, rows)
     is_val = candidates["candidate_id"].astype(str).isin(val_ids)
     candidates[~is_val].to_parquet(out / "dpo_v2_train.parquet", index=False)
     candidates[is_val].to_parquet(out / "dpo_v2_validation.parquet", index=False)
