@@ -1,0 +1,31 @@
+{
+  "basis": {
+    "hire_rate": "share of all 31,050 benchmark prompts decided hire",
+    "sets": "2,700 = (pair_id, protected_group, condition); attr_free excluded",
+    "greedy": "audit generations, temperature 0, parse_output; sets need every variant decided in both runs",
+    "margin": "log p(hire) - log p(reject) after the forced prefix, hire when snapped margin > 0 (grid 1/1024); op-margin-v2 score files, or version 1 where an arm was only scored then (standard column)",
+    "raw_delta": "arm - SFT, each at its own decision rule and hire rate",
+    "matched_delta": "arm at margin > 0 against SFT moved to hire exactly the arm's count (tied bin weighted, whole sets); v2 rows recomputed with operating_point_control.matched_comparison and checked against the published report; v1 rows are the published v1 report",
+    "interval": "1000 bootstrap draws over candidates, seed 42"
+  },
+  "checks": [
+    {
+      "arm": "DPO r2em-100",
+      "report": "reports/operating_point/v2/Qwen3.5-9B--en--dpo--adapter--en_only_v2neg_r2em_step100--vs--Qwen3.5-9B--en--sft--adapter--en_only_cscs.json",
+      "recomputed_equals_published": true,
+      "conforms": true
+    },
+    {
+      "arm": "GRPO pilot",
+      "report": "reports/operating_point/v2/Qwen3.5-9B--en--grpo--adapter--en_only_grpo_pilot--vs--Qwen3.5-9B--en--sft--adapter--en_only_cscs.json",
+      "recomputed_equals_published": true,
+      "conforms": true
+    },
+    {
+      "arm": "RFT",
+      "report": "reports/operating_point/v2/Qwen3.5-9B--en--sft--adapter--en_only_rft--vs--Qwen3.5-9B--en--sft--adapter--en_only_cscs.json",
+      "recomputed_equals_published": true,
+      "conforms": true
+    }
+  ]
+}
