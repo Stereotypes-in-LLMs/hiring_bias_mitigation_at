@@ -379,3 +379,40 @@ From past jobs on one GH200 node:
 - **Judging.** Job 5045685's judge stage took 13 minutes for 11,178 rationales, about 5 of them loading the teacher (305 s in this round's generation jobs). At r2em's selection rates, the full run has about 32,000 rationales to judge and the top-up about 12,000, so the judge jobs take about 30 and 15 minutes.
 
 That is about 10 node-hours in all, or 40 allocated GPU-hours.
+
+### Result
+
+#### SFT-v3
+
+**In one sentence.** SFT-v3 trained one epoch on all the new data in one job and met none of its stop conditions.
+
+- **Observed.** On a seeded 1,000 of the validation rows, the loss fell from 0.536 at step 250 to 0.502 at the end. It has been flat since about step 1,500. On 64 held-out prompts, half with a hire anchor and half with a reject anchor, greedy decisions agree with the vote anchor 0.953 of the time at the end, with a hire rate of 0.516.
+- **Interpretation.** The model reproduces the vote anchors on held-out candidates. The 64-prompt readout cannot tell the sources apart, and it is not a fairness result.
+- **Unknown.** Everything on the benchmark: nothing in this round reads it.
+
+| field | value |
+|---|---|
+| job | 5107673, `normal`, one GH200 node, 4 GPUs; 5:13:49, completed |
+| code | commit 47b7a05 on `xinyang/v3-additional-data`, clean (the job log's first line and the cost record) |
+| config and data | `configs/mitigation/sft/qwen3.5-9b_en_only_sft_v3_additional_gh200.yaml`; `configs/data/en_only_sft_v3_additional.yaml`, `data_kind` sft: 62,761 training and 3,527 validation rows |
+| output | `outputs/sft/qwen3.5-9b_en_only_sft_v3_additional`: the final adapter at step 3,923 (DPO's start point, chosen in advance), and checkpoints every 250 steps |
+| W&B | run 462f9084, `sft-qwen3.5-9b_en_only_sft_v3_additional` |
+| cost | 20.90 GPU-h, 14.4 MJ, peak 57.1 GiB per GPU, mean GPU utilisation 46% (`$XW/cost/records/20261020T171220_train_sft_5107673_209020.json`); the cancelled first submission adds 0.74 GPU-h |
+
+The training loss averaged 0.377 over the epoch (`train_loss` in the job log). The full curves are in the job log `logs/xw-sft-5107673.out` and the W&B run.
+
+**Decisions on the 64 held-out prompts** (`decision_eval.jsonl` in the output directory), every 250 steps:
+
+| step | agree with anchor | hire rate | hire rate, hire anchors | hire rate, reject anchors | unreadable |
+|---|---|---|---|---|---|
+| 250 | 0.781 | 0.719 | 1.000 | 0.438 | 0 |
+| 500 | 0.922 | 0.547 | 0.969 | 0.125 | 0 |
+| 1,000 | 0.891 | 0.547 | 0.938 | 0.156 | 0 |
+| 1,500 | 0.984 | 0.484 | 0.969 | 0.000 | 0 |
+| 2,000 | 0.969 | 0.500 | 0.969 | 0.031 | 0 |
+| 3,000 | 0.938 | 0.531 | 0.969 | 0.094 | 0 |
+| 3,923 | 0.953 | 0.516 | 0.969 | 0.063 | 0 |
+
+**Validation loss**, every 250 steps: 0.5364, 0.5152, 0.5189, 0.5081, 0.5042, 0.5030, 0.5013, 0.5028, 0.4996, 0.5006, 0.5003, 0.5038, 0.5038, 0.5036, 0.5023, then 0.5024 at step 3,923.
+
+Sixty-four prompts are a coarse readout: one prompt is 1.6 points of agreement. The early steps hire too often on reject anchors (0.438 at step 250), and from step 1,250 on the rate stays between 0 and 0.094.
