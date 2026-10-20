@@ -50,6 +50,7 @@ from __future__ import annotations
 import argparse
 import hashlib
 import json
+import os
 import subprocess
 import sys
 import time
@@ -102,7 +103,9 @@ def _out(cfg: dict) -> Path:
 
 def _write_json(path: Path, payload: dict) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text(json.dumps(payload, indent=2, ensure_ascii=False, default=str), "utf-8")
+    tmp = path.with_suffix(path.suffix + ".tmp")
+    tmp.write_text(json.dumps(payload, indent=2, ensure_ascii=False, default=str), "utf-8")
+    tmp.replace(path)
 
 
 def _write_parquet(frame: pd.DataFrame, path: Path) -> None:
@@ -221,10 +224,23 @@ def _paths(cfg: dict, part: str, name: str) -> tuple[Path, Path]:
     return base / f"{name}.parquet", base / f"{name}.meta.json"
 
 
+def _pass_sha256(cfg: dict, name: str) -> str:
+    """What else, besides the prompts, decides a pass's generations."""
+    spec = {"teacher": cfg["teacher_model"], "generation": cfg["passes"][name],
+            "n": int(cfg["vote_draws"]) if name == "votes" else 1}
+    return hashlib.sha256(json.dumps(spec, sort_keys=True).encode()).hexdigest()
+
+
 def _done(cfg: dict, part: str, name: str, prompts: list[str]) -> bool:
     path, meta = _paths(cfg, part, name)
-    return (path.exists() and meta.exists()
-            and json.loads(meta.read_text())["prompts_sha256"] == V.prompts_sha256(prompts))
+    if not (path.exists() and meta.exists()):
+        return False
+    try:
+        recorded = json.loads(meta.read_text())
+    except (json.JSONDecodeError, OSError):
+        return False
+    return (recorded.get("prompts_sha256") == V.prompts_sha256(prompts)
+            and recorded.get("pass_sha256") == _pass_sha256(cfg, name))
 
 
 def part_anchors(cfg: dict, part: str, pairs: pd.DataFrame) -> pd.DataFrame:
@@ -241,7 +257,17 @@ def part_variants(cfg: dict, part: str, anchored: pd.DataFrame) -> pd.DataFrame:
     return SY.build_variant_frame(anchored, synth_cfg)
 
 
-def _generate_pass(cfg, backend, part, name, frame, prompts, generation, sampled_n=None):
+def _vllm_version() -> str | None:
+    try:
+        import vllm
+
+        return vllm.__version__
+    except Exception:  # the fake teacher of the tests, or no vLLM on this node
+        return None
+
+
+def _generate_pass(cfg, backend, part, name, frame, prompts, generation, sampled_n=None,
+                   load_seconds=None):
     from hiring_bias_mitigation.eval import backends as BK
 
     start = time.time()
@@ -256,12 +282,36 @@ def _generate_pass(cfg, backend, part, name, frame, prompts, generation, sampled
     _write_parquet(out, path)
     _write_json(meta, {
         "part": part, "pass": name, "prompts": len(prompts), "rows": len(out),
-        "prompts_sha256": V.prompts_sha256(prompts), "teacher": cfg["teacher_model"],
-        "serving": cfg["serving"], "generation": generation,
+        "prompts_sha256": V.prompts_sha256(prompts), "pass_sha256": _pass_sha256(cfg, name),
+        "teacher": cfg["teacher_model"], "serving": cfg["serving"], "generation": generation,
         "seeding": "per_prompt_seed(generation.seed, prompt)",
-        "generation_seconds": round(time.time() - start, 1), "code": _code(),
+        "generation_seconds": round(time.time() - start, 1),
+        "engine_load_seconds": load_seconds, "vllm": _vllm_version(), "code": _code(),
+        "slurm_job": os.environ.get("SLURM_JOB_ID"),
         "written": datetime.now(timezone.utc).isoformat()})
     log.info("%s %s: %d prompts in %.0f s", part, name, len(prompts), time.time() - start)
+
+
+def stop_reasons(cfg: dict, part: str, pairs: pd.DataFrame) -> tuple[list[str], dict]:
+    """docs/V3_NEW_DATA.md's stop conditions, read from one part's own files."""
+    limits = cfg["stop"]
+    draws = pd.read_parquet(_paths(cfg, part, "votes")[0])
+    anchors = part_anchors(cfg, part, pairs)
+    readout = {"undecided_draw_share": float((~draws["decision"].isin(V.DECIDED)).mean()),
+               "unanchored_share": float((~anchors["anchored"]).mean())}
+    for name, filt in (("invariant", F.filter_invariant), ("biased", F.filter_biased)):
+        path = _paths(cfg, part, name)[0]
+        if path.exists():
+            raw = pd.read_parquet(path)
+            _, rep = filt(raw["raw_output"].tolist(), raw.drop(columns=["raw_output"]), LANG)
+            readout[f"{name}_yield"] = rep["yield"]
+    checks = [("undecided_draw_share", ">", limits["max_undecided_draw_share"]),
+              ("unanchored_share", ">", limits["max_unanchored_share"]),
+              ("invariant_yield", "<", limits["min_invariant_yield"]),
+              ("biased_yield", "<", limits["min_biased_yield"])]
+    reasons = [f"{k} {readout[k]:.4f} {op} {limit}" for k, op, limit in checks
+               if k in readout and (readout[k] > limit if op == ">" else readout[k] < limit)]
+    return reasons, readout
 
 
 def stage_generate(cfg: dict, parts: list[str], passes: list[str]) -> None:
@@ -278,27 +328,40 @@ def stage_generate(cfg: dict, parts: list[str], passes: list[str]) -> None:
     engine: dict[str, object] = {}
 
     def backend_for(name: str):
-        # One engine for the job; each pass sets its own decoding before it runs.
+        # One engine for the job; each pass sets its own decoding before it runs. The engine is
+        # loaded before the first pass's timer starts, so its seconds are the pass's alone.
         generation = dict(cfg["passes"][name])
+        load_seconds = None
         if "llm" not in engine:
+            start = time.time()
             engine["llm"] = BK.build_backend({**cfg["serving"], "model": cfg["teacher_model"],
                                               "generation": generation})
+            if hasattr(engine["llm"], "_load"):
+                engine["llm"]._load()
+            load_seconds = round(time.time() - start, 1)
         engine["llm"].generation = BK.GenerationConfig(**generation)
-        return engine["llm"], generation
+        return engine["llm"], generation, load_seconds
+
+    checked: dict[str, list[str]] = {}
 
     try:
         # Explicit parts run in the order given, so a job can put each source's first part
         # first and have it read against the stop conditions while the rest runs.
         for part in (known if parts == ["all"] else list(dict.fromkeys(wanted))):
+            source = part.rsplit("-", 1)[0]
+            if checked.get(source):
+                log.warning("%s: skipped, %s stopped on its first part: %s", part, source,
+                            checked[source])
+                continue
             pairs = pool[pool["part"] == part].reset_index(drop=True)
             if "votes" in passes:
                 prompts = SY.reference_prompts(pairs, LANG)
                 if _done(cfg, part, "votes", prompts):
                     log.info("%s votes: already drawn for these prompts, skipped", part)
                 else:
-                    backend, generation = backend_for("votes")
+                    backend, generation, load = backend_for("votes")
                     _generate_pass(cfg, backend, part, "votes", pairs, prompts, generation,
-                                   sampled_n=int(cfg["vote_draws"]))
+                                   sampled_n=int(cfg["vote_draws"]), load_seconds=load)
             if not _paths(cfg, part, "votes")[0].exists():
                 log.warning("%s: no votes yet; the variant passes are skipped", part)
                 continue
@@ -313,8 +376,21 @@ def stage_generate(cfg: dict, parts: list[str], passes: list[str]) -> None:
                 if _done(cfg, part, name, prompts):
                     log.info("%s %s: already generated for these prompts, skipped", part, name)
                     continue
-                backend, generation = backend_for(name)
-                _generate_pass(cfg, backend, part, name, variants, prompts, generation)
+                backend, generation, load = backend_for(name)
+                _generate_pass(cfg, backend, part, name, variants, prompts, generation,
+                               load_seconds=load)
+            if source not in checked and set(passes) == set(PASSES):
+                # The first part of each source in this job is read against the stop conditions;
+                # a source that crosses one gets no further part (docs/V3_NEW_DATA.md).
+                reasons, readout = stop_reasons(cfg, part, pairs)
+                checked[source] = reasons
+                _write_json(_out(cfg) / "parts" / part / "stop_check.json",
+                            {"part": part, "readout": readout, "reasons": reasons,
+                             "limits": cfg["stop"]})
+                if reasons:
+                    log.warning("%s: STOP for %s: %s", part, source, reasons)
+                else:
+                    log.info("%s: stop conditions clear: %s", part, readout)
     finally:
         if "llm" in engine:
             engine["llm"].close()

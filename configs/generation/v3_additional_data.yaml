@@ -54,6 +54,14 @@ passes:
     top_p: 0.9
     seed: 42
 
+# docs/V3_NEW_DATA.md's stop conditions, read on each source's first part in a job; a source that
+# crosses one gets no further part in that job.
+stop:
+  max_undecided_draw_share: 0.05
+  max_unanchored_share: 0.10
+  min_invariant_yield: 0.80
+  min_biased_yield: 0.20
+
 split:
   val_fraction: 0.05        # of each source's candidates; none of them is a V1 candidate
 

@@ -72,7 +72,7 @@ A source's generation stops after its first part, and what is done is reported, 
 - invariant yield below 0.80 (the vote targets' floor);
 - biased yield below 0.20.
 
-The round also stops at the node-hour budget the user sets for the full run.
+The job enforces them itself (`configs` `stop:`): after each source's first part in a job, `stage_generate` reads the four readouts from that part's files, writes them to `parts/<part>/stop_check.json`, and gives a source that crosses one no further part. The round also stops at the node-hour budget the user sets for the full run.
 
 ### Compute
 

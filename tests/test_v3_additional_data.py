@@ -94,6 +94,8 @@ def setup(tmp_path, monkeypatch):
         "passes": {p: {"max_new_tokens": 32, "temperature": 0.7, "top_p": 0.9, "seed": s}
                    for p, s in (("votes", 43), ("invariant", 42), ("biased", 42))},
         "split": {"val_fraction": 0.25},
+        "stop": {"max_undecided_draw_share": 0.05, "max_unanchored_share": 0.10,
+                 "min_invariant_yield": 0.80, "min_biased_yield": 0.20},
         "assemble": {"sft_v3_dir": str(v3), "dpo_cap_per_pair": 2},
     }
     teacher = FakeTeacher()
@@ -198,3 +200,20 @@ def test_v1_dpo_reads_the_vote_anchor_and_keeps_sft_v3s_split(setup, tmp_path):
     assert row["reference_decision"] == "hire"
     # 7 of 8 is a stable vote; that it overturned v1 is `anchor_changed`, not `anchor_unstable`.
     assert not bool(row["anchor_unstable"]) and bool(row["anchor_changed"])
+
+
+def test_a_source_that_crosses_a_stop_condition_gets_no_further_part(setup):
+    """The pre-registered stop conditions are read in the job, on each source's first part."""
+    mod, cfg, _, out = setup
+    pool = pd.read_parquet(out / "pool" / "pairs_en.parquet")
+    rjdb = pool["source"] == "rjdb"
+    pool.loc[rjdb, "part"] = ["rjdb-000", "rjdb-000", "rjdb-001", "rjdb-001"]
+    pool.to_parquet(out / "pool" / "pairs_en.parquet", index=False)
+    cfg["stop"]["min_invariant_yield"] = 1.01       # no part can meet it
+    mod.stage_generate(cfg, ["rjdb-000", "rjdb-001", "djinni_new-000"], list(mod.PASSES))
+    check = json.loads((out / "parts" / "rjdb-000" / "stop_check.json").read_text())
+    assert check["reasons"] and check["readout"]["invariant_yield"] < 1.01
+    assert not (out / "parts" / "rjdb-001").exists()             # skipped
+    assert (out / "parts" / "djinni_new-000" / "biased.parquet").exists()   # other sources run
+    meta = json.loads((out / "parts" / "rjdb-000" / "votes.meta.json").read_text())
+    assert meta["engine_load_seconds"] is not None and meta["pass_sha256"]

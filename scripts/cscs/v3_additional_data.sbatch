@@ -5,11 +5,14 @@
 # job cut by its time limit is resubmitted with the same parts and skips what is done. Submit one
 # job at a time on the shared account, with REPO pointing at the checkout whose code should run:
 #
-#   REPO=$XW/hiring_bias_mitigation_at-v3additional scripts/cscs/submit.sh -t 01:30:00 \
+#   REPO=$XW/hiring_bias_mitigation_at-v3additional scripts/cscs/submit.sh -t 03:00:00 \
 #       scripts/cscs/v3_additional_data.sbatch djinni_new-000 rjdb-000 kaggle_linkedin-000
 #   REPO=... scripts/cscs/submit.sh -t 12:00:00 scripts/cscs/v3_additional_data.sbatch rjdb-001 rjdb-002 ...
 #
-# After the parts, the CPU `report` stage reads every part drawn so far.
+# Per part of 1,500 Djinni or RJDB pairs: about 9 min of votes and 13 min per variant pass at the
+# rates of jobs 5073453 and 5103710; Kaggle x LinkedIn prompts are about 2.5x longer. The first part
+# of each source is read against the stop conditions (configs stop:), and a source that crosses one
+# gets no further part. After the parts, the CPU `report` stage reads every part drawn so far.
 #
 #SBATCH --job-name=xw-v3-additional
 #SBATCH --account=lp193
@@ -17,7 +20,7 @@
 #SBATCH --nodes=1
 #SBATCH --ntasks=1
 #SBATCH --gpus-per-node=4
-#SBATCH --time=01:30:00
+#SBATCH --time=06:00:00
 #SBATCH --output=/ritom/scratch/cscs/zhang/xw/logs/%x-%j.out
 
 set -euo pipefail
