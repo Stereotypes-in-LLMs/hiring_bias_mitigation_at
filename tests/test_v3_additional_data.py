@@ -250,3 +250,11 @@ def test_quality_exclusions_drop_contradicting_djinni_cvs_and_rjdb_residue():
     assert excluded == {"a", "c"}            # Kaggle's anonymisation placeholders are kept
     cfg["assemble"]["exclude"] = {}
     assert mod.quality_exclusions(cfg, pairs)[0] == set()
+
+
+def test_a_job_without_the_biased_pass_still_reads_the_stop_conditions(setup):
+    mod, cfg, teacher, out = setup
+    mod.stage_generate(cfg, ["rjdb-000"], ["votes", "invariant"])
+    assert not (out / "parts" / "rjdb-000" / "biased.parquet").exists()
+    check = json.loads((out / "parts" / "rjdb-000" / "stop_check.json").read_text())
+    assert "invariant_yield" in check["readout"] and "biased_yield" not in check["readout"]

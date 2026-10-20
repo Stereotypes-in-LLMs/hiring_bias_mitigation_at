@@ -33,8 +33,11 @@ echo "host $(hostname) | job ${SLURM_JOB_ID:-none} | commit $(git rev-parse --sh
 git status --porcelain | sed 's/^/uncommitted: /'
 CFG=configs/generation/v3_additional_data.yaml
 
-step "generate: votes, invariant and biased passes for $*"
-$PY scripts/v3_additional_data.py --config "$CFG" --stage generate --parts "$@"
+# PASSES="votes invariant" skips the biased pass, whose teacher-written negatives r2em does not
+# use; DPO's rejected side then comes from on-policy sampling (docs/V3_NEW_DATA.md).
+PASSES=${PASSES:-votes invariant biased}
+step "generate: passes $PASSES for $*"
+$PY scripts/v3_additional_data.py --config "$CFG" --stage generate --parts "$@" --passes $PASSES
 step "report: every part drawn so far"
 $PY scripts/v3_additional_data.py --config "$CFG" --stage report
 echo "STAGE v3-additional $* OK"

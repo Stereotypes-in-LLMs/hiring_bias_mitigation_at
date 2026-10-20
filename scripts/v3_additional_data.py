@@ -294,7 +294,11 @@ def _generate_pass(cfg, backend, part, name, frame, prompts, generation, sampled
 
 
 def stop_reasons(cfg: dict, part: str, pairs: pd.DataFrame) -> tuple[list[str], dict]:
-    """docs/V3_NEW_DATA.md's stop conditions, read from one part's own files."""
+    """docs/V3_NEW_DATA.md's stop conditions, read from one part's own files.
+
+    A pass that was not run (a job with `--passes votes invariant`) has no readout, and its
+    condition is not checked.
+    """
     limits = cfg["stop"]
     draws = pd.read_parquet(_paths(cfg, part, "votes")[0])
     anchors = part_anchors(cfg, part, pairs)
@@ -380,7 +384,7 @@ def stage_generate(cfg: dict, parts: list[str], passes: list[str]) -> None:
                 backend, generation, load = backend_for(name)
                 _generate_pass(cfg, backend, part, name, variants, prompts, generation,
                                load_seconds=load)
-            if source not in checked and set(passes) == set(PASSES):
+            if source not in checked and "invariant" in passes:
                 # The first part of each source in this job is read against the stop conditions;
                 # a source that crosses one gets no further part (docs/V3_NEW_DATA.md).
                 reasons, readout = stop_reasons(cfg, part, pairs)
