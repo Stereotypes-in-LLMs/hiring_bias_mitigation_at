@@ -303,3 +303,26 @@ def test_validation_passes_only_when_the_engines_and_the_greedy_decisions_agree(
     sample = OP.validation_sample(31050, 256, 42)
     assert len(sample) == 256 and (np.diff(sample) > 0).all()
     assert (sample == OP.validation_sample(31050, 256, 42)).all()
+
+
+def test_compare_arms_against_a_base_pass_is_named_and_marked(tmp_path, monkeypatch):
+    monkeypatch.setenv("HBM_OUTPUT_ROOT", str(tmp_path))
+    for run, which, seed, shift in (("dpo", "adapter", 1, -0.5), ("sft", "base", 0, 0.5),
+                                    ("sft", "adapter", 2, 0.0)):
+        path, meta_path = OP.score_paths(run, which)
+        _margins(seed, shift).to_parquet(path)
+        meta_path.write_text(json.dumps(_meta(run=run, which=which)))
+    monkeypatch.setattr(OP, "code_state", lambda: CLEAN)
+    monkeypatch.setattr(OP, "validation_records", lambda: PASSED)
+    monkeypatch.setattr(OP, "reports_dir", lambda *parts: tmp_path)
+    monkeypatch.setattr(OP.R, "build_run_name", lambda cfg: cfg["name"])
+
+    OP.cmd_compare_arms({"name": "dpo"}, {"name": "sft"}, "base")
+    on_base = json.loads((tmp_path / "dpo--vs--sft--base.json").read_text())
+    assert on_base["against"] == "sft--base" and on_base["against_which"] == "base"
+    assert on_base["delta_matched_pp"] == OP.matched_comparison(
+        _margins(0, 0.5), _margins(1, -0.5))["delta_matched_pp"]
+
+    OP.cmd_compare_arms({"name": "dpo"}, {"name": "sft"})
+    on_arm = json.loads((tmp_path / "dpo--vs--sft.json").read_text())
+    assert on_arm["against"] == "sft" and "against_which" not in on_arm

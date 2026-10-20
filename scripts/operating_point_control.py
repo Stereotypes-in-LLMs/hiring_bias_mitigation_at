@@ -22,6 +22,12 @@ Two fine-tuned arms against each other (e.g. DPO continued from SFT), each after
 
     python scripts/operating_point_control.py compare-arms --config <dpo audit cfg> --against <sft audit cfg>
 
+An arm against the base model, the same way: `--against-which base` reads the base pass of the
+`--against` config (`<run>--base`) as the reference arm, and the report is named
+`<arm>--vs--<run>--base.json` and marked `"against_which": "base"`.
+
+    python scripts/operating_point_control.py compare-arms --config <dpo audit cfg> --against <sft audit cfg> --against-which base
+
 One standard (`STANDARD`)
 -------------------------
 Every file this control writes follows the one procedure fixed here, so a new checkpoint needs
@@ -542,13 +548,17 @@ def _write_report(summary: dict, path: Path) -> None:
     log.info("wrote %s (%s)", path, "conforms" if summary["conforms"] else "does NOT conform")
 
 
-def cmd_compare_arms(cfg: dict, against: dict) -> None:
+def cmd_compare_arms(cfg: dict, against: dict, which: str = "adapter") -> None:
+    """The arm of `cfg` against the `which` pass of `against`: its adapter, or its base model."""
     run_name, ref_name = R.build_run_name(cfg), R.build_run_name(against)
     run, run_meta = load_scores(run_name, "adapter")
-    ref, ref_meta = load_scores(ref_name, "adapter")
-    summary = arm_report(run_name, ref_name, run, run_meta, ref, ref_meta, code_state(),
+    ref, ref_meta = load_scores(ref_name, which)
+    label = ref_name if which == "adapter" else f"{ref_name}--{which}"
+    summary = arm_report(run_name, label, run, run_meta, ref, ref_meta, code_state(),
                          validation_records())
-    _write_report(summary, reports_dir() / f"{run_name}--vs--{ref_name}.json")
+    if which != "adapter":
+        summary["against_which"] = which
+    _write_report(summary, reports_dir() / f"{run_name}--vs--{label}.json")
 
 
 def cmd_compare(cfg: dict) -> None:
@@ -716,6 +726,8 @@ def main() -> None:
     a = sub.add_parser("compare-arms")
     a.add_argument("--config", required=True, help="the arm compared (e.g. DPO)")
     a.add_argument("--against", required=True, help="the reference arm (e.g. SFT)")
+    a.add_argument("--against-which", choices=("adapter", "base"), default="adapter",
+                   help="the reference's adapter pass, or its base pass (the base model)")
     v = sub.add_parser("validate", help="check the scorer against HuggingFace; once per vLLM version")
     v.add_argument("--config", required=True)
     v.add_argument("--which", choices=("base", "adapter"), required=True)
@@ -733,7 +745,7 @@ def main() -> None:
     if args.cmd == "margins":
         cmd_margins(cfg, args.which, args.chunk)
     elif args.cmd == "compare-arms":
-        cmd_compare_arms(cfg, load_config(args.against))
+        cmd_compare_arms(cfg, load_config(args.against), args.against_which)
     elif args.cmd == "validate":
         cmd_validate(cfg, args.which, args.n, batch_size=args.batch_size)
     else:

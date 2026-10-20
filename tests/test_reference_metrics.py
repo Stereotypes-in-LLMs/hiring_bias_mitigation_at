@@ -260,3 +260,22 @@ def test_run_row_reads_the_expected_grid(tmp_path):
     assert row["flip_coverage_pct"] == pytest.approx(50.0)
     assert row["agreed_clear_pairs"] == 1
     assert row["margin_source"] is None and row["margin_set_sd_nats"] is None
+
+
+def test_an_arm_compared_with_the_base_model_is_judged_against_the_baseline_row(tmp_path):
+    rows_dir, reports = tmp_path / "rows", tmp_path / "reports"
+    reports.mkdir()
+    RM.write_row({"run": "base", "family": "none", "tpr_vs_gpt4o_pct": 42.0,
+                  "agree_gpt4o_pct": 79.0}, rows_dir)
+    RM.write_row({"run": "arm", "family": "dpo", "baseline_run": "base",
+                  "merge_kept_pct": 90.0, "decided_pct": 100.0, "tpr_vs_gpt4o_pct": 66.0,
+                  "agree_gpt4o_pct": 82.0}, rows_dir)
+    _report(reports / "arm--vs--sft--base.json", run="arm", against="sft--base",
+            against_which="base", delta_matched_pp=-6.0, ci_low=-8.0, ci_high=-4.0,
+            conforms=True)
+    RM.write_table(rows_dir, tmp_path / "t.csv", reports, tmp_path / "c.csv")
+    long = pd.read_csv(tmp_path / "c.csv").set_index("run")
+    assert long.at["arm", "kind"] == "arms-vs-base"
+    assert long.at["arm", "reference_run"] == "base"
+    assert long.at["arm", "std_tpr_vs_ref_pp"] == pytest.approx(24.0)
+    assert long.at["arm", "std_verdict"] == "better"

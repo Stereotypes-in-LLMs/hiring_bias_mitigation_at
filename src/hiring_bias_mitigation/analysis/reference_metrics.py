@@ -351,8 +351,9 @@ def read_comparisons(report_dir: Path = OP_REPORTS) -> list[dict]:
     """Every op-margin-v2 comparison report, one dict each.
 
     `compare-arms` reports (`<run>--vs--<ref>.json`) carry the delta against another arm and its
-    interval; `compare` reports (`<run>.json`) the adapter against its own base, with no
-    interval.
+    interval, kind `arms`; with `--against-which base` the reference is a base-model pass, kind
+    `arms-vs-base`. `compare` reports (`<run>.json`) the adapter against its own base, with no
+    interval, kind `base`.
     """
     out = []
     for path in sorted(Path(report_dir).glob("*.json")):
@@ -360,7 +361,8 @@ def read_comparisons(report_dir: Path = OP_REPORTS) -> list[dict]:
         if rep.get("standard") != "op-margin-v2":
             continue
         if "--vs--" in path.name:
-            out.append({"run": rep.get("run"), "against": rep.get("against"), "kind": "arms",
+            kind = "arms-vs-base" if rep.get("against_which") == "base" else "arms"
+            out.append({"run": rep.get("run"), "against": rep.get("against"), "kind": kind,
                         "delta_pp": rep.get("delta_matched_pp"), "ci_low_pp": rep.get("ci_low"),
                         "ci_high_pp": rep.get("ci_high"), "conforms": rep.get("conforms"),
                         "issues": "; ".join(rep.get("issues") or []) or None,
@@ -523,7 +525,8 @@ def write_table(row_dir: Path = ROW_DIR, table: Path = TABLE, report_dir: Path =
                       "primary_ci_low_pp": comp["ci_low_pp"],
                       "primary_ci_high_pp": comp["ci_high_pp"],
                       "primary_conforms": comp["conforms"]}
-        reference = row.get("baseline_run") if comp["against"] == "base" else comp["against"]
+        on_base = comp["kind"] in ("base", "arms-vs-base")
+        reference = row.get("baseline_run") if on_base else comp["against"]
         verdict = judge(as_primary, by_run.get(reference))
         long.append({**comp, "reference_run": reference,
                      "merge_kept_pct": row.get("merge_kept_pct"),
