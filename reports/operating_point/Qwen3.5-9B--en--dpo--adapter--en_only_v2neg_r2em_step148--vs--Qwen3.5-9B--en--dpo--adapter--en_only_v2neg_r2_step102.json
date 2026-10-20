@@ -1,0 +1,16 @@
+{
+  "run": "Qwen3.5-9B--en--dpo--adapter--en_only_v2neg_r2em_step148",
+  "against": "Qwen3.5-9B--en--dpo--adapter--en_only_v2neg_r2_step102",
+  "prompts": 31050,
+  "sets": 2700,
+  "hire_rate_ref": 0.20077294685990338,
+  "unstable_ref": 0.026296296296296297,
+  "hire_rate_run": 0.30003220611916265,
+  "unstable_run": 0.0337037037037037,
+  "ref_threshold_matched": -20.124999642400006,
+  "hire_rate_ref_matched": 0.30003220611916265,
+  "unstable_ref_matched": 0.042222222222222223,
+  "delta_matched_pp": -0.8518518518518523,
+  "ci_low": -2.4074074074074074,
+  "ci_high": 0.6296296296296297
+}
