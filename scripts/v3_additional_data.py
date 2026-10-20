@@ -419,6 +419,55 @@ def _filtered(cfg: dict, done: list[str]) -> tuple[dict, dict]:
     return kept, reports
 
 
+#: IT job titles (the data-quality review's classifier, 2026-10-20), for the persona readout.
+IT_TITLE = re.compile(
+    r"(?i)\b(?:software|developer|programmer|devops|sre|data (?:scientist|engineer|analyst"
+    r"|architect|warehouse)|database|dba|sql|java|python|\.net|c#|c\+\+|php|ruby|javascript"
+    r"|react|angular|node(?:\.?js)?|salesforce|sap|oracle|sharepoint|web|ui|ux|front[- ]?end"
+    r"|back[- ]?end|full[- ]?stack|it|information technology|network|system(?:s)? (?:admin\w*"
+    r"|engineer|analyst)|sysadmin|help ?desk|service desk|desktop support|technical support"
+    r"|cyber\w*|information security|security (?:analyst|engineer|architect)|qa"
+    r"|quality assurance|tester|test (?:engineer|analyst|automation|lead|manager)|cloud|aws"
+    r"|azure|linux|unix|mainframe|etl|bi|business intelligence|tableau|hadoop|spark|big data"
+    r"|machine learning|ml|ai|computer|application (?:developer|support|analyst|engineer"
+    r"|architect)|solutions? architect|scrum master|technical (?:lead|architect"
+    r"|project manager)|it project|ios|android|mobile (?:app\w*|developer|engineer)|embedded"
+    r"|firmware|peoplesoft|workday|servicenow|dynamics|informatica|cognos|abap|golang|scala"
+    r"|kotlin|swift|perl|rpa|blockchain|game developer)\b")
+#: Djinni's own non-technical role keywords (`primary_keyword`).
+DJINNI_NON_IT = {
+    "HR", "Marketing", "Sales", "Design", "Project Manager", "Product Manager", "Support",
+    "Copywriting", "Lead Generation", "Business Analyst", "Artist", "Finances", "Legal", "SEO",
+    "Customer Success", "Other", "Sales Manager", "Account Manager", "Marketing Manager",
+    "Recruiter", "Office Manager", "Lead Gen", "Technical Writing", "Translator", "Media Buyer"}
+TECH_WORDS = re.compile(r"(?i)\btechnical\b|\btech stack\b|\bprogramming\b|\bcoding\b")
+
+
+def persona_readout(anchors: pd.DataFrame) -> dict:
+    """`synth.REFERENCE_PROMPT` calls the teacher a technical recruiter on every pair.
+
+    Per pool source, IT against non-IT roles: the anchor's hire share and the share of anchor
+    rationales that cite technical skills. If the non-IT rows diverge, the persona may be
+    steering anchors on the external sources (data-quality review, 2026-10-20).
+    """
+    a = anchors[anchors["anchored"]].copy()
+    if a.empty:
+        return {}
+    titled = a["job_position"].fillna("").map(lambda s: bool(IT_TITLE.search(str(s))))
+    djinni = a["source"].str.startswith("djinni")
+    kaggle_it = a["occupation"].eq("INFORMATION-TECHNOLOGY")
+    a["role"] = np.where(np.where(djinni, ~a["primary_keyword"].isin(DJINNI_NON_IT),
+                                  titled | kaggle_it), "it", "non_it")
+    a["hire"] = a["reference_decision"].eq("hire")
+    a["tech"] = a["reference_feedback"].fillna("").str.contains(TECH_WORDS)
+    out: dict[str, dict] = {}
+    for (source, role), g in a.groupby(["source", "role"], sort=True):
+        out.setdefault(source, {})[role] = {"pairs": len(g),
+                                            "anchor_hire_share": round(float(g["hire"].mean()), 4),
+                                            "tech_word_share": round(float(g["tech"].mean()), 4)}
+    return out
+
+
 def stage_report(cfg: dict) -> None:
     pool, done = _voted_parts(cfg)
     if not done:
@@ -462,11 +511,17 @@ def stage_report(cfg: dict) -> None:
             for anchor, decision in zip(raw["reference_decision"], got):
                 key = f"anchor {anchor} -> {decision}"
                 counts[key] = counts.get(key, 0) + 1
+    stop_checks = {}
+    for p in done:
+        path = _out(cfg) / "parts" / p / "stop_check.json"
+        if path.exists():
+            stop_checks[p] = json.loads(path.read_text())
     _write_parquet(anchors, _out(cfg) / "anchors_en.parquet")
     _write_json(_out(cfg) / "report.json", {
         "built": datetime.now(timezone.utc).isoformat(), "code": _code(), "parts_voted": done,
         "vote": V.vote_report(anchors, draws, by=anchors["source"]),
         "filters_by_source": by_source, "biased_decisions_by_source": biased_decisions,
+        "persona_by_source": persona_readout(anchors), "stop_checks": stop_checks,
         "generation_seconds": seconds})
     log.info("report: %d pairs voted over %d parts", len(anchors), len(done))
 
