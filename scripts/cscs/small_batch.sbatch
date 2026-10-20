@@ -26,6 +26,9 @@
 
 set -euo pipefail
 source /ritom/scratch/cscs/zhang/xw/hiring_bias_mitigation_at/scripts/cscs/env.sh
+# An env.sh without `cost` (main before the recorder, an older checkout): run the step
+# unrecorded rather than fail.
+type cost > /dev/null 2>&1 || cost() { shift 2; "$@"; }
 [ -x "$PY" ] || { echo "FATAL: no venv at $XW/venv -- run scripts/cscs/build_env.sbatch first"; exit 3; }
 export HF_HUB_OFFLINE=1
 STAGE=${1:-all}
@@ -38,14 +41,15 @@ nvidia-smi --query-gpu=index,name,memory.total,driver_version --format=csv
 
 if [[ $STAGE == generate || $STAGE == all ]]; then
   step "generate 1/2 teacher: negatives + judgements (resumes from raw/ dumps)"
-  $PY scripts/generate_negatives_v2.py --config "$CONFIG"
+  cost datagen teacher $PY scripts/generate_negatives_v2.py --config "$CONFIG"
   step "generate 2/2 direction check, GPU-free part (D1-D3, D5-D7)"
-  $PY scripts/check_preference_direction.py --batch "$BATCH"
+  cost datagen direction-check $PY scripts/check_preference_direction.py --batch "$BATCH"
 fi
 
 if [[ $STAGE == check || $STAGE == all ]]; then
   step "check: SFT student and base model preferences (D4, HF + PEFT, one GPU)"
-  CUDA_VISIBLE_DEVICES=0 $PY scripts/check_preference_direction.py --batch "$BATCH" \
+  CUDA_VISIBLE_DEVICES=0 cost datagen d4-check \
+    $PY scripts/check_preference_direction.py --batch "$BATCH" \
     --student "$STUDENT" --also-base --batch-size 4
 fi
 

@@ -21,6 +21,9 @@
 
 set -euo pipefail
 source "${REPO:-/ritom/scratch/cscs/zhang/xw/hiring_bias_mitigation_at}/scripts/cscs/env.sh"
+# An env.sh without `cost` (main before the recorder, an older checkout): run the step
+# unrecorded rather than fail.
+type cost > /dev/null 2>&1 || cost() { shift 2; "$@"; }
 [ -x "$PY" ] || { echo "FATAL: no venv at $XW/venv -- run scripts/cscs/build_env.sbatch first"; exit 3; }
 export HF_HUB_OFFLINE=1
 cd "$REPO"
@@ -34,9 +37,10 @@ git status --porcelain --untracked-files=all -- scripts src reports/judge_author
 step "tests"
 $PY -m pytest -q tests/test_judge_author_control.py tests/test_onpolicy.py tests/test_negatives_v2.py
 step "select: first correct filtered sample per judged row"
-$PY scripts/judge_author_control.py --stage select "${ARGS[@]}"
+cost datagen judge-control-select $PY scripts/judge_author_control.py --stage select "${ARGS[@]}"
 step "judge: control samples + retest, teacher on four GPUs"
-$PY scripts/judge_author_control.py --stage judge "${ARGS[@]}" --retest-n "${RETEST_N:-400}"
+cost datagen judge-control $PY scripts/judge_author_control.py --stage judge "${ARGS[@]}" \
+  --retest-n "${RETEST_N:-400}"
 step "summarize"
 $PY scripts/judge_author_control.py --stage summarize "${ARGS[@]}"
 echo "STAGE judge-author-control OK"

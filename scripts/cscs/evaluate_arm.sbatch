@@ -31,6 +31,9 @@
 
 set -euo pipefail
 source /ritom/scratch/cscs/zhang/xw/hiring_bias_mitigation_at/scripts/cscs/env.sh
+# An env.sh without `cost` (main before the recorder, an older checkout): run the step
+# unrecorded rather than fail.
+type cost > /dev/null 2>&1 || cost() { shift 2; "$@"; }
 [ -x "$PY" ] || { echo "FATAL: no venv at $XW/venv -- run scripts/cscs/build_env.sbatch first"; exit 3; }
 export HF_HUB_OFFLINE=1
 AUDIT=${AUDIT:?set AUDIT to the audit config of the arm}
@@ -42,22 +45,26 @@ echo "host $(hostname) | job ${SLURM_JOB_ID:-none} | commit $(git rev-parse --sh
 L="$XW/logs/xw-eval-arm-${SLURM_JOB_ID:-local}"
 
 step "1. merge $AUDIT and measure the merge"
-$PY scripts/merge_adapter.py --config "$AUDIT" --ensure-retention > "$L-merge.log" 2>&1 \
+cost eval merge \
+  $PY scripts/merge_adapter.py --config "$AUDIT" --ensure-retention > "$L-merge.log" 2>&1 \
   || { tail -n 20 "$L-merge.log"; echo "FATAL: merge failed"; exit 1; }
 grep -E "merge kept|wrote|already merged" "$L-merge.log" | tail -n 4 || true
 
 step "2. audit (GPU 0) and margin pass (GPU 1)"
 pids=()
-CUDA_VISIBLE_DEVICES=0 $PY scripts/run_audit.py --config "$AUDIT" --no-similarity \
+CUDA_VISIBLE_DEVICES=0 cost eval audit $PY scripts/run_audit.py --config "$AUDIT" --no-similarity \
   > "$L-audit.log" 2>&1 & pids+=($!)
-CUDA_VISIBLE_DEVICES=1 $PY scripts/operating_point_control.py margins --config "$AUDIT" \
+CUDA_VISIBLE_DEVICES=1 cost eval margins \
+  $PY scripts/operating_point_control.py margins --config "$AUDIT" \
   --which adapter > "$L-margins.log" 2>&1 & pids+=($!)
 if [ "${VALIDATE:-0}" = 1 ]; then
-  CUDA_VISIBLE_DEVICES=2 $PY scripts/operating_point_control.py validate --config "$AUDIT" \
+  CUDA_VISIBLE_DEVICES=2 cost eval validate \
+    $PY scripts/operating_point_control.py validate --config "$AUDIT" \
     --which adapter > "$L-validate.log" 2>&1 & pids+=($!)
 fi
 if [ "$AGAINST" = base ]; then
-  CUDA_VISIBLE_DEVICES=3 $PY scripts/operating_point_control.py margins --config "$AUDIT" \
+  CUDA_VISIBLE_DEVICES=3 cost eval margins-base \
+    $PY scripts/operating_point_control.py margins --config "$AUDIT" \
     --which base > "$L-base.log" 2>&1 & pids+=($!)
 fi
 fail=0
@@ -71,9 +78,10 @@ done
 
 step "3. matched comparison"
 if [ "$AGAINST" = base ]; then
-  $PY scripts/operating_point_control.py compare --config "$AUDIT"
+  cost eval compare $PY scripts/operating_point_control.py compare --config "$AUDIT"
 else
-  $PY scripts/operating_point_control.py compare-arms --config "$AUDIT" --against "$AGAINST"
+  cost eval compare $PY scripts/operating_point_control.py compare-arms --config "$AUDIT" \
+    --against "$AGAINST"
 fi
 
 step "4. reference row and verdict"

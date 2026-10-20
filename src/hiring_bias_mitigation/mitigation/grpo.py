@@ -577,7 +577,7 @@ def train(cfg: dict) -> C.TrainArtifacts:
         train_dataset=train_ds,
         processing_class=tokenizer,
         peft_config=C.peft_config(cfg),
-        callbacks=C.memory_guard_callbacks(cfg),
+        callbacks=C.memory_guard_callbacks(cfg) + C.cost_callbacks(),
     )
     policy = trainer.accelerator.unwrap_model(trainer.model)
     install_weight_sync(trainer.vllm_generation, policy)

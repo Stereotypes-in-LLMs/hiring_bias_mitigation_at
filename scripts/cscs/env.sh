@@ -73,3 +73,21 @@ export UV_VERSION=0.10.9
 export HF_HUB_VERSION=1.33.0
 
 step() { echo; echo "=== $(date '+%F %T') $*"; }
+
+# `cost <stage> <label> <command...>` runs the command as one recorded step: wall time, the
+# GPUs its processes actually used, their energy, the job, the commit, plus what the code adds
+# (tokens, trained parameters). One JSON per step under $HBM_COST_DIR; scripts/cost_report.py
+# builds reports/cost/ from them. Stages: datagen | train | eval | patching | other.
+# HBM_COST_ARM=<arm> names the arm a step's cost belongs to. If the recorder cannot be
+# imported, the command runs unrecorded: bookkeeping never costs a run.
+export HBM_COST_DIR=${HBM_COST_DIR:-$XW/cost/records}
+cost() {
+  local stage=$1 label=$2
+  shift 2
+  if "$PY" -c "import hiring_bias_mitigation.utils.cost" 2>/dev/null; then
+    "$PY" -m hiring_bias_mitigation.utils.cost run --stage "$stage" --label "$label" -- "$@"
+  else
+    echo "cost: recorder not importable here; running $stage/$label unrecorded" >&2
+    "$@"
+  fi
+}

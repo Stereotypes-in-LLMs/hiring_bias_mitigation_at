@@ -65,6 +65,7 @@ uv run python scripts/merge_adapter.py --config <audit cfg> --retention-only   #
 uv run python scripts/operating_point_control.py margins --config <audit cfg> --which base|adapter
 uv run python scripts/operating_point_control.py compare --config <audit cfg>            # stability at equal hire rate
 uv run python scripts/diagnose_adapter.py --help            # HF+PEFT decision logit against the vLLM audit, row by row
+uv run python scripts/cost_report.py                        # GPU and time cost by step, stage and arm -> reports/cost/ (docs/COST.md)
 uv pip install -e '.[viz]' && uv run python scripts/make_figures.py --only tradeoff --formats png
 ```
 
@@ -142,7 +143,8 @@ as results.
 `enable_planned.sh`, `experiment_runs.csv`, `set_stability*.csv`,
 `mitigation_decision_table.csv`, `training_curves.csv`, everything under `figures/`,
 `eval/results/index.json`, `reports/reference_metrics.csv`, `reports/reference_metrics/`,
-`reports/comparisons.csv`, and every generated config. The phase-1 versions of the
+`reports/comparisons.csv`, everything under `reports/cost/` except the hand-written
+`labels.csv`, and every generated config. The phase-1 versions of the
 analysis and plan outputs are kept unchanged in `reports/archive/phase1/`. `FINDINGS.md`,
 `MITIGATION_FINDINGS.md`, `PAPER_KIT.md`, the model cards and `docs/*.md` are written by hand
 from those files, and each number in them names the file it came from.
@@ -257,6 +259,7 @@ Reading, Caveats and Reproducing. The card at the top links at least these:
 | training run ID | `output_dir` under `$HBM_OUTPUT_ROOT/outputs/{sft,dpo}/`, the checkpoint step, `wandb_run_name`, the scheduler job ID |
 | independent evaluation run ID | the audit run name and its `eval/results/<run>.json`; `served_model` in the meta shows the merged checkpoint that was actually evaluated |
 | figures and per-sample results | `figures/{en,uk}/<figure>.{svg,csv}`, `reports/set_stability*.csv`, `outputs/raw/<run>.parquet` |
+| GPU and time cost | the run's job IDs in `reports/cost/steps.csv` (`gpu_h`, `wall_s`, `params_trainable`), recorded by `cost <stage> <label>` in the sbatch scripts; `docs/COST.md` |
 
 ### Traps this project has already fallen into
 

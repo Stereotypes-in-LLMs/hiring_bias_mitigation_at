@@ -1,0 +1,22 @@
+pattern,arm,stage,recipe,note
+dpo_v2neg_r2em,dpo_r2em,,,training and evaluation configs name their arm; r2em before r2
+dpo_v2neg_r2(_|\.yaml),dpo_r2,,,
+dpo_v2neg_r1(_|\.yaml),dpo_r1,,,
+grpo_smoke,grpo_dev,,,smoke runs before the pilot: development; not part of the recipe
+grpo_pilot,grpo_pilot,,,
+_rft(_|\.yaml),rft,,,
+sft_en_only,sft,,,audits of the published SFT adapter; its training ran outside these jobs
+122b_en_teacher,sft_v3_data,,,the 122B teacher audited on the benchmark for the SFT-v3 anchor study (docs/SFT_V3_ANCHORS.md on xinyang/sft-v3-vote-anchors)
+^xw-dpo-eval \| 5055493 ,dpo_r1,,,decision eval of round-1 checkpoints (Notion log 2026-10-14)
+^xw-grpo-signal ,grpo_pilot,,,
+^xw-v2-onpolicy-(full|hire) .*\| (prepare|sample|collect),dpo_r1+dpo_r2+dpo_r2em+rft+grpo_pilot,,,the SFT student's samples on the v1 pool: DPO pairs and the RFT and GRPO data are all built from them (scripts/build_rft_data.py; scripts/build_grpo_prompts.py)
+^xw-v2-onpolicy-hire \| 5053062 ,dpo_r1,,,count balancing and its direction check: round 1's data only
+^xw-v2-onpolicy-(full|hire) ,dpo_r1+dpo_r2+dpo_r2em,,,teacher judgements of the negatives, which every DPO round's pairs pass through (docs/V2_NEGATIVES_DPO_DATA.md)
+^xw-margin ,dpo_r2,,,
+^xw-bdpo ,dpo_r2em,,,
+^xw-it2,dpo_it2,,,round-2 iterative DPO data; not trained (docs/ITERATIVE_DPO.md)
+^xw-gender-,dpo_it2,,,pi1's mistakes on more gender rows (docs/GENDER_COVERAGE.md)
+^xw-v2-(small|variants|onpolicy) ,dpo_v2_dev,,,batch-01 comparison of negative writers
+^xw-judge-author ,dpo_v2_dev,,,judge-author control (docs/JUDGE_AUTHOR_CONTROL.md)
+^xw-v3-additional \| 5104067 ,sft_v3_data,,yes,cancelled during its biased pass; its vote and invariant passes were reused by 5105355. Includes the biased pass (2.76 GPU-h by docs/V3_NEW_DATA.md on xinyang/v3-additional-data) that training does not use
+^xw-(sft-v3-anchors|teacher-anchor|anchor-seed|v3-additional) ,sft_v3_data,,,vote anchors and added data for SFT v3

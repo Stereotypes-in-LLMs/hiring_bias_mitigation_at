@@ -15,6 +15,9 @@
 
 set -euo pipefail
 source /ritom/scratch/cscs/zhang/xw/hiring_bias_mitigation_at/scripts/cscs/env.sh
+# An env.sh without `cost` (main before the recorder, an older checkout): run the step
+# unrecorded rather than fail.
+type cost > /dev/null 2>&1 || cost() { shift 2; "$@"; }
 [ -x "$PY" ] || { echo "FATAL: no venv at $XW/venv -- run scripts/cscs/build_env.sbatch first"; exit 3; }
 export HF_HUB_OFFLINE=1
 OUT=artifacts/semisynthetic-v2/onpolicy-hire32/margin_balanced
@@ -22,11 +25,12 @@ cd "$REPO"
 echo "host $(hostname) | job ${SLURM_JOB_ID:-none} | commit $(git rev-parse --short HEAD 2>/dev/null || echo n/a)"
 
 step "prepare"
-$PY scripts/margin_balance.py prepare
+cost datagen prepare $PY scripts/margin_balance.py prepare
 step "score: SFT margins, one process per GPU"
 pids=(); fail=0
 for g in 0 1 2 3; do
-  CUDA_VISIBLE_DEVICES=$g $PY scripts/margin_balance.py score --shard $g --shards 4 \
+  CUDA_VISIBLE_DEVICES=$g cost datagen score \
+    $PY scripts/margin_balance.py score --shard $g --shards 4 \
     > "$XW/logs/xw-margin-${SLURM_JOB_ID:-local}-gpu$g.log" 2>&1 &
   pids+=($!)
 done
@@ -34,7 +38,8 @@ for p in "${pids[@]}"; do wait "$p" || fail=1; done
 for g in 0 1 2 3; do echo "--- gpu$g"; { grep -E "scored|skipping|Error|Traceback" "$XW/logs/xw-margin-${SLURM_JOB_ID:-local}-gpu$g.log" || true; } | tail -n 3; done
 [ "$fail" -eq 0 ] || { echo "FATAL: a scoring process failed -- see the gpu logs"; exit 1; }
 step "select"
-$PY scripts/margin_balance.py select
+cost datagen select $PY scripts/margin_balance.py select
 step "direction check, GPU-free part"
-$PY scripts/check_preference_direction.py --pairs "$OUT/dpo_v2_candidates.parquet"
+cost datagen direction-check \
+  $PY scripts/check_preference_direction.py --pairs "$OUT/dpo_v2_candidates.parquet"
 echo "STAGE margin OK"
