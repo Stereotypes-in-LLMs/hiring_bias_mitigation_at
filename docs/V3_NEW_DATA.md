@@ -416,3 +416,19 @@ The training loss averaged 0.377 over the epoch (`train_loss` in the job log). T
 **Validation loss**, every 250 steps: 0.5364, 0.5152, 0.5189, 0.5081, 0.5042, 0.5030, 0.5013, 0.5028, 0.4996, 0.5006, 0.5003, 0.5038, 0.5038, 0.5036, 0.5023, then 0.5024 at step 3,923.
 
 Sixty-four prompts are a coarse readout: one prompt is 1.6 points of agreement. The early steps hire too often on reject anchors (0.438 at step 250), and from step 1,250 on the rate stays between 0 and 0.094.
+
+#### SFT-v3 on the benchmark: pre-registration
+
+Written on 2026-10-20 at about 22:50, before any audit of SFT-v3. The user asked for the evaluation as soon as SFT finished ("SFT跑完了？来eval"), on the `debug` partition beside the running sample job ("debug同时跑一个").
+
+- **Question.** Does SFT-v3 lower the share of unstable within-group counterfactual sets at matched hire rate, against the cell's declared reference arm, SFT v1 (`Qwen3.5-9B--en--sft--adapter--en_only_cscs`, `analysis/eval_standard.py`), and stay inside the guardrails? The hypothesis is that it does: it is trained on 7.5 times the rows, with vote anchors. The result counts against the hypothesis if the 95% interval reaches 0 or above.
+- **Control.** SFT v1's GH200 audit and its op-margin-v2 margin pass, both on disk. For context, SFT-v3 is also compared with the base model at matched hire rate, through the base pass of SFT v1's config (`compare-arms --against-which base`, CPU only), as r2em-100 was.
+- **Decision and guardrails.** As `docs/EVAL_STANDARD.md` fixes them:
+  - **better** only if the upper end of the interval is below 0;
+  - the merge keeps at least 80% of the update;
+  - the hire rate on prompts GPT-4o hires falls by at most 10 pp against SFT v1;
+  - agreement with GPT-4o falls by at most 5 pp;
+  - at most 1% of the expected prompts are undecided.
+- **Stop conditions.** `run_audit.py`'s parse-failure abort threshold. `debug` stops a job at 30 minutes; a cut job is submitted again and resumes from its cached chunks.
+- **Checkpoint and split.** The final adapter, step 3,923, declared before the audit (rule 3 of the standard). The benchmark audit is the final test and is spent once on this configuration. One seed is a pilot (rule 4).
+- **Job.** `scripts/cscs/evaluate_arm.sbatch` with `AUDIT=configs/audit/qwen3.5-9b_en_sft_v3_additional_gh200.yaml`, `AGAINST` = SFT v1's config, and `HBM_COST_ARM=sft_v3`. The audit config is SFT v1's GH200 config with only `run_suffix` and `lora_path` changed.
