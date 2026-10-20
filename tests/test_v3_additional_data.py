@@ -123,19 +123,30 @@ def test_generate_report_assemble(setup):
     assert report["vote"]["all"]["anchored"] == 8
     assert report["vote"]["by"]["rjdb"]["anchor_hire_share"] == 0.5
 
-    mod.stage_assemble(cfg)
+    with pytest.raises(SystemExit):                     # v1_dpo has not been built
+        mod.stage_assemble(cfg)
+    mod.stage_assemble(cfg, allow_partial=True)
     new_train = pd.read_parquet(out / "additional_sft_train.parquet")
     new_val = pd.read_parquet(out / "additional_sft_validation.parquet")
     combined = pd.read_parquet(out / "sft_train.parquet")
     dpo_train = pd.read_parquet(out / "additional_dpo_train.parquet")
     capped = pd.read_parquet(out / "dpo_capped_train.parquet")
+    balanced = pd.read_parquet(out / "dpo_capped_balanced_train.parquet")
     assert capped.groupby("pair_id").size().max() <= 2
-    assert capped["decision"].value_counts().nunique() == 1        # as many hire as reject
-    assert {"anchor_hire_votes", "anchor_unstable"} <= set(capped.columns)
+    assert balanced["decision"].value_counts().nunique() == 1      # as many hire as reject
+    assert set(balanced["pair_id"]) <= set(capped["pair_id"])
+    assert {"anchor_hire_votes", "anchor_unstable", "anchor_changed", "reference_decision",
+            "pool_source"} <= set(capped.columns)
+    gen = json.loads((out / "generation_report.json").read_text())
+    assert gen["splits"]["dpo_train"]["dpo_capped_balanced"]["decision_contrast_share"] == 1.0
     assert not set(new_train["candidate_id"]) & set(new_val["candidate_id"])
-    assert set(new_train["source"]) <= {"djinni_new", "rjdb"}
+    assert set(new_train["pool_source"]) <= {"djinni_new", "rjdb"}
+    # The publish guard's names: new Djinni rows are Djinni.
+    assert set(new_train["source"]) <= {"djinni", "rjdb"}
+    assert (new_train["reference_decision"] == new_train["decision"]).all()
     # SFT-v3's swap rows come first, unchanged; the new rows follow.
     assert combined["candidate_id"].iloc[0] == "v1-a" and combined["source"].iloc[0] == "djinni"
+    assert combined["pool_source"].iloc[0] == "djinni_v1"
     assert len(combined) == 1 + len(new_train)
     assert "v1-b" in set(pd.read_parquet(out / "sft_validation.parquet")["candidate_id"])
     assert len(dpo_train) and (dpo_train["chosen"] != dpo_train["rejected"]).all()
@@ -171,6 +182,7 @@ def test_v1_dpo_reads_the_vote_anchor_and_keeps_sft_v3s_split(setup, tmp_path):
         tmp_path / "biased.parquet")
     pd.DataFrame({"pair_id": ["v1-b__j"], "new_decision": ["hire"],
                   "new_feedback": ["vote feedback"], "changed": [True], "hire_votes": [7],
+                  "decided": [8], "source": ["vote"],
                   "unstable": [True]}).to_parquet(tmp_path / "anchors.parquet")
     cfg["v1_dpo"] = {"vote_anchors": str(tmp_path / "anchors.parquet"),
                      "v1_invariant": str(tmp_path / "inv.parquet"),
@@ -182,4 +194,7 @@ def test_v1_dpo_reads_the_vote_anchor_and_keeps_sft_v3s_split(setup, tmp_path):
     row = val.iloc[0]
     assert json.loads(row["chosen"])["decision"] == "hire"         # the regenerated target
     assert json.loads(row["rejected"])["decision"] == "reject" and row["rejected_flipped_decision"]
-    assert row["source"] == "djinni_v1" and bool(row["anchor_unstable"])
+    assert row["source"] == "djinni" and row["pool_source"] == "djinni_v1"
+    assert row["reference_decision"] == "hire"
+    # 7 of 8 is a stable vote; that it overturned v1 is `anchor_changed`, not `anchor_unstable`.
+    assert not bool(row["anchor_unstable"]) and bool(row["anchor_changed"])

@@ -39,8 +39,10 @@ raw passes (CPU). `assemble` builds v1's SFT and DPO sets from the new kept rows
 candidate (a seeded 5% of each source's candidates in validation), and writes:
 `additional_{sft,dpo}_*` (new rows alone); `sft_*` (SFT-v3's swap set, rows, order and split
 exactly as built, with the new rows after it); `dpo_*` and `kto_*` (V1's pairs and the new
-pairs); and `dpo_capped_*`, at most `dpo_cap_per_pair` rows per pool pair, hire and reject
-balanced.
+pairs); `dpo_capped_*`, at most `dpo_cap_per_pair` rows per pool pair at the natural decision
+mix; and `dpo_capped_balanced_*`, the same with hire and reject rows equal. The biased teacher
+never answers hire, so balancing makes half the rows a hire-over-reject decision contrast and
+none the reverse (`contrast`); which view to train on is the user's choice.
 """
 
 from __future__ import annotations
@@ -369,11 +371,26 @@ def stage_report(cfg: dict) -> None:
                 m = json.loads(meta.read_text())
                 seconds.setdefault(name, []).append(
                     {"part": p, "prompts": m["prompts"], "seconds": m["generation_seconds"]})
+    # What the biased teacher answers, by anchor: v1's never said hire (0 of 36,000), which
+    # makes every DPO decision contrast hire over reject (see `contrast`).
+    from hiring_bias_mitigation.eval.parsing import parse_output
+
+    biased_decisions: dict[str, dict] = {}
+    for p in done:
+        path = _paths(cfg, p, "biased")[0]
+        if path.exists():
+            raw = pd.read_parquet(path, columns=["reference_decision", "raw_output"])
+            got = [parse_output(text, LANG).decision for text in raw["raw_output"]]
+            counts = biased_decisions.setdefault(p.rsplit("-", 1)[0], {})
+            for anchor, decision in zip(raw["reference_decision"], got):
+                key = f"anchor {anchor} -> {decision}"
+                counts[key] = counts.get(key, 0) + 1
     _write_parquet(anchors, _out(cfg) / "anchors_en.parquet")
     _write_json(_out(cfg) / "report.json", {
         "built": datetime.now(timezone.utc).isoformat(), "code": _code(), "parts_voted": done,
         "vote": V.vote_report(anchors, draws, by=anchors["source"]),
-        "filters_by_source": by_source, "generation_seconds": seconds})
+        "filters_by_source": by_source, "biased_decisions_by_source": biased_decisions,
+        "generation_seconds": seconds})
     log.info("report: %d pairs voted over %d parts", len(anchors), len(done))
 
 
@@ -393,37 +410,93 @@ def _decision(completions: pd.Series) -> pd.Series:
     return completions.map(lambda c: json.loads(c)["decision"])
 
 
-def with_anchor(dpo: pd.DataFrame, anchors: pd.DataFrame) -> pd.DataFrame:
-    """DPO rows with the chosen decision and their pair's vote, so a view can filter on them."""
-    cols = anchors[["pair_id", "hire_votes", "unstable"]].rename(
-        columns={"hire_votes": "anchor_hire_votes", "unstable": "anchor_unstable"})
-    out = dpo.merge(cols, on="pair_id", how="left", validate="many_to_one")
+def anchor_columns(anchors: pd.DataFrame) -> pd.DataFrame:
+    """One row per pair: its vote, in the same terms for V1's pairs and for new ones.
+
+    `anchor_unstable` is the vote alone -- no decided draw, or a majority of at most 5 of the
+    decided draws -- so it means the same on every row. On V1's pairs `vote.UNSTABLE` also
+    counted a verdict the vote overturned; that is `anchor_changed` here, False for new pairs.
+    """
+    hire, decided = anchors["hire_votes"].astype(int), anchors["decided"].astype(int)
+    share = np.maximum(hire, decided - hire) / decided.clip(lower=1)
+    return pd.DataFrame({
+        "pair_id": anchors["pair_id"], "anchor_hire_votes": hire, "anchor_decided": decided,
+        "anchor_unstable": (decided == 0) | (share <= V.UNSTABLE_MAX_SHARE),
+        "anchor_changed": (anchors["changed"].astype(bool) if "changed" in anchors
+                           else False),
+        "anchor_source": anchors["anchor_source"] if "anchor_source" in anchors
+        else anchors["source"],
+    })
+
+
+def with_anchor(rows: pd.DataFrame, anchors: pd.DataFrame) -> pd.DataFrame:
+    """SFT or DPO rows with their pair's vote, and `reference_decision`, the anchor's verdict.
+
+    `reference_decision` is the column `mitigation/decision_eval.py` and
+    `scripts/eval_dpo_checkpoints.py` read, as every v2 DPO set carries it; a DPO row's
+    `decision` is its chosen verdict, which is the anchor's.
+    """
+    out = rows.merge(anchor_columns(anchors), on="pair_id", how="left", validate="many_to_one")
     if out["anchor_hire_votes"].isna().any():
-        raise ValueError("a DPO row has no anchor")
-    return out.assign(decision=_decision(out["chosen"]))
+        raise ValueError("a row has no anchor")
+    if "decision" not in out:
+        out["decision"] = _decision(out["chosen"])
+    return out.assign(reference_decision=out["decision"])
 
 
-def capped_balanced(dpo: pd.DataFrame, cap: int, seed: int) -> tuple[pd.DataFrame, dict]:
-    """At most `cap` rows per pool pair, then as many hire as reject rows.
+def provenance(rows: pd.DataFrame, pool_source) -> pd.DataFrame:
+    """`source` as the publish guard reads it, and `pool_source`, the part of the pool.
+
+    `sources.is_publishable` knows `djinni`, `rjdb` and `kaggle_linkedin`. V1's pairs and the
+    new Djinni pairs are both Djinni, so they are `source="djinni"`; `pool_source` keeps
+    `djinni_v1` and `djinni_new` apart for readouts.
+    """
+    pool_source = pd.Series(pool_source, index=rows.index) if not isinstance(
+        pool_source, pd.Series) else pool_source
+    return rows.assign(pool_source=pool_source,
+                       source=pool_source.where(~pool_source.str.startswith("djinni"), "djinni"))
+
+
+def contrast(dpo: pd.DataFrame) -> dict:
+    """Which decision contrasts a DPO set teaches.
+
+    v1's biased teacher never answers hire (0 of 36,000 English generations), so every
+    `rejected` says reject: a hire row contrasts hire with reject, and a reject row contrasts
+    two rejects that differ only in their rationale. The share of hire rows is therefore the
+    share of rows whose gradient moves the decision, all of it toward hire.
+    """
+    rejected = _decision(dpo["rejected"]) if len(dpo) else pd.Series(dtype=str)
+    pairs = pd.Series(list(zip(dpo["decision"], rejected)), dtype=object)
+    return {"rows": len(dpo), "pairs": int(dpo["pair_id"].nunique()),
+            "chosen_rejected": {f"{c}>{r}": int(n) for (c, r), n in pairs.value_counts().items()},
+            "decision_contrast_share": float((dpo["decision"].to_numpy()
+                                              != rejected.to_numpy()).mean()) if len(dpo) else None,
+            "by_pool_source": dpo["pool_source"].value_counts().to_dict()}
+
+
+def capped(dpo: pd.DataFrame, cap: int, seed: int) -> pd.DataFrame:
+    """At most `cap` rows per pool pair, rows of different protected groups first.
 
     A pair's 12 variants share one CV and one JD, so its DPO rows are near-duplicates of each
-    other; the cap spreads the set over more pairs. Within a pair, rows of different protected
-    groups are taken first. The larger decision side is then drawn down at random to the
-    smaller, as `filters.balance_decisions` does for SFT.
+    other; the cap spreads a set of a given size over more pairs.
     """
     rng = np.random.default_rng(seed)
     shuffled = dpo.iloc[rng.permutation(len(dpo))].copy()
     shuffled["_group_rank"] = shuffled.groupby(["pair_id", "protected_group"]).cumcount()
     shuffled = shuffled.sort_values(["pair_id", "_group_rank"], kind="stable")
-    capped = shuffled.groupby("pair_id").head(cap).drop(columns="_group_rank")
-    sides = capped.groupby("decision")
-    n = int(sides.size().min()) if capped["decision"].nunique() == 2 else 0
-    out = (pd.concat([g.iloc[rng.permutation(len(g))[:n]] for _, g in sides], ignore_index=True)
-           if n else capped.iloc[:0])
-    out = out.iloc[rng.permutation(len(out))].reset_index(drop=True)
-    return out, {"rows_before": len(dpo), "rows_after_cap": len(capped),
-                 "by_decision_after_cap": capped["decision"].value_counts().to_dict(),
-                 "per_side": n, "rows": len(out), "pairs": int(out["pair_id"].nunique())}
+    out = shuffled.groupby("pair_id").head(cap).drop(columns="_group_rank")
+    return out.iloc[rng.permutation(len(out))].reset_index(drop=True)
+
+
+def balanced(rows: pd.DataFrame, seed: int) -> pd.DataFrame:
+    """As many hire as reject rows, the larger side drawn down at random."""
+    rng = np.random.default_rng(seed)
+    sides = rows.groupby("decision")
+    n = int(sides.size().min()) if rows["decision"].nunique() == 2 else 0
+    if not n:
+        return rows.iloc[:0]
+    out = pd.concat([g.iloc[rng.permutation(len(g))[:n]] for _, g in sides], ignore_index=True)
+    return out.iloc[rng.permutation(len(out))].reset_index(drop=True)
 
 
 def stage_v1_dpo(cfg: dict) -> None:
@@ -456,7 +529,7 @@ def stage_v1_dpo(cfg: dict) -> None:
     biased, rep_b = F.filter_biased(biased_raw["raw_output"].tolist(),
                                     biased_raw.drop(columns=["raw_output"]), LANG)
     dpo = with_anchor(D.build_dpo_dataset(invariant, biased), anchors)
-    dpo["source"] = "djinni_v1"
+    dpo = provenance(dpo, "djinni_v1")
     assert_no_leakage(dpo, "v3_additional_data.v1_dpo")
     base = Path(resolve_output_path(cfg["assemble"]["sft_v3_dir"]))
     val = set(pd.read_parquet(base / "sft_validation.parquet", columns=["candidate_id"])
@@ -473,13 +546,23 @@ def stage_v1_dpo(cfg: dict) -> None:
         "by_decision": dpo["decision"].value_counts().to_dict(),
         "rejected_flipped_share": float(dpo["rejected_flipped_decision"].mean()),
         "rejected_mentions_attribute_share": float(dpo["rejected_mentions_attribute"].mean()),
-        "rows_on_unstable_anchors": int(dpo["anchor_unstable"].sum())})
+        "rows_on_unstable_anchors": int(dpo["anchor_unstable"].sum()),
+        "rows_on_changed_anchors": int(dpo["anchor_changed"].sum()),
+        "contrast": contrast(dpo)})
     log.info("v1_dpo: %d rows (%s)", len(dpo), dpo["decision"].value_counts().to_dict())
 
 
-def stage_assemble(cfg: dict) -> None:
+def stage_assemble(cfg: dict, allow_partial: bool = False) -> None:
     require_output_root()
     pool, done = _voted_parts(cfg)
+    missing = [f"{p}/{n}" for p in done for n in ("invariant", "biased")
+               if not _paths(cfg, p, n)[0].exists()]
+    out = _out(cfg)
+    no_v1 = not (out / "v1_dpo_train.parquet").exists()
+    if (missing or no_v1) and not allow_partial:
+        raise SystemExit(f"assemble: voted parts without every pass {missing}"
+                         f"{'; v1_dpo not built' if no_v1 else ''}. Finish them, or pass "
+                         "--allow-partial to assemble what is there.")
     kept, reports = _filtered(cfg, done)
     if not kept["invariant"]:
         raise SystemExit("assemble: no invariant pass yet")
@@ -490,10 +573,10 @@ def stage_assemble(cfg: dict) -> None:
 
     sft, balance = F.balance_decisions(D.build_sft_dataset(invariant), seed=int(cfg["seed"]),
                                        column="decision")
+    sft = provenance(with_anchor(sft, anchors), sft["source"])
     dpo = D.build_dpo_dataset(invariant, biased)
-    dpo = with_anchor(dpo, anchors) if len(dpo) else dpo
+    dpo = provenance(with_anchor(dpo, anchors), dpo["source"]) if len(dpo) else dpo
     val = validation_candidates(cfg, pool)
-    out = _out(cfg)
     base = Path(resolve_output_path(cfg["assemble"]["sft_v3_dir"]))
     splits: dict[str, dict] = {}
     new: dict[str, dict[str, pd.DataFrame]] = {}
@@ -516,13 +599,14 @@ def stage_assemble(cfg: dict) -> None:
         v3 = pd.read_parquet(base / f"sft_{split}.parquet")
         if set(v3["candidate_id"]) & set(rows["candidate_id"]):
             raise ValueError(f"assemble: a new candidate is already in SFT-v3 {split}")
-        combined = pd.concat([v3.assign(source=v3.get("source", "djinni")), rows],
-                             ignore_index=True)
+        v3 = provenance(v3.assign(reference_decision=v3["decision"]), "djinni_v1")
+        combined = pd.concat([v3, rows], ignore_index=True)
         _write_parquet(combined, out / f"sft_{split}.parquet")
         splits[f"sft_{split}"] = {
             "rows": len(combined), "sft_v3_rows": len(v3), "new_rows": len(rows),
-            "by_source_and_decision": {f"{s} {d}": int(n) for (s, d), n in
-                                       combined.groupby(["source", "decision"]).size().items()}}
+            "by_pool_source_and_decision": {
+                f"{s} {d}": int(n) for (s, d), n in
+                combined.groupby(["pool_source", "decision"]).size().items()}}
 
     # DPO and KTO: V1's pairs on the vote anchors (stage v1_dpo) and the new pairs, together.
     cap = int(cfg["assemble"]["dpo_cap_per_pair"])
@@ -534,15 +618,13 @@ def stage_assemble(cfg: dict) -> None:
         if not frames:
             continue
         both = pd.concat(frames, ignore_index=True)
-        _write_parquet(both, out / f"dpo_{split}.parquet")
+        views = {"dpo": both, "dpo_capped": capped(both, cap, int(cfg["seed"]))}
+        views["dpo_capped_balanced"] = balanced(views["dpo_capped"], int(cfg["seed"]))
+        for name, frame in views.items():
+            _write_parquet(frame, out / f"{name}_{split}.parquet")
         _write_parquet(D.build_kto_dataset(both), out / f"kto_{split}.parquet")
-        target, target_report = capped_balanced(both, cap, int(cfg["seed"]))
-        _write_parquet(target, out / f"dpo_capped_{split}.parquet")
-        splits[f"dpo_{split}"] = {
-            "rows": len(both), "includes_v1_pairs": v1_path.exists(),
-            "by_source_and_decision": {f"{s} {d}": int(n) for (s, d), n in
-                                       both.groupby(["source", "decision"]).size().items()},
-            "capped_balanced": target_report}
+        splits[f"dpo_{split}"] = {"includes_v1_pairs": v1_path.exists(),
+                                  **{name: contrast(frame) for name, frame in views.items()}}
     _write_json(out / "generation_report.json", {
         "built": datetime.now(timezone.utc).isoformat(), "code": _code(),
         "teacher_model": cfg["teacher_model"], "parts": done, "sft_v3_dir": str(base),
@@ -558,6 +640,8 @@ def main() -> None:
                         choices=["pool", "generate", "report", "v1_dpo", "assemble"])
     parser.add_argument("--parts", nargs="+", default=["all"])
     parser.add_argument("--passes", nargs="+", default=list(PASSES), choices=PASSES)
+    parser.add_argument("--allow-partial", action="store_true",
+                        help="assemble even when a voted part lacks a pass or v1_dpo is missing")
     args = parser.parse_args()
     cfg = load_config(args.config)
     cfg["_path"] = args.config
@@ -565,7 +649,7 @@ def main() -> None:
      "generate": lambda: stage_generate(cfg, args.parts, args.passes),
      "report": lambda: stage_report(cfg),
      "v1_dpo": lambda: stage_v1_dpo(cfg),
-     "assemble": lambda: stage_assemble(cfg)}[args.stage]()
+     "assemble": lambda: stage_assemble(cfg, args.allow_partial)}[args.stage]()
 
 
 if __name__ == "__main__":
