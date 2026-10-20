@@ -468,7 +468,11 @@ Raw case, a swapped training row (English, military status "Participant in comba
 
 The data sets are on Daint under `artifacts/semisynthetic-v3/sft_v3_swap/` and `sft_v3_rebalanced/`, each holding `sft_train.parquet`, `sft_validation.parquet` and `sft_v3.meta.json`. v1's fetched inputs are in `artifacts/semisynthetic-v1-hub/`, with `PROVENANCE.json` giving the repository, the revision and each file's sha256.
 
-Not done: training, and a data config for either variant.
+**Choice.** On 2026-10-20 the user chose `sft_v3_swap` as the stage-2 data, because it is the only variant where the anchor is all that changes. Two hand-written configs point at it, so a training run would differ from SFT v1 in data only:
+- `configs/data/en_only_sft_v3_swap.yaml`: the `en_only` view over `sft_v3_swap`, 8,419 training and 455 validation rows, 0.603 and 0.607 hire.
+- `configs/mitigation/sft/qwen3.5-9b_en_only_sft_v3_swap_gh200.yaml`: SFT v1's recipe with the data view, output directory and run name changed. Gradient accumulation goes from 16 to 4 for Daint's four GPUs, keeping the effective batch at 16.
+
+Not done: training. Stage 2 is still not approved. It needs the control's run name (the user's reproduction of SFT v1), confirmation that the control ran with the same placement, and a pre-registration of the comparison.
 
 ## Reading
 
