@@ -7,6 +7,7 @@
 #   scripts/cscs/submit.sh -p debug -t 00:30:00 scripts/cscs/sft_v3_anchors.sbatch generate
 #   scripts/cscs/submit.sh -p debug -t 00:15:00 scripts/cscs/sft_v3_anchors.sbatch control
 #   scripts/cscs/submit.sh -p debug -t 00:30:00 scripts/cscs/sft_v3_anchors.sbatch votes
+#   scripts/cscs/submit.sh -p debug -t 00:20:00 scripts/cscs/sft_v3_anchors.sbatch vote_targets
 #
 # `select` copies the blind review's labels, draws both candidate prompts on its 391 pool pairs
 # and scores them (stage 0a). `generate` draws the chosen prompt on all 2,992 pairs, regenerates
@@ -15,6 +16,9 @@
 # same 391 pairs and compares it with both candidates (the page's addendum). `votes` draws the
 # unchanged v1 prompt at seed 43 on all 2,992 pool pairs, in parts, and reads the earlier
 # training sets against it (the second addendum); a run that times out resumes from its parts.
+# `vote_targets` takes the vote's majority as the anchor (the third addendum), regenerates v1's
+# invariant targets for the pairs whose verdict it changes, one seed per prompt, and reads them
+# against v1's targets for the same variants.
 #
 #SBATCH --job-name=xw-sft-v3-anchors
 #SBATCH --account=lp193
@@ -56,6 +60,11 @@ case "${1:-}" in
     $PY scripts/sft_v3_anchors.py --stage votes
     step "enrichment: platform check, unstable anchors in earlier training sets, stability"
     $PY scripts/sft_v3_anchors.py --stage enrichment ;;
-  *) echo "usage: sft_v3_anchors.sbatch select|generate|control|votes"; exit 2 ;;
+  vote_targets)
+    step "vote anchors: v1's invariant procedure on the pairs whose verdict the vote changes"
+    $PY scripts/sft_v3_anchors.py --stage vote_targets
+    step "readout: the regenerated targets against v1's, and the flips in earlier training sets"
+    $PY scripts/sft_v3_anchors.py --stage vote_readout ;;
+  *) echo "usage: sft_v3_anchors.sbatch select|generate|control|votes|vote_targets"; exit 2 ;;
 esac
 echo "STAGE sft-v3-anchors $1 OK"

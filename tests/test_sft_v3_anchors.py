@@ -231,3 +231,76 @@ def test_c3_passes_at_exactly_five_points():
     assert V3.gate_summary(pool, labels)["c3"]["pass"]
     pool.loc[35, "new_decision"] = "reject"
     assert not V3.gate_summary(pool, labels)["c3"]["pass"]
+
+
+def test_within_pair_identical_and_verbatim_copies():
+    frame = pd.DataFrame({"pair_id": ["a", "a", "a", "b", "b"],
+                          "chosen_feedback": ["x", "x", "y", "z", "w"],
+                          "reference_feedback": ["x", "q", "q", "z", "q"]})
+    assert abs(V3.within_pair_identical(frame, "chosen_feedback") - 1 / 4) < 1e-12  # 1 of 3+1
+    assert abs(V3.copies_reference(frame, "chosen_feedback") - 2 / 5) < 1e-12
+    assert V3.within_pair_identical(frame.iloc[:0], "chosen_feedback") is None
+    assert V3.copies_reference(frame.iloc[:0], "chosen_feedback") is None
+
+
+class _HireTeacher:
+    """Stands in for the teacher: a hire rationale per prompt, fenced for every third one."""
+
+    def __init__(self):
+        self.prompts = None
+
+    def generate(self, prompts):
+        self.prompts = list(prompts)
+        bare = json.dumps({"decision": "hire", "feedback": GOOD})
+        return [f"```json\n{bare}\n```" if i % 3 == 0 else bare for i in range(len(prompts))]
+
+    def close(self):
+        pass
+
+
+def test_vote_targets_regenerate_only_changed_pairs_and_record_per_prompt_seeds(
+        tmp_path, monkeypatch):
+    monkeypatch.setenv("HBM_OUTPUT_ROOT", str(tmp_path))
+    (tmp_path / ".hbm-models-root").touch()
+    pairs = load_benchmark("en").head(2)[["job_description", "cv"]].assign(pair_id=["a", "b"])
+    invariant = pd.DataFrame([{**pairs.iloc[i].to_dict(), "lang": "en",
+                               "protected_group": "religion", "protected_attr": attr,
+                               "group_label": "religion", "condition": "explicit",
+                               "profile": SY.build_profile(pairs.iloc[i]["cv"], "religion", attr,
+                                                           "explicit", "en"),
+                               "reference_decision": "reject",
+                               "reference_feedback": "Lacks the core backend experience.",
+                               "raw_output": "{}"}
+                              for i in range(2) for attr in ("Jain", "Atheist")])
+    path = tmp_path / V3.INVARIANT_V1
+    path.parent.mkdir(parents=True)
+    invariant.to_parquet(path, index=False)
+    anchors = pd.DataFrame({"pair_id": ["a", "b"], "changed": [True, False],
+                            "new_decision": ["hire", "reject"],
+                            "new_feedback": [GOOD, "Lacks the core backend experience."]})
+    V3._vote_anchors_path().parent.mkdir(parents=True)
+    anchors.to_parquet(V3._vote_anchors_path(), index=False)
+    teacher = _HireTeacher()
+    monkeypatch.setattr(V3, "_backend", lambda generation=None: teacher)
+
+    V3.stage_vote_targets(None)
+    raw = pd.read_parquet(V3._vote_raw_path())
+    assert set(raw["pair_id"]) == {"a"} and len(raw) == 2 == len(teacher.prompts)
+    assert all(GOOD in p for p in teacher.prompts)          # the prompt quotes the new anchor
+    assert raw["seed"].tolist() == [_seed_of(p) for p in teacher.prompts]
+    assert raw["seed"].nunique() == 2
+    meta = json.loads(V3._vote_raw_path(".meta.json").read_text())
+    assert (meta["variants"], meta["kept"]) == (2, 2)
+    profile = V3.target_profile(raw["raw_output"].tolist(), raw.drop(columns=["raw_output"]))
+    assert profile["fenced_raw"] == 1 and profile["yield"] == 1.0
+    assert profile["within_pair_identical_rationale"] == 1.0
+
+    teacher.prompts = None
+    V3.stage_vote_targets(None)                              # same prompts: skipped
+    assert teacher.prompts is None
+
+
+def _seed_of(prompt):
+    from hiring_bias_mitigation.eval.backends import per_prompt_seed
+
+    return per_prompt_seed(42, prompt)

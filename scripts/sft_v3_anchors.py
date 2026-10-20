@@ -24,6 +24,14 @@ and the two arms added after stage 0a (the page's addenda):
   enrichment  CPU  the platform check, unstable anchors in earlier training sets, and the
                    vote's agreement with the control
 
+and, once job 5103584 showed v1's anchors were one sampling draw shared by every prompt and the
+user chose the pool-wide vote's majority as the anchor (the page's third addendum):
+
+  vote_targets  GPU  v1's invariant procedure on the pairs whose verdict the vote changes,
+                     seeded per prompt; skips if its output already covers these prompts
+  vote_readout  CPU  those targets against v1's on the same variants, the anchors' readouts,
+                     and the rows of earlier training sets whose target the vote flips
+
 Outputs: artifacts/semisynthetic-v3/ under $HBM_OUTPUT_ROOT (training data from the pool, never
 benchmark outputs) and reports/sft_v3_anchors/.
 
@@ -36,6 +44,8 @@ benchmark outputs) and reports/sft_v3_anchors/.
     python scripts/sft_v3_anchors.py --stage compare
     python scripts/sft_v3_anchors.py --stage votes       # GPU, tensor parallel 4
     python scripts/sft_v3_anchors.py --stage enrichment
+    python scripts/sft_v3_anchors.py --stage vote_targets  # GPU, tensor parallel 4
+    python scripts/sft_v3_anchors.py --stage vote_readout
 """
 
 from __future__ import annotations
@@ -60,6 +70,7 @@ import teacher_anchor_check as TA  # noqa: E402
 
 from hiring_bias_mitigation.data import prompts as P  # noqa: E402
 from hiring_bias_mitigation.data.injection import ATTR_FREE  # noqa: E402
+from hiring_bias_mitigation.eval import backends as BK  # noqa: E402
 from hiring_bias_mitigation.generation import filters as F  # noqa: E402
 from hiring_bias_mitigation.generation import synth as SY  # noqa: E402
 from hiring_bias_mitigation.utils.config import (  # noqa: E402
@@ -87,6 +98,9 @@ CONTROL = "reference"
 POOL_VOTE_SEED, POOL_VOTE_PARTS = 43, 4
 UNSTABLE_MAX_MAJORITY = 5 / 8
 PLATFORM_MAX_GAP, ENRICHMENT_MIN, SFT_RETRAIN_MIN_CHANGED = 0.03, 2.0, 0.10
+#: The vote anchors' regenerated targets (the page's third addendum): below this yield they are
+#: reported, and no SFT data is built from them.
+VOTE_MIN_YIELD = 0.80
 #: The arms whose data a follow-up would rebuild on vote anchors.
 REBUILD_CANDIDATES = ("DPO r2em", "GRPO grpo-02")
 DECISIVE = " Be decisive: a genuinely weak match is a reject."
@@ -513,8 +527,6 @@ def _write_json(path: Path, payload: dict) -> None:
 
 
 def _backend(generation: dict = TA.V1_GENERATION):
-    from hiring_bias_mitigation.eval import backends as BK
-
     return BK.build_backend({"model": TA.TEACHER, "generation": generation, **TA.SERVING})
 
 
@@ -675,6 +687,118 @@ def stage_gate(args) -> None:
     _write_json(REPORTS / "gate.json", summary)
     (REPORTS / "gate.md").write_text(render_gate(summary), encoding="utf-8")
     print(render_gate(summary))
+
+
+# ---- the vote anchors' targets (the page's third addendum) -----------------------------------
+
+def _vote_anchors_path() -> Path:
+    return _votes_path().parent / f"pool_votes_seed{POOL_VOTE_SEED}_anchors.parquet"
+
+
+def _vote_raw_path(suffix: str = ".parquet") -> Path:
+    return Path(resolve_output_path(OUT)) / "raw" / f"en_invariant_vote_changed{suffix}"
+
+
+def within_pair_identical(frame: pd.DataFrame, text: str) -> float | None:
+    """Share of same-pair variant pairs whose text is byte-identical."""
+    same = total = 0
+    for _, group in frame.groupby("pair_id"):
+        n = len(group)
+        counts = group[text].value_counts()
+        total += n * (n - 1) // 2
+        same += int((counts * (counts - 1) // 2).sum())
+    return same / total if total else None
+
+
+def copies_reference(frame: pd.DataFrame, text: str) -> float | None:
+    """Share of rows whose rationale repeats, verbatim, the reference feedback the prompt quotes."""
+    if not len(frame):
+        return None
+    return float((frame[text].str.strip() == frame["reference_feedback"].str.strip()).mean())
+
+
+def target_profile(raw: list[str], variants: pd.DataFrame) -> dict:
+    """Yield, drop reasons and text readouts of one set of invariant targets."""
+    kept, report = F.filter_invariant(raw, variants, LANG)
+    return {"variants": len(variants), "kept": len(kept), "yield": report["yield"],
+            "dropped_by_reason": report["dropped_by_reason"],
+            "fenced_raw": int(fenced(pd.Series(raw, dtype=str)).sum()),
+            "within_pair_identical_rationale": within_pair_identical(kept, "chosen_feedback"),
+            "copies_reference_feedback": copies_reference(kept, "chosen_feedback")}
+
+
+def stage_vote_targets(args) -> None:
+    """v1's invariant procedure on the pairs whose verdict the pool-wide vote changes."""
+    require_output_root()
+    anchors = pd.read_parquet(_vote_anchors_path())
+    variants = changed_variants(anchors, pd.read_parquet(resolve_output_path(INVARIANT_V1)))
+    prompts = SY.invariant_prompts(variants, LANG)
+    raw_path, meta_path = _vote_raw_path(), _vote_raw_path(".meta.json")
+    saved = json.loads(meta_path.read_text()) if meta_path.exists() else {}
+    if raw_path.exists() and saved.get("prompts_sha256") == prompts_sha256(prompts):
+        print(f"resuming: {raw_path} is complete")
+        return
+    print(f"{int(anchors['changed'].sum())} pairs changed verdict; "
+          f"{len(variants)} invariant variants to regenerate")
+    backend = _backend()
+    try:
+        start = time.time()
+        raw = backend.generate(prompts)
+        seconds = round(time.time() - start, 1)
+        engine = getattr(getattr(getattr(backend, "_llm", None), "llm_engine", None),
+                         "vllm_config", None)
+        v2_runner = getattr(engine, "use_v2_model_runner", None)
+    finally:
+        backend.close()
+    kept, report = F.filter_invariant(raw, variants, LANG)
+    raw_path.parent.mkdir(parents=True, exist_ok=True)
+    variants.assign(raw_output=raw, seed=[BK.per_prompt_seed(TA.V1_GENERATION["seed"], p)
+                                          for p in prompts]).to_parquet(raw_path, index=False)
+    kept.to_parquet(_vote_raw_path("_kept.parquet"), index=False)
+    _write_json(meta_path, {
+        "stage": "vote_targets", "anchors": str(_vote_anchors_path()), "model": TA.TEACHER,
+        "decoding": TA.V1_GENERATION, "serving": TA.SERVING,
+        "seeding": "per_prompt_seed(42, prompt): VLLMBackend.generate since 7112197",
+        "use_v2_model_runner": v2_runner, "variants": len(variants), "kept": len(kept),
+        "prompts_sha256": prompts_sha256(prompts), "filter_report": report,
+        "generation_seconds": seconds, **provenance()})
+    print(f"wrote {raw_path}: {len(kept)} of {len(variants)} targets kept")
+
+
+def stage_vote_readout(args) -> None:
+    """The regenerated targets against v1's on the same variants, and the anchors' readouts."""
+    anchors = pd.read_parquet(_vote_anchors_path())
+    recomputed = new_anchors(pd.read_parquet(_votes_path().with_suffix(".parquet")), pool_pairs())
+    cols = ["pair_id", "new_decision", "new_feedback", "changed", "source"]
+    same_as_saved = bool(recomputed[cols].reset_index(drop=True)
+                         .equals(anchors[cols].reset_index(drop=True)))
+    new = pd.read_parquet(_vote_raw_path())
+    meta = json.loads(_vote_raw_path(".meta.json").read_text())
+    v1_raw = pd.read_parquet(resolve_output_path(INVARIANT_V1))
+    v1 = v1_raw[v1_raw["pair_id"].isin(new["pair_id"].unique())].reset_index(drop=True)
+    profile_new = target_profile(new["raw_output"].tolist(), new.drop(columns=["raw_output"]))
+    profile_v1 = target_profile(v1["raw_output"].tolist(), v1.drop(columns=["raw_output"]))
+    kept = pd.read_parquet(_vote_raw_path("_kept.parquet"))
+    summary = {
+        "anchors": {"path": str(_vote_anchors_path()), "recomputed_equals_saved": same_as_saved,
+                    **gate_summary(anchors, load_labels())},
+        "targets": {"vote": profile_new, "v1_same_variants": profile_v1,
+                    "min_yield": VOTE_MIN_YIELD, "yield_floor_met":
+                        profile_new["yield"] >= VOTE_MIN_YIELD,
+                    "by_cell": invariant_cells(kept, new), "distinct_seeds":
+                        int(new["seed"].nunique()), "generation": {
+                            k: meta[k] for k in ("seeding", "use_v2_model_runner",
+                                                 "generation_seconds", "code", "written")}},
+        "training_sets": {},
+        **provenance()}
+    for name, path in TRAINING_SETS.items():
+        full = resolve_output_path(path)
+        if full.exists():
+            rows = pd.read_parquet(full, columns=["pair_id", "reference_decision"])
+            summary["training_sets"][name] = {"path": path, **flip_readout(rows, anchors)}
+    _write_json(REPORTS / "vote_targets.json", summary)
+    (REPORTS / "vote_targets.md").write_text(render_vote_targets(summary), encoding="utf-8")
+    print(render_vote_targets(summary))
 
 
 def stage_control(args) -> None:
@@ -903,6 +1027,45 @@ def render_gate(s: dict) -> str:
     return "\n".join(lines)
 
 
+def render_vote_targets(s: dict) -> str:
+    a, t = s["anchors"], s["targets"]
+    rows = [{"targets": name, **{k: r[k] for k in ("variants", "kept", "yield", "fenced_raw",
+                                                   "within_pair_identical_rationale",
+                                                   "copies_reference_feedback")},
+             "dropped_by_reason": r["dropped_by_reason"]}
+            for name, r in (("vote anchor, regenerated", t["vote"]),
+                            ("v1 anchor, same variants", t["v1_same_variants"]))]
+    lines = [
+        "# SFT-v3: targets for the vote anchors", "",
+        "Generated by `scripts/sft_v3_anchors.py --stage vote_readout`; regenerate it, do not edit "
+        f"it. Pre-registration: the third addendum of `docs/SFT_V3_ANCHORS.md` (sha256 "
+        f"{s['prereg_sha256'][:12]}).", "",
+        f"Anchors: `{a['path']}`, recomputed from the vote's draws and equal to the saved file: "
+        f"**{a['recomputed_equals_saved']}**. v1 against vote anchor, pairs: {a['v1_by_new']}. "
+        f"Changed: {a['changed']}. Sources: {a['sources']}. Pool hire share "
+        f"{a['c3']['v1_hire_share']:.4f} to {a['c3']['new_hire_share']:.4f}.", "",
+        f"Regenerated targets: yield floor {t['min_yield']}, met: **{t['yield_floor_met']}**. "
+        f"Distinct per-prompt seeds: {t['distinct_seeds']}. Generation: {t['generation']}.", "",
+        *_table(rows, ["targets", "variants", "kept", "yield", "fenced_raw",
+                       "within_pair_identical_rationale", "copies_reference_feedback",
+                       "dropped_by_reason"]), "",
+        *_table(t["by_cell"], ["protected_group", "condition", "reference_decision", "variants",
+                               "kept", "yield"]), "",
+        "Reviewed pairs, the vote anchor's hire share by review set and fit (descriptive; C1 and "
+        f"C2 chose a prompt in stage 0a and decide nothing here): C1 {a['c1']['hired']} of "
+        f"{a['c1']['pairs']}, C2 {a['c2']['rejected']} of {a['c2']['pairs']}.", "",
+        *_table(a["reviewed_by_set_and_fit"], ["set", "fit_bucket", "pairs",
+                                                "new_anchor_hire_share"]), "",
+    ]
+    sets = [{"set": name, **{k: v for k, v in r.items() if k != "path"}}
+            for name, r in s["training_sets"].items()]
+    if sets:
+        lines += ["Earlier training sets: rows whose target the vote anchor flips, by old target.",
+                  "", *_table(sets, ["set", "rows", "pairs", "flipped", "old_hire",
+                                     "old_hire_flipped", "old_reject", "old_reject_flipped"]), ""]
+    return "\n".join(lines)
+
+
 def render_compare(s: dict) -> str:
     arms = [{"arm": name, "C1 clear-hire targets hired": _criterion_cells(r)[0],
              "C2 clear-reject targets and controls rejected": _criterion_cells(r)[1],
@@ -994,7 +1157,8 @@ def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__,
                                      formatter_class=argparse.RawDescriptionHelpFormatter)
     parser.add_argument("--stage", choices=("labels", "select", "score", "generate", "gate",
-                                            "control", "compare", "votes", "enrichment"),
+                                            "control", "compare", "votes", "enrichment",
+                                            "vote_targets", "vote_readout"),
                         required=True)
     parser.add_argument("--review", help="the blind review's graded_cases.csv (stage labels)")
     parser.add_argument("--reports", type=Path, default=REPORTS,
@@ -1004,7 +1168,8 @@ def main() -> None:
     {"labels": stage_labels, "select": stage_select, "score": stage_score,
      "generate": stage_generate, "gate": stage_gate, "control": stage_control,
      "compare": stage_compare, "votes": stage_votes,
-     "enrichment": stage_enrichment}[args.stage](args)
+     "enrichment": stage_enrichment, "vote_targets": stage_vote_targets,
+     "vote_readout": stage_vote_readout}[args.stage](args)
 
 
 if __name__ == "__main__":

@@ -158,6 +158,54 @@ Written on 2026-10-16 at about 20:40 CEST, after the redraw control and before t
 
 **Compute.** One debug job on one GH200 node, about 25 minutes. The draws are saved in parts, so a job that runs out of time resumes where it stopped.
 
+### Addendum: the vote's majority as the anchor
+
+Written on 2026-10-20 at about 10:00 CEST, after the shared-seed check (job 5103584) and the user's decision to use the 8-draw majority, and before any target was regenerated. The version of this page the stage runs with is kept as `reports/sft_v3_anchors/PREREG_vote_targets.md`.
+
+**Why the outcome above is revisited.** The pool-wide vote changed 6.4% of verdicts, under the 10% at which an SFT retrain was worth proposing. Job 5103584 then explained why v1 and Daint differ (branch `xinyang/anchor-seed-check`, commit ed9a080, `scripts/anchor_seed_check.py`):
+- v1's run sent all 3,000 anchor prompts one seed, 42.
+- On a model runner that seeds a generator per request and draws its noise per decode step, every prompt then gets the same noise at each step.
+- Redrawn that way on Daint (vLLM's classic runner), the anchors take the same decision as v1 on 98.9% of pairs, and 40.3% are byte-identical. With one seed per prompt on the same runner, they match the vote.
+
+So the v1 anchors are not samples of the teacher's decision. They are one draw shared by every pair, which acts as a hire threshold near p = 0.87. The user chose the vote's majority as the anchor of record on 2026-10-20. That choice is this addendum. It does not claim that the 10% threshold was met.
+
+**Question.** Does v1's invariant procedure give usable training targets for the 192 pairs whose verdict the vote changes? How do those targets differ from the v1 targets they replace?
+
+**The anchors.** `pool_votes_seed43_anchors.parquet` from job 5073453, under the vote rule above, unchanged:
+- 192 pairs change verdict, all from reject to hire. The pool's hire share goes from 0.1417 to 0.2059.
+- 72 ties keep v1's verdict, which is reject for each of them, and therefore the shared draw's verdict.
+- `--stage vote_readout` recomputes these anchors from the vote's draws with this branch's code, and reports whether they equal the saved file. The CPU dry run says they do.
+
+**The targets.**
+- For the 192 changed pairs, v1's 12 variants each, 2,304 in total, go through `synth.INVARIANT_PROMPT` with the new anchor quoted, v1's decoding (temperature 0.7, top_p 0.9, 320 new tokens) and `filters.filter_invariant`.
+- One deliberate change from v1: each prompt gets its own seed, `per_prompt_seed(42, prompt)`, which `VLLMBackend.generate` uses since 7112197. One shared seed is what coupled v1's draws.
+- The other 2,800 pairs keep their v1 targets byte for byte.
+
+**Control.** v1's targets for the same 2,304 variants, pinned to v1's reject. From the CPU dry run on the real files:
+
+| v1 targets, same variants | value |
+|---|---|
+| yield | 1.000 |
+| same-pair variant pairs with an identical rationale | 0.355 |
+| rationales that repeat the quoted reference verbatim | 0.092 |
+| raw outputs in a code fence | 0 |
+
+**Expected.**
+- Yield at least 0.95. v1's invariant pass kept 99.7% overall and dropped nothing for drift.
+- Fewer identical rationales within a pair than v1's 0.355, because the draws are no longer coupled.
+- Some raw outputs in a code fence, as in 13% of Daint's anchor draws. The SFT target is rebuilt as JSON from the parsed decision and feedback (`generation/dataset.py`), so a fence does not reach training.
+
+**Stop conditions and compute.**
+- Below a yield of 0.80, the targets are reported and no SFT data is built from them. Parse failures count against the yield.
+- One debug job on one GH200 node, at most 20 minutes. A job whose output already covers these prompts skips the generation.
+
+**Not in this addendum.** Each of the following needs its own decision:
+- building the SFT-v3 data set, including what `filters.balance_decisions` does with 192 more hire pairs;
+- training (stage 2) and its control, which is the user's reproduction of SFT v1 (run name to be fixed);
+- DPO, GRPO or RFT data rebuilt on the vote anchors.
+
+**Splits.** No model is selected, and the benchmark is not read.
+
 ## Result
 
 Stage 0a ran as job 5073299, taking 9 min 52 s on one GH200 node in the debug partition. The code was 67f4bb1 plus three untracked files:
@@ -329,6 +377,8 @@ The per-pair votes are in `artifacts/semisynthetic-v3/anchors/pool_votes_seed43.
 - **Unknown.**
   - The cause of the shift, and whether it also holds on benchmark CVs.
   - Whether the reviewer's clear-reject grades are right.
+
+- **Update, 2026-10-20: the cause of the shift.** Job 5103584 found it. v1's anchor run gave every prompt the one seed 42, and a runner that seeds a generator per request then draws every prompt against the same noise at each step. On Daint, vLLM's classic runner with that shared seed takes v1's decision on 98.9% of pairs and is byte-identical on 40.3%. The same runner with one seed per prompt matches the vote. The shift comes from seeding, not from the platform, the code or the model snapshot. That retires the interpretation and the "Unknown" items above, and with them the caveat that Daint teacher numbers describe a different setup. The user then chose the vote's majority as the anchor; see the third addendum.
 
 ## Caveats
 
