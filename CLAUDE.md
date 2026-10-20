@@ -60,6 +60,8 @@ safe to run while a sweep is in flight.
 
 ```bash
 uv run python scripts/set_stability.py                      # reports/set_stability*.csv, mitigation_decision_table.csv
+uv run python scripts/reference_metrics.py --all            # one row per run + verdict -> reports/reference_metrics.csv, comparisons.csv; also written by every audit
+uv run python scripts/merge_adapter.py --config <audit cfg> --retention-only   # share of the update a merge kept, for merges older than the measurement
 uv run python scripts/operating_point_control.py margins --config <audit cfg> --which base|adapter
 uv run python scripts/operating_point_control.py compare --config <audit cfg>            # stability at equal hire rate
 uv run python scripts/diagnose_adapter.py --help            # HF+PEFT decision logit against the vLLM audit, row by row
@@ -139,7 +141,8 @@ as results.
 `reports/RESULTS.md`, `ANALYSIS.md`, `EXPERIMENT_PLAN.md`, `mitigation_plan.yaml`,
 `enable_planned.sh`, `experiment_runs.csv`, `set_stability*.csv`,
 `mitigation_decision_table.csv`, `training_curves.csv`, everything under `figures/`,
-`eval/results/index.json`, and every generated config. `FINDINGS.md`,
+`eval/results/index.json`, `reports/reference_metrics.csv`, `reports/reference_metrics/`,
+`reports/comparisons.csv`, and every generated config. `FINDINGS.md`,
 `MITIGATION_FINDINGS.md`, `PAPER_KIT.md`, the model cards and `docs/*.md` are written by hand
 from those files, and each number in them names the file it came from.
 
@@ -172,6 +175,12 @@ test that would have caught it.
 Several clean, significant, plausible results in this repository turned out to be artefacts.
 The five are written up under "Methodological lessons" in `reports/MITIGATION_FINDINGS.md`.
 The rules below are how a round of work is specified, reported and followed up.
+
+How two methods are compared is fixed in `docs/EVAL_STANDARD.md` and coded in
+`analysis/eval_standard.py`: the matched-hire-rate decision, its guardrails, the protocol, and
+the per-run reference metrics. Evaluate a new arm with `scripts/cscs/evaluate_arm.sbatch`, read
+its verdict from `reports/reference_metrics.csv`, and change the standard only on the user's
+decision.
 
 ### Before running anything
 

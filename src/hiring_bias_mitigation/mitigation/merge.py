@@ -8,6 +8,13 @@ which vLLM loads with no LoRA code involved (`eval/runner.py`).
 
 A DPO adapter fitted on top of an SFT adapter is merged together with it, SFT first: see
 `adapter_chain`.
+
+A merge into bf16 also drops the parts of an adapter's update smaller than half a bf16 unit of
+the weight they are added to, so the served model can lag the trained one. `merge` measures how
+much of each adapter's update survived (`merge_retention`) and records it beside the merged
+weights; `measure_retention` does the same for a model merged before the measurement existed.
+The evaluation standard (`docs/EVAL_STANDARD.md`) requires the last adapter of the chain, the
+arm being evaluated, to keep at least 80% of its update.
 """
 
 from __future__ import annotations
@@ -62,13 +69,68 @@ def _parent_adapter(adapter: Path) -> Path | None:
     return Path(resolve_sft_checkpoint(spec))
 
 
-def merge_chain(model, chain: list[Path]):
-    """Applies and merges each adapter of `chain` in order, parents first."""
+def merge_chain(model, chain: list[Path], retention: list | None = None):
+    """Applies and merges each adapter of `chain` in order, parents first.
+
+    With a `retention` list, each adapter's merge is measured layer by layer and one record per
+    adapter is appended to it (see `merge_measured`). The merged weights are the same either way.
+    """
+    import warnings
+
     from peft import PeftModel
 
     for adapter in chain:
-        model = PeftModel.from_pretrained(model, str(adapter)).merge_and_unload()
+        peft_model = PeftModel.from_pretrained(model, str(adapter))
+        if retention is not None:
+            retention.append({"adapter": str(adapter), **merge_measured(peft_model)})
+        with warnings.catch_warnings():
+            # After merge_measured every measured layer is merged already; PEFT says so.
+            warnings.filterwarnings("ignore", message="All adapters are already merged")
+            model = peft_model.merge_and_unload()
     return model
+
+
+def merge_measured(peft_model) -> dict:
+    """Merges every LoRA linear layer in place and measures what the merge kept.
+
+    The exact update of a layer is `B @ A * scaling` in float32; the merge writes `W' - W`
+    into the base dtype. `kept_fraction` is the written change projected on the exact update,
+    sum((W' - W) * D) / sum(D * D): 1.0 when all of it survived, near 0 when rounding dropped
+    it. `unchanged` is the share of weights the merge left bit-identical. Layers PEFT merges
+    without a `lora_A` linear (embeddings) are merged by `merge_and_unload` afterwards and are
+    not measured; `layers` counts the measured ones.
+    """
+    import torch
+    from peft.tuners.lora import LoraLayer
+
+    kept = total = unchanged = count = 0.0
+    layers = 0
+    with torch.no_grad():
+        for module in peft_model.modules():
+            if not isinstance(module, LoraLayer):
+                continue
+            names = [n for n in module.active_adapters
+                     if n in module.lora_A and n not in module.merged_adapters]
+            if not names:
+                continue
+            weight = module.get_base_layer().weight
+            before = weight.detach().float().clone()
+            exact = torch.zeros_like(before)
+            for name in names:
+                delta = module.lora_B[name].weight.float() @ module.lora_A[name].weight.float()
+                if getattr(module, "fan_in_fan_out", False):
+                    delta = delta.T
+                exact += delta * module.scaling[name]
+            module.merge(adapter_names=names)
+            change = weight.detach().float() - before
+            kept += float((change * exact).sum())
+            total += float((exact * exact).sum())
+            unchanged += float((change == 0).sum())
+            count += change.numel()
+            layers += 1
+    return {"kept_fraction": kept / total if total else 1.0,
+            "unchanged": unchanged / count if count else 1.0,
+            "layers": layers}
 
 
 def conform_to_base(out: Path, base_name: str, base_dir: Path) -> None:
@@ -148,7 +210,11 @@ def merge(adapter: str | Path, force: bool = False) -> Path:
     log.info("merging %s into %s", " then ".join(map(str, chain)), base_name)
     model = AutoModelForCausalLM.from_pretrained(base_name, dtype=torch.bfloat16,
                                                  device_map="cpu", trust_remote_code=True)
-    model = merge_chain(model, chain)
+    retention: list[dict] = []
+    model = merge_chain(model, chain, retention)
+    for record in retention:
+        log.info("merge kept %.3f of %s (%d layers)", record["kept_fraction"], record["adapter"],
+                 record["layers"])
     if out.exists():
         shutil.rmtree(out)  # never mix shards from an earlier, interrupted merge
     out.mkdir(parents=True)
@@ -167,9 +233,50 @@ def merge(adapter: str | Path, force: bool = False) -> Path:
     conform_to_base(out, base_name, base_dir)
     marker.write_text(json.dumps({"base_model": base_name, "adapter": str(adapter),
                                   "adapters": [str(a) for a in chain],
-                                  "adapter_mtime": mtime}, indent=2))
+                                  "adapter_mtime": mtime,
+                                  "merge_retention": retention}, indent=2))
     log.info("wrote %s", out)
     return out
+
+
+def measure_retention(adapter: str | Path) -> Path:
+    """Measures the merge of an already merged adapter without touching its weights.
+
+    Rebuilds the merge in memory exactly as `merge` does (bf16 base on CPU, the chain parents
+    first) and writes `merge_retention.json` into the merged directory. For models merged before
+    `merge` recorded the measurement.
+    """
+    import torch
+    from transformers import AutoModelForCausalLM
+
+    adapter = Path(resolve_output_path(str(adapter)))
+    chain = adapter_chain(adapter)
+    out = merged_dir_for(adapter)
+    base_name = json.loads((chain[0] / "adapter_config.json").read_text())[
+        "base_model_name_or_path"]
+    model = AutoModelForCausalLM.from_pretrained(base_name, dtype=torch.bfloat16,
+                                                 device_map="cpu", trust_remote_code=True)
+    retention: list[dict] = []
+    merge_chain(model, chain, retention)
+    out.mkdir(parents=True, exist_ok=True)
+    path = out / "merge_retention.json"
+    path.write_text(json.dumps({"base_model": base_name, "adapters": [str(a) for a in chain],
+                                "adapter_mtime": _chain_mtime(chain),
+                                "merge_retention": retention}, indent=2))
+    log.info("wrote %s", path)
+    return path
+
+
+def recorded_retention(merged: str | Path) -> list[dict] | None:
+    """The merge measurement recorded for a merged directory, or None when there is none."""
+    merged = Path(merged)
+    for name in ("merged_from.json", "merge_retention.json"):
+        path = merged / name
+        if path.is_file():
+            records = json.loads(path.read_text()).get("merge_retention")
+            if records:
+                return records
+    return None
 
 
 def _adapter_mtime(adapter: Path) -> float:
