@@ -140,6 +140,48 @@ def select_negatives(
     return kept.drop(columns=["_row"]), report
 
 
+def _share(flags: list[bool]) -> float | None:
+    return round(sum(flags) / len(flags), 4) if flags else None
+
+
+def selection_by(rows: pd.DataFrame, attributed: list[list[str]],
+                 free_by_pair: dict[str, list[str]], selected: pd.DataFrame, by: str,
+                 lang: str = "en") -> dict:
+    """The student's decisions and the negatives selected from them, per value of `by`.
+
+    V3 balances and checks each pool source on its own (docs/V3_NEW_DATA.md, round 2). Which
+    side a student errs on follows from its operating point, so each source's attribute-free
+    hire rate is read beside its negatives; a source whose tipped negatives fall under 2% of
+    its rows is reported before the judge runs. `attributed` lines up with `rows`, and
+    `free_by_pair` holds each pair's attribute-free samples under its `pair_id` as a string.
+    """
+    rows = rows.reset_index(drop=True)
+    out = {}
+    for value, part in rows.groupby(by, sort=True):
+        references = part["reference_decision"].tolist()
+        with_attr = [(d, ref) for i, ref in zip(part.index, references)
+                     for d in _decisions(attributed[i], lang)]
+        pair_ref = part.drop_duplicates("pair_id").set_index("pair_id")["reference_decision"]
+        free = [(d, ref) for pair, ref in pair_ref.items()
+                for d in _decisions(free_by_pair[str(pair)], lang)]
+        picked = selected[selected[by] == value] if len(selected) else selected
+        strategies = picked["rejected_strategy"].value_counts() if len(picked) else {}
+        out[str(value)] = {
+            "rows": len(part), "pairs": len(pair_ref),
+            "reference_hire_share": _share([r == "hire" for r in references]),
+            "student_hire_rate_attr_free": _share([d == "hire" for d, _ in free]),
+            "student_right_rate_attr_free": _share([d == r for d, r in free]),
+            "student_hire_rate_with_attribute": _share([d == "hire" for d, _ in with_attr]),
+            "student_right_rate_with_attribute": _share([d == r for d, r in with_attr]),
+            "student_right_rate_with_attribute_by_reference": {
+                side: _share([d == r for d, r in with_attr if r == side])
+                for side in ("hire", "reject")},
+            "selected": {str(k): int(v) for k, v in dict(strategies).items()},
+            "tipped_per_row": round(int(dict(strategies).get(TIPPED, 0)) / len(part), 4),
+        }
+    return out
+
+
 def filter_rows(rows: pd.DataFrame, row_filter: dict | None) -> pd.DataFrame:
     """The rows matching every `column: value` of `row_filter`, re-indexed; None keeps all.
 

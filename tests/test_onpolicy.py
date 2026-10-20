@@ -407,3 +407,38 @@ def test_merge_needs_a_topup_run(tmp_path):
     module = _onpolicy_full_script()
     with pytest.raises(SystemExit, match="topup_of"):
         module.stage_merge({}, tmp_path)
+
+
+def test_selection_by_pool_source_reads_each_sources_operating_point():
+    """Which side a student errs on follows from its hire rate, so V3 reads each source's
+    attribute-free hire rate beside its negatives (docs/V3_NEW_DATA.md, round 2)."""
+    def says(decision, n):
+        return [json.dumps({"decision": decision, "feedback": "f"})] * n
+
+    rows = pd.DataFrame({"pair_id": ["a", "a", "b"], "pool_source": ["rjdb", "rjdb", "kaggle"],
+                         "reference_decision": ["hire", "hire", "reject"]})
+    attributed = [says("hire", 3) + says("reject", 1), says("hire", 4), says("reject", 4)]
+    free_by_pair = {"a": says("hire", 2) + says("reject", 2), "b": says("reject", 4)}
+    selected = pd.DataFrame({"pool_source": ["rjdb"], "rejected_strategy": [OP.TIPPED]})
+
+    by = OP.selection_by(rows, attributed, free_by_pair, selected, "pool_source")
+
+    assert by["rjdb"]["rows"] == 2 and by["rjdb"]["pairs"] == 1
+    assert by["rjdb"]["student_hire_rate_attr_free"] == 0.5
+    assert by["rjdb"]["student_right_rate_with_attribute"] == 0.875
+    assert by["rjdb"]["student_right_rate_with_attribute_by_reference"] == {"hire": 0.875,
+                                                                            "reject": None}
+    assert by["rjdb"]["selected"] == {OP.TIPPED: 1} and by["rjdb"]["tipped_per_row"] == 0.5
+    assert by["kaggle"]["student_hire_rate_attr_free"] == 0.0
+    assert by["kaggle"]["selected"] == {} and by["kaggle"]["tipped_per_row"] == 0.0
+
+
+def test_the_judge_stage_reports_each_pool_source():
+    module = _onpolicy_full_script()
+    selected = pd.DataFrame({"pool_source": ["rjdb", "rjdb", "rjdb", "kaggle"]})
+    candidates = pd.DataFrame({"pool_source": ["rjdb", "rjdb"],
+                               "reference_decision": ["hire", "reject"]})
+    by = module.judged_by(selected, candidates, pd.Series([False, True]), "pool_source")
+    assert by["rjdb"] == {"selected": 3, "kept": 2, "keep_rate": 0.6667,
+                          "kept_reference_hire_share": 0.5, "train": 1, "validation": 1}
+    assert by["kaggle"]["kept"] == 0 and by["kaggle"]["kept_reference_hire_share"] is None

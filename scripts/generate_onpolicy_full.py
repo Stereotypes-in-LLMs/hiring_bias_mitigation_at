@@ -143,8 +143,13 @@ def stage_collect(cfg: dict, out: Path) -> None:
     report = {"student": f"{cfg['student_base']} + {cfg['student_adapter']} (merged)",
               "merged_checkpoint": info["merged_checkpoint"], "samples_per_prompt": k,
               "student_generation": cfg.get("student_generation", {}), "selection": selection}
+    if "pool_source" in rows.columns:   # V3: each pool source is balanced and checked alone
+        report["by_pool_source"] = OP.selection_by(rows, attributed, free_by_pair, selected,
+                                                   "pool_source", str(cfg.get("lang", "en")))
     (out / "sample_report.json").write_text(_json(report), encoding="utf-8")
     print(_json(selection))
+    if "by_pool_source" in report:
+        print(_json(report["by_pool_source"]))
 
 
 def v1_validation_candidates(source: Path) -> set[str]:
@@ -169,6 +174,23 @@ def carry_row_columns(pairs: pd.DataFrame, kept: pd.DataFrame) -> pd.DataFrame:
         if column in kept.columns:
             pairs[column] = kept[column].values
     return pairs
+
+
+def judged_by(selected: pd.DataFrame, candidates: pd.DataFrame, is_val: pd.Series,
+              by: str) -> dict:
+    """Per value of `by`: negatives sent to the judge, pairs it kept, their reference hire
+    share and their split. V3 reads each pool source's judge stage on its own (D7)."""
+    out = {}
+    for value, sent in selected.groupby(by, sort=True):
+        mine = (candidates[by] == value).to_numpy()
+        kept, val = candidates[mine], is_val.to_numpy()[mine]
+        out[str(value)] = {
+            "selected": len(sent), "kept": len(kept),
+            "keep_rate": round(len(kept) / len(sent), 4),
+            "kept_reference_hire_share": (round(float((kept["reference_decision"] == "hire")
+                                                      .mean()), 4) if len(kept) else None),
+            "train": int((~val).sum()), "validation": int(val.sum())}
+    return out
 
 
 def validation_ids(cfg: dict, rows: pd.DataFrame) -> set[str]:
@@ -251,12 +273,16 @@ def stage_judge(cfg: dict, out: Path) -> None:
     report["splits"] = {"dpo_v2_train": int((~is_val).sum()),
                         "dpo_v2_validation": int(is_val.sum()),
                         "validation_candidates": len(val_ids)}
+    if "pool_source" in candidates.columns:
+        report["by_pool_source"] = judged_by(selected, candidates, is_val, "pool_source")
     (out / "report.json").write_text(_json(report), encoding="utf-8")
     N.write_samples(out / "samples.md", candidates, int(cfg.get("n_samples", 20)))
     for strategy, entry in report["strategies"].items():
         print(f"  {strategy:15s} kept {entry['n_kept']:5d} of {entry['n_selected']} selected | "
               f"balanced AUC {entry['separability']['auc_balanced']}")
     print(f"  splits: {report['splits']}")
+    for source, entry in report.get("by_pool_source", {}).items():
+        print(f"  {source:15s} {entry}")
 
 
 def stage_balance(cfg: dict, out: Path) -> None:
