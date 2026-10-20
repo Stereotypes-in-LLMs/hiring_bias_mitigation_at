@@ -108,3 +108,11 @@ r2em:
   vote_anchors: artifacts/semisynthetic-v3/anchors/pool_votes_seed43_anchors.parquet
   drop_conflicting: true    # chosen verdict the vote overturns: 49 train, 20 validation rows
   drop_legacy: true         # v1's biased-teacher negatives: 42 train, 3 validation rows
+
+dpo_v3:
+  # V3's DPO set (docs/V3_NEW_DATA.md, round 2): r2em_v3 above, then the on-policy pairs from
+  # SFT-v3's own mistakes on the new pairs (configs/generation/negatives_v3_onpolicy_*), merged
+  # with the k=32 top-up and balanced by error mass per pool source by
+  # scripts/build_balanced_dpo.py --balance-by pool_source (`--stage dpo_v3`).
+  onpolicy_dir: artifacts/semisynthetic-v3/onpolicy-error-mass
+  onpolicy_name: dpo_v3_onpolicy

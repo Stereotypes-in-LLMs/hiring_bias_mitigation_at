@@ -295,13 +295,30 @@ Three code changes, each with a test in `tests/test_onpolicy.py`:
 - **Candidates.** The full run's pairs with the top-up's merged in (`onpolicy.merge_topup`, the full run's pair first), unbalanced. That is r2em's candidate set: r1 plus the surplus that r1's count balance dropped. There is no legacy pool.
 - **Validation.** Balanced by count within each pool source and protected group, the way stage 8 balanced r1's validation, which r2em kept.
 
-That needs code that is not written yet. It will be written before job 6, without changing the rule above:
+The code for these steps was written while SFT-v3 trained (job 5107507), before any on-policy sample existed, without changing the rule above. Each piece has tests:
 
-- a `merge` stage in `generate_onpolicy_full.py` that writes the merged, unbalanced pairs;
-- in `build_balanced_dpo.py`, `pool_source` kept through `normalise_pairs` and a `--balance-by pool_source` build; a `NAME` for `build_balanced_dpo.sbatch`;
-- a `dpo_v3` stage in `scripts/v3_additional_data.py`, and a job for the per-source checks.
+- **`generate_onpolicy_full.py --stage merge`** writes the merged, unbalanced pairs to `merged/` (`tests/test_onpolicy.py`).
+- **`build_balanced_dpo.py`** keeps `pool_source` through `normalise_pairs`, and `build --balance-by pool_source` balances each source on its own (`balanced_dpo.balance_error_mass_by`, `balance_count_by`; `tests/test_balanced_dpo.py`). A source it cannot balance is left out, named in the report, and its validation pairs go with it. `build_balanced_dpo.sbatch` takes the file prefix as `NAME`.
+- **`v3_additional_data.py --stage dpo_v3`** adds r2em_v3 (`tests/test_v3_additional_data.py`). Before it writes anything, it refuses an on-policy row that chooses against its pair's vote anchor, a row whose `rejected` keeps the chosen decision, a repeated prompt, a candidate on both sides of the split, and a benchmark id.
+- **`scripts/cscs/dpo_v3_checks.sbatch`** runs the checks, one pool source per GPU.
 
-**Combine.** V3's DPO set is r2em_v3 (2,271 training and 272 validation rows) followed by the balanced on-policy pairs, as `dpo_v3_{train,validation}.parquet` beside r2em_v3, read through a new data config. Every row keeps its `pool_source` (r2em_v3's is `djinni_v1`), and a column names the part it came from.
+In order, with the login-node steps between the jobs, run with `HBM_OUTPUT_ROOT=$XW` and the shared venv's Python:
+
+```bash
+# jobs 1-5 as in the table, each with HBM_COST_ARM and REPO=$PWD
+python scripts/generate_onpolicy_full.py --config configs/generation/negatives_v3_onpolicy_hire_gh200.yaml --stage merge
+python scripts/build_balanced_dpo.py candidates --artifacts-dir artifacts/semisynthetic-v3/onpolicy-error-mass \
+    --name dpo_v3_onpolicy --no-legacy \
+    --round1-train $XW/artifacts/semisynthetic-v3/onpolicy-hire32/merged/dpo_v2_train.parquet \
+    --round1-validation $XW/artifacts/semisynthetic-v3/onpolicy-hire32/merged/dpo_v2_validation.parquet
+# job 6: build_balanced_dpo.sbatch score, ARTIFACTS=... NAME=dpo_v3_onpolicy STUDENT=outputs/sft/...
+python scripts/build_balanced_dpo.py build --artifacts-dir artifacts/semisynthetic-v3/onpolicy-error-mass \
+    --name dpo_v3_onpolicy --balance-by pool_source
+python scripts/v3_additional_data.py --config configs/generation/v3_additional_data.yaml --stage dpo_v3
+# job 7: dpo_v3_checks.sbatch
+```
+
+**Combine.** V3's DPO set is r2em_v3 (2,271 training and 272 validation rows) followed by the balanced on-policy pairs, as `dpo_v3_{train,validation}.parquet` beside r2em_v3, read through `configs/data/en_only_dpo_v3.yaml` with `data_kind: dpo_v3`. Every row keeps its `pool_source` (r2em_v3's is `djinni_v1`), and `dpo_v3_part` names the part it came from. The two parts were scored by different students, so r2em_v3's SFT v1 margins are renamed `sft_v1_margin` and `sft_v1_p_wrong`; `student_margin` and `p_wrong` are SFT-v3's.
 
 #### Control
 

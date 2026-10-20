@@ -5,7 +5,7 @@
     # then scripts/sample_student.py once per GPU (scripts/cscs/onpolicy_full.sbatch does both)
     python scripts/generate_onpolicy_full.py --config $CFG --stage collect
     python scripts/generate_onpolicy_full.py --config $CFG --stage judge
-    python scripts/generate_onpolicy_full.py --config $CFG --stage balance
+    python scripts/generate_onpolicy_full.py --config $CFG --stage balance   # or merge (V3)
 
   prepare  every pool row with v1's chosen side (v1's own filter), one attribute-free prompt per
            pair and one attribute-bearing prompt per row in prompts.parquet, and the merged
@@ -18,6 +18,10 @@
   balance  equal hire and reject reference verdicts per protected group inside each split,
            written to balanced/ with balance.json (the pool is 86% reject; spec D6). The DPO
            data config reads balanced/
+  merge    a top-up run only: its pairs merged into the base run's inside each split, not
+           balanced, written to merged/ with merge.json. V3 balances them by error mass per
+           pool source afterwards (scripts/build_balanced_dpo.py), which is r2em's candidate
+           set: the count balance above would drop pairs that balance should choose from
 
 A top-up run (`row_filter` + `topup_of` in its config) samples one slice of the pool again
 with more samples per prompt, e.g. the hire rows at k=32 because the pool is 86% reject. Its
@@ -280,11 +284,38 @@ def stage_balance(cfg: dict, out: Path) -> None:
     print(_json(info))
 
 
+def stage_merge(cfg: dict, out: Path) -> None:
+    """The top-up's pairs merged into its base run's inside each split, not balanced.
+
+    r2em balanced by error mass over r1 and the surplus r1's count balance dropped, which
+    together are every merged pair; V3 hands the merged pairs to scripts/build_balanced_dpo.py
+    directly (docs/V3_NEW_DATA.md, round 2). Where both runs have a pair for a row, the base
+    run's stays (`onpolicy.merge_topup`).
+    """
+    base = _topup_base(cfg)
+    if base is None:
+        raise SystemExit("merge: this config has no `topup_of`; there is nothing to merge")
+    target = out / "merged"
+    target.mkdir(exist_ok=True)
+    info: dict = {"base": str(base), "topup": str(out)}
+    for split in ("train", "validation"):
+        merged, info[split] = OP.merge_topup(pd.read_parquet(base / f"dpo_v2_{split}.parquet"),
+                                             pd.read_parquet(out / f"dpo_v2_{split}.parquet"))
+        merged.to_parquet(target / f"dpo_v2_{split}.parquet", index=False)
+        info[split]["n_merged"] = len(merged)
+        if "pool_source" in merged.columns:
+            info[split]["by_pool_source_and_reference"] = {
+                f"{s} {d}": int(n) for (s, d), n in
+                merged.groupby(["pool_source", "reference_decision"]).size().items()}
+    (target / "merge.json").write_text(_json(info), encoding="utf-8")
+    print(_json(info))
+
+
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__,
                                      formatter_class=argparse.RawDescriptionHelpFormatter)
     parser.add_argument("--config", required=True)
-    parser.add_argument("--stage", choices=("prepare", "collect", "judge", "balance"),
+    parser.add_argument("--stage", choices=("prepare", "collect", "judge", "balance", "merge"),
                         required=True)
     args = parser.parse_args()
     cfg = load_config(args.config)
@@ -292,7 +323,7 @@ def main() -> None:
     out = Path(resolve_output_path(cfg["artifacts_dir"]))
     (out / "raw").mkdir(parents=True, exist_ok=True)
     stages = {"prepare": stage_prepare, "collect": stage_collect, "judge": stage_judge,
-              "balance": stage_balance}
+              "balance": stage_balance, "merge": stage_merge}
     stages[args.stage](cfg, out)
 
 

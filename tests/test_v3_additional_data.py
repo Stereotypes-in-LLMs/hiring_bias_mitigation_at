@@ -298,3 +298,94 @@ def test_r2em_drops_rows_the_vote_overturns_and_its_legacy_pool(setup, tmp_path)
     assert train["r2em_pool"].tolist() == ["round1"] and train["source"].tolist() == ["djinni"]
     report = json.loads((out / "r2em_v3_report.json").read_text())
     assert report["train"]["conflicting_with_vote"] == 1 and report["train"]["legacy"] == 1
+
+
+def _dpo_row(pair, decision, pool_source, candidate, **extra):
+    other = "reject" if decision == "hire" else "hire"
+    return {"prompt": f"prompt {pair} {candidate}",
+            "chosen": json.dumps({"decision": decision,
+                                  "feedback": "Six years of Django match the stated stack."}),
+            "rejected": json.dumps({"decision": other,
+                                    "feedback": "Too little production work for this role."}),
+            "decision": decision, "rejected_decision": other, "lang": "en",
+            "protected_group": "military_status", "protected_attr": "War veteran",
+            "condition": "explicit", "candidate_id": candidate, "job_id": f"j-{pair}",
+            "pair_id": pair, "pool_source": pool_source, "reference_decision": decision,
+            **extra}
+
+
+@pytest.fixture
+def dpo_v3(setup, tmp_path):
+    """r2em_v3 beside the anchors, and an error-mass build of on-policy pairs elsewhere."""
+    mod, cfg, _, out = setup
+    out.mkdir(parents=True, exist_ok=True)
+    v1 = {"r2em_pool": "round1", "source": "djinni", "student_margin": -1.0, "p_wrong": 0.73,
+          "anchor_hire_votes": 8, "anchor_decided": 8, "anchor_unstable": False,
+          "anchor_changed": False, "anchor_source": "vote"}
+    pd.DataFrame([_dpo_row("v1a", "hire", "djinni_v1", "c-v1a", **v1)]).to_parquet(
+        out / "r2em_v3_train.parquet")
+    pd.DataFrame([_dpo_row("v1b", "reject", "djinni_v1", "c-v1b", **v1)]).to_parquet(
+        out / "r2em_v3_validation.parquet")
+    pd.DataFrame({"pair_id": ["n1", "n2", "n3"], "hire_votes": [8, 1, 6], "decided": [8, 8, 8],
+                  "reference_decision": ["hire", "reject", "hire"],
+                  "anchor_source": "vote", "source": ["djinni_new", "rjdb", "djinni_new"]}
+                 ).to_parquet(out / "anchors_en.parquet")
+    onp = tmp_path / "onpolicy-error-mass"
+    onp.mkdir()
+    build = {"source": "round1", "student_margin": 0.5}
+    train = [_dpo_row("n1", "hire", "djinni_new", "c-n1", p_wrong=0.62, **build),
+             _dpo_row("n2", "reject", "rjdb", "c-n2", p_wrong=0.62, **build)]
+    validation = [_dpo_row("n3", "hire", "djinni_new", "c-n3", **build)]
+    (onp / "dpo_v3_onpolicy_report.json").write_text(json.dumps({
+        "parameters": {"balance_by": "pool_source"},
+        "balance": {"by": "pool_source", "left_out": ["kaggle_linkedin"],
+                    "groups": {"djinni_new": {"after": {}}, "rjdb": {"after": {}},
+                               "kaggle_linkedin": {"left_out": "no hire-side pairs"}}},
+        "validation_balance": {"n_kept": 1}}))
+    cfg["dpo_v3"] = {"onpolicy_dir": str(onp), "onpolicy_name": "dpo_v3_onpolicy"}
+
+    def write(train_rows=train, validation_rows=validation):
+        pd.DataFrame(train_rows).to_parquet(onp / "dpo_v3_onpolicy_train.parquet")
+        pd.DataFrame(validation_rows).to_parquet(onp / "dpo_v3_onpolicy_validation.parquet")
+
+    write()
+    return mod, cfg, out, write, train, validation
+
+
+def test_dpo_v3_puts_r2em_v3_first_and_keeps_each_parts_student_apart(dpo_v3):
+    mod, cfg, out, *_ = dpo_v3
+    mod.stage_dpo_v3(cfg)
+    train = pd.read_parquet(out / "dpo_v3_train.parquet")
+    assert train["dpo_v3_part"].tolist() == ["r2em_v3", "onpolicy_v3", "onpolicy_v3"]
+    assert train["pool_source"].tolist() == ["djinni_v1", "djinni_new", "rjdb"]
+    assert train["source"].tolist() == ["djinni", "djinni", "rjdb"]
+    assert train["r2em_pool"].tolist() == ["round1"] * 3
+    # r2em's margins are SFT v1's and keep that name; SFT-v3's are the on-policy rows'.
+    assert train["sft_v1_margin"].tolist()[0] == -1.0 and pd.isna(train["sft_v1_margin"][1])
+    assert pd.isna(train["student_margin"][0]) and train["student_margin"][1] == 0.5
+    assert train["anchor_hire_votes"].tolist() == [8, 8, 1]
+    assert (train["reference_decision"] == train["decision"]).all()
+    for source in ("djinni_v1", "djinni_new", "rjdb"):
+        assert len(pd.read_parquet(out / "dpo_v3_checks" / source / "pairs.parquet")) == 1
+    report = json.loads((out / "dpo_v3_report.json").read_text())
+    assert report["onpolicy_build"]["left_out"] == ["kaggle_linkedin"]
+    assert report["train"]["rows_by_part"] == {"onpolicy_v3": 2, "r2em_v3": 1}
+    assert report["train"]["error_mass_sft_v3"] == {"djinni_new hire": 0.62, "rjdb reject": 0.62}
+    assert set(report["train"]["direction"]["by_pool_source"]) == {"djinni_v1", "djinni_new",
+                                                                   "rjdb"}
+    assert len(pd.read_parquet(out / "dpo_v3_validation.parquet")) == 2
+
+
+def test_dpo_v3_refuses_an_on_policy_pair_against_its_vote(dpo_v3):
+    mod, cfg, _, write, train, validation = dpo_v3
+    flipped = {**train[0], "decision": "reject", "rejected_decision": "hire"}
+    write([flipped, train[1]], validation)
+    with pytest.raises(ValueError, match="against their pair's vote anchor"):
+        mod.stage_dpo_v3(cfg)
+
+
+def test_dpo_v3_refuses_a_candidate_on_both_sides_of_the_split(dpo_v3):
+    mod, cfg, _, write, train, validation = dpo_v3
+    write(train, [*validation, {**train[0], "prompt": "another variant of n1"}])
+    with pytest.raises(ValueError, match="both sides of the split"):
+        mod.stage_dpo_v3(cfg)

@@ -7,6 +7,7 @@
     python scripts/v3_additional_data.py --config $CFG --stage report      # CPU
     python scripts/v3_additional_data.py --config $CFG --stage v1_dpo      # CPU
     python scripts/v3_additional_data.py --config $CFG --stage assemble    # CPU
+    python scripts/v3_additional_data.py --config $CFG --stage dpo_v3      # CPU, after round 2
 
 SFT-v3 (docs/SFT_V3_ANCHORS.md) is v1's construction with two changes: the 8-draw vote's
 majority as the anchor, and the whole-word `metrics.mentions_attribute` (9e02ae2) in every
@@ -799,6 +800,103 @@ def stage_r2em(cfg: dict) -> None:
                           for s in ("train", "validation")})
 
 
+#: The anchor columns `with_anchor` adds; a frame that already has them is re-anchored.
+ANCHOR_COLUMNS = ("anchor_hire_votes", "anchor_decided", "anchor_unstable", "anchor_changed",
+                  "anchor_source")
+#: V3's DPO set in order: V1's pairs (r2em on the vote anchors), then the new pairs' on-policy
+#: part. The two were scored by different students: SFT v1 for r2em, SFT-v3 for the new part.
+DPO_V3_PARTS = ("r2em_v3", "onpolicy_v3")
+
+
+def stage_dpo_v3(cfg: dict) -> None:
+    """V3's DPO set: r2em_v3, then the on-policy pairs from SFT-v3; CPU only.
+
+    The on-policy pairs are SFT-v3's own covert, attribute-tipped mistakes on the new pairs
+    (configs/generation/negatives_v3_onpolicy_*), merged with the k=32 top-up and balanced by
+    error mass within each pool source (scripts/build_balanced_dpo.py --balance-by
+    pool_source). r2em_v3 is V1's pairs (`--stage r2em`). docs/V3_NEW_DATA.md, round 2.
+
+    Each row keeps `pool_source` and says which part it came from (`dpo_v3_part`). The
+    error-mass build's pool label, which it wrote into `source`, becomes `r2em_pool`, as in
+    r2em_v3. `student_margin` and `p_wrong` are SFT-v3's; r2em_v3's, from SFT v1, move to
+    `sft_v1_margin` and `sft_v1_p_wrong`.
+
+    Refused before anything is written: a row whose rejected keeps the chosen decision, an
+    on-policy row whose chosen verdict is not its pair's vote anchor, a repeated prompt, a
+    candidate on both sides of the split, and a benchmark id. Writes
+    dpo_v3_{train,validation}.parquet, dpo_v3_report.json (contrasts per part and pool source,
+    the error-mass build's balance, the GPU-free direction readout per pool source) and, for
+    the D4 job, each pool source's training pairs as dpo_v3_checks/<pool source>/pairs.parquet.
+    """
+    require_output_root()
+    spec = cfg["dpo_v3"]
+    out = _out(cfg)
+    onpolicy = Path(resolve_output_path(spec["onpolicy_dir"]))
+    anchors = pd.read_parquet(out / "anchors_en.parquet")
+    vote = anchors.set_index("pair_id")["reference_decision"]
+    build = json.loads((onpolicy / f"{spec['onpolicy_name']}_report.json").read_text())
+    report: dict = {"built": datetime.now(timezone.utc).isoformat(), "code": _code(),
+                    "inputs": spec, "onpolicy_build": {
+                        "parameters": build.get("parameters"),
+                        "left_out": build["balance"].get("left_out", []),
+                        "after_by_pool_source": {
+                            s: g.get("after") for s, g in build["balance"].get("groups",
+                                                                            {}).items()},
+                        "validation_balance": build.get("validation_balance")}}
+    frames = {}
+    for split in ("train", "validation"):
+        r2em = pd.read_parquet(out / f"r2em_v3_{split}.parquet").rename(
+            columns={"student_margin": "sft_v1_margin", "p_wrong": "sft_v1_p_wrong"})
+        new = pd.read_parquet(onpolicy / f"{spec['onpolicy_name']}_{split}.parquet").rename(
+            columns={"source": "r2em_pool"})
+        anchored = new["pair_id"].map(vote)
+        if anchored.isna().any():
+            raise ValueError(f"dpo_v3 {split}: {int(anchored.isna().sum())} on-policy rows "
+                             "have no vote anchor")
+        against = anchored != new["decision"]
+        if against.any():
+            raise ValueError(f"dpo_v3 {split}: {int(against.sum())} on-policy rows choose "
+                             "against their pair's vote anchor")
+        new = new.drop(columns=[c for c in ANCHOR_COLUMNS if c in new.columns])
+        new = provenance(with_anchor(new, anchors), new["pool_source"])
+        both = pd.concat([r2em.assign(dpo_v3_part=DPO_V3_PARTS[0]),
+                          new.assign(dpo_v3_part=DPO_V3_PARTS[1])], ignore_index=True)
+        same = both["decision"] == both["rejected_decision"]
+        if same.any():
+            raise ValueError(f"dpo_v3 {split}: {int(same.sum())} rows keep the chosen decision")
+        repeated = both["prompt"].duplicated()
+        if repeated.any():
+            raise ValueError(f"dpo_v3 {split}: {int(repeated.sum())} prompts repeat")
+        assert_no_leakage(both, f"v3_additional_data.dpo_v3.{split}")
+        frames[split] = both
+    shared = set(frames["train"]["candidate_id"]) & set(frames["validation"]["candidate_id"])
+    if shared:
+        raise ValueError(f"dpo_v3: {len(shared)} candidates are on both sides of the split")
+    if set(frames["train"]["prompt"]) & set(frames["validation"]["prompt"]):
+        raise ValueError("dpo_v3: a prompt is in both splits")
+
+    seed = int(cfg["seed"])
+    for split, frame in frames.items():
+        _write_parquet(frame, out / f"dpo_v3_{split}.parquet")
+        report[split] = {
+            "rows_by_part": frame["dpo_v3_part"].value_counts().to_dict(),
+            "contrast": contrast(frame),
+            "unstable_anchors_by_part": frame.groupby("dpo_v3_part")["anchor_unstable"]
+            .sum().astype(int).to_dict(),
+        }
+    train = frames["train"]
+    onpolicy_train = train[train["dpo_v3_part"] == DPO_V3_PARTS[1]]
+    report["train"]["error_mass_sft_v3"] = {
+        f"{s} {d}": round(float(g["p_wrong"].sum()), 2)
+        for (s, d), g in onpolicy_train.groupby(["pool_source", "decision"])}
+    report["train"]["direction"] = direction_readout(train, seed)
+    for source, rows in train.groupby("pool_source", sort=True):
+        _write_parquet(rows.reset_index(drop=True),
+                       out / "dpo_v3_checks" / str(source) / "pairs.parquet")
+    _write_json(out / "dpo_v3_report.json", report)
+    log.info("dpo_v3: %s", {s: len(f) for s, f in frames.items()})
+
+
 def stage_assemble(cfg: dict, allow_partial: bool = False) -> None:
     """SFT for training, the on-policy DPO build's input, and optionally teacher-biased DPO.
 
@@ -906,7 +1004,8 @@ def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__.split("\n")[0])
     parser.add_argument("--config", required=True)
     parser.add_argument("--stage", required=True,
-                        choices=["pool", "generate", "report", "v1_dpo", "r2em", "assemble"])
+                        choices=["pool", "generate", "report", "v1_dpo", "r2em", "assemble",
+                                 "dpo_v3"])
     parser.add_argument("--parts", nargs="+", default=["all"])
     parser.add_argument("--passes", nargs="+", default=list(PASSES), choices=PASSES)
     parser.add_argument("--allow-partial", action="store_true",
@@ -919,7 +1018,8 @@ def main() -> None:
      "report": lambda: stage_report(cfg),
      "v1_dpo": lambda: stage_v1_dpo(cfg),
      "r2em": lambda: stage_r2em(cfg),
-     "assemble": lambda: stage_assemble(cfg, args.allow_partial)}[args.stage]()
+     "assemble": lambda: stage_assemble(cfg, args.allow_partial),
+     "dpo_v3": lambda: stage_dpo_v3(cfg)}[args.stage]()
 
 
 if __name__ == "__main__":

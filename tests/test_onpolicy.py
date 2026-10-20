@@ -363,3 +363,47 @@ def test_judged_pairs_keep_the_rows_pool_source():
     v1_pairs = module.carry_row_columns(pd.DataFrame({"prompt": ["a"]}),
                                         pd.DataFrame({"free_right_rate": [1.0]}))
     assert "pool_source" not in v1_pairs
+
+
+def test_merge_keeps_every_pair_of_both_runs_unbalanced(tmp_path, monkeypatch):
+    """V3 balances by error mass afterwards, over every merged pair as r2em did over r1 and its
+    surplus; the merge itself drops only the top-up's pairs for rows the base run has."""
+    import json
+
+    module = _onpolicy_full_script()
+    monkeypatch.setenv("HBM_OUTPUT_ROOT", str(tmp_path))
+    monkeypatch.setenv("HBM_ALLOW_LOCAL_OUTPUT", "1")
+
+    def pairs(keys, source):
+        return pd.DataFrame({"pair_id": [k[0] for k in keys], "protected_attr": "Female",
+                             "condition": [k[1] for k in keys], "prompt": "p",
+                             "reference_decision": "reject" if source == "base" else "hire",
+                             "pool_source": "djinni_new", "run": source})
+
+    for name in ("base", "topup"):
+        (tmp_path / name).mkdir()
+    pairs([("a", "explicit"), ("b", "explicit")], "base").to_parquet(
+        tmp_path / "base" / "dpo_v2_train.parquet")
+    pairs([("v", "explicit")], "base").to_parquet(tmp_path / "base" / "dpo_v2_validation.parquet")
+    pairs([("b", "explicit"), ("c", "implicit"), ("c", "explicit")], "topup").to_parquet(
+        tmp_path / "topup" / "dpo_v2_train.parquet")
+    pairs([], "topup").to_parquet(tmp_path / "topup" / "dpo_v2_validation.parquet")
+
+    module.stage_merge({"topup_of": "base"}, tmp_path / "topup")
+
+    merged = pd.read_parquet(tmp_path / "topup" / "merged" / "dpo_v2_train.parquet")
+    assert list(zip(merged["pair_id"], merged["run"])) == [
+        ("a", "base"), ("b", "base"), ("c", "topup"), ("c", "topup")]
+    info = json.loads((tmp_path / "topup" / "merged" / "merge.json").read_text())
+    assert info["train"]["n_already_in_base"] == 1 and info["train"]["n_merged"] == 4
+    assert info["train"]["by_pool_source_and_reference"] == {"djinni_new hire": 2,
+                                                             "djinni_new reject": 2}
+    assert len(pd.read_parquet(tmp_path / "topup" / "merged" / "dpo_v2_validation.parquet")) == 1
+
+
+def test_merge_needs_a_topup_run(tmp_path):
+    import pytest
+
+    module = _onpolicy_full_script()
+    with pytest.raises(SystemExit, match="topup_of"):
+        module.stage_merge({}, tmp_path)
