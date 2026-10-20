@@ -1,0 +1,8 @@
+run,family,base_model,lora_r,lora_alpha,target_modules,params_trainable,params_base,params_base_vision,params_base_mtp,params_base_text,trainable_pct_of_text
+qwen3.5-9b_en_only_dpo_v2neg_r1,dpo,Qwen/Qwen3.5-9B,32,64,down_proj+gate_proj+k_proj+o_proj+q_proj+up_proj+v_proj,58195968,9653104368,456010480,243290624,8953803264,0.65
+qwen3.5-9b_en_only_dpo_v2neg_r2,dpo,Qwen/Qwen3.5-9B,32,64,down_proj+gate_proj+k_proj+o_proj+q_proj+up_proj+v_proj,58195968,9653104368,456010480,243290624,8953803264,0.65
+qwen3.5-9b_en_only_dpo_v2neg_r2em,dpo,Qwen/Qwen3.5-9B,32,64,down_proj+gate_proj+k_proj+o_proj+q_proj+up_proj+v_proj,58195968,9653104368,456010480,243290624,8953803264,0.65
+qwen3.5-9b_en_only_grpo_pilot,grpo,Qwen/Qwen3.5-9B,32,64,down_proj+gate_proj+k_proj+o_proj+q_proj+up_proj+v_proj,58195968,9653104368,456010480,243290624,8953803264,0.65
+qwen3.5-9b_en_only_grpo_smoke,grpo,Qwen/Qwen3.5-9B,32,64,down_proj+gate_proj+k_proj+o_proj+q_proj+up_proj+v_proj,58195968,9653104368,456010480,243290624,8953803264,0.65
+qwen3.5-9b-hiring-debias-sft-en,sft,Qwen/Qwen3.5-9B,32,64,down_proj+gate_proj+k_proj+o_proj+q_proj+up_proj+v_proj,58195968,9653104368,456010480,243290624,8953803264,0.65
+qwen3.5-9b_en_only_rft,sft,Qwen/Qwen3.5-9B,32,64,down_proj+gate_proj+k_proj+o_proj+q_proj+up_proj+v_proj,58195968,9653104368,456010480,243290624,8953803264,0.65

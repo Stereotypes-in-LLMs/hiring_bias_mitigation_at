@@ -1,0 +1,7 @@
+stage,steps,wall_h,gpu_h,gpu_h_measured,gpu_h_reconstructed,gpu_h_other_basis,gpu_h_not_ok,gpu_energy_kwh,node_h,node_energy_kwh,node_h_with_energy
+datagen,72,7.676,30.704,,30.704,,11.3,,,,
+train,12,3.9,15.601,,15.601,,3.869,,,,
+eval,31,3.929,15.716,,15.716,,0.524,,,,
+other,103,0.517,1.843,,1.843,,0.69,,,,
+idle (0 recorded jobs),,,,,,,,,,,
+total allocated,66,,63.864,,,,,,16.022,22.9,15.102
