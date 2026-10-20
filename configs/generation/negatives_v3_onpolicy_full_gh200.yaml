@@ -8,9 +8,10 @@
 # kaggle_linkedin 1,504; 32% hire), so 111,014 prompts and 888,112 samples. Against
 # negatives_v2_onpolicy_full_gh200.yaml only the source, the output, the student and the split
 # change. The k=32 hire top-up is negatives_v3_onpolicy_hire_gh200.yaml.
-#   CONFIG=configs/generation/negatives_v3_onpolicy_full_gh200.yaml REPO=$PWD \
+# Costs are recorded under the arm dpo_v3, with every job of V3's DPO data (docs/COST.md):
+#   HBM_COST_ARM=dpo_v3 REPO=$PWD CONFIG=configs/generation/negatives_v3_onpolicy_full_gh200.yaml \
 #     scripts/cscs/submit.sh -p normal -t 03:00:00 scripts/cscs/onpolicy_full.sbatch sample
-#   CONFIG=... REPO=$PWD scripts/cscs/submit.sh -p normal -t 02:00:00 \
+#   HBM_COST_ARM=dpo_v3 REPO=$PWD CONFIG=... scripts/cscs/submit.sh -p normal -t 02:00:00 \
 #     scripts/cscs/onpolicy_full.sbatch judge
 source_artifacts_dir: artifacts/semisynthetic-v3/additional
 artifacts_dir: artifacts/semisynthetic-v3/onpolicy-full

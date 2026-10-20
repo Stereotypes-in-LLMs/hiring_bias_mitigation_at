@@ -242,7 +242,7 @@ HBM_OUTPUT_ROOT=$XW python scripts/v3_additional_data.py --config $CFG --stage a
 
 ### Pre-registration
 
-Written on 2026-10-20 at about 16:10 CEST. At that point SFT-v3 was not trained and no on-policy sample was drawn. At about 15:45 the user chose DPO's start point: SFT-v3 on all the new data for one epoch ("use all new data train 1 epoch"). No SFT-v3 checkpoint existed under `outputs/sft/`, so this round trains it first. The user asked to stop after this section is committed and before any job is submitted ("stop after commit before run").
+Written on 2026-10-20 at about 16:10 CEST. At that point SFT-v3 was not trained and no on-policy sample was drawn. At about 15:45 the user chose DPO's start point: SFT-v3 on all the new data for one epoch ("use all new data train 1 epoch"). No SFT-v3 checkpoint existed under `outputs/sft/`, so this round trains it first. The user asked to stop after this section is committed and before any job is submitted ("stop after commit before run"). Then, before any job, the branch was rebased onto `main` at 6f4b7e9 ("rebase first"), so every job of this round runs with `main`'s cost recorder (`docs/COST.md`).
 
 #### Question
 
@@ -268,6 +268,8 @@ The jobs run one at a time on the `zhang` account, on the `normal` partition, fr
 | 7 | direction checks | SFT-v3 and the base | D1 to D7 per pool source, D4 on 600 pairs per source |
 
 The merge, the candidate and build stages and the combine run on the login node, between jobs 5 and 7.
+
+Every job is submitted with `HBM_COST_ARM`, as `docs/COST.md` asks of the v3 runs: `sft_v3` for job 1, and `dpo_v3` for jobs 2 to 7, which DPO's training will share. `reports/cost/by_arm.csv` then adds up each arm.
 
 **SFT-v3.** The recipe is SFT v1's, as the swap arm on `xinyang/sft-v3-vote-anchors` carries it: LoRA r 32 and alpha 64, lr 1e-4 cosine, effective batch 16 as 4 GPUs × 1 × 4. The data is `configs/data/en_only_sft_v3_additional.yaml`: 62,761 English training rows (the swap set's 8,419, then 54,342 new) and 3,527 validation rows. One epoch is 3,923 steps. Besides the data and the single epoch, three settings differ from the swap arm's:
 
@@ -341,7 +343,7 @@ What would count against it: a source whose hire side cannot be balanced even wi
 - **Checks.**
   - D1 below 1.0 is a bug: the round stops.
   - A source that fails D2, D3 or D4 is reported before the combine, and enters only if the user says so.
-- **Compute.** At most 40 allocated GPU-h for SFT-v3 and 60 for the whole round.
+- **Compute.** At most 40 allocated GPU-h for SFT-v3 and 60 for the whole round, as `reports/cost/steps.csv` counts them.
 
 #### Splits
 

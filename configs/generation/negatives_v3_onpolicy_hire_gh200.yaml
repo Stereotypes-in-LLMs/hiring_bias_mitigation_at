@@ -12,9 +12,10 @@
 # The split follows the full run's (`topup_of`), and the merge keeps the full run's pair where
 # both runs have one (onpolicy.merge_topup). Against negatives_v2_onpolicy_hire_gh200.yaml only
 # the source, the rows, the outputs, the student and the split change.
-#   CONFIG=configs/generation/negatives_v3_onpolicy_hire_gh200.yaml REPO=$PWD \
+# Costs are recorded under the arm dpo_v3, with every job of V3's DPO data (docs/COST.md):
+#   HBM_COST_ARM=dpo_v3 REPO=$PWD CONFIG=configs/generation/negatives_v3_onpolicy_hire_gh200.yaml \
 #     scripts/cscs/submit.sh -p normal -t 01:30:00 scripts/cscs/onpolicy_full.sbatch sample
-#   CONFIG=... REPO=$PWD scripts/cscs/submit.sh -p normal -t 01:00:00 \
+#   HBM_COST_ARM=dpo_v3 REPO=$PWD CONFIG=... scripts/cscs/submit.sh -p normal -t 01:00:00 \
 #     scripts/cscs/onpolicy_full.sbatch judge
 source_artifacts_dir: artifacts/semisynthetic-v3/additional
 artifacts_dir: artifacts/semisynthetic-v3/onpolicy-hire32
