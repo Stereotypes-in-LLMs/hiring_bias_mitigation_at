@@ -1,0 +1,36 @@
+# Hand-written -- NOT produced by generate_experiment_configs.py.
+# Part B timing run (docs/THROUGHPUT_B.md, scripts/cscs/throughput_b.sbatch): prefix cache off,
+# prompts submitted in prefix order. The four configs/throughput/ files differ only in
+# engine_kwargs.enable_prefix_caching, submit_order and run_suffix (tests/test_throughput.py);
+# model, prompts and decoding are those of configs/audit/qwen3.5-9b_en_baseline_gh200.yaml.
+# Generation only: scripts/throughput_b.py run never scores, and writes to raw_dir below.
+backend: vllm
+max_model_len: 8192
+gpu_memory_utilization: 0.8
+seed: 42
+engine_kwargs:
+  gdn_prefill_backend: triton     # no CUDA toolkit on Daint for FlashInfer's JIT
+  enable_prefix_caching: false
+  disable_log_stats: false        # vLLM keeps its prefix-cache counters only with stats on
+submit_order: prefix
+limit_pairs: 225                  # the benchmark's first 225 pairs: 15,525 prompts
+raw_dir: outputs/throughput/raw
+conditions:
+- explicit
+- implicit
+- attr_free
+chat_template_kwargs:
+  enable_thinking: false
+max_intersection_cells: null
+generation:
+  max_new_tokens: 512
+  temperature: 0.0
+  top_p: 1.0
+  seed: 42
+model: Qwen/Qwen3.5-9B
+lang: en
+protected_groups:
+- military_status
+- gender
+- religion
+run_suffix: throughput-cacheoff-prefix

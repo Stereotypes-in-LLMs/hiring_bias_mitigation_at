@@ -1,0 +1,6 @@
+scope,groups,median_tokens,mean_tokens,prompt_tokens,share_reaching_one_block,skippable_share_token_exact,skippable_share_whole_blocks,block
+prompt,15525,703.0,731.1,11350662.0,,,,
+set,1575,375.0,432.0,11350662.0,0.2927,0.4722,0.1442,528.0
+pair,225,344.0,380.3,11350662.0,0.2133,0.5126,0.1582,528.0
+job,138,346.5,385.1,11350662.0,0.2029,0.5152,0.1591,528.0
+response (Qwen3.5-9B--en--baseline--cscs),31050,35.0,35.6,,,,,

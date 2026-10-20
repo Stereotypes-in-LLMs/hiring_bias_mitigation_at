@@ -208,6 +208,46 @@ def _generate_resumable(backend, prompts: list[str], run_name: str, chunk: int =
     return done[:len(prompts)]
 
 
+#: Orders a run's prompts can be sent to the backend in (`submit_order` in the run config).
+#: They change speed only: the responses are put back in the frame's order before anything
+#: reads them.
+#:
+#:   as_built  the frame's order, the default and every audit's so far: group, condition,
+#:             pair, attribute, so the variants of one counterfactual set are adjacent
+#:   prefix    sorted by prompt text, so prompts sharing a prefix are adjacent: one job's
+#:             pairs, one pair's sets, one set's variants (docs/THROUGHPUT_B.md)
+#:   shuffle   a seeded random permutation, the order with no locality at all
+SUBMIT_ORDERS = ("as_built", "prefix", "shuffle")
+
+
+def submission_order(prompts: list[str], how: str | None = None, seed: int = 42) -> list[int]:
+    """The order `prompts` are sent in: entry k is the index of the k-th prompt sent."""
+    how = how or "as_built"
+    if how == "as_built":
+        return list(range(len(prompts)))
+    if how == "prefix":
+        return sorted(range(len(prompts)), key=prompts.__getitem__)
+    if how == "shuffle":
+        import numpy as np
+
+        return np.random.default_rng(seed).permutation(len(prompts)).tolist()
+    raise ValueError(f"unknown submit_order {how!r}; expected one of {SUBMIT_ORDERS}")
+
+
+def _generate_in_order(backend, prompts: list[str], run_name: str, order: list[int],
+                       chunk: int = 4000) -> list[str]:
+    """Generates `prompts` sent in `order` and returns the responses in the prompts' order.
+
+    The chunk cache is keyed by the prompts as sent, so a run resumes only onto chunks sent
+    in the same order, and `as_built` resumes onto the caches every earlier audit left.
+    """
+    sent = _generate_resumable(backend, [prompts[i] for i in order], run_name, chunk=chunk)
+    out = [""] * len(prompts)
+    for position, index in enumerate(order):
+        out[index] = sent[position]
+    return out
+
+
 def run_audit(cfg: dict) -> tuple[pd.DataFrame, dict]:
     """Generates every response for one run. Returns (parsed frame, run metadata)."""
     set_seed(cfg.get("seed", 42))
@@ -257,8 +297,9 @@ def run_audit(cfg: dict) -> tuple[pd.DataFrame, dict]:
         df, mitigation_meta = _apply_mitigation_to_frame(df, cfg, backend)
         log.info("run %s: %d prompts", build_run_name(cfg), len(df))
 
-        raw = _generate_resumable(backend, _build_prompts(df, strategy),
-                                  build_run_name(cfg))
+        prompts = _build_prompts(df, strategy)
+        order = submission_order(prompts, cfg.get("submit_order"), cfg.get("seed", 42))
+        raw = _generate_in_order(backend, prompts, build_run_name(cfg), order)
         df = df.assign(raw_output=raw)
         parsed = parse_frame(df)
 
@@ -291,6 +332,7 @@ def run_audit(cfg: dict) -> tuple[pd.DataFrame, dict]:
         "conditions": list(cfg.get("conditions", ("explicit", "implicit", "attr_free"))),
         "mitigation": {**mitigation, **mitigation_meta},
         "prompt_strategy": strategy,
+        "submit_order": cfg.get("submit_order") or "as_built",
         "generation": generation,
         "seed": cfg.get("seed", 42),
         "limit_pairs": cfg.get("limit_pairs"),

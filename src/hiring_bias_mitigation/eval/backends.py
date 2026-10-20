@@ -261,6 +261,7 @@ class VLLMBackend:
         with cost.phase("generate"):
             outputs = self._llm.generate(wrapped, params, **kwargs)
         _count_vllm(outputs)
+        _note_prefix_cache(self._llm)
         return [o.outputs[0].text for o in outputs]
 
     def generate_samples(self, prompts: list[str], n: int) -> list[list[str]]:
@@ -297,6 +298,7 @@ class VLLMBackend:
         with cost.phase("generate"):
             outputs = self._llm.generate(wrapped, params, **kwargs)
         _count_vllm(outputs)
+        _note_prefix_cache(self._llm)
         return [[c.text for c in o.outputs] for o in outputs]
 
     def close(self) -> None:
@@ -432,6 +434,28 @@ def _count_vllm(outputs) -> None:
         )
     except Exception as e:  # a renamed vLLM field must not stop a generation
         log.warning("cost: could not count the tokens of a vLLM call: %r", e)
+
+
+def _note_prefix_cache(llm) -> None:
+    """vLLM's prefix-cache counters so far, in prompt tokens, for the step's cost record:
+    `prefix_cache_queries` looked up, `prefix_cache_hits` found (docs/THROUGHPUT_B.md).
+
+    They count over the engine's life, so they are notes (the last value wins), not counters.
+    `LLM.get_metrics` works only with stat logging on (`engine_kwargs.disable_log_stats:
+    false`); an engine started without it, which is every audit's, notes nothing.
+    """
+    if not cost.tracked():
+        return
+    try:
+        metrics = llm.get_metrics()
+    except Exception:  # stat logging off, or an engine without metrics
+        return
+    totals = {"vllm:prefix_cache_queries": 0, "vllm:prefix_cache_hits": 0}
+    for metric in metrics:
+        if metric.name in totals:
+            totals[metric.name] += int(getattr(metric, "value", 0) or 0)
+    cost.note(prefix_cache_queries=totals["vllm:prefix_cache_queries"],
+              prefix_cache_hits=totals["vllm:prefix_cache_hits"])
 
 
 def _free_gpu() -> None:
