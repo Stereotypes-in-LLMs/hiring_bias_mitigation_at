@@ -130,4 +130,91 @@ Kept: 2,271 train and 272 validation rows. Their contrasts are still symmetric: 
 
 ## Result
 
-Not run yet.
+**In one sentence.** The v3 pipeline ran on 9,034 new English pairs with no stop condition crossed.
+
+- **Observed.** The pairs come from three sources: `djinni_new` 000-002, `rjdb` 000-001 and `kaggle_linkedin` 000-001. Together they add 54,342 SFT training rows to SFT-v3's swap set.
+- **Interpretation.** The vote and the invariant pass behave on the new sources as they do on V1's pairs, apart from the sources' own hire shares.
+- **Unknown.** Whether training on these rows helps; nothing was trained.
+
+**Runs.** Both on one GH200 node (TP 4), `normal` partition.
+
+| job | code | parts and passes | elapsed | end |
+|---|---|---|---|---|
+| 5104067 | 56c8959 | `djinni_new-000`, `rjdb-000`, `kaggle_linkedin-000`/`-001`: votes, invariant, biased; `djinni_new-001`: votes, invariant | 2:15:36 | cancelled on purpose before `djinni_new-001`'s biased pass (addendum) |
+| 5105355 | b3fad61 | `rjdb-001`, `djinni_new-002`: votes, invariant (`PASSES="votes invariant"`) | 0:47:50 | completed |
+
+Outputs are under `artifacts/semisynthetic-v3/additional/`: `report.json`, `generation_report.json`, `r2em_v3_report.json` and `parts/<part>/`.
+
+### The vote, by source (`report.json`, `vote.by`)
+
+| source | pairs | anchored | per-draw hire | anchor hire | unanimous | unstable (at most 5 of 8) | undecided draws | fenced draws |
+|---|---|---|---|---|---|---|---|---|
+| djinni_new | 4,500 | 4,399 | 0.231 | 0.223 | 0.816 | 0.069 | 0.0000 | 0.132 |
+| rjdb | 3,000 | 2,866 | 0.558 | 0.565 | 0.652 | 0.134 | 0.0005 | 0.033 |
+| kaggle_linkedin | 1,534 | 1,507 | 0.157 | 0.147 | 0.831 | 0.067 | 0.0000 | 0.285 |
+| SFT-v3's vote on V1's pairs (control) | 2,992 | 2,920 without fallback | 0.217 | 0.211 | 0.829 | 0.069 | 0 | 0.131 |
+
+`djinni_new` reads like V1's pairs. RJDB's matched CVs hire 2.5 times as often and split their votes more often. Kaggle x LinkedIn hires least: its pairs are matched on occupation alone, with no experience matching.
+
+### Passes and stop conditions
+
+| source | invariant kept / sent | biased kept / sent (parts with that pass) |
+|---|---|---|
+| djinni_new | 52,711 / 52,788 (0.9985) | 8,764 / 17,520 (0.5002), `djinni_new-000` |
+| rjdb | 34,315 / 34,392 (0.9978) | 8,056 / 17,220 (0.4678), `rjdb-000`; 7,456 refused |
+| kaggle_linkedin | 18,032 / 18,084 (0.9971) | 10,304 / 18,084 (0.5698) |
+
+Every first-part stop check came out clear (`parts/<part>/stop_check.json`, collected in `report.json`). The largest unanchored share was 4.6% (`rjdb-001`), against a limit of 10%. The biased teacher answered hire 14 times in 52,824 generations (`biased_decisions_by_source`), which is the one-directional contrast the addendum is about.
+
+**Throughput.** A vote pass took about 510 s per 1,500 pairs (23.5 draws/s). An invariant pass took about 770 s per 17,500 prompts (22.8 prompts/s); Kaggle x LinkedIn took 940 s, its prompts being twice as long. The teacher took about 305 s to load per job.
+
+**Persona** (`persona_by_source`, IT against non-IT roles):
+
+| source | role | pairs | anchor hire share | rationales citing technical skills |
+|---|---|---|---|---|
+| djinni_new | IT | 2,775 | 0.248 | 0.079 |
+| djinni_new | non-IT | 1,624 | 0.182 | 0.188 |
+| rjdb | IT | 1,136 | 0.545 | 0.094 |
+| rjdb | non-IT | 1,730 | 0.578 | 0.090 |
+| kaggle_linkedin | IT | 122 | 0.041 | 0.213 |
+| kaggle_linkedin | non-IT | 1,385 | 0.157 | 0.066 |
+
+On RJDB and Kaggle the non-IT roles are not marked down, and technical words go with IT roles. Djinni's non-IT gap is therefore more likely a property of its non-IT pairs than of the "technical recruiter" persona. That is not tested.
+
+### Assembly (`generation_report.json`)
+
+- **Exclusions on CV.** 133 `djinni_new` pairs were dropped for the external marker list, and 88 RJDB pairs for template residue.
+- **Balancing, per source** (before, then after):
+  - djinni_new: 11,494 hire and 39,656 reject, then 11,494 each;
+  - rjdb: 18,734 hire and 14,549 reject, then 14,549 each;
+  - kaggle_linkedin: 2,664 hire and 15,368 reject, then 2,664 each.
+- **SFT.** `sft_train` has 69,232 rows: `sft_v3_swap`'s 14,890 unchanged, then 54,342 new. The English rows a run reads are 62,761 train and 3,527 validation (`configs/data/en_only_sft_v3_additional.yaml`, checked through `training_common.load_generated_dataset`).
+  - New train rows by source: djinni_new 10,822 hire and 10,883 reject; rjdb 13,779 and 13,841; kaggle_linkedin 2,508 and 2,509.
+- **On-policy input.** `raw/en_invariant.parquet`: 102,660 rows over 8,555 pairs, in v1's columns.
+- **r2em on the vote anchors.** 2,271 train and 272 validation rows (`configs/data/en_only_dpo_v3_r2em.yaml`, `data_kind: r2em_v3`).
+
+## Reading
+
+The new sources give SFT-v3 about seven times its English training rows. Within each source, the targets meet the same filters at the same yields as V1's. The vote and the yields are measured. What the rows do to a model is not.
+
+The hire shares differ by source (0.22, 0.57, 0.15). The per-source balancing keeps each source at 50/50 in SFT, but the mix of sources still changes what the model sees: RJDB is 51% of the new rows. A run on this set should be read per source on the validation split, and at matched hire rate on the benchmark.
+
+## Caveats
+
+- **The DPO negatives.** No DPO set for training is built here. Teacher-biased negatives are ruled out (addendum), and the on-policy pairs need SFT-v3. The biased passes on disk are kept only for comparison: four parts, plus `teacher_biased_v1_dpo_*`.
+- **Off-policy r2em.** The r2em part of V3's DPO set was sampled from SFT v1.
+- **Ukrainian.** `sft_train` keeps the swap set's 6,471 Ukrainian rows, and every new row is English. The English data config reads English only.
+- **V1's own filter.** V1's pairs keep V1's marker filter. About 3.3% of their CVs would fail the external list that the new Djinni rows pass.
+- **Seeds.** New anchors use per-prompt seeds, while V1's vote (job 5073453) used one shared seed.
+- **The pool is larger than what ran.** It holds 186,970 new pairs; 9,034 were generated, sized for the DPO target.
+
+## Reproducing
+
+```bash
+CFG=configs/generation/v3_additional_data.yaml
+HBM_OUTPUT_ROOT=$XW python scripts/v3_additional_data.py --config $CFG --stage pool        # CPU, ~15 min
+REPO=$PWD PASSES="votes invariant" scripts/cscs/submit.sh -p normal -t 06:00:00 \
+    scripts/cscs/v3_additional_data.sbatch djinni_new-000 rjdb-000 kaggle_linkedin-000 ...
+HBM_OUTPUT_ROOT=$XW python scripts/v3_additional_data.py --config $CFG --stage r2em        # CPU
+HBM_OUTPUT_ROOT=$XW python scripts/v3_additional_data.py --config $CFG --stage assemble    # CPU
+```
