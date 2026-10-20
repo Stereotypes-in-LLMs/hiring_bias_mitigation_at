@@ -21,6 +21,7 @@ with a non-zero temperature when you want to measure the variance instead of rem
 
 from __future__ import annotations
 
+import hashlib
 import math
 import os
 import time
@@ -54,6 +55,12 @@ class GenerationConfig:
     top_p: float = 1.0
     seed: int = 42
     n_samples: int = 1
+    #: vLLM only. Sampled decoding gives every prompt's request the one seed `seed` instead of
+    #: `per_prompt_seed(seed, prompt)`. That is the request every sampled run sent before
+    #: per-prompt seeds, so this exists to replay such a run and nothing else: under one seed,
+    #: prompts share their sampling noise (see `VLLMBackend.generate`). A record without this
+    #: key predates per-prompt seeds.
+    shared_seed: bool = False
 
     def as_dict(self) -> dict:
         return {
@@ -63,6 +70,7 @@ class GenerationConfig:
             "seed": self.seed,
             "n_samples": self.n_samples,
             "greedy": self.temperature == 0.0,
+            "shared_seed": self.shared_seed,
         }
 
 
@@ -122,6 +130,20 @@ def _chat_wrap(tokenizer, prompt: str, template_kwargs: dict | None = None) -> s
         )
 
 
+def per_prompt_seed(base_seed: int, prompt: str) -> int:
+    """The sampling seed of one prompt: a stable hash of the run's base seed and its text.
+
+    The text is the prompt as the caller passed it, before the chat template, which is what
+    prompts.parquet stores, so any stored sample's seed can be recomputed. sha256 rather than
+    `hash()`, whose value for a str changes with every interpreter (PYTHONHASHSEED). The value
+    stays below 2**62: vLLM runs the n children of a request on seed .. seed + n - 1 and keeps
+    seeds in an int64, and two prompts' child ranges overlap only when their seeds land within
+    n of each other, about n / 2**61 per pair of prompts.
+    """
+    digest = hashlib.sha256(f"{int(base_seed)}:{prompt}".encode()).digest()
+    return int.from_bytes(digest[:8], "big") >> 2
+
+
 @dataclass
 class VLLMBackend:
     model: str
@@ -178,17 +200,57 @@ class VLLMBackend:
 
             self._lora_request = LoRARequest("mitigation", 1, self.lora_path)
 
-    def generate(self, prompts: list[str]) -> list[str]:
-        self._load()
+    def _sampling_params(self, prompts: list[str], n: int):
+        """The sampling params of one `LLM.generate` call over `prompts`: a single
+        SamplingParams when every request is the same, else one per prompt, which vLLM 0.31
+        pairs with the prompts one to one.
+
+        Greedy decoding has no random stream and carries no seed. Sampled decoding seeds each
+        prompt with `per_prompt_seed(generation.seed, prompt)`, or, under
+        `generation.shared_seed`, sends every prompt the one seed `generation.seed` -- the
+        request every sampled run sent before per-prompt seeds.
+        """
         from vllm import SamplingParams
 
-        params = SamplingParams(
-            max_tokens=self.generation.max_new_tokens,
-            temperature=self.generation.temperature,
-            top_p=self.generation.top_p,
-            seed=self.generation.seed if self.generation.temperature > 0 else None,
-            n=1,
-        )
+        g = self.generation
+
+        def params(seed: int | None):
+            return SamplingParams(max_tokens=g.max_new_tokens, temperature=g.temperature,
+                                  top_p=g.top_p, seed=seed, n=int(n))
+
+        if g.temperature <= 0:
+            return params(None)
+        if g.shared_seed:
+            return params(g.seed)
+        return [params(per_prompt_seed(g.seed, p)) for p in prompts]
+
+    def generate(self, prompts: list[str]) -> list[str]:
+        """One completion per prompt.
+
+        Greedy decoding, the audit default, sends one SamplingParams without a seed, as it
+        always has. Sampled decoding seeds each prompt from its own text, as `generate_samples`
+        does: `per_prompt_seed(generation.seed, prompt)`, independent of the prompt's batch,
+        chunk or position. Identical prompts in one call still draw identical text; several
+        draws of one prompt come from `generate_samples`.
+
+        Until 2026-10-20 sampled decoding here sent every prompt the one seed
+        `generation.seed`, and the teacher ran on that. configs/generation/teacher.yaml (T=0.7,
+        scripts/generate_training_data.py) drew artifacts/semisynthetic-v1 on the DGX Spark,
+        and negatives_v2_small*.yaml drew the batch-01 negatives. Neither config regenerates
+        its artifacts byte for byte any more. Under one seed, vLLM 0.31's V2 model runner gives
+        prompts of equal token length the same noise (see `generate_samples`), and the classic
+        runner, which seeds a generator per request and draws the noise per decode step, gives
+        every prompt the same noise at each step. The check of 2026-10-19 found no
+        equal-length replay in v1 or batch-01 (batch-01: no duplicate text in 720), but the v1
+        anchors look like one noise draw shared by all 3,000 prompts: they hire none of the
+        288 pairs that eight independent Daint draws (job 5073453) hire 1-4 times. That is
+        what the classic runner would do; the Spark's vLLM version and runner were not
+        recorded, so it is not confirmed. `generation.shared_seed: true` sends the old request
+        again. A byte-identical replay also needs the vLLM version and model runner the run
+        used.
+        """
+        self._load()
+        params = self._sampling_params(prompts, n=1)
         wrapped = [_chat_wrap(self._tokenizer, p, self.chat_template_kwargs) for p in prompts]
         kwargs = {"lora_request": self._lora_request} if self._lora_request else {}
         outputs = self._llm.generate(wrapped, params, **kwargs)
@@ -200,17 +262,29 @@ class VLLMBackend:
         Repeating a prompt n times under a fixed per-request seed returns n copies of one
         answer; asking for n samples in one request draws n different ones, reproducibly.
         On-policy negatives need exactly that: several of the student's own answers per prompt.
+
+        Each prompt's request carries its own seed, `per_prompt_seed(generation.seed, prompt)`.
+        With one seed for every prompt, vLLM 0.31 runs child sample j of each request on
+        seed + j, and its V2 model runner draws the sampling noise from (seed, token position,
+        token id). Any two prompts of equal token length therefore got the same noise in
+        sample j. In onpolicy-full (check of 2026-10-19), 57% of same-index samples were
+        byte-identical between attribute variants of one pair that tokenise to the same length
+        (7% of variant pairs) and none between variants of different lengths. An attribute
+        prompt is always longer than its pair's attribute-free prompt, so the free-vs-
+        attributed comparison a row's tipping is read from was not coupled. The seed depends on
+        the base seed and the prompt text only, so a resumed or re-sharded run redraws the same
+        samples. The same model on the same prompts under the same base seed still draws the
+        same samples; a run meant to add independent draws must set its own `seed`.
+
+        Earlier on-policy runs -- batch-01-onpolicy, onpolicy-full, onpolicy-hire32,
+        onpolicy-it2 and onpolicy-gender-pi1 -- sampled under the shared seed (`seed=42`).
+        onpolicy-hire32's samples 0-7 replay onpolicy-full's (same model, prompts and seeds:
+        84% byte-identical, 99.9% the same decision), and onpolicy-gender-pi1's samples of the
+        prompts it shares with onpolicy-it2 replay those (81%, 99.8%). Re-running their
+        configs now draws different samples, unless `generation.shared_seed` is set.
         """
         self._load()
-        from vllm import SamplingParams
-
-        params = SamplingParams(
-            max_tokens=self.generation.max_new_tokens,
-            temperature=self.generation.temperature,
-            top_p=self.generation.top_p,
-            seed=self.generation.seed if self.generation.temperature > 0 else None,
-            n=int(n),
-        )
+        params = self._sampling_params(prompts, n=n)
         wrapped = [_chat_wrap(self._tokenizer, p, self.chat_template_kwargs) for p in prompts]
         kwargs = {"lora_request": self._lora_request} if self._lora_request else {}
         outputs = self._llm.generate(wrapped, params, **kwargs)
