@@ -472,7 +472,7 @@ The data sets are on Daint under `artifacts/semisynthetic-v3/sft_v3_swap/` and `
 - `configs/data/en_only_sft_v3_swap.yaml`: the `en_only` view over `sft_v3_swap`, 8,419 training and 455 validation rows, 0.603 and 0.607 hire.
 - `configs/mitigation/sft/qwen3.5-9b_en_only_sft_v3_swap_gh200.yaml`: SFT v1's recipe with the data view, output directory and run name changed. Gradient accumulation goes from 16 to 4 for Daint's four GPUs, keeping the effective batch at 16.
 
-Not done: training. Stage 2 is still not approved. It needs the control's run name (the user's reproduction of SFT v1), confirmation that the control ran with the same placement, and a pre-registration of the comparison.
+Not done: training. On 2026-10-20 the user decided that SFT-v3 stops at the data and configs for now. Stage 2 is not approved. It needs the control's run name (the user's reproduction of SFT v1), confirmation that the control ran with the same placement, and a pre-registration of the comparison.
 
 ## Reading
 
