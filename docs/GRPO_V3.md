@@ -85,6 +85,28 @@ These settings differ from the pilot:
 
 - **Cost.** 7.27 GPU-h measured under `grpo_v3` (`$XW/cost/records/*_{5114721,5115435}_*`): training 6.78, merge 0.07, audit 0.23, margin pass 0.20.
 
+## Round 2: GRPO-v3-new, on pairs SFT-v3 never trained on
+
+### Pre-registration (2026-10-21, about 19:00, before the prompts exist)
+
+The user asked for this run after GRPO-v3's result: "Plan a GRPO run on Round 3's new pairs, to run after Round 3's SFT-v3 sample job."
+
+- **Question.** Does GRPO from SFT-v3 on pairs SFT-v3 never trained on lower the share of unstable within-group sets at matched hire rate against SFT-v3?
+- **Hypothesis.** Yes, or at least by more than GRPO-v3 does. GRPO-v3's prompts were SFT-v3's own training pairs, where it errs on 1.18% of its samples. On held-out candidates its tipped rate per row is higher, by 1.4 to 8 times by source and anchor (`docs/V3_NEW_DATA.md`, round 3, "Why new pairs").
+- **Control.** SFT-v3, the decision, as for GRPO-v3. GRPO-v3 is context: the same recipe on pairs SFT-v3 trained on. A run better than GRPO-v3 but not better than SFT-v3 supports "unseen pairs carry more signal" only as context, not as a gain.
+- **For the hypothesis.** Δ < 0 against SFT-v3 with the interval below 0, and all four guardrails passing.
+- **Against it.** An interval that reaches 0 or a Δ above 0, or a guardrail failure.
+- **What changes from GRPO-v3: only the prompts.** `grpo-v3-new` (`configs/data/en_only_grpo_v3_new.yaml`) comes from `scripts/build_grpo_prompts.py --pool artifacts/semisynthetic-v3/onpolicy-new --hire-topup none --validation-root artifacts/semisynthetic-v3`. That is grpo-v3's construction: 3,000 prompts, half per vote-anchor verdict, the same summed pull on both halves. The pool is round 3's new pairs only, sampled by SFT-v3 at k=8 (`configs/generation/negatives_v3_onpolicy_new_gh200.yaml`); round 3 has no hire top-up. The new pairs are not mixed with grpo-v3's, so the two runs differ in whether SFT-v3 has seen the pairs, and in the k=32 top-up.
+- **Data gate, checked before training.**
+  - At least 750 tipped training rows per anchor side, so that at most half of each half lacks a sampled error.
+  - 128 held-out monitor rows per side.
+  - If the gate fails, nothing is submitted; the counts are reported to the user.
+- **Stop conditions.** As GRPO-v3: the monitor band 15–35%, `memory_floor_gb` 12, a 3 h limit with one resubmission.
+- **Selection and test.** The final adapter, step 187, is audited. The held-out candidates include round 3's `sft_validation`, which round 3's DPO also holds out. The benchmark audit is spent once.
+- **Order.** The prompts are built when round 3's SFT-v3 sample job has finished. Training is submitted when the account's queue is empty, one job at a time. It may run before or after round 3's judge job.
+
+The training config is `configs/mitigation/grpo/qwen3.5-9b_en_only_grpo_v3_new_gh200.yaml` and the audit config `configs/audit/qwen3.5-9b_en_grpo_v3_new_gh200.yaml`. Costs are recorded under `grpo_v3_new`. The prompts' share of round 3's sample job stays under `dpo_v3_5k`, whose job it is.
+
 ## Reproducing
 
 From a Daint login node, one submission at a time:
@@ -97,6 +119,19 @@ python scripts/build_grpo_prompts.py --pool artifacts/semisynthetic-v3/onpolicy-
 HBM_COST_ARM=grpo_v3 CONFIG=configs/mitigation/grpo/qwen3.5-9b_en_only_grpo_v3_gh200.yaml \
   scripts/cscs/submit.sh -p normal -t 03:00:00 scripts/cscs/train_grpo.sbatch
 HBM_COST_ARM=grpo_v3 AUDIT=configs/audit/qwen3.5-9b_en_grpo_v3_gh200.yaml \
+AGAINST=configs/audit/qwen3.5-9b_en_sft_v3_additional_gh200.yaml \
+  scripts/cscs/submit.sh scripts/cscs/evaluate_arm.sbatch
+```
+
+GRPO-v3-new, after round 3's SFT-v3 sample job:
+
+```bash
+python scripts/build_grpo_prompts.py --pool artifacts/semisynthetic-v3/onpolicy-new \
+  --hire-topup none --validation-root artifacts/semisynthetic-v3 \
+  --out artifacts/semisynthetic-v3/grpo-v3-new
+HBM_COST_ARM=grpo_v3_new CONFIG=configs/mitigation/grpo/qwen3.5-9b_en_only_grpo_v3_new_gh200.yaml \
+  scripts/cscs/submit.sh -p normal -t 03:00:00 scripts/cscs/train_grpo.sbatch
+HBM_COST_ARM=grpo_v3_new AUDIT=configs/audit/qwen3.5-9b_en_grpo_v3_new_gh200.yaml \
 AGAINST=configs/audit/qwen3.5-9b_en_sft_v3_additional_gh200.yaml \
   scripts/cscs/submit.sh scripts/cscs/evaluate_arm.sbatch
 ```

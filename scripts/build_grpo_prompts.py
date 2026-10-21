@@ -7,8 +7,9 @@
 
 Inputs are the v1 English pool as the SFT student was sampled on it (`onpolicy-full`: rows,
 their attributed prompts, the k=8 selection and samples) and the k=32 hire top-up's selection
-and samples (`onpolicy-hire32`). Every candidate in a `*validation.parquet` under
-semisynthetic-v2 is held out of training. Output, read by a training config with `data_kind: grpo`:
+and samples (`onpolicy-hire32`); `--hire-topup none` for a pool sampled at k=8 only. Every
+candidate in a `*validation.parquet` under semisynthetic-v2 is held out of training. Output, read
+by a training config with `data_kind: grpo`:
 
     grpo_train.parquet, grpo_validation.parquet, report.json, samples.md
 """
@@ -41,7 +42,8 @@ def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__,
                                      formatter_class=argparse.RawDescriptionHelpFormatter)
     parser.add_argument("--pool", default="artifacts/semisynthetic-v2/onpolicy-full")
-    parser.add_argument("--hire-topup", default="artifacts/semisynthetic-v2/onpolicy-hire32")
+    parser.add_argument("--hire-topup", default="artifacts/semisynthetic-v2/onpolicy-hire32",
+                        help="the k=32 hire top-up's run directory, or `none`")
     parser.add_argument("--validation-root", default="artifacts/semisynthetic-v2",
                         help="every *validation.parquet below it names held-out candidates")
     parser.add_argument("--out", default="artifacts/semisynthetic-v2/grpo-02")
@@ -58,12 +60,13 @@ def main() -> None:
 
     require_output_root()
     pool = Path(resolve_output_path(args.pool))
-    topup = Path(resolve_output_path(args.hire_topup))
+    topups = ([] if args.hire_topup.lower() == "none"
+              else [Path(resolve_output_path(args.hire_topup))])
     out = Path(resolve_output_path(args.out))
 
     rows = G.attach_prompts(G.read(pool / "rows.parquet"), G.read(pool / "prompts.parquet"))
     rows = rows[rows["lang"] == "en"]
-    keys = G.tipped_keys(G.read(pool / "selected.parquet"), G.read(topup / "selected.parquet"))
+    keys = G.tipped_keys(*[G.read(r / "selected.parquet") for r in [pool, *topups]])
     rows = G.mark_tipped(rows, keys)
 
     def counts(root: Path) -> dict:
@@ -72,7 +75,7 @@ def main() -> None:
         return G.sample_hire_counts(frame[frame["prompt"].isin(set(rows["prompt"]))])
 
     # The k=32 top-up first: its hire rows' rates rest on four times the samples.
-    rows = G.attach_sft_rates(rows, counts(topup), counts(pool))
+    rows = G.attach_sft_rates(rows, *[counts(r) for r in topups], counts(pool))
 
     root = Path(resolve_output_path(args.validation_root))
     split_files = sorted(p for p in root.rglob("*validation.parquet") if out not in p.parents)
