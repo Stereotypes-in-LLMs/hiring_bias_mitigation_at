@@ -584,7 +584,7 @@ Written on 2026-10-21 at about 09:10, after the full run's judge and before any 
 
 #### On-policy pairs: the top-up's samples (job 5111001)
 
-**In one sentence.** At 32 samples a prompt, each source's short side gave about 2.4 times the tipped negatives the full run's 8 did, and SFT-v3 was again right on 98.8% of its samples.
+**In one sentence.** At 32 samples a prompt, each source's short side gave 2.4 to 2.5 times the tipped negatives the full run's 8 did, and SFT-v3 was again right on 98.8% of its samples.
 
 **By source** (`artifacts/semisynthetic-v3/onpolicy-hire32/sample_report.json`, `by_pool_source`; the full run's counts from its own report):
 
@@ -600,6 +600,6 @@ The rest of the readout:
 - **Wrong samples.** 11,180 wrong samples, on 2,565 rows.
 - **Selected.** 2,361 tipped negatives and 192 untipped ones.
 
-RJDB's reject rows stay the hardest to draw mistakes from, about a quarter of the rate on the other two sources' hire rows.
+RJDB's reject rows stay the hardest to draw mistakes from: 3.7% a row, a quarter to a third of the rate on the other two sources' hire rows.
 
 **Run.** Job 5111001 on `normal`, 59:45, commit b45c7b3. Prepare took 44 s, reusing SFT-v3's merge. Sampling took 56 to 58 minutes per GPU at 87–89% mean GPU use, 3.81 GPU-h in all, 3.98 allocated (`$XW/cost/records/*_5111001_*`, arm `dpo_v3`). Its judge is job 5111399.
