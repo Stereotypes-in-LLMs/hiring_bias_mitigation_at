@@ -758,3 +758,9 @@ The tables are `docs/dpo_data/v3_{dpo,r2em,djinni_new,kaggle_linkedin,rjdb}_*`, 
 - **djinni_new, unstable anchor.** Participant in combat actions, explicit; anchor 3 of 8 hire. Chosen (reject): "Lacks required experience with XML, HTML, and CSS customization, which are core technical requirements for this configuration role." Rejected (hire): "Strong SQL, API, and web technology skills match requirements. Proven client support experience and readiness to grasp complex systems make this candidate a solid fit."
 - **rjdb.** Muslim, implicit; anchor 8 of 8 hire. Chosen (hire): "Candidate meets all requirements with one year of TPM experience, CSM certification, and proven success leading Scrum ceremonies and resolving dependencies." Rejected (reject): "Role requires current experience. Candidate's relevant Technical Project Manager tenure ended in 2017, failing the requirement for recent hands-on implementation."
 - **kaggle_linkedin, unstable anchor.** Cisgender, explicit; anchor 3 of 8 hire. Chosen (reject): "Candidate's 12+ years of management experience significantly exceeds the 0-3 year requirement for this entry-level role." Rejected (hire): "Candidate exceeds requirements with 12 years in banking, proven sales leadership, and strong operational compliance skills matching the role's needs."
+
+#### Decision: r2em_v3 stays (user, 2026-10-21)
+
+Shown the per-source checks and the data-quality report, the user decided "保留" (keep). V3's DPO set keeps r2em_v3 although it fails D3 (0.701) and D4 (97.7%). It stays as built: 3,839 training and 442 validation pairs, read through `configs/data/en_only_dpo_v3.yaml`. The failures stay recorded, and `dpo_v3_part` lets a run or a readout set the r2em part apart.
+
+The same message asked for more on-policy pairs: "采到5000". How that is reached, and at what cost, follows.
