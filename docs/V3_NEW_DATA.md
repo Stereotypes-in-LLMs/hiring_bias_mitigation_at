@@ -1017,3 +1017,117 @@ The verdict is "not better: the interval reaches 0". The merge kept less of this
 
 - **Merge.** SFT-v3 kept 100% and the run's adapter 86.0% (`$XW/logs/xw-eval-arm-5114592.out`).
 - **Cost.** 0.50 GPU-h measured: merge 0.07, audit 0.23, margin pass 0.20 (`$XW/cost/records/*_5114592_*`, arm `dpo_v3`). With training, the check cost 2.10 GPU-h. The context comparisons ran on the login node.
+
+## Round 3: on-policy pairs to 5,000, from pairs SFT-v3 never trained on
+
+### Pre-registration
+
+Written on 2026-10-21 at about 17:20 CEST, before any job of this round. DPO on the 1,568 on-policy pairs alone was not better than SFT-v3. The user then judged "DPO need大量好数据，但是好数据难找" and decided "DPO一般训练规模都上万，想先增加好数据到5千对".
+
+#### Question
+
+Can the on-policy part of V3's DPO set reach 5,000 training pairs from SFT-v3's mistakes on pool pairs it never trained on? The pairs must be balanced by error mass within each pool source and pass every per-source check.
+
+"5,000" counts training pairs after the per-source balance, on-policy only. r2em_v3 is not counted: it failed D3 and D4, and the run without it did better than DPO-v3 (−0.90 pp [−2.27, +0.42]). If 5,000 was meant to include r2em_v3's 2,271 pairs, the round needs about 1,200 more pairs instead of about 3,400.
+
+#### Why new pairs
+
+- **Round 1's pairs are SFT-v3's training pairs.** On them, 98.8% of its samples match the anchor, and 2.3% of rows give a tipped negative (job 5108751).
+- **The rate is higher on the candidates SFT-v3 held out.** The table gives tipped negatives per row from the same run, at k=8 and before the judge, mostly higher on RJDB and on hire anchors (`reports/v3_new_data/onpolicy_yield_by_split.json`, from `scripts/onpolicy_yield_by_split.py`):
+
+  | source and anchor | rows SFT-v3 trained on | other rows of its training candidates | held-out candidates |
+  |---|---|---|---|
+  | djinni_new, hire | 4.85% of 10,822 | none | 8.04% of 672 |
+  | djinni_new, reject | 1.59% of 10,883 | 2.02% of 26,781 | 2.21% of 1,992 |
+  | rjdb, hire | 1.67% of 13,779 | 1.77% of 3,959 | 7.53% of 996 |
+  | rjdb, reject | 1.08% of 13,841 | none | 9.04% of 708 |
+
+  The held-out samples are small: 222 djinni_new candidates and 142 RJDB candidates.
+- **Resampling round 1's pairs has diminishing returns.** At k=32, the top-up found 2.4 to 2.5 times the full run's tipped negatives on the same rows, for 4 times the samples.
+- **Pool left.** The pool holds 139,591 djinni_new pairs and 38,345 RJDB pairs that no round drew (`additional/pool/pairs_en.parquet`, less round 1's parts). All 1,534 Kaggle × LinkedIn pairs were drawn, so that source stays at round 2's 334 pairs.
+
+#### The runs
+
+The jobs run one at a time on `normal`, from this worktree, with `HBM_COST_ARM=dpo_v3_5k`:
+
+| # | job | config | output |
+|---|---|---|---|
+| 1 | `v3_additional_data.sbatch djinni_new-003 rjdb-002`, `PASSES="votes invariant"` | `configs/generation/v3_new_pairs.yaml` | `artifacts/semisynthetic-v3/new-pairs/parts/` |
+| – | `--stage assemble`, on the login node | the same | `new-pairs/raw/en_invariant.parquet` and `new-pairs/sft_validation.parquet` |
+| 2 | `onpolicy_full.sbatch sample` | `configs/generation/negatives_v3_onpolicy_new_gh200.yaml` | `artifacts/semisynthetic-v3/onpolicy-new` |
+| 3 | `onpolicy_full.sbatch judge` | the same | the same |
+| 4–6 | as 1–3, on the further parts the pilot sizes | | |
+| 7 | `build_balanced_dpo.sbatch score` | SFT-v3 | SFT-v3's margin on every candidate prompt |
+| 8 | direction checks per source | SFT-v3 and the base | D1 to D7, with D4 on 600 pairs per source |
+
+Jobs 1 to 3 are the pilot: one part per source, 3,000 pairs. After job 3, the pilot's yields are reported together with the number of further parts they imply. Jobs 4 to 6 wait for the user's go-ahead.
+
+**New code**, each piece with a test:
+
+- **`v3_additional_data.py`** reads the pool from `pool_dir` and writes to its own directory, so round 1's outputs stay as built, SFT-v3's training data among them. `earlier_rounds` makes `generate` refuse round 1's parts and `all` skip them. It also makes `assemble` refuse any candidate that is in round 1's `sft_*` files (`tests/test_v3_additional_data.py`).
+- **`generate_onpolicy_full.py --stage merge`** takes `merge_with`: the new run's pairs join round 2's merged pairs, 2,379 training and 252 validation. It refuses pairs from another merged student and any candidate on both sides of the split (`tests/test_onpolicy.py`).
+- **`v3_additional_data.sbatch`** takes `CFG`, and records the teacher step with `cost`.
+
+**Balance.** The union goes through `build_balanced_dpo.py candidates`, `score` and `build --balance-by pool_source` under the name `dpo_v3_onpolicy5k`, at r2em's parameters: tolerance 0.05, `min_keep` 0.5, seed 42. Round 2's `dpo_v3_onpolicy` set stays on disk as built.
+
+#### Expected
+
+These numbers are a scale, not a gate. They assume:
+
+- the held-out rates above;
+- round 2's judge keep rates: djinni_new 78.5%, RJDB 48.9%;
+- 5% of candidates in validation;
+- round 2's balance trims: 19% of djinni_new's reject side, 8% of RJDB's hire side.
+
+Per 1,000 new pairs, that gives:
+
+| source | tipped, hire / reject | training pairs after the judge, hire / reject | balanced pairs |
+|---|---|---|---|
+| djinni_new | 217 / 206 | about 160 / 150 | about 250 |
+| rjdb | 509 / 474 | about 235 / 220 | about 430 |
+
+Round 2 has 1,568 pairs, so 5,000 needs about 3,430 more. Four djinni_new parts and three RJDB parts would do it: 6,000 and 4,500 pairs, giving about 1,500 and 1,950, pilot included.
+
+That plan would make RJDB about 44% of the set, against 17% now. More djinni_new parts would lower that share, but each balanced pair would need more new pairs. The mix is decided with the user after the pilot.
+
+What would support the plan:
+
+- in the pilot, each source's tipped rate per row is within a factor of 1.5 of its held-out rate;
+- the new pairs pass D1 to D6 per source.
+
+What would count against it:
+
+- a source at less than half its projected rate;
+- new pairs that fail D3 or D4.
+
+#### Stop conditions
+
+- **Teacher.** Round 1's per-part stop conditions apply to each source's first part (`stop:` in the config).
+- **Samples.** A source is reported before its judge if its tipped rate per row in the pilot is less than half its projection: 1.8% for djinni_new, 4.1% for RJDB.
+- **Judge.** A keep rate under 40% is reported (D7). RJDB kept 43% to 49% in round 2.
+- **Balance.** A source that cannot balance at `min_keep` 0.5 stays out and is reported. Neither `min_keep` nor the tolerance is lowered without the user.
+- **Checks.** D1 below 1.0 stops the round as a bug. A source that fails D2, D3 or D4 is reported, and enters only if the user says so.
+- **Compute.** At most 30 GPU-h for the round, as `reports/cost/steps.csv` counts arm `dpo_v3_5k`.
+
+#### Splits
+
+- **New candidates follow the pool's seeded split.** This is round 1's draw of 5% of each source's candidates over the whole pool (`validation_candidates`), so which side a candidate is on does not depend on the round. The on-policy run holds out the candidates in `new-pairs/sft_validation.parquet`, as round 2 held out round 1's.
+- **No new candidate is in SFT-v3's training data.** `assemble` checks this.
+- **No benchmark.** Nothing in this round reads the benchmark. DPO on the result gets its own pre-registration after the checks.
+
+#### Compute estimate
+
+From round 1's and round 2's measured rates:
+
+- **Teacher.** Round 1's vote and invariant passes took 8.68 GPU-h for 9,034 pairs, about 0.96 GPU-h per 1,000 pairs. Loading the teacher adds about 0.34 GPU-h per job.
+- **Sampling.** Each pair has 13 prompts at 8 samples. Round 2's full run drew about 285 samples a second on one node, so this is about 0.4 GPU-h per 1,000 pairs.
+- **Judge.** Most of a judge job is loading the teacher: about 0.5 GPU-h per job.
+
+**The pilot** costs about 3.2 GPU-h of teacher, 1.3 of sampling and 0.5 of judging: about 5 GPU-h.
+
+**The whole round,** at 10,500 new pairs, costs about 11 GPU-h of teacher, 4.5 of sampling, 1 of judging, 0.3 of scoring and 1 of checks: about 18 GPU-h.
+
+#### What it cannot settle
+
+- Whether DPO on 5,000 pairs beats SFT-v3.
+- Whether pairs from candidates SFT-v3 never saw teach it something different from round 2's pairs, which came from candidates it trained on. The per-source checks describe the two; they do not settle it.

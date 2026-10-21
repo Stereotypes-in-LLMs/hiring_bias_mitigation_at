@@ -409,6 +409,50 @@ def test_merge_needs_a_topup_run(tmp_path):
         module.stage_merge({}, tmp_path)
 
 
+def test_merge_with_joins_a_run_on_new_rows_of_the_same_student(tmp_path, monkeypatch):
+    """Round 3: the new pairs' run joins round 2's merged pairs; the union keeps both."""
+    import json
+
+    import pytest
+
+    module = _onpolicy_full_script()
+    monkeypatch.setenv("HBM_OUTPUT_ROOT", str(tmp_path))
+    monkeypatch.setenv("HBM_ALLOW_LOCAL_OUTPUT", "1")
+
+    def pairs(ids, run):
+        return pd.DataFrame({"pair_id": ids, "candidate_id": [f"c-{i}" for i in ids],
+                             "protected_attr": "Female", "condition": "explicit", "prompt": "p",
+                             "reference_decision": "hire", "pool_source": "rjdb", "run": run})
+
+    old, new = tmp_path / "hire32" / "merged", tmp_path / "new"
+    old.mkdir(parents=True)
+    new.mkdir()
+    for run, student in ((tmp_path / "hire32", "sft_v3"), (new, "sft_v3")):
+        (run / "prepare.json").write_text(json.dumps({"merged_checkpoint": student}))
+    pairs(["a", "b"], "old").to_parquet(old / "dpo_v2_train.parquet")
+    pairs(["v"], "old").to_parquet(old / "dpo_v2_validation.parquet")
+    pairs(["c"], "new").to_parquet(new / "dpo_v2_train.parquet")
+    pairs(["w"], "new").to_parquet(new / "dpo_v2_validation.parquet")
+
+    with pytest.raises(SystemExit, match="not both"):
+        module.stage_merge({"merge_with": "hire32/merged", "topup_of": "x"}, new)
+    module.stage_merge({"merge_with": "hire32/merged"}, new)
+    train = pd.read_parquet(new / "merged" / "dpo_v2_train.parquet")
+    assert list(zip(train["pair_id"], train["run"])) == [("a", "old"), ("b", "old"),
+                                                         ("c", "new")]
+    assert len(pd.read_parquet(new / "merged" / "dpo_v2_validation.parquet")) == 2
+
+    # Another student's pairs are refused.
+    (new / "prepare.json").write_text(json.dumps({"merged_checkpoint": "sft_v1"}))
+    with pytest.raises(SystemExit, match="two students"):
+        module.stage_merge({"merge_with": "hire32/merged"}, new)
+    # A candidate in round 2's training split and the new run's validation is refused.
+    (new / "prepare.json").write_text(json.dumps({"merged_checkpoint": "sft_v3"}))
+    pairs(["a"], "new").to_parquet(new / "dpo_v2_validation.parquet")
+    with pytest.raises(SystemExit, match="both sides"):
+        module.stage_merge({"merge_with": "hire32/merged"}, new)
+
+
 def test_selection_by_pool_source_reads_each_sources_operating_point():
     """Which side a student errs on follows from its hire rate, so V3 reads each source's
     attribute-free hire rate beside its negatives (docs/V3_NEW_DATA.md, round 2)."""

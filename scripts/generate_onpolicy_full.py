@@ -18,15 +18,21 @@
   balance  equal hire and reject reference verdicts per protected group inside each split,
            written to balanced/ with balance.json (the pool is 86% reject; spec D6). The DPO
            data config reads balanced/
-  merge    a top-up run only: its pairs merged into the base run's inside each split, not
-           balanced, written to merged/ with merge.json. V3 balances them by error mass per
-           pool source afterwards (scripts/build_balanced_dpo.py), which is r2em's candidate
-           set: the count balance above would drop pairs that balance should choose from
+  merge    a top-up run, or a run with `merge_with`: its pairs merged into the base run's (or
+           `merge_with`'s) inside each split, not balanced, written to merged/ with
+           merge.json. V3 balances them by error mass per pool source afterwards
+           (scripts/build_balanced_dpo.py), which is r2em's candidate set: the count balance
+           above would drop pairs that balance should choose from
 
 A top-up run (`row_filter` + `topup_of` in its config) samples one slice of the pool again
 with more samples per prompt, e.g. the hire rows at k=32 because the pool is 86% reject. Its
 train/validation split comes from the base run's rows, so a candidate is on the same side in
 both runs, and its balance stage merges the base run's pairs with its own before balancing.
+
+A run on new pairs of the same pool (`merge_with` in its config, V3's round 3) samples rows no
+earlier run has, from its own source directory, and its merge joins its pairs to the merged
+pairs `merge_with` names. Both must come from the same merged student, and no candidate may
+end up on both sides of the split.
 
 An attribute-coverage run (`add_attributes: {group, k, seed}`) samples only new rows: `k` more
 attributes of one group per pair, with the pair's own chosen text reused
@@ -79,6 +85,23 @@ def _source(cfg: dict) -> Path:
 
 def _topup_base(cfg: dict) -> Path | None:
     return Path(resolve_output_path(cfg["topup_of"])) if cfg.get("topup_of") else None
+
+
+def _merge_base(cfg: dict) -> Path | None:
+    """The pairs this run's are merged into: its top-up base run's, or `merge_with`'s."""
+    if cfg.get("topup_of") and cfg.get("merge_with"):
+        raise SystemExit("merge: a config takes `topup_of` or `merge_with`, not both")
+    if cfg.get("merge_with"):
+        return Path(resolve_output_path(cfg["merge_with"]))
+    return _topup_base(cfg)
+
+
+def _student_of(run: Path) -> str | None:
+    """The merged student a run sampled, from its prepare.json or its parent run's."""
+    for path in (run / "prepare.json", run.parent / "prepare.json"):
+        if path.exists():
+            return json.loads(path.read_text()).get("merged_checkpoint")
+    return None
 
 
 def _source_label(cfg: dict) -> str:
@@ -316,23 +339,39 @@ def stage_merge(cfg: dict, out: Path) -> None:
     r2em balanced by error mass over r1 and the surplus r1's count balance dropped, which
     together are every merged pair; V3 hands the merged pairs to scripts/build_balanced_dpo.py
     directly (docs/V3_NEW_DATA.md, round 2). Where both runs have a pair for a row, the base
-    run's stays (`onpolicy.merge_topup`).
+    run's stays (`onpolicy.merge_topup`). With `merge_with` (round 3) the rows differ, so the
+    merge is the union; it refuses pairs of another student and a candidate on both sides.
     """
-    base = _topup_base(cfg)
+    base = _merge_base(cfg)
     if base is None:
-        raise SystemExit("merge: this config has no `topup_of`; there is nothing to merge")
+        raise SystemExit("merge: this config has neither `topup_of` nor `merge_with`; there is "
+                         "nothing to merge")
+    if cfg.get("merge_with"):
+        mine, theirs = _student_of(out), _student_of(base)
+        if not mine or mine != theirs:
+            raise SystemExit(f"merge: {base} was sampled from {theirs}, this run from {mine}; "
+                             "pairs of two students are not merged")
     target = out / "merged"
     target.mkdir(exist_ok=True)
     info: dict = {"base": str(base), "topup": str(out)}
+    merged_splits = {}
     for split in ("train", "validation"):
         merged, info[split] = OP.merge_topup(pd.read_parquet(base / f"dpo_v2_{split}.parquet"),
                                              pd.read_parquet(out / f"dpo_v2_{split}.parquet"))
-        merged.to_parquet(target / f"dpo_v2_{split}.parquet", index=False)
+        merged_splits[split] = merged
         info[split]["n_merged"] = len(merged)
         if "pool_source" in merged.columns:
             info[split]["by_pool_source_and_reference"] = {
                 f"{s} {d}": int(n) for (s, d), n in
                 merged.groupby(["pool_source", "reference_decision"]).size().items()}
+    if all("candidate_id" in m.columns for m in merged_splits.values()):
+        both = set(merged_splits["train"]["candidate_id"]) & set(
+            merged_splits["validation"]["candidate_id"])
+        if both:
+            raise SystemExit(f"merge: {len(both)} candidate(s) on both sides of the split, "
+                             f"e.g. {sorted(both)[:3]}")
+    for split, merged in merged_splits.items():
+        merged.to_parquet(target / f"dpo_v2_{split}.parquet", index=False)
     (target / "merge.json").write_text(_json(info), encoding="utf-8")
     print(_json(info))
 

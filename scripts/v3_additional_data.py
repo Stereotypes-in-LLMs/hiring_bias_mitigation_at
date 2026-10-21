@@ -44,6 +44,13 @@ pairs); `dpo_capped_*`, at most `dpo_cap_per_pair` rows per pool pair at the nat
 mix; and `dpo_capped_balanced_*`, the same with hire and reject rows equal. The biased teacher
 never answers hire, so balancing makes half the rows a hire-over-reject decision contrast and
 none the reverse (`contrast`); which view to train on is the user's choice.
+
+A later round draws further parts of the same pool into its own directory, so the first
+round's outputs, SFT-v3's training data among them, stay as built (round 3,
+`configs/generation/v3_new_pairs.yaml`). `pool_dir` names the pool it reads, so its parts and
+its validation split are the first round's, and `pool` refuses to run. `earlier_rounds` names
+the directories whose parts it must not draw again: `generate` refuses such a part, `all`
+skips them, and `assemble` refuses a candidate that is in an earlier round's `sft_*` files.
 """
 
 from __future__ import annotations
@@ -101,6 +108,24 @@ def _code() -> dict:
 
 def _out(cfg: dict) -> Path:
     return Path(resolve_output_path(cfg["artifacts_dir"]))
+
+
+def _pool_path(cfg: dict) -> Path:
+    """This directory's pool, or `pool_dir`'s for a later round of the same pool."""
+    base = (Path(resolve_output_path(cfg["pool_dir"])) if cfg.get("pool_dir")
+            else _out(cfg) / "pool")
+    return base / "pairs_en.parquet"
+
+
+def _earlier_rounds(cfg: dict) -> list[Path]:
+    return [Path(resolve_output_path(p)) for p in cfg.get("earlier_rounds") or []]
+
+
+def drawn_earlier(cfg: dict, parts) -> list[str]:
+    """The parts an earlier round has voted on. Their pairs are in that round's SFT data, so a
+    later round that drew them again would hand the student pairs it trained on."""
+    return [p for p in parts if any((d / "parts" / p / "votes.parquet").exists()
+                                    for d in _earlier_rounds(cfg))]
 
 
 def _write_json(path: Path, payload: dict) -> None:
@@ -167,6 +192,9 @@ def _text_key(frame: pd.DataFrame) -> pd.Series:
 
 def stage_pool(cfg: dict) -> None:
     require_output_root()
+    if cfg.get("pool_dir"):
+        raise SystemExit(f"pool: this round reads the pool in {cfg['pool_dir']}; rebuilding it "
+                         "here could cut different parts")
     out = _out(cfg) / "pool"
     v1 = v1_pairs(cfg)
     new, new_report = djinni_new_pairs(cfg, v1)
@@ -324,12 +352,17 @@ def stage_generate(cfg: dict, parts: list[str], passes: list[str]) -> None:
     from hiring_bias_mitigation.eval import backends as BK
 
     require_output_root()
-    pool = pd.read_parquet(_out(cfg) / "pool" / "pairs_en.parquet")
+    pool = pd.read_parquet(_pool_path(cfg))
     known = part_order(pool["part"])
-    wanted = known if parts == ["all"] else parts
+    earlier = set(drawn_earlier(cfg, known))
+    wanted = [p for p in known if p not in earlier] if parts == ["all"] else parts
     unknown = sorted(set(wanted) - set(known))
     if unknown:
         raise SystemExit(f"unknown part(s) {unknown}; the pool has {known[:5]}...")
+    repeated = sorted(set(wanted) & earlier)
+    if repeated:
+        raise SystemExit(f"part(s) {repeated} were drawn by an earlier round "
+                         f"({cfg['earlier_rounds']}); this round draws new parts only")
 
     engine: dict[str, object] = {}
 
@@ -353,7 +386,7 @@ def stage_generate(cfg: dict, parts: list[str], passes: list[str]) -> None:
     try:
         # Explicit parts run in the order given, so a job can put each source's first part
         # first and have it read against the stop conditions while the rest runs.
-        for part in (known if parts == ["all"] else list(dict.fromkeys(wanted))):
+        for part in (wanted if parts == ["all"] else list(dict.fromkeys(wanted))):
             source = part.rsplit("-", 1)[0]
             if checked.get(source):
                 log.warning("%s: skipped, %s stopped on its first part: %s", part, source,
@@ -405,7 +438,7 @@ def stage_generate(cfg: dict, parts: list[str], passes: list[str]) -> None:
 # ---- report and assemble --------------------------------------------------------------------
 
 def _voted_parts(cfg: dict) -> tuple[pd.DataFrame, list[str]]:
-    pool = pd.read_parquet(_out(cfg) / "pool" / "pairs_en.parquet")
+    pool = pd.read_parquet(_pool_path(cfg))
     return pool, [p for p in part_order(pool["part"]) if _paths(cfg, p, "votes")[0].exists()]
 
 
@@ -908,6 +941,17 @@ def stage_assemble(cfg: dict, allow_partial: bool = False) -> None:
     """
     require_output_root()
     pool, done = _voted_parts(cfg)
+    # A later round's pairs must be new to the student: none of its candidates may be in an
+    # earlier round's SFT data, whichever part they came from.
+    drawn = set(pool.loc[pool["part"].isin(done), "candidate_id"])
+    for earlier in _earlier_rounds(cfg):
+        for split in ("train", "validation"):
+            path = earlier / f"sft_{split}.parquet"
+            if path.exists():
+                seen = drawn & set(pd.read_parquet(path, columns=["candidate_id"])["candidate_id"])
+                if seen:
+                    raise ValueError(f"assemble: {len(seen)} candidate(s) of this round are in "
+                                     f"{path}, e.g. {sorted(seen)[:3]}")
     missing = [f"{p}/invariant" for p in done if not _paths(cfg, p, "invariant")[0].exists()]
     if missing and not allow_partial:
         raise SystemExit(f"assemble: voted parts without an invariant pass {missing}. Finish "
