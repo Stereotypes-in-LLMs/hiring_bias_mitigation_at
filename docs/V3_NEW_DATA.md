@@ -581,3 +581,25 @@ Written on 2026-10-21 at about 09:10, after the full run's judge and before any 
 
 - **What does not change.** The config and directory names (they keep "hire"), the merge, the per-source balance by error mass at r2em's parameters, the checks and the stop conditions.
 - **Cost.** At the full run's rate of about 260 samples a second, sampling takes about 65 minutes instead of 30.
+
+#### On-policy pairs: the top-up's samples (job 5111001)
+
+**In one sentence.** At 32 samples a prompt, each source's short side gave about 2.4 times the tipped negatives the full run's 8 did, and SFT-v3 was again right on 98.8% of its samples.
+
+**By source** (`artifacts/semisynthetic-v3/onpolicy-hire32/sample_report.json`, `by_pool_source`; the full run's counts from its own report):
+
+| source and side | rows | tipped, top-up | tipped, full run | tipped per row, top-up |
+|---|---|---|---|---|
+| djinni_new, hire anchors | 11,494 | 1,418 | 579 | 12.3% |
+| kaggle_linkedin, hire anchors | 2,664 | 399 | 165 | 15.0% |
+| rjdb, reject anchors | 14,549 | 544 | 214 | 3.7% |
+
+The rest of the readout:
+
+- **Rows and samples.** 28,707 rows over 2,397 pairs, 31,104 prompts, as counted in the amendment. SFT-v3 was right on 98.76% of its samples with the attribute and 98.65% without.
+- **Wrong samples.** 11,180 wrong samples, on 2,565 rows.
+- **Selected.** 2,361 tipped negatives and 192 untipped ones.
+
+RJDB's reject rows stay the hardest to draw mistakes from, about a quarter of the rate on the other two sources' hire rows.
+
+**Run.** Job 5111001 on `normal`, 59:45, commit b45c7b3. Prepare took 44 s, reusing SFT-v3's merge. Sampling took 56 to 58 minutes per GPU at 87–89% mean GPU use, 3.81 GPU-h in all, 3.98 allocated (`$XW/cost/records/*_5111001_*`, arm `dpo_v3`). Its judge is job 5111399.
