@@ -405,6 +405,8 @@ def _sync_validation_class():
 #: 28.0% in all. r1-300, which collapsed to 19.1%, hired 47.6% and 4.8%.
 SFT_BENCHMARK = {"reference_hire_share": 0.333, "hire_rate_ref_hire": 0.658,
                  "hire_rate_ref_reject": 0.091}
+#: A run from another SFT parent gives that parent's two rates as `sft_benchmark` in its config
+#: (reports/reference_metrics.csv: tpr_vs_gpt4o_pct and fpr_vs_gpt4o_pct, as fractions).
 
 
 def projected_hire_rate(metrics: dict, baseline: dict, n_side: int,
@@ -447,8 +449,10 @@ def _decision_monitor_class():
 
         def __init__(self, rows, tokenizer, output_dir, every: int, band: tuple[float, float],
                      template_kwargs: dict | None,
-                     max_new_tokens: int = 96, lang: str = "en", vllm_generation=None):
+                     max_new_tokens: int = 96, lang: str = "en", vllm_generation=None,
+                     sft_benchmark: dict | None = None):
             self.rows = rows.reset_index(drop=True)
+            self.sft_benchmark = {**SFT_BENCHMARK, **(sft_benchmark or {})}
             self.vllm_generation = vllm_generation
             self.tokenizer = tokenizer
             self.output_dir = Path(output_dir)
@@ -511,7 +515,8 @@ def _decision_monitor_class():
                 from .decision_eval import record
 
                 outputs, metrics = self._evaluate(model)
-                metrics.update(projected_hire_rate(metrics, self.baseline, self._n_side()))
+                metrics.update(projected_hire_rate(metrics, self.baseline, self._n_side(),
+                                               self.sft_benchmark))
                 low, high = self.band
                 stop = not low <= metrics["hire_rate_projected"] <= high
                 metrics["out_of_band"] = stop
@@ -522,7 +527,8 @@ def _decision_monitor_class():
                          metrics["invalid_rate"])
                 if self.vllm_generation is not None:
                     served_out, served = self._evaluate_served()
-                    served.update(projected_hire_rate(served, self.baseline, self._n_side()))
+                    served.update(projected_hire_rate(served, self.baseline, self._n_side(),
+                                                       self.sft_benchmark))
                     record(self.output_dir, state.global_step, self.rows, served_out, served,
                            prefix="decision_served")
                     log.info("served (merged) at step %d: agree %.3f, projected hire rate %.3f, "
@@ -598,7 +604,8 @@ def train(cfg: dict) -> C.TrainArtifacts:
             output_dir, int(cfg.get("decision_eval_steps", 25)), (float(band[0]), float(band[1])),
             chat_kwargs,
             int(cfg.get("decision_eval_max_new_tokens", 96)),
-            vllm_generation=trainer.vllm_generation)
+            vllm_generation=trainer.vllm_generation,
+            sft_benchmark=cfg.get("sft_benchmark"))
         trainer.add_callback(monitor)
     else:
         log.warning("no validation split: the vLLM sync is NOT validated and no hire-rate "

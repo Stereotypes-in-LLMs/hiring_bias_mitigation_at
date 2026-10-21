@@ -294,6 +294,21 @@ def test_projected_hire_rate_carries_relative_changes_onto_sfts_benchmark_rates(
         pytest.approx(0.191, abs=0.002)
 
 
+def test_the_monitor_projects_onto_its_own_sft_parents_benchmark_rates():
+    pytest.importorskip("transformers")
+    rows = pd.DataFrame({"reference_decision": ["hire", "reject"]})
+    default = grpo._decision_monitor_class()(rows, None, ".", 25, (0.2, 0.4), None)
+    assert default.sft_benchmark == grpo.SFT_BENCHMARK
+    # SFT-v3 (reports/reference_metrics.csv): 57.73% where GPT-4o hires, 5.266% where it rejects
+    v3 = {"hire_rate_ref_hire": 0.5773, "hire_rate_ref_reject": 0.05266}
+    monitor = grpo._decision_monitor_class()(rows, None, ".", 25, (0.15, 0.35), None,
+                                             sft_benchmark=v3)
+    assert monitor.sft_benchmark["reference_hire_share"] == 0.333
+    same = {"hire_rate_ref_hire": 1.0, "hire_rate_ref_reject": 0.2}
+    out = grpo.projected_hire_rate(same, same, 128, monitor.sft_benchmark)
+    assert out["hire_rate_projected"] == pytest.approx(0.333 * 0.5773 + 0.667 * 0.05266)
+
+
 def test_merged_into_base_runs_the_pushed_weights_and_restores_the_base_bit_for_bit():
     torch = pytest.importorskip("torch")
     model = _tiny_peft()
