@@ -131,6 +131,43 @@ def test_signal_balance_gives_both_halves_the_same_pull():
     assert not train.duplicated(G.ROW_KEY).any()
 
 
+def _mixed_pull(rows: pd.DataFrame, informative_untipped: dict) -> pd.DataFrame:
+    """Tipped rows err 3 of 8 times; the first `informative_untipped[side]` untipped rows of a
+    side 1 of 8 times; every other row never."""
+    rate = []
+    for side, group in rows.groupby("reference_decision", sort=False):
+        seen = 0
+        for tipped in group["tipped"]:
+            wrong = 3 / 8 if tipped else (1 / 8 if seen < informative_untipped[side] else 0.0)
+            seen += not tipped
+            rate.append(1 - wrong if side == "hire" else wrong)
+    counts = {p: (round(r * 8), 8) for p, r in zip(rows["prompt"], rate)}
+    return G.attach_sft_rates(rows, counts)
+
+
+def test_pull_fill_takes_rows_with_signal_before_rows_without():
+    rows = _mixed_pull(_rows(200, 200, 20, 20), {"hire": 30, "reject": 30})
+    random, _ = G.signal_balanced_train(rows, 100, seed=4)
+    pulled, plan = G.signal_balanced_train(rows, 100, seed=4, fill="pull")
+    assert pulled["reference_decision"].value_counts().to_dict() == {"hire": 50, "reject": 50}
+    for side in ("hire", "reject"):
+        assert plan[side]["drawn_tipped"] == 20  # attribute-tipped rows still go first
+        assert plan[side]["drawn_informative"] == 50
+        assert plan[side]["available_informative"] == 50
+    assert (pulled["pull"] > 0).sum() == 100 > (random["pull"] > 0).sum()
+    assert pulled["pull"].sum() > random["pull"].sum()
+    with pytest.raises(ValueError, match="fill"):
+        G.signal_balanced_train(rows, 100, fill="best")
+
+
+def test_informative_half_is_the_smaller_side_with_a_sampled_error():
+    rows = _mixed_pull(_rows(200, 200, 20, 20), {"hire": 30, "reject": 70})
+    assert G.informative_half(rows) == 50
+    train, plan = G.signal_balanced_train(rows, 2 * G.informative_half(rows), fill="pull")
+    assert plan["hire"]["drawn_informative"] == 50  # the short side uses every one
+    assert (train["pull"] > 0).all()
+
+
 def test_signal_balance_refuses_a_side_too_small_and_is_seeded():
     rows = _with_pull(_rows(30, 400, 10, 100), {"hire": 0.5, "reject": 0.5},
                       {"hire": 1.0, "reject": 0.0})

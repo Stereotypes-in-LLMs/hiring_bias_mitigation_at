@@ -119,6 +119,50 @@ The user asked for this run after GRPO-v3's result: "Plan a GRPO run on Round 3'
 
 The training config is `configs/mitigation/grpo/qwen3.5-9b_en_only_grpo_v3_new_gh200.yaml` and the audit config `configs/audit/qwen3.5-9b_en_grpo_v3_new_gh200.yaml`. Costs are recorded under `grpo_v3_new`. The prompts' share of round 3's sample job stays under `dpo_v3_5k`, whose job it is.
 
+### Stopped (job 5115959)
+
+The user stopped the training at about 20:14 ("先停训练"). It was at step 4 of 187, before any checkpoint or monitor reading. The vLLM sync check at step 0 had passed (decision agreement 1.000, rank correlation 0.9996). Nothing of it is evaluated. The prompt set and configs stay on disk as built.
+
+## Round 3: GRPO-v3-all, every new pair and every suggested change
+
+### Pre-registration (2026-10-21, about 20:30, before the second batch's data exists)
+
+The user replaced GRPO-v3-new: "等数据生成完，用所有新的数据。按你提的建议都改了，然后跑。" That is: wait for round 3's data, use all of it, and apply each change suggested after GRPO-v3-new's prompts were built.
+
+- **Question and control.** As round 2. Does it lower unstable within-group sets at matched hire rate against SFT-v3? GRPO-v3 is context.
+- **For and against.** As round 2: Δ < 0 with the interval below 0 and every guardrail passing, or not.
+
+**What changes from GRPO-v3-new, and why:**
+
+| change | GRPO-v3-new | GRPO-v3-all | why |
+|---|---|---|---|
+| pairs | the pilot, 2,787 | the pilot and the second batch (`djinni_new-004` to `-007`, `docs/V3_NEW_DATA.md`, round 3 amendment) | all of round 3's new data |
+| hire top-up | none | k=32 on every hire row of both pools (`configs/generation/negatives_v3_onpolicy_{new,new2}_hire32_gh200.yaml`) | the hire side is short; on round 1's pool the top-up doubled tipped hire rows |
+| fill of a half | untipped rows at random: 48 of the 691 drawn hire rows had a sampled error | `--fill pull`: rows with a sampled error first, tipped ones first among them | the pilot's prompts carried 333.6 of 618.7 available hire pull |
+| prompts | 3,000 | `--n-train auto`: twice the smaller side's count of rows with a sampled error | use all of it |
+| generations per prompt | 8 | 16, with accumulation 8, so a step is still 16 prompts | a row that errs 1 time in 16 still splits its group |
+
+Everything else is GRPO-v3's: the start, β, the learning rate, one epoch, the monitor and its band, and the final adapter as the audited checkpoint.
+
+- **What the pull fill trades.** An untipped row with a sampled error is one where SFT-v3 also misses the anchor without the attribute. It trains agreement with the anchor, not invariance to the attribute. Before this run the prompts favoured tipped rows. The fill still takes tipped rows first, but the halves now hold both kinds, about half each on the pilot.
+- **Preview on the pilot alone.** 3,102 prompts, a pull of 616 and 625 per half, 3,064 of them with a sampled error (scratchpad build, not used).
+- **Data gate, checked before training.** Each side has at least 3,000 training rows with a sampled error, and 128 held-out monitor rows. Otherwise nothing is submitted and the counts go to the user.
+- **Scale and stop conditions.** The size follows from the data and is reported before training. By the pilot's rates the second batch adds about 2,200 hire and 2,900 reject rows with an error at k=8, before the top-up. That is roughly 8,000 to 10,000 prompts and 500 to 625 steps at about 50 s a step: 7 to 9 hours, 28 to 36 GPU-h.
+  - The job runs with a 12 h limit; `resume: true` allows one more submission.
+  - The training stops at 45 GPU-h whatever its step, and the user is asked.
+  - The monitor band (15–35%) and `memory_floor_gb` are as before.
+- **Order, one job at a time.**
+  1. Round 3's teacher job and its SFT-v3 sample job.
+  2. Round 3's judge, given 10 minutes to go first.
+  3. The pilot's k=32 top-up, then the second batch's.
+  4. The prompt build and the gate, on the login node.
+  5. The training.
+  6. Its evaluation, once training has finished cleanly and the code is committed.
+  - Round 3's later jobs (scoring, checks) may run in between.
+- **Costs.** All under `grpo_v3_all`.
+
+The training config is `configs/mitigation/grpo/qwen3.5-9b_en_only_grpo_v3_all_gh200.yaml`, the data config `configs/data/en_only_grpo_v3_all.yaml`, and the audit config `configs/audit/qwen3.5-9b_en_grpo_v3_all_gh200.yaml`. `build_grpo_prompts.py` takes several `--pool` and `--hire-topup`, `--fill pull` and `--n-train auto` (`grpo_prompts.signal_balanced_train`, `informative_half`; `tests/test_grpo.py`). With its defaults it still rebuilds grpo-v3 and grpo-v3-new byte for byte.
+
 ## Reproducing
 
 From a Daint login node, one submission at a time:
@@ -144,6 +188,26 @@ python scripts/build_grpo_prompts.py --pool artifacts/semisynthetic-v3/onpolicy-
 HBM_COST_ARM=grpo_v3_new CONFIG=configs/mitigation/grpo/qwen3.5-9b_en_only_grpo_v3_new_gh200.yaml \
   scripts/cscs/submit.sh -p normal -t 03:00:00 scripts/cscs/train_grpo.sbatch
 HBM_COST_ARM=grpo_v3_new AUDIT=configs/audit/qwen3.5-9b_en_grpo_v3_new_gh200.yaml \
+AGAINST=configs/audit/qwen3.5-9b_en_sft_v3_additional_gh200.yaml \
+  scripts/cscs/submit.sh scripts/cscs/evaluate_arm.sbatch
+```
+
+GRPO-v3-all, after round 3's second batch has been sampled (each job alone in the queue):
+
+```bash
+for c in new new2; do
+  HBM_COST_ARM=grpo_v3_all CONFIG=configs/generation/negatives_v3_onpolicy_${c}_hire32_gh200.yaml \
+    scripts/cscs/submit.sh -p normal -t 02:00:00 scripts/cscs/onpolicy_full.sbatch sample
+done
+python scripts/build_grpo_prompts.py --pool artifacts/semisynthetic-v3/onpolicy-new \
+  --pool artifacts/semisynthetic-v3/onpolicy-new2 \
+  --hire-topup artifacts/semisynthetic-v3/onpolicy-new-hire32 \
+  --hire-topup artifacts/semisynthetic-v3/onpolicy-new2-hire32 \
+  --fill pull --n-train auto --validation-root artifacts/semisynthetic-v3 \
+  --out artifacts/semisynthetic-v3/grpo-v3-all
+HBM_COST_ARM=grpo_v3_all CONFIG=configs/mitigation/grpo/qwen3.5-9b_en_only_grpo_v3_all_gh200.yaml \
+  scripts/cscs/submit.sh -p normal -t 12:00:00 scripts/cscs/train_grpo.sbatch
+HBM_COST_ARM=grpo_v3_all AUDIT=configs/audit/qwen3.5-9b_en_grpo_v3_all_gh200.yaml \
 AGAINST=configs/audit/qwen3.5-9b_en_sft_v3_additional_gh200.yaml \
   scripts/cscs/submit.sh scripts/cscs/evaluate_arm.sbatch
 ```

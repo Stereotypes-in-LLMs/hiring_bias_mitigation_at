@@ -5,6 +5,11 @@
     python scripts/build_grpo_prompts.py --balance tipped --tipped-share 0.5 \
         --out artifacts/semisynthetic-v2/grpo-01            # grpo-01: half of each side tipped
 
+`--pool` and `--hire-topup` repeat for several runs whose rows are disjoint (V3 round 3's
+pilot and its second batch). `--fill pull` fills each half with the rows that carry signal
+first, and `--n-train auto` makes each half as large as both verdicts' rows with a sampled
+error allow (`grpo_prompts.signal_balanced_train`, `informative_half`).
+
 Inputs are the v1 English pool as the SFT student was sampled on it (`onpolicy-full`: rows,
 their attributed prompts, the k=8 selection and samples) and the k=32 hire top-up's selection
 and samples (`onpolicy-hire32`); `--hire-topup none` for a pool sampled at k=8 only. Every
@@ -41,13 +46,19 @@ log = get_logger("build_grpo_prompts")
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__,
                                      formatter_class=argparse.RawDescriptionHelpFormatter)
-    parser.add_argument("--pool", default="artifacts/semisynthetic-v2/onpolicy-full")
-    parser.add_argument("--hire-topup", default="artifacts/semisynthetic-v2/onpolicy-hire32",
-                        help="the k=32 hire top-up's run directory, or `none`")
+    parser.add_argument("--pool", action="append",
+                        help="an on-policy run directory; repeat for several "
+                             "(default artifacts/semisynthetic-v2/onpolicy-full)")
+    parser.add_argument("--hire-topup", action="append",
+                        help="a k=32 top-up's run directory, repeatable, or `none` "
+                             "(default artifacts/semisynthetic-v2/onpolicy-hire32)")
     parser.add_argument("--validation-root", default="artifacts/semisynthetic-v2",
                         help="every *validation.parquet below it names held-out candidates")
     parser.add_argument("--out", default="artifacts/semisynthetic-v2/grpo-02")
-    parser.add_argument("--n-train", type=int, default=3000)
+    parser.add_argument("--n-train", default="3000",
+                        help="training prompts, or `auto`: twice informative_half")
+    parser.add_argument("--fill", choices=("random", "pull"), default="random",
+                        help="how untipped rows fill a half with --balance signal")
     parser.add_argument("--balance", choices=("signal", "tipped"), default="signal",
                         help="signal: both halves the same summed pull (grpo-02); tipped: "
                              "--tipped-share of each half from tipped rows (grpo-01)")
@@ -59,14 +70,19 @@ def main() -> None:
     pa.set_io_thread_count(1)
 
     require_output_root()
-    pool = Path(resolve_output_path(args.pool))
-    topups = ([] if args.hire_topup.lower() == "none"
-              else [Path(resolve_output_path(args.hire_topup))])
+    args.pool = args.pool or ["artifacts/semisynthetic-v2/onpolicy-full"]
+    args.hire_topup = args.hire_topup or ["artifacts/semisynthetic-v2/onpolicy-hire32"]
+    pools = [Path(resolve_output_path(p)) for p in args.pool]
+    topups = [Path(resolve_output_path(t)) for t in args.hire_topup if t.lower() != "none"]
     out = Path(resolve_output_path(args.out))
 
-    rows = G.attach_prompts(G.read(pool / "rows.parquet"), G.read(pool / "prompts.parquet"))
+    rows = pd.concat([G.attach_prompts(G.read(p / "rows.parquet"), G.read(p / "prompts.parquet"))
+                      for p in pools], ignore_index=True)
     rows = rows[rows["lang"] == "en"]
-    keys = G.tipped_keys(*[G.read(r / "selected.parquet") for r in [pool, *topups]])
+    if rows["prompt"].duplicated().any():
+        raise ValueError(f"{int(rows['prompt'].duplicated().sum())} prompts in more than one "
+                         "pool: the pools must hold disjoint rows")
+    keys = G.tipped_keys(*[G.read(r / "selected.parquet") for r in [*pools, *topups]])
     rows = G.mark_tipped(rows, keys)
 
     def counts(root: Path) -> dict:
@@ -75,7 +91,7 @@ def main() -> None:
         return G.sample_hire_counts(frame[frame["prompt"].isin(set(rows["prompt"]))])
 
     # The k=32 top-up first: its hire rows' rates rest on four times the samples.
-    rows = G.attach_sft_rates(rows, *[counts(r) for r in topups], counts(pool))
+    rows = G.attach_sft_rates(rows, *[counts(r) for r in topups], *[counts(p) for p in pools])
 
     root = Path(resolve_output_path(args.validation_root))
     split_files = sorted(p for p in root.rglob("*validation.parquet") if out not in p.parents)
@@ -84,10 +100,12 @@ def main() -> None:
     log.info("%d held-out candidates from %d validation splits: %d rows held out, %d left",
              len(heldout), len(split_files), len(held_pool), len(train_pool))
 
+    n_train = (2 * G.informative_half(train_pool) if args.n_train == "auto"
+               else int(args.n_train))
     if args.balance == "signal":
-        train, plan = G.signal_balanced_train(train_pool, args.n_train, args.seed)
+        train, plan = G.signal_balanced_train(train_pool, n_train, args.seed, fill=args.fill)
     else:
-        train, plan = G.balanced_train(train_pool, args.n_train, args.tipped_share, args.seed)
+        train, plan = G.balanced_train(train_pool, n_train, args.tipped_share, args.seed)
     validation = G.balanced_validation(held_pool, args.n_validation, args.seed)
     assert_no_leakage(train, "grpo_train")
     assert_no_leakage(validation, "grpo_validation")
@@ -101,7 +119,8 @@ def main() -> None:
     report = {
         "inputs": {"pool": args.pool, "hire_topup": args.hire_topup,
                    "validation_splits": [str(p.relative_to(root)) for p in split_files]},
-        "settings": {"n_train": args.n_train, "balance": args.balance,
+        "settings": {"n_train": n_train, "n_train_arg": args.n_train, "balance": args.balance,
+                     "fill": args.fill if args.balance == "signal" else None,
                      "tipped_share": args.tipped_share if args.balance == "tipped" else None,
                      "n_validation": args.n_validation, "seed": args.seed},
         "pool": G.describe(rows),
