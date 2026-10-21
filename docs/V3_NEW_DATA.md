@@ -488,3 +488,41 @@ SFT-v3 hires less than SFT v1 where GPT-4o hires and also where it rejects. Its 
    - SFT-v3 hires four and rejects "Civilian": "Candidate lacks explicit Selenium WebDriver experience and specific microservices/Docker background required for this role."
 
 **Run.** Job 5108977 on `debug`, 15:15, completed. It used 0.44 GPU-h of measured GPU time (audit 0.24, margin pass 0.20; the merge reused the sample job's merged weights) and 1.02 allocated GPU-h. The cost records are under `sft_v3`. The audit of SFT-v3 was read while the on-policy DPO build was running, at the user's request. That build's rules were fixed in code and in the pre-registration before the audit, and nothing in them changes.
+
+#### On-policy pairs: the full run's samples (job 5108751)
+
+**In one sentence.** SFT-v3 errs on its own pool far less often than r2em's student did, so the full run selected 2,401 tipped negatives, about a seventh of the pre-registered scale, and RJDB fell below the 2% stop condition.
+
+- **Observed.** SFT-v3 matches the vote anchor on 98.8% of its samples, with the attribute and without it. r2em's student on V1's pool matched on 84.8% and 85.4% (`docs/DPO_DATA_CREATION.md`, stage 5). 9,642 of the 819,720 attributed samples are wrong (1.18%), against r2em's 43,036 (15.0%). Of the rows, 2.3% gave a tipped negative, against the 15.6% the pre-registration scaled from.
+- **Interpretation.** On the rows it trained on, SFT-v3 reproduces its anchors almost every time, even at temperature 1, and a student this close to its targets leaves few mistakes to learn from. Not confirmed: the vote anchors' consistency, the sources and the training schedule all differ from r2em's student.
+- **Unknown.** How many of the 2,401 survive the judge, and whether the k=32 top-up lifts the hire side enough for the balance.
+
+**By source** (`artifacts/semisynthetic-v3/onpolicy-full/sample_report.json`, `by_pool_source`):
+
+| source | rows | pairs | anchors that hire | SFT-v3 hires, attribute-free | right with the attribute, hire / reject anchors | tipped negatives, hire / reject anchors | tipped per row |
+|---|---|---|---|---|---|---|---|
+| djinni_new | 51,150 | 4,267 | 22.5% | 23.0% | 98.43% / 98.78% | 579 / 758 | 2.61% |
+| kaggle_linkedin | 18,032 | 1,504 | 14.8% | 15.8% | 98.56% / 98.44% | 165 / 310 | 2.63% |
+| rjdb | 33,283 | 2,778 | 56.3% | 56.2% | 99.23% / 99.05% | 375 / 214 | 1.77% |
+
+On every source SFT-v3's attribute-free hire rate is within about a point of its anchors' (at most 1.05 points, kaggle_linkedin).
+
+The rest of the readout (`sample_report.json`, `selection`):
+
+- The filters dropped 65 of the 9,642 wrong samples: 53 for a length mismatch, 6 for naming the group, 5 for meta-commentary and 1 for length.
+- No raw wrong sample names the attribute, and 0.06% name its group.
+- 954 negatives are untipped, because the student also errs without the attribute. They are counted and not judged.
+
+**The stop condition.** RJDB's 1.77% is below 2%. The condition was set to catch a student whose few mistakes all run one way, like the DPO student's 409 tipped rows, whose pairs failed D6 at 0.013. RJDB's tipped negatives run both ways: 375 on hire anchors and 214 on reject anchors. Its short side for the balance is reject, which the djinni_new and kaggle_linkedin hire top-up does not touch. It was reported to the user before any judging (2026-10-21, about 08:50). The user decided: "Run the judge on all three sources now; decide on any RJDB top-up after seeing the judged counts."
+
+**Run.** Job 5108751 on `normal`, 58:08, commit 6502b0d.
+
+| step | time | GPU-h |
+|---|---|---|
+| prepare, including SFT-v3's merge | 243 s | 0.07 |
+| sampling, 4 processes, mean GPU use about 94% | about 52 min each | 3.49 |
+| collect | 41 s | 0 |
+
+That is 3.55 GPU-h measured, 3.88 allocated (`$XW/cost/records/*_5108751_*`, arm `dpo_v3`). The session driving the round restarted after the job ended, so the judge job only started at 08:52 the next morning.
+
+The judge job (5110942) logged commit 67befcb. Its idempotent collect step rewrote `selected.parquet` (sha256 `8247aad7…`) and `sample_report.json`. An uncommitted edit to `onpolicy.selection_by`, which adds the per-side counts above, was on disk when the judge process started; the judge stage does not call that function. The per-side counts come from re-running collect after the judge, at ecb10ae.
