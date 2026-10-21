@@ -105,6 +105,18 @@ The user asked for this run after GRPO-v3's result: "Plan a GRPO run on Round 3'
 - **Selection and test.** The final adapter, step 187, is audited. The held-out candidates include round 3's `sft_validation`, which round 3's DPO also holds out. The benchmark audit is spent once.
 - **Order.** The prompts are built when round 3's SFT-v3 sample job has finished. Training is submitted when the account's queue is empty, one job at a time. It may run before or after round 3's judge job.
 
+**The prompt set as built** (19:53, before training; `artifacts/semisynthetic-v3/grpo-v3-new/report.json`). It comes from round 3's pilot parts `djinni_new-003` and `rjdb-002` (jobs 5115569 and 5115774): 2,787 anchored pairs, 33,424 rows.
+
+- **Gate.** It passed. There are 809 tipped hire and 953 tipped reject training rows, and 128 monitor rows per side.
+- **Draw.** The hire half is all 809 tipped rows plus 691 others; the reject half is 831 tipped and 669 others. Each half carries a pull of 333.6, against GRPO-v3's 368.9. The error mass is 298 on the hire half and 287 on the reject half, against GRPO-v3's 117 and 192.
+- **Overlap.** No training candidate is in SFT-v3's training or validation data or in grpo-v3, and none is in both GRPO-v3-new splits.
+- **A second difference from GRPO-v3: the source mix.** RJDB gives 1,005 of the 1,500 hire prompts here, against 223 in grpo-v3, where Djinni gave 1,003. There is no Kaggle × LinkedIn, which round 1 used up. So the comparison with GRPO-v3 also changes the sources, not only whether SFT-v3 saw the pairs.
+
+| source | hire | reject |
+|---|---|---|
+| djinni_new | 495 | 848 |
+| rjdb | 1,005 | 652 |
+
 The training config is `configs/mitigation/grpo/qwen3.5-9b_en_only_grpo_v3_new_gh200.yaml` and the audit config `configs/audit/qwen3.5-9b_en_grpo_v3_new_gh200.yaml`. Costs are recorded under `grpo_v3_new`. The prompts' share of round 3's sample job stays under `dpo_v3_5k`, whose job it is.
 
 ## Reproducing
