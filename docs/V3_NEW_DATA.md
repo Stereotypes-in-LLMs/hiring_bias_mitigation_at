@@ -823,3 +823,17 @@ The training loss averaged 0.155 over the epoch (`train_loss`).
 - reward margin: 6.40 at step 25, 8.73 at the end.
 
 The loss jumps, to 0.700 at step 50 and 0.792 at step 150, coincide with the decision readout's dips at those steps.
+
+#### Erratum: what D3 and D4 do and do not say (2026-10-21)
+
+A review of this round, checked against the code and the docs, found three statements that overreach. The text above stays as written; this note corrects it.
+
+1. **D4 is not a measure of gradient.** Three places above make it one: the per-source direction checks ("they carry little gradient"), the data-quality section ("the informative share DPO trains on"), and DPO-v3's pre-registration ("the gradient should therefore come mostly from the on-policy 41% of the rows"). That is wrong for this setup. DPO's loss is −log σ(β[(log π(y⁺) − log π(y⁻)) − (log π_ref(y⁺) − log π_ref(y⁻))]). DPO-v3 starts from SFT-v3 and uses it as the reference, so at the first step the bracket is 0 on every pair, and every pair, r2em_v3's included, has the same weight σ(0) = ½. D4 measures the reference's own preference, which does not enter that weight.
+   - What a D4 of 97.7% does say: r2em_v3's pairs mostly contrast answers SFT-v3 already ranks correctly, so they may not reach the mistakes SFT-v3 still makes.
+   - Whether they move its decisions is for the audit to show.
+   - `docs/DATA_EVALUATION.md` said the same ("the batch carries no gradient") and is corrected.
+   - The pre-registered prediction stands; its reasoning does not.
+2. **D3 measures how separable the texts are, not wording alone.** A rationale argued for the wrong verdict can cite weaker evidence, which is content; `DATA_EVALUATION.md`'s ablation left 0.78 after removing style words. Where the text above says the two sides "cannot be told from" each other "by wording", read "by their text". The 0.65 gate remains a pre-registered risk screen.
+3. **Two claims about earlier probes,** made in the conversation and not in this document:
+   - Decision-only DPO pairs carry no rationale at all, by design (`configs/mitigation/dpo/qwen3.5-9b_en_only_dpo_decision.yaml`).
+   - The "102 of 30,600 decisions, moved at random" in `scripts/build_consistency_pairs.py`'s docstring predates the corrected audits. `reports/MITIGATION_FINDINGS.md` has decision-only DPO at −8.3 pp against the base: significant, and weaker than SFT v1's −10.1.
