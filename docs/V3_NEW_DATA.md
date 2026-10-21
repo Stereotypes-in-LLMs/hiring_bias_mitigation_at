@@ -894,3 +894,23 @@ The verdict is "not better: the interval reaches 0".
 
 - **Merge.** SFT-v3 kept 100% and DPO-v3's adapter 93.9% (job log).
 - **Cost.** 0.49 GPU-h measured: merge 0.06, audit 0.23, margin pass 0.20 (`$XW/cost/records/*_5114015_*`, arm `dpo_v3`). The context comparisons ran on the login node.
+
+#### DPO on the on-policy pairs alone: pre-registration
+
+Written on 2026-10-21 at about 15:50, before training. After DPO-v3's verdict the user judged DPO ineffective so far ("感觉DPO没效果"). Of the checks offered, the user chose this one: "只用 on-policy 的 1,568 对做 DPO，然后评测".
+
+- **Question.** Was r2em_v3 what made DPO-v3 worse than SFT-v3? It was 59% of DPO-v3's rows and was sampled from SFT v1. This run trains DPO on the on-policy pairs alone, from SFT-v3. The decision is against SFT-v3; the comparison with DPO-v3 is descriptive.
+- **Hypothesis and what counts against it.** If r2em_v3 drove DPO-v3's +0.94 pp, this run's change against SFT-v3 is at or below 0. If it is at or above DPO-v3's +0.94, or its interval stays above 0, r2em_v3 was not the cause, and DPO on these on-policy pairs does not help either.
+- **Control.**
+  - **The decision:** SFT-v3, the reference arm (`compare-arms --against configs/audit/qwen3.5-9b_en_sft_v3_additional_gh200.yaml`).
+  - **Context:** DPO-v3 (`--against configs/audit/qwen3.5-9b_en_dpo_v3_step240_gh200.yaml`), whose margin pass is on disk, and the base model through SFT v1's base pass.
+- **Data.** `configs/data/en_only_dpo_v3_onpolicy.yaml`, `data_kind: dpo_v3_onpolicy`: 1,568 training and 170 validation pairs. They are DPO-v3's `onpolicy_v3` rows exactly; the trainer's loader reads the same prompts.
+- **Settings.** DPO-v3's: beta 0.3, sigmoid plus 0.2 NLL, lr 5e-5, 10 warmup steps, effective batch 16, one epoch (98 steps), `max_seq_len` 3072. The config (`configs/mitigation/dpo/qwen3.5-9b_en_only_dpo_v3_onpolicy_gh200.yaml`) differs from DPO-v3's in the data and the names only.
+- **Stop conditions.** As DPO-v3's:
+  - `memory_floor_gb` 12;
+  - a non-finite loss;
+  - more than 5% unreadable decisions on the validation prompts;
+  - the hire-rate gate on hire-anchor validation prompts (below 0.75 at the last two evaluations means a report before the audit);
+  - at most 6 GPU-h for training (a 1:30 job).
+- **Checkpoint and split.** The final checkpoint, step 98, is declared now as the one audited. The benchmark audit is spent once on it, with `evaluate_arm.sbatch` against SFT-v3.
+- **What it cannot settle.** Seed noise: it is one seed, like DPO-v3.
