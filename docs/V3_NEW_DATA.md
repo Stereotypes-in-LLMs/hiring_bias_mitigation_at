@@ -526,3 +526,41 @@ The rest of the readout (`sample_report.json`, `selection`):
 That is 3.55 GPU-h measured, 3.88 allocated (`$XW/cost/records/*_5108751_*`, arm `dpo_v3`). The session driving the round restarted after the job ended, so the judge job only started at 08:52 the next morning.
 
 The judge job (5110942) logged commit 67befcb. Its idempotent collect step rewrote `selected.parquet` (sha256 `8247aad7…`) and `sample_report.json`. An uncommitted edit to `onpolicy.selection_by`, which adds the per-side counts above, was on disk when the judge process started; the judge stage does not call that function. The per-side counts come from re-running collect after the judge, at ecb10ae.
+
+#### On-policy pairs: the full run's judge (job 5110942)
+
+**In one sentence.** The teacher kept 1,717 of the 2,401 tipped negatives. The pooled pairs pass D1, D2, D3, D5 and D6, but RJDB keeps only 58 reject-anchor training pairs.
+
+- **Observed.** djinni_new and kaggle_linkedin keep about 79% of their negatives and RJDB 49%. RJDB's kept pairs are two thirds hire, and 82 of its 288 sit in validation.
+- **Interpretation.** RJDB's per-source balance is capped at about 58 pairs per side unless its reject side gets more samples. The hire top-up as planned covers only djinni_new and kaggle_linkedin.
+- **Unknown.** Why the judge rejects RJDB's negatives more often: its drop reasons are counted only over all sources together.
+
+| source | selected | kept | keep rate | train, hire / reject | validation, hire / reject |
+|---|---|---|---|---|---|
+| djinni_new | 1,337 | 1,050 | 78.5% | 391 / 595 | 37 / 27 |
+| kaggle_linkedin | 475 | 379 | 79.8% | 104 / 247 | 16 / 12 |
+| rjdb | 589 | 288 | 48.9% | 148 / 58 | 46 / 36 |
+| all | 2,401 | 1,717 | 71.5% | 643 / 900 | 99 / 75 |
+
+Sources: `artifacts/semisynthetic-v3/onpolicy-full/report.json` (`by_pool_source`) for the first four columns. The hire and reject counts are counted from `dpo_v2_{train,validation}.parquet` by pool source, split and `reference_decision`.
+
+The 546 validation candidates are SFT-v3's own. Validation holds 6% of djinni_new's kept pairs, 7% of kaggle_linkedin's and 28% of RJDB's.
+
+**The judge's drops, all sources** (`report.json`):
+
+- On the rejected side, 417 negatives were ungrounded, 17 contradicted their decision and 3 alluded to the attribute.
+- On the chosen side, 247 more pairs were dropped.
+
+**Direction checks, GPU-free, all sources before balancing** (`direction_report.json`):
+
+| check | value |
+|---|---|
+| D1 | every pair points the right way |
+| D2 | lexical rate 0, judge allusion rate 0 |
+| D3 | balanced AUC 0.574 on 1,484 balanced pairs (gate 0.65) |
+| D5 | mean token overlap 0.134 |
+| D6 | chosen hire share 0.432 |
+
+The per-source checks are on the final set, as pre-registered.
+
+**Run.** Job 5110942 on `normal`, 9:25, commit 67befcb; the judge took 507 s and 0.56 GPU-h (`$XW/cost/records/*_5110942_*`, arm `dpo_v3`). Collect was re-run on the login node at ecb10ae: `selected.parquet` is byte-identical (sha256 `8247aad7…`), and `sample_report.json` gained only `tipped_by_reference`.
