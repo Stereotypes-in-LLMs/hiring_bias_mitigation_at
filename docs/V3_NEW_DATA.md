@@ -742,7 +742,7 @@ The tables are `docs/dpo_data/v3_{dpo,r2em,djinni_new,kaggle_linkedin,rjdb}_*`, 
 **What holds up.**
 
 - **Validity and covertness.** Every pair flips the decision toward the anchor. No rationale names the attribute or, lexically, its group. The judge dropped 7 negatives for alluding to it. Among the raw wrong samples, 0.06% named the group, and the selection filters dropped those.
-- **Length and wording.** The two rationales are about 20 words each and differ by at most 3 words in three pairs out of four (the selection allows 10). On the new sources a classifier cannot tell the right rationale from the wrong one (D3 0.49 to 0.56). The judge's main drop reason was "ungrounded": 417 and 488 negatives.
+- **Length and wording.** The two rationales are about 20 words each. In the middle half of pairs, `rejected` is between 2 words shorter and 3 words longer than `chosen` (`rejected_minus_chosen_words` p25 and p75; the selection allows 10). On the new sources a classifier cannot tell the right rationale from the wrong one (D3 0.49 to 0.56). The judge's main drop reason was "ungrounded": 417 and 488 negatives.
 - **Balance.** Every source is 50/50 in training, with error masses within 5% of each other. Validation is balanced by count within each source and protected group, and every group and condition is covered evenly.
 - **Signal.** SFT-v3 does not yet prefer `chosen` on 20% to 34% of the new pairs. That is the informative share DPO trains on, against 2.3% for r2em_v3.
 
