@@ -420,6 +420,31 @@ def test_dpo_v3_refuses_an_on_policy_pair_against_its_vote(dpo_v3):
         mod.stage_dpo_v3(cfg)
 
 
+def test_dpo_v3_builds_an_on_policy_only_set_from_a_later_round(dpo_v3, tmp_path):
+    """Round 3: no r2em_v3, the vote anchors from several directories, the files renamed."""
+    mod, cfg, out, *_ = dpo_v3
+    later = tmp_path / "artifacts" / "new-pairs-2"
+    later.mkdir(parents=True)
+    anchors = pd.read_parquet(out / "anchors_en.parquet")
+    anchors[anchors["pair_id"] == "n2"].to_parquet(later / "anchors_en.parquet")
+    anchors[anchors["pair_id"] != "n2"].to_parquet(out / "anchors_en.parquet")
+    spec = {**cfg["dpo_v3"], "r2em": False, "name": "dpo_v3_5k",
+            "anchors_from": [str(out), str(later)]}
+    mod.stage_dpo_v3({**cfg, "artifacts_dir": "artifacts/new-pairs-2", "dpo_v3": spec})
+    train = pd.read_parquet(later / "dpo_v3_5k_train.parquet")
+    assert train["dpo_v3_part"].tolist() == ["onpolicy_v3", "onpolicy_v3"]
+    assert train["anchor_hire_votes"].tolist() == [8, 1]
+    assert sorted(p.name for p in (later / "dpo_v3_5k_checks").iterdir()) == ["djinni_new",
+                                                                             "rjdb"]
+    report = json.loads((later / "dpo_v3_5k_report.json").read_text())
+    assert report["train"]["rows_by_part"] == {"onpolicy_v3": 2}
+    assert not (later / "dpo_v3_train.parquet").exists()
+    # A pair anchored in two of the directories is refused.
+    anchors.to_parquet(later / "anchors_en.parquet")
+    with pytest.raises(ValueError, match="two of"):
+        mod.stage_dpo_v3({**cfg, "artifacts_dir": "artifacts/new-pairs-2", "dpo_v3": spec})
+
+
 def test_dpo_v3_refuses_a_candidate_on_both_sides_of_the_split(dpo_v3):
     mod, cfg, _, write, train, validation = dpo_v3
     write(train, [*validation, {**train[0], "prompt": "another variant of n1"}])

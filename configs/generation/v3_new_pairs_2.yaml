@@ -97,3 +97,18 @@ serving:                    # the vote and judge runs' serving on a GH200 node
   dtype: auto
   engine_kwargs:
     gdn_prefill_backend: triton
+
+dpo_v3:
+  # Round 3's on-policy set (docs/V3_NEW_DATA.md): build_balanced_dpo.py's error-mass build of
+  # round 2's, the pilot's and this batch's on-policy pairs (dpo_v3_onpolicy5k), without r2em_v3
+  # (on-policy pairs only; user, 2026-10-21). `--stage dpo_v3` with this config checks every row
+  # against its pair's vote anchor, wherever that pair was drawn, and writes dpo_v3_5k_*,
+  # dpo_v3_5k_report.json and dpo_v3_5k_checks/<pool source>/pairs.parquet here.
+  onpolicy_dir: artifacts/semisynthetic-v3/onpolicy-error-mass
+  onpolicy_name: dpo_v3_onpolicy5k
+  r2em: false
+  name: dpo_v3_5k
+  anchors_from:
+  - artifacts/semisynthetic-v3/additional
+  - artifacts/semisynthetic-v3/new-pairs
+  - artifacts/semisynthetic-v3/new-pairs-2

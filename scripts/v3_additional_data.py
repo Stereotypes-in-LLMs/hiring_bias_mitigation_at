@@ -860,12 +860,24 @@ def stage_dpo_v3(cfg: dict) -> None:
     dpo_v3_{train,validation}.parquet, dpo_v3_report.json (contrasts per part and pool source,
     the error-mass build's balance, the GPU-free direction readout per pool source) and, for
     the D4 job, each pool source's training pairs as dpo_v3_checks/<pool source>/pairs.parquet.
+
+    Round 3's on-policy set (docs/V3_NEW_DATA.md) is built the same way from a later round's
+    config: `r2em: false` leaves r2em_v3 out, `anchors_from` names every directory whose
+    anchors_en.parquet holds a pair's vote anchor, and `name` replaces the `dpo_v3` prefix of
+    every file it writes.
     """
     require_output_root()
     spec = cfg["dpo_v3"]
     out = _out(cfg)
+    name = str(spec.get("name", "dpo_v3"))
+    parts = DPO_V3_PARTS if spec.get("r2em", True) else DPO_V3_PARTS[1:]
     onpolicy = Path(resolve_output_path(spec["onpolicy_dir"]))
-    anchors = pd.read_parquet(out / "anchors_en.parquet")
+    anchor_dirs = [Path(resolve_output_path(d)) for d in spec.get("anchors_from") or []] or [out]
+    anchors = pd.concat([pd.read_parquet(d / "anchors_en.parquet") for d in anchor_dirs],
+                        ignore_index=True)
+    if anchors["pair_id"].duplicated().any():
+        raise ValueError("dpo_v3: a pair has a vote anchor in two of "
+                         f"{[str(d) for d in anchor_dirs]}")
     vote = anchors.set_index("pair_id")["reference_decision"]
     build = json.loads((onpolicy / f"{spec['onpolicy_name']}_report.json").read_text())
     report: dict = {"built": datetime.now(timezone.utc).isoformat(), "code": _code(),
@@ -878,8 +890,6 @@ def stage_dpo_v3(cfg: dict) -> None:
                         "validation_balance": build.get("validation_balance")}}
     frames = {}
     for split in ("train", "validation"):
-        r2em = pd.read_parquet(out / f"r2em_v3_{split}.parquet").rename(
-            columns={"student_margin": "sft_v1_margin", "p_wrong": "sft_v1_p_wrong"})
         new = pd.read_parquet(onpolicy / f"{spec['onpolicy_name']}_{split}.parquet").rename(
             columns={"source": "r2em_pool"})
         anchored = new["pair_id"].map(vote)
@@ -892,8 +902,12 @@ def stage_dpo_v3(cfg: dict) -> None:
                              "against their pair's vote anchor")
         new = new.drop(columns=[c for c in ANCHOR_COLUMNS if c in new.columns])
         new = provenance(with_anchor(new, anchors), new["pool_source"])
-        both = pd.concat([r2em.assign(dpo_v3_part=DPO_V3_PARTS[0]),
-                          new.assign(dpo_v3_part=DPO_V3_PARTS[1])], ignore_index=True)
+        pieces = [new.assign(dpo_v3_part=DPO_V3_PARTS[1])]
+        if DPO_V3_PARTS[0] in parts:
+            r2em = pd.read_parquet(out / f"r2em_v3_{split}.parquet").rename(
+                columns={"student_margin": "sft_v1_margin", "p_wrong": "sft_v1_p_wrong"})
+            pieces.insert(0, r2em.assign(dpo_v3_part=DPO_V3_PARTS[0]))
+        both = pd.concat(pieces, ignore_index=True)
         same = both["decision"] == both["rejected_decision"]
         if same.any():
             raise ValueError(f"dpo_v3 {split}: {int(same.sum())} rows keep the chosen decision")
@@ -910,7 +924,7 @@ def stage_dpo_v3(cfg: dict) -> None:
 
     seed = int(cfg["seed"])
     for split, frame in frames.items():
-        _write_parquet(frame, out / f"dpo_v3_{split}.parquet")
+        _write_parquet(frame, out / f"{name}_{split}.parquet")
         report[split] = {
             "rows_by_part": frame["dpo_v3_part"].value_counts().to_dict(),
             "contrast": contrast(frame),
@@ -925,9 +939,9 @@ def stage_dpo_v3(cfg: dict) -> None:
     report["train"]["direction"] = direction_readout(train, seed)
     for source, rows in train.groupby("pool_source", sort=True):
         _write_parquet(rows.reset_index(drop=True),
-                       out / "dpo_v3_checks" / str(source) / "pairs.parquet")
-    _write_json(out / "dpo_v3_report.json", report)
-    log.info("dpo_v3: %s", {s: len(f) for s, f in frames.items()})
+                       out / f"{name}_checks" / str(source) / "pairs.parquet")
+    _write_json(out / f"{name}_report.json", report)
+    log.info("%s: %s", name, {s: len(f) for s, f in frames.items()})
 
 
 def stage_assemble(cfg: dict, allow_partial: bool = False) -> None:
