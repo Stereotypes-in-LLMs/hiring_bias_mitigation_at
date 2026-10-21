@@ -914,3 +914,34 @@ Written on 2026-10-21 at about 15:50, before training. After DPO-v3's verdict th
   - at most 6 GPU-h for training (a 1:30 job).
 - **Checkpoint and split.** The final checkpoint, step 98, is declared now as the one audited. The benchmark audit is spent once on it, with `evaluate_arm.sbatch` against SFT-v3.
 - **What it cannot settle.** Seed noise: it is one seed, like DPO-v3.
+
+#### DPO on the on-policy pairs alone: training (job 5114249)
+
+The run trained its 98 steps in one job and met none of its stop conditions. It passes the hire-rate gate, so its final checkpoint goes to the benchmark audit (job 5114592).
+
+| field | value |
+|---|---|
+| job | 5114249, `normal`, 24:19, completed |
+| code | commit e701fa4, clean; the package loaded from the worktree's `src` |
+| output | `outputs/dpo/qwen3.5-9b_en_only_dpo_v3_onpolicy`: the final adapter at step 98 (declared for the audit), and checkpoints at 25, 50 and 75 |
+| W&B | run f8a0514f, `dpo-qwen3.5-9b_en_only_dpo_v3_onpolicy` |
+| cost | 1.60 GPU-h (`$XW/cost/records/20261021T154615_train_dpo_5114249_42725.json`, arm `dpo_v3`) |
+
+The training loss averaged 0.229 over the epoch.
+
+**Decisions on 64 of its validation prompts** (). These are the on-policy validation pairs, the student's own error cases, so they are not comparable with DPO-v3's readout, which mixed in r2em_v3's pairs. None was unreadable at any evaluation.
+
+| step | agree with anchor | hire rate | hire rate, hire anchors | hire rate, reject anchors |
+|---|---|---|---|---|
+| 25 | 0.750 | 0.250 | 0.500 | 0.000 |
+| 50 | 0.859 | 0.547 | 0.906 | 0.188 |
+| 75 | 0.875 | 0.625 | 1.000 | 0.250 |
+| 98 | 0.891 | 0.609 | 1.000 | 0.219 |
+
+The gate reads 1.000 at the last two evaluations, above 0.75; the dip to 0.500 at step 25 is early in the run.
+
+**Evaluation on the 170 validation pairs:**
+
+- loss: 2.825, 0.575, 0.786 and 0.662;
+- preference accuracy: 0.709 at step 25, 0.901 at the end;
+- reward margin: 3.39 at step 25, 6.44 at the end.
