@@ -717,3 +717,44 @@ How the checks were run:
 - SFT-v3: 20.90 GPU-h, plus 0.74 for the cancelled first submission;
 - its benchmark evaluation: 0.44;
 - V3's DPO data: 9.02 in all (sampling 7.36, judging 1.12, scoring 0.11, checks 0.43).
+
+#### V3's DPO set: data quality
+
+**In one sentence.** The new on-policy pairs are valid, covert, matched in length, balanced, and not separable by wording, and SFT-v3 errs on a fifth to a third of them. They are also concentrated on few CV and job pairs, and a quarter of them sit on anchors the teacher itself split on.
+
+The tables are `docs/dpo_data/v3_{dpo,r2em,djinni_new,kaggle_linkedin,rjdb}_*`, from `scripts/describe_dpo_data.py`. The checks come from `dpo_v3_checks/<source>/direction_report.json`; the anchors and rows per pair are counted from `dpo_v3_checks/<source>/pairs.parquet`.
+
+| | r2em_v3 | djinni_new | kaggle_linkedin | rjdb |
+|---|---|---|---|---|
+| training pairs | 2,271 | 962 | 334 | 272 |
+| CV and job pairs; candidates | 553; 481 | 261; 261 | 103; 94 | 149; 149 |
+| pairs per CV and job pair | 4.1 | 3.7 | 3.2 | 1.8 |
+| pairs from CV and job pairs with 6 or more | 52% | 53% | 45% | 12% |
+| on unstable anchors (majority of at most 5 of 8) | 4.3% | 24.4% | 29.6% | 21.7% |
+| gender / military / religion | 687 / 786 / 798 | 311 / 328 / 323 | 116 / 100 / 118 | 88 / 91 / 93 |
+| explicit / implicit | 1,125 / 1,146 | 459 / 503 | 170 / 164 | 118 / 154 |
+| words, chosen / rejected (mean) | 19.9 / 20.4 | 20.1 / 19.7 | 20.1 / 20.1 | 20.1 / 20.5 |
+| D1, D2 (lexical) | pass, 0 | pass, 0 | pass, 0 | pass, 0 |
+| D3, balanced AUC | **0.701** | 0.487 | 0.557 | 0.489 |
+| D4, SFT-v3 prefers `chosen` | **97.7%** | 69.3% | 65.9% | 80.1% |
+| D5, overlap; D6, hire share | 0.130; 0.502 | 0.129; 0.500 | 0.137; 0.500 | 0.166; 0.500 |
+
+**What holds up.**
+
+- **Validity and covertness.** Every pair flips the decision toward the anchor. No rationale names the attribute or, lexically, its group. The judge dropped 7 negatives for alluding to it. Among the raw wrong samples, 0.06% named the group, and the selection filters dropped those.
+- **Length and wording.** The two rationales are about 20 words each and differ by at most 3 words in three pairs out of four (the selection allows 10). On the new sources a classifier cannot tell the right rationale from the wrong one (D3 0.49 to 0.56). The judge's main drop reason was "ungrounded": 417 and 488 negatives.
+- **Balance.** Every source is 50/50 in training, with error masses within 5% of each other. Validation is balanced by count within each source and protected group, and every group and condition is covered evenly.
+- **Signal.** SFT-v3 does not yet prefer `chosen` on 20% to 34% of the new pairs. That is the informative share DPO trains on, against 2.3% for r2em_v3.
+
+**Read before training.**
+
+- **Concentration.** SFT-v3's mistakes cluster on the pairs it is unsure of. The 1,568 on-policy pairs come from 513 CV and job pairs. On djinni_new and kaggle_linkedin, about half the rows come from CV and job pairs that contribute 6 to 12 attribute variants, which share one CV and one job.
+- **Ambiguous anchors.** A quarter of the on-policy pairs sit on anchors where the teacher voted 5 to 3 or closer, against 4% of r2em_v3. On those pairs the student's "mistake" agrees with the teacher's minority draws, and DPO teaches a firm preference on a case the teacher found close. That is r2em's construction applied as pre-registered. Whether to weight or drop these pairs would be a new rule, for the user.
+- **Length.** Kaggle × LinkedIn prompts reach about 2,400 tokens (the SFT measurement, `reports/v3_new_data/sft_token_lengths.json`). A DPO config on this set needs `max_seq_len` and `max_prompt_len` above SFT v1's 2048 and 1792, or those rows are cut.
+
+**Read as text.** The pairs below are quoted as written, from `dpo_v3_checks/<source>/pairs.parquet`, sampled with seed 7.
+
+- **djinni_new.** Military retiree, implicit; anchor 8 of 8 hire. Chosen (hire): "Strong iOS expertise with Swift, UIKit, networking, and multithreading across diverse projects. Proven ability to build apps from scratch and handle deployment." Rejected (reject): "No App Store publishing experience or financial app background; lacks Objective-C proficiency required for this role."
+- **djinni_new, unstable anchor.** Participant in combat actions, explicit; anchor 3 of 8 hire. Chosen (reject): "Lacks required experience with XML, HTML, and CSS customization, which are core technical requirements for this configuration role." Rejected (hire): "Strong SQL, API, and web technology skills match requirements. Proven client support experience and readiness to grasp complex systems make this candidate a solid fit."
+- **rjdb.** Muslim, implicit; anchor 8 of 8 hire. Chosen (hire): "Candidate meets all requirements with one year of TPM experience, CSM certification, and proven success leading Scrum ceremonies and resolving dependencies." Rejected (reject): "Role requires current experience. Candidate's relevant Technical Project Manager tenure ended in 2017, failing the requirement for recent hands-on implementation."
+- **kaggle_linkedin, unstable anchor.** Cisgender, explicit; anchor 3 of 8 hire. Chosen (reject): "Candidate's 12+ years of management experience significantly exceeds the 0-3 year requirement for this entry-level role." Rejected (hire): "Candidate exceeds requirements with 12 years in banking, proven sales leadership, and strong operational compliance skills matching the role's needs."
