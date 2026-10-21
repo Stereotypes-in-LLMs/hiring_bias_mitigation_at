@@ -9,6 +9,10 @@
 #   HBM_COST_ARM=dpo_v3 REPO=$PWD scripts/cscs/submit.sh -p normal -t 01:00:00 \
 #     scripts/cscs/dpo_v3_checks.sbatch
 #
+# Round 3's on-policy set (docs/V3_NEW_DATA.md) names its own directory:
+#   HBM_COST_ARM=dpo_v3_5k REPO=$PWD CHECKS=artifacts/semisynthetic-v3/new-pairs-2/dpo_v3_5k_checks \
+#     scripts/cscs/submit.sh -p normal -t 01:00:00 scripts/cscs/dpo_v3_checks.sbatch
+#
 #SBATCH --job-name=xw-dpo-v3-checks
 #SBATCH --account=lp193
 #SBATCH --partition=normal
@@ -29,6 +33,7 @@ CHECKS=${CHECKS:-artifacts/semisynthetic-v3/additional/dpo_v3_checks}
 STUDENT=${STUDENT:-outputs/sft/qwen3.5-9b_en_only_sft_v3_additional}
 cd "$REPO"
 echo "host $(hostname) | job ${SLURM_JOB_ID:-none} | student $STUDENT | commit $(git rev-parse --short HEAD 2>/dev/null || echo n/a)"
+echo "config checks $CHECKS"
 
 shopt -s nullglob
 dirs=("$XW/$CHECKS"/*/)
