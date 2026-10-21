@@ -631,3 +631,56 @@ RJDB's reject rows stay the hardest to draw mistakes from: 3.7% a row, a quarter
 | all | 1,359 / 1,020 | 152 / 100 |
 
 **The candidates** (`build_balanced_dpo.py candidates`, `onpolicy-error-mass/dpo_v3_onpolicy_candidates_report.json`). All 2,631 merged pairs pass `normalise_pairs` unchanged. They keep `pool_source`, and none needs the legacy judge. SFT-v3's margins on them are job 5111574.
+
+#### V3's DPO set: score, per-source balance and combine
+
+**In one sentence.** Balanced by error mass within each pool source, the on-policy part is 1,568 training pairs. Together with r2em_v3 that makes V3's DPO set 3,839 training and 442 validation pairs.
+
+- **Observed.** All three new sources pass D1, D2, D3 and D6 on the GPU-free checks. r2em_v3 fails D3 at a balanced AUC of 0.701; this is the first direction check r2em has had. D4 is job 5111654.
+- **Interpretation.** In the new pairs, the rationale argued for the wrong verdict cannot be told from the right one by wording (AUC 0.49 to 0.56). r2em's can, to a degree, as round 1's could (0.684).
+- **Unknown.** Whether SFT-v3 already prefers `chosen` on these pairs (D4), and what training on either part does.
+
+**Score** (job 5111574 on `normal`, 6:38, commit 01a9016, 0.11 GPU-h): SFT-v3's decision-token margin on all 2,631 candidate prompts (`dpo_v3_onpolicy_scores.parquet`). Pooled over the training pairs:
+
+- hire anchors: error mass 65.1 over 1,359 pairs, none with `p_wrong` above 0.5;
+- reject anchors: error mass 123.9 over 1,020 pairs, 16 above 0.5.
+
+Most of these negatives were sampled at temperature 1, while SFT-v3's greedy margin prefers the anchor.
+
+**Balance by error mass, per pool source** (`build_balanced_dpo.py build --balance-by pool_source`, tolerance 0.05, `min_keep` 0.5, seed 42; `onpolicy-error-mass/dpo_v3_onpolicy_report.json`):
+
+| source | before, hire / reject (error mass) | after, per side | error mass after, hire / reject | trimmed as most confidently wrong |
+|---|---|---|---|---|
+| djinni_new | 951 (46.8) / 595 (87.0) | 481 | 41.1 / 43.0 | 114 reject pairs, `p_wrong` ≥ 0.245 |
+| kaggle_linkedin | 260 (10.4) / 247 (32.0) | 167 | 9.5 / 9.9 | 80 reject pairs, `p_wrong` ≥ 0.165 |
+| rjdb | 148 (8.0) / 178 (4.9) | 136 | 4.9 / 4.8 | 12 hire pairs, `p_wrong` ≥ 0.182 |
+
+No source was left out. That is 1,568 training pairs, 98 steps an epoch at batch 16. Validation is balanced by count within each source and protected group: 170 pairs, 27, 12 and 46 per side.
+
+**Combine** (`v3_additional_data.py --stage dpo_v3` at 970c210, clean; `artifacts/semisynthetic-v3/additional/dpo_v3_report.json`). r2em_v3 first, then the on-policy pairs:
+
+- **train:** 3,839, of which 2,271 r2em_v3 and 1,568 on-policy;
+- **validation:** 442, of which 272 and 170.
+
+None of the stage's refusals fired: every row flips its decision, every on-policy row chooses its pair's vote anchor, no prompt repeats, no candidate is on both sides of the split, and no benchmark id appears. Unstable anchors (a majority of at most 5 of 8 votes) are 393 of the on-policy training pairs and 97 of r2em_v3's. `configs/data/en_only_dpo_v3.yaml` with `data_kind: dpo_v3` loads 3,839 and 442 rows through `training_common.load_generated_dataset`.
+
+**Contrasts in training** (`dpo_v3_report.json`, `contrast`): every source is symmetric.
+
+| source | hire over reject | reject over hire |
+|---|---|---|
+| djinni_v1 (r2em_v3) | 1,139 | 1,132 |
+| djinni_new | 481 | 481 |
+| kaggle_linkedin | 167 | 167 |
+| rjdb | 136 | 136 |
+
+**GPU-free direction checks on the training split** (`dpo_v3_report.json`, `train.direction`; `direction_check.surface_report`):
+
+| source | pairs | D1 | D2, lexical | D3, balanced AUC (gate 0.65) | D5, mean overlap | D6, hire share |
+|---|---|---|---|---|---|---|
+| djinni_v1 (r2em_v3) | 2,271 | pass | 0 | **0.701, fails** | 0.130 | 0.502 |
+| djinni_new | 962 | pass | 0 | 0.487 | 0.129 | 0.500 |
+| kaggle_linkedin | 334 | pass | 0 | 0.557 | 0.137 | 0.500 |
+| rjdb | 272 | pass | 0 | 0.489 | 0.166 | 0.500 |
+| all | 3,839 | pass | 0 | 0.599 | 0.133 | 0.501 |
+
+By the stop conditions, a source that fails D3 enters only if the user says so. That applies to r2em_v3, the part the user chose before this check existed. The decision is open until D4 is in.
