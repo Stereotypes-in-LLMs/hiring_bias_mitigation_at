@@ -1028,7 +1028,7 @@ Written on 2026-10-21 at about 17:20 CEST, before any job of this round. DPO on 
 
 Can the on-policy part of V3's DPO set reach 5,000 training pairs from SFT-v3's mistakes on pool pairs it never trained on? The pairs must be balanced by error mass within each pool source and pass every per-source check.
 
-"5,000" counts training pairs after the per-source balance, on-policy only. r2em_v3 is not counted: it failed D3 and D4, and the run without it did better than DPO-v3 (−0.90 pp [−2.27, +0.42]). If 5,000 was meant to include r2em_v3's 2,271 pairs, the round needs about 1,200 more pairs instead of about 3,400.
+"5,000" counts training pairs after the per-source balance, on-policy only. r2em_v3 is not counted: it failed D3 and D4, and the run without it did better than DPO-v3 (−0.90 pp [−2.27, +0.42]). The user confirmed this reading and the pilot at about 17:30: "Yes. 5,000 counts on-policy pairs only. Submit the pilot once the GPU is free, and report after the judge."
 
 #### Why new pairs
 
