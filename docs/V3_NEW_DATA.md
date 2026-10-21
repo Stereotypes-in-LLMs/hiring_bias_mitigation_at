@@ -929,7 +929,7 @@ The run trained its 98 steps in one job and met none of its stop conditions. It 
 
 The training loss averaged 0.229 over the epoch.
 
-**Decisions on 64 of its validation prompts** (). These are the on-policy validation pairs, the student's own error cases, so they are not comparable with DPO-v3's readout, which mixed in r2em_v3's pairs. None was unreadable at any evaluation.
+**Decisions on 64 of its validation prompts** (`decision_eval.jsonl`). These are the on-policy validation pairs, the student's own error cases, so they are not comparable with DPO-v3's readout, which mixed in r2em_v3's pairs. None was unreadable at any evaluation.
 
 | step | agree with anchor | hire rate | hire rate, hire anchors | hire rate, reject anchors |
 |---|---|---|---|---|
