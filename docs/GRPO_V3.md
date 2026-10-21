@@ -161,6 +161,20 @@ Everything else is GRPO-v3's: the start, β, the learning rate, one epoch, the m
   - Round 3's later jobs (scoring, checks) may run in between.
 - **Costs.** All under `grpo_v3_all`.
 
+**As run, before training** (`artifacts/semisynthetic-v3/grpo-v3-all/report.json`).
+
+- **Data.** Round 3's second batch was generated and sampled by jobs 5116018 and 5116328. The k=32 hire top-ups were jobs 5116724 (pilot, 26 min, 1.62 GPU-h) and 5116767 (second batch, 31 min, 1.94 GPU-h).
+- **Pool.** 100,970 rows: 27,577 hire and 73,393 reject. 1,155 candidates are held out (5,039 rows).
+- **Gate.** It passed at 01:06 on 2026-10-22. The training rows with a sampled error are 6,410 hire and 4,570 reject; the monitor has 128 rows per side.
+- **Size.** `--n-train auto` gives 9,140 prompts, 4,570 per side, over 1,767 candidates, so 572 steps.
+- **Draw.**
+  - Hire half: 2,985 tipped rows, and every hire row has a sampled error, at k=32.
+  - Reject half: 2,077 tipped rows; 4,217 of its 4,570 rows have a sampled error, at k=8.
+  - The reject side carries more pull per row, so it takes 353 rows without an error to match the hire half's pull: 1,730 against 1,696, within the 1% tolerance. GRPO-v3 had 369 per half.
+- **Sources.** djinni_new gives 3,421 hire and 3,669 reject prompts, RJDB 1,149 and 901.
+- **Overlap.** No training candidate is in SFT-v3's training data, and none is in both splits.
+- **Training.** Job 5116822 started at 01:07 at commit bb42df1, with no uncommitted code.
+
 The training config is `configs/mitigation/grpo/qwen3.5-9b_en_only_grpo_v3_all_gh200.yaml`, the data config `configs/data/en_only_grpo_v3_all.yaml`, and the audit config `configs/audit/qwen3.5-9b_en_grpo_v3_all_gh200.yaml`. `build_grpo_prompts.py` takes several `--pool` and `--hire-topup`, `--fill pull` and `--n-train auto` (`grpo_prompts.signal_balanced_train`, `informative_half`; `tests/test_grpo.py`). With its defaults it still rebuilds grpo-v3 and grpo-v3-new byte for byte.
 
 ## Reproducing
