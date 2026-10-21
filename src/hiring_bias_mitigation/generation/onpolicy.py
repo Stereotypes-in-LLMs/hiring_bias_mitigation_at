@@ -166,6 +166,7 @@ def selection_by(rows: pd.DataFrame, attributed: list[list[str]],
                 for d in _decisions(free_by_pair[str(pair)], lang)]
         picked = selected[selected[by] == value] if len(selected) else selected
         strategies = picked["rejected_strategy"].value_counts() if len(picked) else {}
+        tipped = picked[picked["rejected_strategy"] == TIPPED] if len(picked) else picked
         out[str(value)] = {
             "rows": len(part), "pairs": len(pair_ref),
             "reference_hire_share": _share([r == "hire" for r in references]),
@@ -178,6 +179,9 @@ def selection_by(rows: pd.DataFrame, attributed: list[list[str]],
                 for side in ("hire", "reject")},
             "selected": {str(k): int(v) for k, v in dict(strategies).items()},
             "tipped_per_row": round(int(dict(strategies).get(TIPPED, 0)) / len(part), 4),
+            # The side each source's error-mass balance will be short of.
+            "tipped_by_reference": {side: int((tipped["reference_decision"] == side).sum())
+                                    if len(tipped) else 0 for side in ("hire", "reject")},
         }
     return out
 

@@ -419,7 +419,8 @@ def test_selection_by_pool_source_reads_each_sources_operating_point():
                          "reference_decision": ["hire", "hire", "reject"]})
     attributed = [says("hire", 3) + says("reject", 1), says("hire", 4), says("reject", 4)]
     free_by_pair = {"a": says("hire", 2) + says("reject", 2), "b": says("reject", 4)}
-    selected = pd.DataFrame({"pool_source": ["rjdb"], "rejected_strategy": [OP.TIPPED]})
+    selected = pd.DataFrame({"pool_source": ["rjdb"], "rejected_strategy": [OP.TIPPED],
+                             "reference_decision": ["hire"]})
 
     by = OP.selection_by(rows, attributed, free_by_pair, selected, "pool_source")
 
@@ -431,6 +432,8 @@ def test_selection_by_pool_source_reads_each_sources_operating_point():
     assert by["rjdb"]["selected"] == {OP.TIPPED: 1} and by["rjdb"]["tipped_per_row"] == 0.5
     assert by["kaggle"]["student_hire_rate_attr_free"] == 0.0
     assert by["kaggle"]["selected"] == {} and by["kaggle"]["tipped_per_row"] == 0.0
+    assert by["rjdb"]["tipped_by_reference"] == {"hire": 1, "reject": 0}
+    assert by["kaggle"]["tipped_by_reference"] == {"hire": 0, "reject": 0}
 
 
 def test_the_judge_stage_reports_each_pool_source():
