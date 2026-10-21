@@ -684,3 +684,36 @@ None of the stage's refusals fired: every row flips its decision, every on-polic
 | all | 3,839 | pass | 0 | 0.599 | 0.133 | 0.501 |
 
 By the stop conditions, a source that fails D3 enters only if the user says so. That applies to r2em_v3, the part the user chose before this check existed. The decision is open until D4 is in.
+
+#### V3's DPO set: direction checks per source (job 5111654)
+
+**In one sentence.** The three new on-policy sources pass every check. r2em_v3 fails D3 and D4: SFT-v3 already prefers `chosen` on 97.7% of its pairs.
+
+- **Observed.** On the new sources SFT-v3 prefers `chosen` on 66% to 80% of pairs, inside D4's 50–90% band, so 20% to 34% of pairs are informative. On r2em_v3 it prefers `chosen` on 97.7%, so 2.3% are informative, and the wording separates at 0.701.
+- **Interpretation.** r2em's negatives were SFT v1's mistakes. SFT-v3 does not make most of them, so for a DPO run from SFT-v3 they are off-policy in fact as well as by construction, and they carry little gradient. Not confirmed by training.
+- **Unknown.** What DPO from SFT-v3 does with either part.
+
+| source | pairs | D1 | D2, lexical | D3, balanced AUC (≤ 0.65) | D5, overlap | D6, hire share | D4 pairs | D4, SFT-v3 prefers `chosen` (50–90%) | informative | base prefers `chosen` |
+|---|---|---|---|---|---|---|---|---|---|---|
+| djinni_v1 (r2em_v3) | 2,271 | pass | 0 | **0.701, fails** | 0.130 | 0.502 | 600 | **97.7%, fails** | 2.3% | 62.8% |
+| djinni_new | 962 | pass | 0 | 0.487 | 0.129 | 0.500 | 600 | 69.3% | 30.7% | 45.7% |
+| kaggle_linkedin | 334 | pass | 0 | 0.557 | 0.137 | 0.500 | 334 | 65.9% | 34.1% | 39.2% |
+| rjdb | 272 | pass | 0 | 0.489 | 0.166 | 0.500 | 272 | 80.1% | 19.9% | 52.6% |
+
+Sources: `artifacts/semisynthetic-v3/additional/dpo_v3_checks/<source>/direction_report.{json,md}`; the per-pair D4 scores are beside them in `direction_student_scores.parquet`.
+
+How the checks were run:
+
+- D4 is read under HF + PEFT on a seeded 600-pair subsample, or on every pair where a source has fewer.
+- SFT-v3 decides the reference verdict on every scored pair.
+- The judge's allusion rate (D2) is not in these files: the judge's per-pair verdicts are not carried into `dpo_v3`. The judge stages dropped 3 and 4 negatives for alluding to the attribute.
+
+**Run.** Job 5111654 on `normal`, 7:38, commit 4540d18, one source per GPU: 0.43 GPU-h (`$XW/cost/records/*_5111654_*`, arm `dpo_v3`).
+
+**The stop condition.** r2em_v3 fails D3 and D4. Under the pre-registration it stays in V3's DPO set only if the user says so. The set on disk holds both parts, and every row says which one it is (`dpo_v3_part`).
+
+**Compute, round 2 so far.** 31.1 GPU-h measured and 32.8 allocated, against the pre-registered caps of 40 for SFT-v3 and 60 for the round:
+
+- SFT-v3: 20.90 GPU-h, plus 0.74 for the cancelled first submission;
+- its benchmark evaluation: 0.44;
+- V3's DPO data: 9.02 in all (sampling 7.36, judging 1.12, scoring 0.11, checks 0.43).
