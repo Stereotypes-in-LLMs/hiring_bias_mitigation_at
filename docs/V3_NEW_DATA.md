@@ -783,3 +783,43 @@ Written on 2026-10-21 at about 11:30, before training. The user decided to train
 - **Checkpoint and split.** The final checkpoint, step 240, is declared now as the one audited. `dpo_v3_validation` gives `eval_loss` and the decision readout. The benchmark audit is the final test, spent once with `scripts/cscs/evaluate_arm.sbatch` against SFT-v3. It is not part of this job.
 
 **A fix in `scripts/cscs/train_dpo.sbatch`.** The trainer runs as `-m hiring_bias_mitigation.mitigation.dpo`, and without `PYTHONPATH=$REPO/src` a run from a worktree imports the venv's editable install, the main checkout's code, while its log names the worktree's commit. The job now sets it, as `train_sft.sbatch` does, and prints the package path.
+
+#### DPO-v3: result on the validation split
+
+**In one sentence.** DPO-v3 trained its 240 steps in one job and met none of its stop conditions. It passes the hire-rate gate, so its final checkpoint can go to the benchmark audit.
+
+- **Observed.** On the 64 validation prompts, half with hire anchors and half with reject anchors, the final checkpoint agrees with the anchor 0.906 of the time, with a hire rate of 0.469. Its hire rate on hire-anchor prompts is 0.875 at the last two evaluations, above the 0.75 gate. On the seeded 200 validation pairs, it prefers `chosen` on 93.5%, with a mean reward margin of 8.73.
+- **Interpretation.** DPO separated the pairs it was given. Agreement fell from 0.969 at step 25 to 0.906, and on 64 prompts that is 4 prompts. The hire rate on hire anchors went from 0.94 to 0.875, which is 2 of 32. Neither is a benchmark result.
+- **Unknown.** Everything on the benchmark. Its audit against SFT-v3 has not been run.
+
+| field | value |
+|---|---|
+| job | 5112068, `normal`, one GH200 node, 4 GPUs; 49:53, completed |
+| code | commit efe377c on `xinyang/v3-additional-data`, clean; the package loaded from the worktree's `src` (job log) |
+| config and data | `configs/mitigation/dpo/qwen3.5-9b_en_only_dpo_v3_gh200.yaml`; `configs/data/en_only_dpo_v3.yaml`, `data_kind` dpo_v3: 3,839 training pairs, a seeded 200 of the 442 validation pairs for evaluation |
+| start point and reference | SFT-v3, `outputs/sft/qwen3.5-9b_en_only_sft_v3_additional` |
+| output | `outputs/dpo/qwen3.5-9b_en_only_dpo_v3`: the final adapter at step 240 (declared for the audit), and checkpoints every 25 steps |
+| W&B | run b00c15a0, `dpo-qwen3.5-9b_en_only_dpo_v3` |
+| cost | 3.31 GPU-h, 2,976 s on 4 GPUs, peak 32.7 GiB per GPU, mean GPU use 53%, 58.2 M trainable parameters (`$XW/cost/records/20261021T112851_train_dpo_5112068_74228.json`, arm `dpo_v3`) |
+
+The training loss averaged 0.155 over the epoch (`train_loss`).
+
+**Decisions on the 64 validation prompts** (`decision_eval.jsonl` in the output directory). None was unreadable at any evaluation.
+
+| step | agree with anchor | hire rate | hire rate, hire anchors | hire rate, reject anchors |
+|---|---|---|---|---|
+| 25 | 0.969 | 0.469 | 0.938 | 0.000 |
+| 50 | 0.844 | 0.656 | 1.000 | 0.313 |
+| 100 | 0.875 | 0.563 | 0.938 | 0.188 |
+| 150 | 0.844 | 0.406 | 0.750 | 0.063 |
+| 175 | 0.953 | 0.516 | 0.969 | 0.063 |
+| 200 | 0.906 | 0.469 | 0.875 | 0.063 |
+| 240 | 0.906 | 0.469 | 0.875 | 0.063 |
+
+**Evaluation on 200 validation pairs** (job log), every 25 steps and at 240:
+
+- loss: 0.579, 0.700, 0.462, 0.488, 0.395, 0.792, 0.440, 0.518, 0.474, 0.462;
+- preference accuracy: 0.905 at step 25, 0.935 at the end;
+- reward margin: 6.40 at step 25, 8.73 at the end.
+
+The loss jumps, to 0.700 at step 50 and 0.792 at step 150, coincide with the decision readout's dips at those steps.
