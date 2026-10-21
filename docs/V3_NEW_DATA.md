@@ -1208,3 +1208,18 @@ The votes read like round 1's on the same sources (22.3% and 56.5% anchors that 
 The benchmark's pairs are Djinni pairs, so djinni_new is the source closest to it.
 
 **Cost.** 4.81 GPU-h measured, against about 5 pre-registered: teacher 3.11, sampling 1.21, judge 0.49 (`$XW/cost/records/*_{5115569,5115774,5115822}_*`, arm `dpo_v3_5k`).
+
+#### Amendment: the rest of the round is four djinni_new parts (user)
+
+Written on 2026-10-21 at about 20:10, after the pilot's report and before any further job. Offered four djinni_new parts or three djinni_new parts and one RJDB part, the user answered: "Use 4 djinni_new parts for the rest, submitted one at a time, then run scoring, balancing and the checks."
+
+- **Parts.** djinni_new-004 to djinni_new-007, 6,000 pairs, in one teacher job. By the projection above, the union then balances to about 5,000 pairs, with RJDB at about 14%.
+- **Own directories.** `configs/generation/v3_new_pairs_2.yaml` writes to `artifacts/semisynthetic-v3/new-pairs-2`, and `configs/generation/negatives_v3_onpolicy_new2_gh200.yaml` to `onpolicy-new2`.
+  - The pilot's directories stay as built: GRPO-v3-new reads `onpolicy-new` (`docs/GRPO_V3.md`).
+  - Round 1 and the pilot are both `earlier_rounds`, so their parts and candidates are refused.
+  - The new run's merge joins the pilot's merged union (`merge_with: onpolicy-new/merged`).
+- **Balance.** The whole union goes through `build_balanced_dpo.py` as `dpo_v3_onpolicy5k`, at r2em's parameters, scored by SFT-v3.
+- **Checks.** Then each pool source is checked as round 2's were: D1 to D7, with D4 under SFT-v3 and the base on 600 pairs per source.
+- **Shortfall.** If the balanced set falls short of 5,000, the count is reported. Another part runs only at the user's call.
+- **Unchanged.** The stop conditions and the 30 GPU-h cap.
+- **Queue.** The jobs run one at a time behind GRPO-v3-new (job 5115959) and its evaluation.
