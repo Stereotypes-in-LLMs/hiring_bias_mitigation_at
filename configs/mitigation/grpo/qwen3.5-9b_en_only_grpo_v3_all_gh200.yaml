@@ -11,7 +11,7 @@
 # adapter, declared before training.
 #   HBM_COST_ARM=grpo_v3_all REPO=$PWD \
 #   CONFIG=configs/mitigation/grpo/qwen3.5-9b_en_only_grpo_v3_all_gh200.yaml \
-#     scripts/cscs/submit.sh -p normal -t 12:00:00 scripts/cscs/train_grpo.sbatch
+#     scripts/cscs/submit.sh -p normal -t 11:15:00 scripts/cscs/train_grpo.sbatch
 stage: grpo
 objective: grpo
 data_kind: grpo

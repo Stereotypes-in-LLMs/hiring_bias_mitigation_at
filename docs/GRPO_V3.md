@@ -148,8 +148,8 @@ Everything else is GRPO-v3's: the start, β, the learning rate, one epoch, the m
 - **Preview on the pilot alone.** 3,102 prompts, a pull of 616 and 625 per half, 3,064 of them with a sampled error (scratchpad build, not used).
 - **Data gate, checked before training.** Each side has at least 3,000 training rows with a sampled error, and 128 held-out monitor rows. Otherwise nothing is submitted and the counts go to the user.
 - **Scale and stop conditions.** The size follows from the data and is reported before training. By the pilot's rates the second batch adds about 2,200 hire and 2,900 reject rows with an error at k=8, before the top-up. That is roughly 8,000 to 10,000 prompts and 500 to 625 steps at about 50 s a step: 7 to 9 hours, 28 to 36 GPU-h.
-  - The job runs with a 12 h limit; `resume: true` allows one more submission.
-  - The training stops at 45 GPU-h whatever its step, and the user is asked.
+  - The job runs with an 11 h 15 min limit, which is 45 GPU-h on four GPUs.
+  - If it reaches that limit before the epoch ends, the user is asked before `resume: true` continues it.
   - The monitor band (15–35%) and `memory_floor_gb` are as before.
 - **Order, one job at a time.**
   1. Round 3's teacher job and its SFT-v3 sample job.
@@ -206,7 +206,7 @@ python scripts/build_grpo_prompts.py --pool artifacts/semisynthetic-v3/onpolicy-
   --fill pull --n-train auto --validation-root artifacts/semisynthetic-v3 \
   --out artifacts/semisynthetic-v3/grpo-v3-all
 HBM_COST_ARM=grpo_v3_all CONFIG=configs/mitigation/grpo/qwen3.5-9b_en_only_grpo_v3_all_gh200.yaml \
-  scripts/cscs/submit.sh -p normal -t 12:00:00 scripts/cscs/train_grpo.sbatch
+  scripts/cscs/submit.sh -p normal -t 11:15:00 scripts/cscs/train_grpo.sbatch
 HBM_COST_ARM=grpo_v3_all AUDIT=configs/audit/qwen3.5-9b_en_grpo_v3_all_gh200.yaml \
 AGAINST=configs/audit/qwen3.5-9b_en_sft_v3_additional_gh200.yaml \
   scripts/cscs/submit.sh scripts/cscs/evaluate_arm.sbatch
