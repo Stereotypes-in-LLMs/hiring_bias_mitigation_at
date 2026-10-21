@@ -764,3 +764,22 @@ The tables are `docs/dpo_data/v3_{dpo,r2em,djinni_new,kaggle_linkedin,rjdb}_*`, 
 Shown the per-source checks and the data-quality report, the user decided "保留" (keep). V3's DPO set keeps r2em_v3 although it fails D3 (0.701) and D4 (97.7%). It stays as built: 3,839 training and 442 validation pairs, read through `configs/data/en_only_dpo_v3.yaml`. The failures stay recorded, and `dpo_v3_part` lets a run or a readout set the r2em part apart.
 
 The same message asked for more on-policy pairs: "采到5000". How that is reached, and at what cost, follows.
+
+#### DPO-v3: pre-registration
+
+Written on 2026-10-21 at about 11:30, before training. The user decided to train now on everything built so far: "start DPO with all data we got so far from sftV3", after "include r2em total 5000". More on-policy sampling toward 5,000 pairs in all is left for later.
+
+- **Question.** Does DPO on V3's DPO set, starting from SFT-v3, lower the share of unstable within-group sets at matched hire rate against SFT-v3, the cell's reference arm, and stay inside the guardrails? The hypothesis is that it does. The result counts against the hypothesis if the 95% interval reaches 0 or above, or if a guardrail fails. The guardrail most at risk is the hire rate where GPT-4o hires, which is how round 1 failed.
+- **Control.** SFT-v3: its audit and margin pass are on disk (job 5108977). The decision is `compare-arms --against configs/audit/qwen3.5-9b_en_sft_v3_additional_gh200.yaml`. For context, r2em-100 against SFT v1 was −0.96 pp [−1.96, +0.04], not better.
+- **Data.** `configs/data/en_only_dpo_v3.yaml`, `data_kind: dpo_v3`: 3,839 training and 442 validation pairs. r2em_v3 is in by the user's decision, although it fails D3 and D4.
+- **Settings.** r2em's: beta 0.3, sigmoid plus 0.2 NLL on `chosen`, lr 5e-5, 10 warmup steps, effective batch 16, one epoch, 240 steps. `max_seq_len` is 3072, because at 2048, 21 training and 10 validation Kaggle × LinkedIn rows would lose their responses (`reports/v3_new_data/dpo_token_lengths.json`). The config is `configs/mitigation/dpo/qwen3.5-9b_en_only_dpo_v3_gh200.yaml`; against r2em's it changes only the start point, the data, the length and the names.
+- **Expected.** SFT-v3 already prefers `chosen` on 97.7% of r2em_v3's pairs and on 66% to 80% of the on-policy pairs. The gradient should therefore come mostly from the on-policy 41% of the rows, and the DPO loss should fall less on r2em_v3's part. No direction is predicted for the benchmark beyond the hypothesis.
+- **Stop conditions.**
+  - `memory_floor_gb` 12 stops the run cleanly.
+  - The run stops on a non-finite loss.
+  - The run stops if more than 5% of the greedy decisions on the 64 validation prompts are unreadable at any evaluation after the first.
+  - If the hire rate on hire-anchor validation prompts is below 0.75 at the last two evaluations, the final checkpoint is reported before any audit.
+  - At most 8 GPU-h for training: a 2-hour job.
+- **Checkpoint and split.** The final checkpoint, step 240, is declared now as the one audited. `dpo_v3_validation` gives `eval_loss` and the decision readout. The benchmark audit is the final test, spent once with `scripts/cscs/evaluate_arm.sbatch` against SFT-v3. It is not part of this job.
+
+**A fix in `scripts/cscs/train_dpo.sbatch`.** The trainer runs as `-m hiring_bias_mitigation.mitigation.dpo`, and without `PYTHONPATH=$REPO/src` a run from a worktree imports the venv's editable install, the main checkout's code, while its log names the worktree's commit. The job now sets it, as `train_sft.sbatch` does, and prints the package path.
