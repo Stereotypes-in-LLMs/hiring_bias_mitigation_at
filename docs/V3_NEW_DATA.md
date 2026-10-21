@@ -564,3 +564,20 @@ The 546 validation candidates are SFT-v3's own. Validation holds 6% of djinni_ne
 The per-source checks are on the final set, as pre-registered.
 
 **Run.** Job 5110942 on `normal`, 9:25, commit 67befcb; the judge took 507 s and 0.56 GPU-h (`$XW/cost/records/*_5110942_*`, arm `dpo_v3`). Collect was re-run on the login node at ecb10ae: `selected.parquet` is byte-identical (sha256 `8247aad7…`), and `sample_report.json` gained only `tipped_by_reference`.
+
+#### Amendment: the top-up also samples RJDB's reject rows
+
+Written on 2026-10-21 at about 09:10, after the full run's judge and before any top-up sample.
+
+- **What was seen.** RJDB's short side is reject: 214 tipped negatives on reject anchors against 375 on hire, and 58 reject-anchor training pairs after the judge. The planned top-up covers only djinni_new and kaggle_linkedin's hire rows.
+- **The decision.** Asked whether to fold RJDB's reject-anchor rows into the one k=32 top-up job, the user answered: "Yes: fold RJDB's reject-anchor rows into the one k=32 top-up job (about 504k more samples, roughly 35 more minutes), then judge."
+- **What changes.** `configs/generation/negatives_v3_onpolicy_hire_gh200.yaml` now takes each source's short side through a list of row filters (`onpolicy.filter_rows`, with a test). That is 28,707 rows over 2,397 pairs, 31,104 prompts and 995,328 samples, against 14,158 rows and 490,848 samples as first registered:
+
+  | source | anchors | rows | pairs |
+  |---|---|---|---|
+  | djinni_new | hire | 11,494 | 959 |
+  | kaggle_linkedin | hire | 2,664 | 222 |
+  | rjdb | reject | 14,549 | 1,216 |
+
+- **What does not change.** The config and directory names (they keep "hire"), the merge, the per-source balance by error mass at r2em's parameters, the checks and the stop conditions.
+- **Cost.** At the full run's rate of about 260 samples a second, sampling takes about 65 minutes instead of 30.

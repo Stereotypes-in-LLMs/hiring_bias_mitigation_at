@@ -445,3 +445,18 @@ def test_the_judge_stage_reports_each_pool_source():
     assert by["rjdb"] == {"selected": 3, "kept": 2, "keep_rate": 0.6667,
                           "kept_reference_hire_share": 0.5, "train": 1, "validation": 1}
     assert by["kaggle"]["kept"] == 0 and by["kaggle"]["kept_reference_hire_share"] is None
+
+
+def test_a_list_of_row_filters_keeps_rows_matching_any_of_them():
+    """V3's top-up samples each source's short side: hire rows of djinni_new and kaggle_linkedin,
+    reject rows of RJDB (docs/V3_NEW_DATA.md, round 2)."""
+    rows = pd.DataFrame({"pair_id": list("abcdef"),
+                         "pool_source": ["djinni_new", "rjdb", "kaggle_linkedin", "djinni_new",
+                                         "rjdb", "kaggle_linkedin"],
+                         "reference_decision": ["hire", "hire", "hire", "reject", "reject",
+                                                "reject"]})
+    kept = OP.filter_rows(rows, [
+        {"reference_decision": "hire", "pool_source": ["djinni_new", "kaggle_linkedin"]},
+        {"reference_decision": "reject", "pool_source": "rjdb"}])
+    assert kept["pair_id"].tolist() == ["a", "c", "e"]
+    assert kept.index.tolist() == [0, 1, 2]

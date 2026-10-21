@@ -186,22 +186,27 @@ def selection_by(rows: pd.DataFrame, attributed: list[list[str]],
     return out
 
 
-def filter_rows(rows: pd.DataFrame, row_filter: dict | None) -> pd.DataFrame:
-    """The rows matching every `column: value` of `row_filter`, re-indexed; None keeps all.
+def filter_rows(rows: pd.DataFrame, row_filter: dict | list[dict] | None) -> pd.DataFrame:
+    """The rows `row_filter` keeps, re-indexed; None keeps all.
 
-    A top-up run samples one slice of the pool harder (the hire rows at k=32). Its prompt keys
-    are positions in the filtered rows, which is why the index is reset. A list value matches
-    any of its items: V3's top-up takes the hire rows of two pool sources only.
+    A dict keeps the rows matching every `column: value` of it, and a list value matches any of
+    its items. A list of dicts keeps the rows matching any one of them: V3's top-up takes the
+    hire rows of djinni_new and kaggle_linkedin and the reject rows of RJDB, each source's short
+    side. A top-up run samples one slice of the pool harder (k=32); its prompt keys are positions
+    in the filtered rows, which is why the index is reset.
     """
     if not row_filter:
         return rows
-    mask = pd.Series(True, index=rows.index)
-    for column, value in row_filter.items():
-        if isinstance(value, (list, tuple)):
-            mask &= rows[column].isin(list(value))
-        else:
-            mask &= rows[column] == value
-    return rows[mask].reset_index(drop=True)
+    keep = pd.Series(False, index=rows.index)
+    for one in (row_filter if isinstance(row_filter, list) else [row_filter]):
+        mask = pd.Series(True, index=rows.index)
+        for column, value in one.items():
+            if isinstance(value, (list, tuple)):
+                mask &= rows[column].isin(list(value))
+            else:
+                mask &= rows[column] == value
+        keep |= mask
+    return rows[keep].reset_index(drop=True)
 
 
 #: A rationale with one of these addresses one gender. Reused under another attribute it
