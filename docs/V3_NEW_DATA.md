@@ -1131,3 +1131,80 @@ From round 1's and round 2's measured rates:
 
 - Whether DPO on 5,000 pairs beats SFT-v3.
 - Whether pairs from candidates SFT-v3 never saw teach it something different from round 2's pairs, which came from candidates it trained on. The per-source checks describe the two; they do not settle it.
+
+### Result
+
+#### Pilot: djinni_new-003 and rjdb-002 (jobs 5115569, 5115774, 5115822)
+
+**In one sentence.** On pairs it never trained on, SFT-v3 left tipped negatives on 4.7% of djinni_new rows and 6.3% of RJDB rows, against 2.3% on round 1's pairs. The judge kept 1,170 of 1,845, and the new pairs pass D1, D2 and D3 before balancing.
+
+- **Observed.**
+  - djinni_new beat its projection of 3.5% a row; RJDB fell short of its 8.2%, but stayed above its stop line of 4.1%.
+  - SFT-v3 also errs more often without the attribute: it matches the anchor on 92.7% of djinni_new's attribute-free samples and 83.9% of RJDB's.
+  - With round 2's pairs, the training candidates are now 3,493.
+- **Interpretation.** The pilot measures the yield per part that sizes the rest of the round. The projection below rests on round 2's balance trims, since SFT-v3 has not scored the new pairs yet.
+- **Unknown.**
+  - How the error-mass balance treats the new pairs: SFT-v3 may be less sure on them, which would trim more.
+  - D4, which runs with the final set.
+
+**Teacher** (job 5115569 on `normal`, 46:53, commit 8348ec4, clean; `new-pairs/report.json`). Votes and invariant only. Both first-part stop checks came out clear.
+
+| source | pairs | anchored | anchors that hire | unanimous | unstable (at most 5 of 8) | invariant yield |
+|---|---|---|---|---|---|---|
+| djinni_new-003 | 1,500 | 1,462 | 21.9% | 81.6% | 7.4% | 0.998 |
+| rjdb-002 | 1,500 | 1,425 | 54.4% | 64.5% | 14.6% | 0.998 |
+
+The votes read like round 1's on the same sources (22.3% and 56.5% anchors that hire). Assembly dropped 57 djinni_new CVs for the marker list and 44 RJDB CVs for template residue. That leaves 33,492 rows over 2,791 pairs as the on-policy input. None of their candidates is in SFT-v3's training data; `assemble` checked.
+
+**Samples** (job 5115774 on `normal`, 19:49; `onpolicy-new/sample_report.json`, `by_pool_source`). 8 samples per prompt, as onpolicy-full.
+
+| source | rows | right with the attribute, hire / reject anchors | tipped, hire / reject anchors | tipped per row | projected | stop line |
+|---|---|---|---|---|---|---|
+| djinni_new | 16,834 | 83.7% / 95.5% | 312 / 485 | 4.73% | 3.5% | 1.8% |
+| rjdb | 16,590 | 85.9% / 82.1% | 540 / 508 | 6.32% | 8.2% | 4.1% |
+
+3,897 rows gave only untipped negatives, wrong without the attribute too. They are counted and not judged.
+
+**Judge** (job 5115822 on `normal`, 8:05; `onpolicy-new/report.json`):
+
+| source | selected | kept | keep rate | train, hire / reject | validation |
+|---|---|---|---|---|---|
+| djinni_new | 797 | 618 | 77.5% | 206 / 390 | 22 |
+| rjdb | 1,048 | 552 | 52.7% | 231 / 287 | 34 |
+
+- **Drops.** On the rejected side, 431 were ungrounded, 19 contradicted their decision and 2 alluded to the attribute. On the chosen side, 223 more pairs were dropped, 215 of them as ungrounded.
+- **Plausibility.** The judge scored the kept negatives at 4.05 on average: 3.38 on hire anchors, 4.62 on reject anchors.
+- **Concentration.** The 1,114 training pairs come from 300 CV–job pairs. Round 2's 1,568 came from 513.
+
+**GPU-free checks, all pilot pairs before balancing** (`onpolicy-new/direction_report.json`):
+
+| check | value |
+|---|---|
+| D1 | every pair points the right way |
+| D2 | lexical rate 0, judge allusion rate 0.001 |
+| D3 | balanced AUC 0.548 on 918 balanced pairs (gate 0.65; round 2's full run read 0.574) |
+| D5 | mean token overlap 0.147 |
+| D6 | chosen hire share 0.392, before the per-source balance |
+
+**Merge** (`--stage merge` with `merge_with`, `onpolicy-new/merged/merge.json`). Round 2's 2,379 training and 252 validation pairs, then the pilot's 1,114 and 56; no row repeats:
+
+| source | train, hire / reject | validation |
+|---|---|---|
+| djinni_new | 1,157 / 985 | 125 |
+| kaggle_linkedin | 260 / 247 | 42 |
+| rjdb | 379 / 465 | 141 |
+| all | 3,493 | 308 |
+
+**Projection.** These numbers use round 2's balance trims: 19% off djinni_new's reject side and 8% off RJDB's hire side.
+
+- **Now.** The candidates would balance to about 1,600 djinni_new, 700 RJDB and 334 Kaggle × LinkedIn pairs: about 2,630 in all, against 1,568 before the pilot.
+- **Per further part:**
+  - a djinni_new part adds about 630 balanced pairs while the reject side binds, and about 410 once the hire side binds;
+  - an RJDB part adds about 425.
+- **To 5,000, four more parts:**
+  - three djinni_new and one RJDB give about 4,950, with RJDB at about 23% of the set;
+  - four djinni_new give about 5,000, with RJDB at 14%.
+
+The benchmark's pairs are Djinni pairs, so djinni_new is the source closest to it.
+
+**Cost.** 4.81 GPU-h measured, against about 5 pre-registered: teacher 3.11, sampling 1.21, judge 0.49 (`$XW/cost/records/*_{5115569,5115774,5115822}_*`, arm `dpo_v3_5k`).
