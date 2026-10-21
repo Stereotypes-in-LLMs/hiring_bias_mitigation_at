@@ -603,3 +603,31 @@ The rest of the readout:
 RJDB's reject rows stay the hardest to draw mistakes from: 3.7% a row, a quarter to a third of the rate on the other two sources' hire rows.
 
 **Run.** Job 5111001 on `normal`, 59:45, commit b45c7b3. Prepare took 44 s, reusing SFT-v3's merge. Sampling took 56 to 58 minutes per GPU at 87–89% mean GPU use, 3.81 GPU-h in all, 3.98 allocated (`$XW/cost/records/*_5111001_*`, arm `dpo_v3`). Its judge is job 5111399.
+
+#### On-policy pairs: the top-up's judge, the merge and the candidates
+
+**In one sentence.** The teacher kept 1,534 of the top-up's 2,361 negatives. Merged with the full run's pairs, every source now has both sides in training, RJDB's reject side included.
+
+**The top-up's judge** (job 5111399 on `normal`, 9:17, commit 01a9016; `onpolicy-hire32/report.json`, `by_pool_source`):
+
+| source and side | selected | kept | keep rate | train | validation |
+|---|---|---|---|---|---|
+| djinni_new, hire anchors | 1,418 | 1,013 | 71.4% | 939 | 74 |
+| kaggle_linkedin, hire anchors | 399 | 286 | 71.7% | 258 | 28 |
+| rjdb, reject anchors | 544 | 235 | 43.2% | 174 | 61 |
+
+- **The judge's drops.** On the rejected side, 488 were ungrounded, 17 contradicted their decision, 4 alluded to the attribute and 3 were implausible. On the chosen side, 315 more pairs were dropped.
+- **RJDB's keep rate,** 43.2%, is just above D7's 40% note line, as its 48.9% was in the full run.
+- **The judge took** 502 s and 0.56 GPU-h.
+- **The pooled direction check fails here, by construction.** On the top-up alone it fails D3 (balanced AUC 0.959) and D6 (hire share 0.847). The top-up is one-sided per source, so a balanced sample sets djinni_new and kaggle_linkedin's hire pairs against RJDB's reject pairs, and the classifier can read the source. r2em's hire-only top-up read 0.9996 for the same reason (`docs/DPO_DATA_CREATION.md`, stage 7). The pre-registered checks are per source on the final set.
+
+**The merge** (`generate_onpolicy_full.py --stage merge` at 01a9016, `onpolicy-hire32/merged/merge.json`). Of the top-up's 1,371 training pairs, 836 are on rows the full run has no pair for. The other 535 are dropped, because the full run's pair stays. In validation, 78 of 163 are new.
+
+| source | train, hire / reject | validation, hire / reject |
+|---|---|---|
+| djinni_new | 951 / 595 | 76 / 27 |
+| kaggle_linkedin | 260 / 247 | 30 / 12 |
+| rjdb | 148 / 178 | 46 / 61 |
+| all | 1,359 / 1,020 | 152 / 100 |
+
+**The candidates** (`build_balanced_dpo.py candidates`, `onpolicy-error-mass/dpo_v3_onpolicy_candidates_report.json`). All 2,631 merged pairs pass `normalise_pairs` unchanged. They keep `pool_source`, and none needs the legacy judge. SFT-v3's margins on them are job 5111574.
