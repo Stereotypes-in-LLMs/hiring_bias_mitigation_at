@@ -1223,3 +1223,79 @@ Written on 2026-10-21 at about 20:10, after the pilot's report and before any fu
 - **Shortfall.** If the balanced set falls short of 5,000, the count is reported. Another part runs only at the user's call.
 - **Unchanged.** The stop conditions and the 30 GPU-h cap.
 - **Queue.** The jobs run one at a time behind GRPO-v3-new (job 5115959) and its evaluation.
+
+#### Batch 2 and the 5,000-pair set (jobs 5116018, 5116328, 5116418, 5116484, 5116718)
+
+**In one sentence.** The on-policy set balances to 4,880 training and 350 validation pairs, 120 short of 5,000. It passes D1, D2, D3, D5 and D6 on every source, but djinni_new fails D4: SFT-v3 prefers `chosen` on 49.5% of its pairs, against the band's 50%.
+
+- **Observed.**
+  - On the new pairs, SFT-v3 prefers its own sampled mistake to the teacher's text more often than not: 36.5% prefer `chosen` on round 3's djinni_new pairs, against 71.1% on round 2's.
+  - Its greedy decision still matches the anchor on 96.3% of the sampled djinni_new pairs.
+  - RJDB passes D4 at 52.0%, down from round 2's 80.1%.
+- **Interpretation.** D4 compares whole-response log-probabilities. SFT-v3 trained on the `chosen` texts of the pairs it saw, while on new pairs the `chosen` text is new to it and the `rejected` text is its own sample. That would lower D4 without any change in which decision it prefers. Not confirmed: authorship and decision are not separated here.
+- **Unknown.** Whether DPO on these pairs moves the benchmark. By the erratum above, D4 does not set the gradient: with SFT-v3 as the reference, every pair starts at weight σ(0) = ½.
+
+By the stop conditions, djinni_new enters the set only if the user says so. Those pairs are 3,790 of the 4,880.
+
+**Teacher** (job 5116018 on `normal`, 1:31:07, commit 562b498; `new-pairs-2/report.json`). djinni_new-004 to -007, votes and invariant only, with djinni_new-004's stop check clear.
+
+- **Votes.** 6,000 pairs, 5,851 anchored. Anchors hire 22.0%, 81.4% are unanimous and 7.4% are unstable; no draw was undecided.
+- **Assembly.** 212 CVs were dropped for the marker list, which leaves 67,728 rows over 5,644 pairs. No candidate repeats one of round 1's or the pilot's.
+
+**Samples** (job 5116328, 36:15; `onpolicy-new2/sample_report.json`). On 67,546 rows SFT-v3 was right on 91.9% of its samples with the attribute (83.1% on hire anchors, 94.5% on reject anchors) and on 91.9% without it. It left 2,951 tipped negatives (1,333 on hire anchors, 1,618 on reject anchors), 4.37% a row, against the pilot's 4.73% and the stop line of 1.8%.
+
+**Judge** (job 5116418, 10:24; `onpolicy-new2/report.json`).
+
+- **Kept.** 2,217 of 2,951 (75.1%): 2,100 training pairs (863 on hire anchors, 1,237 on reject anchors) and 117 validation pairs.
+- **Drops.** On the rejected side, 514 were ungrounded, 31 contradicted their decision and 6 alluded to the attribute. On the chosen side, 183 more pairs were dropped. Mean plausibility was 4.17.
+- **Concentration.** The 2,100 training pairs come from 514 CV–job pairs.
+- **Checks before balancing.** D3 0.570, D5 0.129, D6 0.409.
+
+**Merge** (`onpolicy-new2/merged/merge.json`). Round 2's, the pilot's and batch 2's pairs, with no row repeated: 5,593 training and 425 validation.
+
+| source | train, hire / reject |
+|---|---|
+| djinni_new | 2,020 / 2,222 |
+| kaggle_linkedin | 260 / 247 |
+| rjdb | 379 / 465 |
+
+**Score and balance.** SFT-v3's margins on all 6,018 candidates came from job 5116484 (9:35). `build --balance-by pool_source` (`onpolicy-error-mass/dpo_v3_onpolicy5k_report.json`) then gave:
+
+| source | before, hire / reject (error mass) | after, per side | trimmed as most confidently wrong |
+|---|---|---|---|
+| djinni_new | 2,020 (261.5) / 2,222 (476.3) | 1,895 | 327 reject pairs, `p_wrong` ≥ 0.438 |
+| kaggle_linkedin | 260 (10.4) / 247 (31.9) | 167 | 80 reject pairs, `p_wrong` ≥ 0.165 |
+| rjdb | 379 (59.6) / 465 (56.8) | 378 | 1 hire pair, `p_wrong` ≥ 0.881 |
+
+That is 4,880 training pairs (305 steps an epoch at batch 16) and 350 validation pairs. The new pairs carry more error mass per pair than round 2's: SFT-v3 is less sure on them. That is why djinni_new's reject side lost 327 pairs and the set ended 120 short of the projection's 5,000.
+
+**The checked set** (`v3_additional_data.py --stage dpo_v3` with `configs/generation/v3_new_pairs_2.yaml`, at f123002; `new-pairs-2/dpo_v3_5k_{train,validation}.parquet` and `dpo_v3_5k_report.json`).
+
+- **Refusals.** None fired: every row chooses its pair's vote anchor and flips the decision, no prompt repeats, no candidate is on both sides of the split, and no benchmark id appears.
+- **Shape.** The 4,880 training pairs come from 1,383 CV–job pairs, and 1,019 of them sit on unstable anchors (21%; round 2's set had 25%). Each source has as many hire-over-reject contrasts as reject-over-hire.
+
+**Direction checks per source** (job 5116718 on `normal`, 7:01, commit b7bd889; `new-pairs-2/dpo_v3_5k_checks/<source>/direction_report.json`). D4 is on 600 sampled pairs per source, all 334 for Kaggle × LinkedIn. The first submission, job 5116703, ran on node nid005539, where no process could see a GPU; other users' jobs failed there in the same hour. It was resubmitted without that node.
+
+| source | pairs | D1 | D2, lexical | D3, balanced AUC | D4, SFT-v3 prefers `chosen` | D4, base | D5 | D6 |
+|---|---|---|---|---|---|---|---|---|
+| djinni_new | 3,790 | pass | 0 | 0.547 | **49.5%, fails (band 50–90%)** | 48.0% | 0.131 | 0.500 |
+| kaggle_linkedin | 334 | pass | 0 | 0.507 | 65.9% | 38.9% | 0.137 | 0.500 |
+| rjdb | 756 | pass | 0 | 0.542 | 52.0% | 47.3% | 0.158 | 0.500 |
+
+**djinni_new's D4 split by round** (`direction_student_scores.parquet`, `student_margin_sum > 0`, the column D4 counts; parts from the pool):
+
+| pairs from | n | SFT-v3 prefers `chosen` | hire anchors | reject anchors | base |
+|---|---|---|---|---|---|
+| round 2 (parts 000–002), candidates SFT-v3 trained on | 225 | 71.1% | 80.0% | 60.0% | 47.1% |
+| round 3 (parts 003–007), candidates it never saw | 375 | 36.5% | 38.5% | 34.8% | 48.5% |
+
+Of djinni_new's 3,790 training pairs, 2,375 are round 3's and 1,415 round 2's.
+
+**Cost.** Round 3 measured 14.22 GPU-h, against a cap of 30 (`$XW/cost/records/*`, arm `dpo_v3_5k`):
+
+- pilot 4.81;
+- teacher 6.06;
+- sampling 2.25;
+- judge 0.63;
+- scoring 0.16;
+- checks 0.32 (the failed submission recorded 0).
