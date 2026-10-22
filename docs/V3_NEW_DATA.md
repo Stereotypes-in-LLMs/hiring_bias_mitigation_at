@@ -1517,6 +1517,49 @@ The user asked for the comparison with the best GRPO arm. That is GRPO-v3-all's 
 - DPO_V3_4880 hires: "Strong PM background with US client experience and Agile expertise aligns well with our growth goals and technical requirements."
 - DPO_V3_4880 hires the pair's 68 attributed prompts as well, and GRPO-525 rejects them all.
 
+#### Why, and would longer training help? (user, 2026-10-22)
+
+The user asked why the two arms come out as they do, and whether to train longer. Everything below reads files already on disk; no job ran. The margin readouts come from the new `scripts/margin_scale.py` (`reports/margin_scale.csv`), whose unstable shares and hire rates reproduce the op-margin-v2 comparisons exactly.
+
+**1. Stability comes from separating pairs more than the attribute moves them.**
+
+- **Observed.**
+  - **In nats, both arms let the attribute move the margin more than SFT-v3 does.** The within-set spread is 0.36 for DPO_V3_4880 and 0.29 for GRPO-525, against 0.22 (`margin_set_sd_nats`).
+  - **They spread the pairs apart much more.** The SD of the sets' mean margins is 29.4 and 18.7 nats, against SFT-v3's 10.4.
+  - **On each model's own scale, the attribute's spread falls.** Within over between is 0.0123 for DPO_V3_4880, 0.0154 for GRPO-525 and 0.0208 for SFT-v3.
+  - **Fewer sets sit near the cut.** Sets whose mean margin is within one of their own SDs of the cut are 0.52%, 0.63% and 1.22%.
+  - **Within each family, the ratio falls as instability falls.**
+    - DPO: 0.0186, 0.0167 and 0.0123 for 2.74%, 1.81% and 0.93% unstable (DPO-v3, the 1,568-pair run, DPO_V3_4880).
+    - GRPO: 0.0174, then 0.0153 and 0.0154, for 2.48%, then 1.26% and 1.04%.
+    - Across families it is not a full ordering. DPO-v3's ratio is under SFT-v3's, yet it has more unstable sets.
+- **Interpretation.** Both arms made the decision depend more on the CV–job content relative to the attribute. They did not make the attribute's pull smaller in absolute terms. Multiplying every margin by a constant changes no decision, so it is the ratio that bears on stability, not the nats. Not shown causally.
+
+**2. GRPO's hire rate drifts, and nothing holds it in place; DPO's does not drift.**
+
+- **Observed.**
+  - **The monitor never settles.** On GRPO-v3-all's held-out monitor (256 pool rows, 128 per anchor verdict; `outputs/grpo/qwen3.5-9b_en_only_grpo_v3_all/decision_eval.jsonl`), the hire rate on hire anchors swung between 0.77 and 0.94 over 22 readings, and on reject anchors between 0.03 and 0.125. The two moved together, with no trend. SFT-v3 reads 0.891 and 0.063 on the same rows (`decision_eval_sft.json`). Agreement with the anchors stayed at 0.87 to 0.93, against SFT-v3's 0.914.
+  - **Most groups carry no signal** (`checkpoint-571/trainer_state.json`). At every 50th step from step 100 on, 87.5% to 100% of the groups had zero reward variance, and give no gradient. The learning rate was a constant 3e-5, and KL to SFT-v3 stayed at 0.01 to 0.04, with β 0.04.
+  - **The earlier GRPO run did not move.** GRPO-v3 had the same reward and start, 187 steps, and mostly tipped rows (no pull fill). It stayed at 22.2% hires, with 56.5% where GPT-4o hires. GRPO-v3-all, with the pull fill (about half its rows train anchor agreement, not invariance) and 571 steps, audits at 18.7% and 19.1%.
+  - **DPO's pairs are fixed and balanced.** Each source has as many hire-over-reject as reject-over-hire contrasts (round 3, "The checked set"). DPO_V3_4880 stays at SFT-v3's hire rate.
+- **Interpretation.**
+  - GRPO's updates come from the few groups that still split, and its objective has nothing that holds the overall hire rate: KL near 0.02 is weak. The model's overall propensity to hire wanders, and where training stops is partly chance. On the benchmark both audited checkpoints are near 19%.
+  - Two causes for the move are not separated, because GRPO-v3 differs from GRPO-v3-all in both: the pull fill's anchor-agreement rows, and the three times longer run.
+  - DPO's fixed, verdict-balanced pairs push both ways equally, so it gives no such drift.
+
+**3. Training longer is unlikely to help either arm on the same data.**
+
+- **DPO_V3_4880.**
+  - **Training set.** By step 300 it is close to memorised: preference accuracy 1.00, loss 0.087 (`checkpoint-305/trainer_state.json`).
+  - **Validation.** Preference accuracy has stood at 0.870 to 0.885 since step 200. The loss ends above its step-25 value (0.772 against 0.728), and the 64-prompt readout has not changed since step 225.
+  - **Schedule.** The learning rate decayed linearly to 5e-8, so the last steps hardly move. Continuing means a new run: two epochs from SFT-v3 with a new schedule, or a second DPO stage starting from DPO_V3_4880.
+  - **What moved the benchmark was more pairs, not more passes.** From 1,568 to 4,880 pairs, the change went from +0.13 to −1.03 pp, and the ratio from 0.0167 to 0.0123.
+- **GRPO-v3-all.**
+  - With most groups at zero variance from step 100 on, more steps mostly re-read prompts that give no gradient, while the hire rate keeps wandering.
+  - What would restore the signal is keeping only groups that split, or re-selecting prompts that still do, not more of the same steps. The first is DAPO-style dynamic sampling.
+- **Unknown.**
+  - No longer run was tried for either arm.
+  - The drift's cause in GRPO, as above.
+
 ### Reading
 
 - **Where SFT-v3's mistakes are.** They sit where it did not train. Its tipped mistakes per row rose from 2.3% on round 1's pairs to 4.4%–4.7% on new djinni_new pairs and 6.3% on new RJDB pairs. Without the attribute, it agrees with the anchor on 91.9% of new djinni_new samples, against 98.8% before. More pairs from the same pool, not more samples of the same rows, is what made 5,000 reachable at 14 GPU-h.
