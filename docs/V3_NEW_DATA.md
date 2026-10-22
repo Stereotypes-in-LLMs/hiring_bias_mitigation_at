@@ -1480,7 +1480,10 @@ The user asked for the comparison with the best GRPO arm. That is GRPO-v3-all's 
   - **Training cost.** 4.04 GPU-h in 1:01 for DPO_V3_4880 (job 5118984), 23.46 GPU-h in 5:52 for GRPO-v3-all (job 5116822).
 - **Interpretation.**
   - On this benchmark, DPO_V3_4880 reaches GRPO-525's stability gain without GRPO-525's loss of hires, at a sixth of its training compute.
-  - The mirrored matched comparisons fit a reading in which moving a model's cut-off away from where it decides adds instability by itself. If so, a matched comparison favours the arm that is not moved, and arms far from SFT-v3's hire rate gain from the standard's matching more than arms near it. Not confirmed.
+  - The matched comparison between the two turns on which one is moved, so it does not separate them.
+    - Moved 3.7 points of hire rate, each of the two gains 0.8 to 1.0 pp of instability: GRPO-525 from 1.04% to 1.83%, DPO_V3_4880 from 0.93% to 1.92%.
+    - SFT-v3 moved 3.5 points gains 0.24 pp (1.81% to 2.05%), and moved 0.3 points 0.15 pp.
+    - Against SFT-v3, the move is therefore a small part of either verdict. At their own hire rates, DPO_V3_4880 is 0.89 pp and GRPO-525 0.78 pp below SFT-v3's 1.81% (the comparisons' `unstable_run` and `unstable_ref`).
 - **Unknown.**
   - Second seeds, for both.
   - How GRPO would do at SFT-v3's hire rate. No audited GRPO checkpoint is there; the monitor's projections did not carry over to the benchmark (`docs/GRPO_V3.md`).
