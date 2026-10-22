@@ -1334,6 +1334,46 @@ Written on 2026-10-22 at about 09:00, before training. The user asked for "DPO_V
   - Seed noise: it is one seed, like the earlier DPO runs.
   - Against the 1,568-pair run, it changes both the number of pairs and where they come from, so a difference between the two cannot be put on either.
 
+#### DPO_V3_4880: training (job 5118984)
+
+The run trained its 305 steps in one job and met none of its stop conditions. It passes the hire-rate gate, so its final checkpoint goes to the benchmark audit (job 5119285).
+
+| field | value |
+|---|---|
+| job | 5118984, `normal`, one GH200 node, 4 GPUs; 1:00:48, completed |
+| code | commit c47d156, clean: 27a926b plus another session's GRPO-v3-all write-up (docs and reports only); the package loaded from the worktree's `src` (job log) |
+| config and data | `configs/mitigation/dpo/qwen3.5-9b_en_only_dpo_v3_4880_gh200.yaml`; `configs/data/en_only_dpo_v3_5k.yaml`, `data_kind` dpo_v3_5k: 4,880 training pairs, a seeded 200 of the 350 validation pairs for evaluation |
+| start point and reference | SFT-v3, `outputs/sft/qwen3.5-9b_en_only_sft_v3_additional` |
+| output | `outputs/dpo/qwen3.5-9b_en_only_dpo_v3_4880`: the final adapter at step 305 (declared for the audit), and checkpoints every 25 steps |
+| W&B | run 0fa14102, `dpo-qwen3.5-9b_en_only_dpo_v3_4880` |
+| cost | 4.04 GPU-h, 3,632 s on 4 GPUs, peak 32.8 GiB per GPU, mean GPU use 54%, 58.2 M trainable parameters (`$XW/cost/records/20261022T090631_train_dpo_5118984_132427.json`, arm `dpo_v3_5k`) |
+
+The training loss averaged 0.239 over the epoch (`train_loss`).
+
+**Decisions on 64 of its validation prompts** (`decision_eval.jsonl`). These are round 3's validation pairs, SFT-v3's own error cases, so the readout is not comparable with the earlier runs'. None was unreadable at any evaluation.
+
+| step | agree with anchor | hire rate | hire rate, hire anchors | hire rate, reject anchors |
+|---|---|---|---|---|
+| 25 | 0.813 | 0.438 | 0.750 | 0.125 |
+| 50 | 0.813 | 0.406 | 0.719 | 0.094 |
+| 75 | 0.844 | 0.406 | 0.750 | 0.063 |
+| 100 | 0.891 | 0.422 | 0.813 | 0.031 |
+| 125 | 0.859 | 0.422 | 0.781 | 0.063 |
+| 150 | 0.813 | 0.375 | 0.688 | 0.063 |
+| 175 | 0.844 | 0.531 | 0.875 | 0.188 |
+| 200 | 0.859 | 0.578 | 0.938 | 0.219 |
+| 225 to 305 | 0.859 | 0.516 | 0.875 | 0.156 |
+
+The gate reads 0.875 at the last two evaluations, above 0.75. The hire-anchor rate was under 0.75 at steps 50 and 150, and the readout does not change from step 225 on.
+
+**Evaluation on the 200 validation pairs** (job log), every 25 steps and at 305:
+
+- loss: 0.728, 0.571, 0.887, 0.578, 0.862, 1.218, 0.890, 0.786, 0.765, 0.773, 0.792, 0.791 and 0.772;
+- preference accuracy: 0.790 at step 25, 0.885 at the end;
+- reward margin: 2.57 at step 25, 6.23 at the end.
+
+The loss does not fall over the run, while preference accuracy and the margin rise. Which pairs carry the loss was not examined. Its peak at step 150 coincides with the readout's dip.
+
 ### Reading
 
 - **Where SFT-v3's mistakes are.** They sit where it did not train. Its tipped mistakes per row rose from 2.3% on round 1's pairs to 4.4%–4.7% on new djinni_new pairs and 6.3% on new RJDB pairs. Without the attribute, it agrees with the anchor on 91.9% of new djinni_new samples, against 98.8% before. More pairs from the same pool, not more samples of the same rows, is what made 5,000 reachable at 14 GPU-h.
