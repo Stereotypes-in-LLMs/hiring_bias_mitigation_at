@@ -38,10 +38,64 @@ Evaluate the selected checkpoint once using the original binary audit protocol a
 
 ## Result
 
-Pending. This document and calibration config are recorded before monitor scoring. Training is conditional on the acceptance gate, not on a successful scoring process alone.
+Calibration failed. No GRPO comparison was submitted, and no other model was retrained.
+
+Job `5123830` completed successfully on one four-GH200 node in **5 min 15 s**, scoring all eight existing merged models. The scoring/pre-registration commit was `1703309`; the gate serialization fix is `c637bf1`. The fix changes NumPy scalar serialization and atomic report publication only. The registered data, numerical projection and acceptance thresholds are unchanged. The updated gate and calibration tests passed: 34 tests and 5 subtests.
+
+The formal result is `$HBM_OUTPUT_ROOT/outputs/monitor_calibration/grpo_v3_all_monitor8_20261022/gate-v2.json`, status `calibration_failed`, exit code 2. The first attempted `gate.json` is a partial file from the serialization error and is not an acceptance report.
+
+All data-integrity checks passed: 696 finite margins for every model, identical ordered prompt digest, 222 held-out candidates, no training-candidate overlap, unchanged 9,140 training rows and all 13 source hashes matching. Fresh parent-margin bins contain `[100, 91, 81, 61, 65, 103, 84, 111]` rows, so every positive-weight bin is covered.
+
+All values below are percentage-point changes relative to SFT-v3. Margin results use the 30,600 attributed benchmark rows and the same scorer as the monitor. Generated results use the frozen full-audit metrics, including the attribute-free control; they are a separate guardrail check, not interchangeable measurements.
+
+| Arm | Monitor ΔTPR | Benchmark margin ΔTPR | Generated ΔTPR | Monitor minus margin | Gate |
+|---|---:|---:|---:|---:|---|
+| DAPO-v3-all | -3.24 | -9.61 | -10.10 | +6.37 | fail |
+| GRPO-v3-all | -4.59 | -9.61 | -10.11 | +5.01 | fail |
+| GRPO-v3-all-step525 | -2.99 | -8.82 | -9.30 | +5.83 | fail |
+| GRPO-v3 | +0.33 | -1.03 | -1.24 | +1.36 | pass |
+| DPO-v3 | -2.25 | -0.49 | -0.98 | -1.76 | pass |
+| DPO-v3-onpolicy | -0.81 | -2.39 | -2.92 | +1.58 | fail |
+| DPO-v3-4880 | -0.84 | +1.24 | +0.70 | -2.08 | fail |
+
+Only GRPO-v3 and DPO-v3 passed every registered arm check. DAPO-v3-all, GRPO-v3-all and step 525 each failed both error checks and the historical-stop check: all three should trigger an 8 pp stop, but none would. DPO-v3-onpolicy hides 2.11 pp of its generated TPR decline, above the strict <2 pp bound. DPO-v3-4880 has 2.08 pp absolute margin error, above the 2 pp bound.
+
+FPR also transfers poorly in the major failing arms. DAPO's benchmark margin FPR change is -1.94 pp but the monitor projects +2.60 pp; step 525 is -0.77 pp versus +4.43 pp. FPR was diagnostic only and did not determine acceptance.
+
+## Reading
+
+Covering the parent's margin bins does not make the held-out rows respond like benchmark rows within each bin. The CPU benchmark-self estimate remains close: DAPO actual -9.61 pp versus estimate -10.41 pp; GRPO-v3-all -9.61 versus -9.20 pp; step 525 -8.82 versus -8.28 pp. Substituting the held-out changes yields the much smaller losses above. Thus the unverified transfer assumption identified before this run did not hold for this monitor cohort.
+
+The existing-score diagnostic `scripts/diagnose_monitor_transfer.py`, commit `1b6e19d`, separates the projection error without fitting any parameter. Results are in the same score directory as `diagnosis.json`. The three terms below sum to monitor projection minus actual benchmark margin TPR change. All independently computed production projections match the gate to 1e-10 pp.
+
+| Arm | Same-bin cohort transfer | Benchmark label pooling | Weight rounding | Total error |
+|---|---:|---:|---:|---:|
+| DAPO-v3-all | +7.169 | -0.798 | -0.003 | +6.368 |
+| GRPO-v3-all | +4.611 | +0.408 | -0.004 | +5.014 |
+| GRPO-v3-all-step525 | +5.289 | +0.551 | -0.005 | +5.835 |
+
+The dominant term is the difference between pooled monitor and pooled benchmark decision changes within the same parent-margin bins. This term includes all within-bin differences in sample composition; it does not identify their causal origin. For DAPO, the bin with parent margins 0.847 to 2.197 loses 36.89 pp hire share on monitor rows versus 63.78 pp on benchmark rows. The -2.197 to -0.847 bin gains 25.27 pp on monitor rows versus 0.00 pp on benchmark rows. These gains offset some projected losses.
+
+The monitor parent hires 68.23% of its 362 anchor-hire rows, versus 57.17% of the 10,200 attributed benchmark reference-hire rows under the same margin scorer. These are descriptive unweighted rates on differently sampled populations, not a replacement acceptance test. Simply conditioning the monitor changes on anchor-hire rows is not a validated repair: the exploratory exact-weight projections become +7.80 pp for DAPO and +9.56 pp for step 525, while their benchmark TPR falls. Some label-specific bins are sparse; the lowest bin has only eight anchor-hire monitor rows. Scores alone cannot determine whether semisynthetic anchors, benchmark labels or other text differences explain the mismatch.
+
+The 8 pp stopping code cannot provide the intended guardrail with these readings. This experiment remains stopped at calibration. No weights or thresholds were refitted after seeing the failed results, and the prepared checkpoint-selection helper was not deployed into training.
+
+## Caveats
+
+This diagnoses the monitor's transfer failure. It does not establish whether a newly monitored GRPO run would improve fairness or preserve benchmark TPR, because that run was not authorized after a failed calibration. It also does not identify a unique cause of the within-bin mismatch. The monitoring rows share 222 candidates, so the 696 rows are not independent samples. No confidence interval was computed for this calibration.
+
+Any revised monitor evaluated against these same seven completed arms is now development work on observed results. A credible pass for deployment needs a separately declared validation check, rather than relaxing this gate or fitting the weights to these losses.
+
 
 ## Reproducing
 
 The calibration job uses `scripts/cscs/monitor_calibration.sbatch` with the eight registered `LABEL=model` entries, a unique `SCORES_DIR`, and the seven registered `LABEL=benchmark-run` comparisons. `scripts/check_monitor_transfer.py` will verify source integrity and write the machine-readable acceptance result. A nonzero gate exit prevents training.
 
-All new outputs are under `outputs/monitor_calibration/grpo_v3_all_monitor8_20261022`. Original models and original train/validation/monitor data are retained. Code commit, job ID, logs, score files and gate result will be recorded here when available.
+All new outputs are under `outputs/monitor_calibration/grpo_v3_all_monitor8_20261022`. Original models and original train/validation/monitor data are retained. The job log is `$HBM_OUTPUT_ROOT/logs/xw-monitor8-cal-5123830.out`; each model has a `xw-monitor-cal-5123830-<label>.log`. The score directory contains eight `<label>.parquet` files, the original `submission.json`, and the formal `gate-v2.json`. The registered config and report include source and score SHA256 hashes. The only unrelated untracked repository file at scoring/result recording was `docs/FRONTIER_RL_SURVEY.md`, which was not staged.
+
+To repeat the CPU checks without overwriting the retained reports, use a fresh output filename with each command:
+
+```bash
+uv run python scripts/check_monitor_transfer.py --config configs/calibration/grpo_v3_all_monitor8.json --scores-dir "$HBM_OUTPUT_ROOT/outputs/monitor_calibration/grpo_v3_all_monitor8_20261022" --output <fresh-gate.json>
+uv run python scripts/diagnose_monitor_transfer.py --config configs/calibration/grpo_v3_all_monitor8.json --scores-dir "$HBM_OUTPUT_ROOT/outputs/monitor_calibration/grpo_v3_all_monitor8_20261022" --output <fresh-diagnosis.json>
+```
