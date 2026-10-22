@@ -1,5 +1,14 @@
 # GRPO from SFT-v3
 
+**Status (2026-10-22, the user's decision): GRPO is recorded as better than SFT-v3.** The model is GRPO-v3-all, checkpoint-525: −1.02 pp unstable within-group sets at matched hire rate, [−1.99, −0.12], with every guardrail passing (round 3 below). The user: "记录GRPO更好（最终我们会用更多数据，现在不用花太多时间验证)". The decision does not wait for the second seed the standard asks for at about 1 pp, because the final runs will use more data.
+
+What stays on the record:
+
+- Checkpoint-525 is exploratory: it was chosen after the final adapter's audit.
+- The final adapter, step 571, is not better (−0.56 pp, [−1.61, +0.41]). It fails the TPR guardrail by 0.11 pp.
+- Both checkpoints sit at about 19% hires, against SFT-v3's 22.75%. Their attribute-free decisions differ on 6 of 450 pairs.
+- The gain comes with a stricter model: about 4 of 5 of the new rejects are GPT-4o hires.
+
 GRPO-v3 runs the GRPO pilot's recipe (`docs/GRPO_PILOT.md`) from SFT-v3, the 9B English reference arm, as the RL arm beside DPO-v3 (`docs/V3_NEW_DATA.md`). The trainer is `mitigation/grpo.py`, the prompt set `scripts/build_grpo_prompts.py` on V3's pool, and the branch `xinyang/v3-additional-data`. This page is the pre-registration, written before training. The result follows below it.
 
 ## Pre-registration (2026-10-21, before training)
