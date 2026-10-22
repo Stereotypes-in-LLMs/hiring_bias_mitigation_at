@@ -99,3 +99,59 @@ To repeat the CPU checks without overwriting the retained reports, use a fresh o
 uv run python scripts/check_monitor_transfer.py --config configs/calibration/grpo_v3_all_monitor8.json --scores-dir "$HBM_OUTPUT_ROOT/outputs/monitor_calibration/grpo_v3_all_monitor8_20261022" --output <fresh-gate.json>
 uv run python scripts/diagnose_monitor_transfer.py --config configs/calibration/grpo_v3_all_monitor8.json --scores-dir "$HBM_OUTPUT_ROOT/outputs/monitor_calibration/grpo_v3_all_monitor8_20261022" --output <fresh-diagnosis.json>
 ```
+
+## Existing-score source diagnosis and proposed repair
+
+User instruction: explain the within-bin mismatch with existing data, propose a correction and validation plan, and do not start training. This follow-up used no new model scoring and changed no production monitor, gate threshold, prompt, training data or benchmark label.
+
+The monitor mixes 504 Djinni rows from 171 candidates with 192 RJDB rows from 51 candidates. The benchmark is entirely Djinni. Within the same parent-margin bands, the model updates often increase hires on RJDB while reducing hires on Djinni. The source-stratified diagnostic below uses the same frozen rounded weights as the original projection; all changes are pp relative to SFT-v3. It is exploratory and does not reverse the failed gate.
+
+| Arm | Original monitor | Djinni only | RJDB only | Benchmark actual |
+|---|---:|---:|---:|---:|
+| DAPO-v3-all | -3.239 | -8.973 | +11.533 | -9.608 |
+| GRPO-v3-all | -4.593 | -8.172 | +3.638 | -9.608 |
+| GRPO-v3-all-step525 | -2.989 | -10.725 | +20.343 | -8.824 |
+| GRPO-v3 | +0.329 | -2.711 | +7.929 | -1.029 |
+| DPO-v3 | -2.253 | -2.262 | -2.449 | -0.490 |
+| DPO-v3-onpolicy | -0.810 | -2.991 | +5.699 | -2.392 |
+| DPO-v3-4880 | -0.844 | -1.054 | -0.235 | +1.235 |
+
+Using exact parent weights, the algebraic source-mixture contributions to projection optimism are +5.733 pp for DAPO, +3.578 pp for GRPO final and +7.736 pp for step525. The remaining Djinni-cohort residuals are +0.639, +1.441 and -1.896 pp. Rounding contributes less than 0.006 pp. This separates observed sources of the error; source is correlated with text construction, occupations and labels, so it does not isolate a causal mechanism.
+
+RJDB is synthetic English JD/CV data generated from a shared skills/occupation seed. The configured pool takes matched pairs and disables weakened CV variants (`docs/EXTERNAL_DATA.md:109`, `generation/sources.py:50,674`, `configs/generation/v3_new_pairs.yaml`). In pair `rjdb:rjdb-train-12957-match`, CV and JD share the same four roles and 5/3/5/1-year requirements; DAPO gains hires on 10 of its 11 monitor rows. Pair `rjdb:rjdb-train-03727-match` repeats the same BSS/OSS/Java/CRM/POS skills and one-year lead role on both sides, with 9/9 gains. Full input examples and anchor votes are retained in `source_audit.json`. These examples support a text-domain hypothesis; they are not new truth labels.
+
+All 696 monitor prompts were reconstructed byte-for-byte through the original shared binary `build_prompt(strategy="baseline")`. The calibration did not use the later audit prompt. Monitor anchors nevertheless differ from benchmark references: Qwen-122B eight-vote majority versus the released GPT-4o field. Old sampled-hire-rate selection bins and fresh scorer-margin bins differ for 215/696 rows. All monitor anchor-hire rows used k32 estimates and anchor-reject rows used k8 estimates. Monitor pairs have 1–12 selected attribute rows, while each benchmark pair has 68 attributed rows.
+
+### Why the source-only adjustment is not a validated repair
+
+DPO-v3-4880 still has about 2.29 pp absolute TPR error. Adding group/condition alignment to Djinni gives GRPO final -7.886 pp, which again misses the 8 pp line. Neither 16 parent-only bins nor candidate-equal weighting solves the original mixed-source failure.
+
+The Djinni-only projection has candidate-cluster bootstrap 95% intervals [-13.64,-4.82] for DAPO, [-12.66,-3.89] for GRPO final and [-15.48,-5.98] for step525. This uses 3,000 draws, seed20261022, and keeps the benchmark fixed. It estimates empirical-monitor sampling variation, not selection/transport bias. The Djinni subset has 171 distinct candidates, candidate-weight ESS about129, minimum13 candidates per margin bin and minimum4 after group/condition refinement. Removing one candidate can move DAPO's estimate above the stop threshold. Directly conditioning on Qwen anchor-hire is especially unstable: the lowest bin has only8 rows/4 candidates but26.91% target hire weight.
+
+### Proposed correction and independent validation
+
+1. Match the monitoring domain to the target: use Djinni for Djinni benchmark TPR and report RJDB separately. Keep original binary prompt and hire meaning. Use fresh SFT scorer margins for sampling/weighting, not historical k8/k32 bins.
+2. Sample independent candidates first; declare attribute/condition sampling weights, record job reuse, and check job-cluster sensitivity. Add coverage for tail and critical margin regions. Attribute duplicates do not supply independent information.
+3. Align the binary reference-label protocol before using label-specific TPR. Current Qwen-hire cannot be substituted for GPT-4o-hire without checking comparability. Prefer a labeled, same-source direct TPR monitor over relying only on cross-domain projections. Report loss, gain and net separately; loss-only is an additional diagnostic, not TPR decline.
+4. Proposed support screen: at least20 distinct candidates per positive-weight coarse label×margin cell, plus a candidate-cluster95% half-width target of2pp. Twenty is not a sufficiency guarantee. Unsupported target mass or inadequate precision must be explicit and prevents release, rather than silently assigning zero change.
+5. All seven completed arms and the current696 rows are development evidence. Freeze the candidate pools, labels, estimator, thresholds and model list before scoring independent candidate-disjoint Djinni monitor/validation banks. Respect all existing training/benchmark exclusions and keep the original benchmark unchanged. Step525 and final are one trajectory, not independent validation arms.
+6. Keep the original acceptance requirements: every arm's margin absolute error≤2pp; optimism against generated TPR<2pp; every actual>8pp decline triggers a stop. Also report false stops on safer arms, FPR and uncertainty. Validate the frozen proposal with existing models only; no new training is needed. If validation fails, do not tune on it and then call it independent.
+7. Before eventual deployment, declare the repeated-check interval rule. Retain25-step checks and an8pp net-TPR stop; a conservative calibrated bound and missing-support stop are proposed safeguards. Single-check95% intervals do not establish a whole-run guarantee, and domain bias/25-step overshoot remain separate risks. A loss-only stop needs its own declared threshold and false-stop validation.
+
+### Available independent validation data
+
+The previous1,155 count is the union of historical validation-ID registries. The two relevant on-policy pools actually contain420 held-out candidates/5,039 rows. Djinni contributes338 candidates/4,055 rows, with74 anchor-hire and264 anchor-reject pairs. After excluding the current monitor candidates and all train/benchmark candidate/job exclusions, only167 unused Djinni candidates/2,004 rows remain: **8 hire pairs and159 reject pairs**. The unused31 RJDB pairs do not repair Djinni target coverage.
+
+Existing SFT k8/k32 caches cover this pool. No DAPO/GRPO per-row margins were found for the unused candidates in the relevant score inventories; the16-sample paired experiment covers the9,140 training rows and old training monitors retained only aggregate checks. Therefore the next step is first to obtain enough untouched Djinni hire cases and check binary labeling, then freeze an inference-only validation manifest. Current unused rows are insufficient for a precise, fully stratified independent TPR validation.
+
+### Evidence and reproduction
+
+All files are under `$HBM_OUTPUT_ROOT/outputs/monitor_calibration/grpo_v3_all_monitor8_20261022/`. `diagnostic_inputs.jsonl.gz` contains frozen existing rows and margins; `monitor_provenance.json` supplies source and anchor information. `numeric.json` includes hashes, all seven arms, fixed ablations, source-mixture identities and bootstrap results. `source_audit.json` contains source citations and input cases. `validation_plan.json` is a proposal, not deployed config. `verification.json` records21 successful checks against the original gate and independent source analysis.
+
+Run the CPU-only analysis with a fresh output destination:
+
+```bash
+uv run python scripts/analyze_monitor_transfer.py --rows "$HBM_OUTPUT_ROOT/outputs/monitor_calibration/grpo_v3_all_monitor8_20261022/diagnostic_inputs.jsonl.gz" --output <fresh-numeric.json>
+```
+
+No training was started by this follow-up.
