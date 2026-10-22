@@ -210,8 +210,67 @@ class ThresholdBoundaries(unittest.TestCase):
         with self.assertRaisesRegex(gate.GateInputError, "nonfinite TPR"):
             gate.evaluate_arm(np.nan, 0., 0., self.limits)
 
+    def test_numpy_projection_stop_checks_are_native_json_booleans(self):
+        result = gate.evaluate_arm(np.float64(-3.24), np.float64(-9.61),
+                                   np.float64(-10.10), self.limits)
+        self.assertTrue(all(type(value) is bool for value in result["checks"].values()))
+        self.assertFalse(json.loads(json.dumps(result))["passed"])
+
 
 class CliFailureReporting(unittest.TestCase):
+    def test_realistic_numpy_calibration_failure_is_complete_json(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            config = Path(tmp) / "config.json"
+            config.write_text("{}")
+            output = Path(tmp) / "gate-v2.json"
+            result = {"passed": np.bool_(False), "status": "calibration_failed",
+                      "failures": ["DAPO: historical_drop_triggers_stop"],
+                      "arms": [{"tpr_monitor_pp": np.float64(-3.24),
+                                "tpr_actual_pp": np.float32(-9.61),
+                                "rows": np.int64(696),
+                                "check": np.bool_(False)}]}
+            with patch.object(gate, "check_transfer", return_value=result):
+                code = gate.main(["--config", str(config), "--scores-dir", tmp,
+                                  "--output", str(output)])
+            self.assertEqual(code, 2)
+            report = json.loads(output.read_text())
+            self.assertIs(report["passed"], False)
+            self.assertIs(report["arms"][0]["check"], False)
+            self.assertEqual(report["arms"][0]["rows"], 696)
+            self.assertEqual(report["arms"][0]["tpr_monitor_pp"], -3.24)
+            self.assertEqual(list(Path(tmp).glob("*.tmp")), [])
+
+    def test_serialization_error_leaves_no_partial_output(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            output = Path(tmp) / "gate.json"
+            with self.assertRaises(TypeError):
+                gate.publish_report(output, {"passed": True, "unserializable": object()})
+            self.assertFalse(output.exists())
+            self.assertEqual(list(Path(tmp).iterdir()), [])
+
+    def test_publish_race_preserves_existing_file_and_cleans_temporary(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            output = Path(tmp) / "gate.json"
+            output.write_text("existing evidence")
+            with self.assertRaises(FileExistsError):
+                gate.publish_report(output, {"passed": False})
+            self.assertEqual(output.read_text(), "existing evidence")
+            self.assertEqual(list(Path(tmp).iterdir()), [output])
+
+    def test_unexpected_report_type_becomes_complete_failure_report(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            config = Path(tmp) / "config.json"
+            config.write_text("{}")
+            output = Path(tmp) / "gate.json"
+            with patch.object(gate, "check_transfer", return_value={"passed": True,
+                              "status": "passed", "bad_value": object()}):
+                code = gate.main(["--config", str(config), "--scores-dir", tmp,
+                                  "--output", str(output)])
+            self.assertEqual(code, 2)
+            report = json.loads(output.read_text())
+            self.assertIs(report["passed"], False)
+            self.assertEqual(report["status"], "invalid_report")
+
     def test_invalid_input_writes_failed_report_and_returns_two(self):
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)

@@ -11,7 +11,9 @@ import hashlib
 import importlib
 import json
 import math
+import os
 import sys
+import tempfile
 from datetime import datetime, timezone
 from pathlib import Path
 
@@ -95,6 +97,7 @@ def evaluate_arm(tpr_monitor, tpr_margin, tpr_generated, limits):
         and not optimism_at_limit,
         "historical_drop_triggers_stop": not needs_stop or tpr_monitor < -limits["tpr_stop_pp"],
     }
+    checks = {name: bool(passed) for name, passed in checks.items()}
     return {"tpr_margin_error_pp": error, "tpr_generated_optimism_pp": optimism,
             "historical_stop_required": bool(needs_stop), "checks": checks,
             "passed": bool(all(checks.values()))}
@@ -259,34 +262,70 @@ def check_transfer(config, scores_dir, calibration=None):
                         "Generated TPR is rounded in the frozen reference metrics CSV."]}
 
 
+def json_scalar(value):
+    """NumPy computations produce scalar booleans/integers as well as floats."""
+    if isinstance(value, np.generic):
+        return value.item()
+    raise TypeError(f"Object of type {type(value).__name__} is not JSON serializable")
+
+
+def publish_report(output, report):
+    """Serialize completely, then publish atomically without replacing any old report."""
+    text = json.dumps(report, indent=2, allow_nan=False, default=json_scalar) + "\n"
+    output = Path(output)
+    output.parent.mkdir(parents=True, exist_ok=True)
+    temporary = None
+    try:
+        with tempfile.NamedTemporaryFile(mode="w", encoding="utf-8", dir=output.parent,
+                                         prefix=f".{output.name}.", suffix=".tmp",
+                                         delete=False) as stream:
+            temporary = Path(stream.name)
+            stream.write(text)
+            stream.flush()
+            os.fsync(stream.fileno())
+        # Same-directory hard-link creation is atomic and fails if output already exists.
+        # Unlike replace(), it cannot overwrite a report created by a concurrent process.
+        os.link(temporary, output)
+    finally:
+        if temporary is not None:
+            temporary.unlink(missing_ok=True)
+
+
 def main(argv=None):
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--config", required=True, type=Path)
     parser.add_argument("--scores-dir", required=True, type=Path)
     parser.add_argument("--output", required=True, type=Path)
     args = parser.parse_args(argv)
-    # Open exclusively before work so an older pass report can never survive a failed rerun.
+    if args.output.exists():
+        print(f"Cannot create fresh gate report: {args.output} already exists", file=sys.stderr)
+        return 2
+    provenance = {"config": str(args.config.resolve()),
+                  "scores_dir": str(args.scores_dir.resolve()),
+                  "computed_at": datetime.now(timezone.utc).isoformat()}
     try:
-        args.output.parent.mkdir(parents=True, exist_ok=True)
-        stream = args.output.open("x", encoding="utf-8")
+        provenance["config_sha256"] = sha256(args.config)
+        config = json.loads(args.config.read_text())
+        report = check_transfer(config, args.scores_dir)
+    except Exception as exc:
+        report = {"passed": False, "status": "invalid_input",
+                  "failures": [f"{type(exc).__name__}: {exc}"]}
+    report.update(provenance)
+    try:
+        publish_report(args.output, report)
+    except (TypeError, ValueError) as exc:
+        # Serialization failures also yield a complete failure report, never partial JSON.
+        report = {**provenance, "passed": False, "status": "invalid_report",
+                  "failures": [f"{type(exc).__name__}: {exc}"]}
+        try:
+            publish_report(args.output, report)
+        except OSError as write_exc:
+            print(f"Cannot create fresh gate report: {write_exc}", file=sys.stderr)
+            return 2
     except OSError as exc:
         print(f"Cannot create fresh gate report: {exc}", file=sys.stderr)
         return 2
-    with stream:
-        provenance = {"config": str(args.config.resolve()),
-                      "scores_dir": str(args.scores_dir.resolve()),
-                      "computed_at": datetime.now(timezone.utc).isoformat()}
-        try:
-            provenance["config_sha256"] = sha256(args.config)
-            config = json.loads(args.config.read_text())
-            report = check_transfer(config, args.scores_dir)
-        except Exception as exc:
-            report = {"passed": False, "status": "invalid_input",
-                      "failures": [f"{type(exc).__name__}: {exc}"]}
-        report.update(provenance)
-        json.dump(report, stream, indent=2, allow_nan=False)
-        stream.write("\n")
-    print(json.dumps({"passed": report["passed"], "status": report["status"],
+    print(json.dumps({"passed": bool(report["passed"]), "status": report["status"],
                       "report": str(args.output), "failures": report.get("failures", [])}))
     return 0 if report["passed"] else 2
 
