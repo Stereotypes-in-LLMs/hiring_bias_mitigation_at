@@ -1299,3 +1299,67 @@ Of djinni_new's 3,790 training pairs, 2,375 are round 3's and 1,415 round 2's.
 - judge 0.63;
 - scoring 0.16;
 - checks 0.32 (the failed submission recorded 0).
+
+#### Decision: the set is the 4,880 pairs, djinni_new included (user, 2026-10-22)
+
+The user's answer, relayed by the session that started this one: "Accept the 4,880 pairs as they are, djinni_new included." No further djinni_new part is drawn.
+
+V3's on-policy DPO set is `new-pairs-2/dpo_v3_5k_{train,validation}.parquet`: 4,880 training and 350 validation pairs. It is read through `configs/data/en_only_dpo_v3_5k.yaml` with `data_kind: dpo_v3_5k`, which loads 4,880 and 350 rows through `training_common.load_generated_dataset`.
+
+A training pair from batch 2, as written (`dpo_v3_5k_train.parquet`; `samples.md` in each run directory holds 20 more). Pair `06ed6ae4…`, from djinni_new-005, religion "Atheist", explicit. The anchor hires with 7 of 8 votes, and SFT-v3's `p_wrong` is 0.62.
+
+- **chosen**, hire: "Strong telecom OSS/BSS background, proven leadership, and UNIX skills align perfectly with requirements. Experience with US clients and complex testing validates suitability."
+- **rejected**, SFT-v3's own sample, reject: "Missing required MVS mainframe experience and advanced Unix shell automation skills. Lacks explicit Waterfall environment background."
+
+### Reading
+
+- **Where SFT-v3's mistakes are.** They sit where it did not train. Its tipped mistakes per row rose from 2.3% on round 1's pairs to 4.4%–4.7% on new djinni_new pairs and 6.3% on new RJDB pairs. Without the attribute, it agrees with the anchor on 91.9% of new djinni_new samples, against 98.8% before. More pairs from the same pool, not more samples of the same rows, is what made 5,000 reachable at 14 GPU-h.
+- **The new pairs are as covert and as hard to tell apart by wording as round 2's** (D2 0, D3 0.51 to 0.55). Measured by SFT-v3's own log-probabilities, they are harder: D4 falls from 71% on round 2's djinni_new pairs to 37% on the new ones. That fits the authorship explanation above, but this round does not test it.
+- **What the set cannot show.** Whether DPO on 4,880 pairs beats SFT-v3. 1,568 pairs did not (+0.13 pp [−0.64, +0.96]), and the set is three times larger, not a different kind of data. Its pairs are mostly from candidates SFT-v3 never trained on, as the benchmark's are.
+
+### Caveats
+
+- **djinni_new fails D4** (49.5%) and is in the set on the user's word. A D4 based on the decision token alone, which would separate authorship from decision, was not computed.
+- **Concentration.** The 4,880 pairs come from 1,383 CV–job pairs. One CV–job pair can give up to 12 pairs, one per attribute variant.
+- **Unstable anchors.** 21% of the training pairs sit on unstable anchors (at most 5 of 8 votes), where the reference verdict itself is uncertain.
+- **Source mix.** djinni_new is 78% of the set, RJDB 15% and Kaggle × LinkedIn 7%. The rest of round 3 drew djinni_new only, by the user's choice.
+- **Validation.** The 350 validation pairs are balanced by count within each source and protected group, so they do not match the training set's mix.
+- **Held-out estimate.** The rates on SFT-v3's held-out candidates that motivated the round came from 222 djinni_new and 142 RJDB candidates. The pilot measured djinni_new above that estimate and RJDB below it.
+
+### Reproducing
+
+From a Daint login node, one job at a time, with `HBM_OUTPUT_ROOT=$XW`, the shared venv's Python, and `HBM_COST_ARM=dpo_v3_5k REPO=$PWD` on every submission:
+
+```bash
+python scripts/onpolicy_yield_by_split.py --run artifacts/semisynthetic-v3/onpolicy-full \
+    --validation artifacts/semisynthetic-v3/additional/sft_validation.parquet \
+    --sft-train artifacts/semisynthetic-v3/additional/additional_sft_train.parquet \
+    --out reports/v3_new_data/onpolicy_yield_by_split.json
+# pilot
+CFG=configs/generation/v3_new_pairs.yaml PASSES="votes invariant" scripts/cscs/submit.sh -t 02:00:00 \
+    scripts/cscs/v3_additional_data.sbatch djinni_new-003 rjdb-002
+python scripts/v3_additional_data.py --config configs/generation/v3_new_pairs.yaml --stage assemble
+CONFIG=configs/generation/negatives_v3_onpolicy_new_gh200.yaml scripts/cscs/submit.sh -p normal -t 01:00:00 \
+    scripts/cscs/onpolicy_full.sbatch sample            # then the same with `judge`
+python scripts/generate_onpolicy_full.py --config configs/generation/negatives_v3_onpolicy_new_gh200.yaml --stage merge
+# batch 2
+CFG=configs/generation/v3_new_pairs_2.yaml PASSES="votes invariant" scripts/cscs/submit.sh -t 03:00:00 \
+    scripts/cscs/v3_additional_data.sbatch djinni_new-004 djinni_new-005 djinni_new-006 djinni_new-007
+python scripts/v3_additional_data.py --config configs/generation/v3_new_pairs_2.yaml --stage assemble
+CONFIG=configs/generation/negatives_v3_onpolicy_new2_gh200.yaml scripts/cscs/submit.sh -p normal -t 01:30:00 \
+    scripts/cscs/onpolicy_full.sbatch sample            # then `judge`, with -t 01:00:00
+python scripts/generate_onpolicy_full.py --config configs/generation/negatives_v3_onpolicy_new2_gh200.yaml --stage merge
+# balance, check
+python scripts/build_balanced_dpo.py candidates --artifacts-dir artifacts/semisynthetic-v3/onpolicy-error-mass \
+    --name dpo_v3_onpolicy5k --no-legacy \
+    --round1-train $XW/artifacts/semisynthetic-v3/onpolicy-new2/merged/dpo_v2_train.parquet \
+    --round1-validation $XW/artifacts/semisynthetic-v3/onpolicy-new2/merged/dpo_v2_validation.parquet
+ARTIFACTS=artifacts/semisynthetic-v3/onpolicy-error-mass NAME=dpo_v3_onpolicy5k \
+STUDENT=outputs/sft/qwen3.5-9b_en_only_sft_v3_additional \
+    scripts/cscs/submit.sh -p normal -t 01:00:00 scripts/cscs/build_balanced_dpo.sbatch score
+python scripts/build_balanced_dpo.py build --artifacts-dir artifacts/semisynthetic-v3/onpolicy-error-mass \
+    --name dpo_v3_onpolicy5k --balance-by pool_source
+python scripts/v3_additional_data.py --config configs/generation/v3_new_pairs_2.yaml --stage dpo_v3
+CHECKS=artifacts/semisynthetic-v3/new-pairs-2/dpo_v3_5k_checks scripts/cscs/submit.sh -p normal -t 01:00:00 \
+    scripts/cscs/dpo_v3_checks.sbatch
+```
