@@ -544,6 +544,167 @@ def _decision_monitor_class():
     return DecisionMonitorCallback
 
 
+#: Bin edges on the SFT parent's decision margin, logit(hire) - logit(reject): the logits of
+#: hire probabilities 1, 10, 30, 50, 70, 90 and 99%. scripts/monitor_calibration.py computes a
+#: run's `margin_monitor` shares on these edges.
+MARGIN_EDGES = (-4.595, -2.197, -0.847, 0.0, 0.847, 2.197, 4.595)
+
+
+def margin_bins(margins, edges=MARGIN_EDGES):
+    """Bin b holds edges[b-1] <= margin < edges[b]: 0 below the first edge, len(edges) above
+    the last (pandas.cut with right=False)."""
+    import numpy as np
+
+    return np.searchsorted(np.asarray(edges, dtype=float), np.asarray(margins, dtype=float),
+                           side="right")
+
+
+def project_from_margins(parent, current, edges, share_ref_hire, share_ref_reject,
+                         sft_benchmark: dict = SFT_BENCHMARK) -> dict:
+    """The benchmark's hire rates projected from the monitor rows' decisions (margin > 0).
+
+    Rows are binned by the parent's margin. Each bin's change in hire share since the parent,
+    weighted by the share of benchmark prompts the parent puts in that bin where GPT-4o hires
+    (`share_ref_hire`), is the change in the hire rate where GPT-4o hires (TPR); with
+    `share_ref_reject`, where it rejects (FPR). The bins carry what the decision monitor's ratio
+    could not: the benchmark's TPR moves in the parent's 50-99% bins, which its rows hardly
+    held. Run on the benchmark's own margins, this estimate is within 1 pp of the TPR change of
+    every arm compared so far (scripts/monitor_calibration.py validate). A bin with no monitor
+    row adds nothing and its weight is reported as `unseen_*`.
+    """
+    import numpy as np
+
+    parent, current = np.asarray(parent, dtype=float), np.asarray(current, dtype=float)
+    bins = margin_bins(parent, edges)
+    out = {"bins": [], "unseen_ref_hire": 0.0, "unseen_ref_reject": 0.0}
+    delta_tpr = delta_fpr = 0.0
+    for b in range(len(edges) + 1):
+        mask = bins == b
+        if mask.any():
+            delta = float((current[mask] > 0).mean() - (parent[mask] > 0).mean())
+            delta_tpr += share_ref_hire[b] * delta
+            delta_fpr += share_ref_reject[b] * delta
+        else:
+            delta = None
+            out["unseen_ref_hire"] += share_ref_hire[b]
+            out["unseen_ref_reject"] += share_ref_reject[b]
+        out["bins"].append({"n": int(mask.sum()), "delta_hire_share": delta})
+    tpr = sft_benchmark["hire_rate_ref_hire"] + delta_tpr
+    fpr = sft_benchmark["hire_rate_ref_reject"] + delta_fpr
+    weight = sft_benchmark["reference_hire_share"]
+    out.update(delta_tpr=delta_tpr, delta_fpr=delta_fpr, projected_tpr=tpr, projected_fpr=fpr,
+               hire_rate_projected=weight * tpr + (1 - weight) * fpr)
+    return out
+
+
+def vllm_margins(vllm_generation, tokenizer, prompts: list[str],
+                 template_kwargs: dict | None = None, lang: str = "en") -> list[float]:
+    """Decision margins of the weights the colocated engine serves, the op-margin-v2 scorer:
+    `logprob_token_ids` after the forced decision prefix (as SyncValidationCallback reads)."""
+    from vllm import SamplingParams
+
+    from ..eval.backends import _chat_wrap
+    from ..eval.margins import PREFIX, WORDS, decision_token_ids
+
+    ids = decision_token_ids(tokenizer, WORDS[lang])
+    texts = [_chat_wrap(tokenizer, p, template_kwargs) + PREFIX for p in prompts]
+    params = SamplingParams(max_tokens=1, temperature=0.0, logprob_token_ids=list(ids))
+    outs = vllm_generation.llm.generate(texts, params, use_tqdm=False)
+    return [o.outputs[0].logprobs[0][ids[0]].logprob - o.outputs[0].logprobs[0][ids[1]].logprob
+            for o in outs]
+
+
+def _margin_monitor_class():
+    from transformers import TrainerCallback
+
+    class MarginMonitorCallback(TrainerCallback):
+        """The benchmark's TPR, projected from decision margins (`project_from_margins`) on
+        held-out rows drawn across the parent's confidence (grpo_prompts.monitor_rows), every
+        `every` steps on rank 0; stops the run, saving first, when the projected TPR has fallen
+        more than `tpr_drop_stop` since the parent.
+
+        Why. The decision monitor's held-out rows are ones the parent hires with near certainty,
+        and its ratio projection never read GRPO-v3-all or DAPO-v3-all below SFT-v3's TPR by
+        more than 8.1 and 2.5 pp; the benchmark measured 10.1 for both, past the standard's
+        10 pp guardrail.
+
+        `score(prompts)` returns the margins of the served weights (`vllm_margins` after a sync
+        in training). The parent's margins are scored when the run starts, before any update,
+        and kept in margin_monitor_parent.json, which a resumed run reads instead.
+        """
+
+        def __init__(self, prompts: list[str], score, output_dir, every: int, settings: dict,
+                     sft_benchmark: dict | None = None):
+            self.prompts = prompts
+            self.score = score
+            self.output_dir = Path(output_dir)
+            self.every = every
+            self.edges = tuple(settings.get("edges", MARGIN_EDGES))
+            self.share_ref_hire = list(settings["share_ref_hire"])
+            self.share_ref_reject = list(settings["share_ref_reject"])
+            if not len(self.share_ref_hire) == len(self.share_ref_reject) == len(self.edges) + 1:
+                raise ValueError("margin_monitor: one share per bin, len(edges) + 1 bins")
+            self.tpr_drop_stop = float(settings["tpr_drop_stop"])
+            self.sft_benchmark = {**SFT_BENCHMARK, **(sft_benchmark or {}),
+                                  **({"reference_hire_share": settings["reference_hire_share"]}
+                                     if "reference_hire_share" in settings else {})}
+            self.parent = None
+            self.aborted = False
+            self.reason = None
+
+        def _parent_path(self) -> Path:
+            return self.output_dir / "margin_monitor_parent.json"
+
+        def on_train_begin(self, args, state, control, **kwargs):
+            if not state.is_world_process_zero:
+                return
+            import numpy as np
+
+            path = self._parent_path()
+            if path.is_file():
+                self.parent = np.asarray(json.loads(path.read_text())["margins"])
+                if len(self.parent) != len(self.prompts):
+                    raise ValueError(f"{path} holds {len(self.parent)} margins for "
+                                     f"{len(self.prompts)} monitor rows")
+                return
+            if state.global_step:
+                raise RuntimeError(f"resuming at step {state.global_step} without {path}: the "
+                                   "parent's margins can only be scored before any update")
+            self.parent = np.asarray(self.score(self.prompts), dtype=float)
+            path.write_text(json.dumps({"margins": self.parent.tolist()}))
+            counts = np.bincount(margin_bins(self.parent, self.edges),
+                                 minlength=len(self.edges) + 1)
+            log.info("margin monitor: %d rows, per parent-margin bin %s", len(self.parent),
+                     counts.tolist())
+
+        def on_step_end(self, args, state, control, **kwargs):
+            if not self.every or state.global_step % self.every:
+                return
+            stop = False
+            if state.is_world_process_zero:
+                result = project_from_margins(self.parent, self.score(self.prompts), self.edges,
+                                              self.share_ref_hire, self.share_ref_reject,
+                                              self.sft_benchmark)
+                stop = result["delta_tpr"] < -self.tpr_drop_stop
+                result.update(step=state.global_step, stop=stop)
+                with (self.output_dir / "margin_monitor.jsonl").open("a") as fh:
+                    fh.write(json.dumps(result) + "\n")
+                log.info("margin monitor at step %d: projected TPR %.3f (%+.1f pp), FPR %.3f "
+                         "(%+.1f pp), hire rate %.3f; stop below %+.1f pp TPR",
+                         state.global_step, result["projected_tpr"], 100 * result["delta_tpr"],
+                         result["projected_fpr"], 100 * result["delta_fpr"],
+                         result["hire_rate_projected"], -100 * self.tpr_drop_stop)
+            if _broadcast(stop):
+                self.aborted = True
+                self.reason = (f"aborted: projected TPR fell more than "
+                               f"{100 * self.tpr_drop_stop:g} pp")
+                log.error("%s at step %d: saving and stopping", self.reason, state.global_step)
+                control.should_save = True
+                control.should_training_stop = True
+
+    return MarginMonitorCallback
+
+
 # ---- training -----------------------------------------------------------------------------
 
 def grpo_config_candidates(cfg: dict) -> dict:
@@ -617,6 +778,28 @@ def train(cfg: dict, trainer_cls=None, reward_funcs=None, trainer_kwargs: dict |
         log.warning("no validation split: the vLLM sync is NOT validated and no hire-rate "
                     "monitor runs")
 
+    margin = None
+    if cfg.get("margin_monitor"):
+        import pandas as pd
+
+        from ..utils.config import resolve_output_path
+
+        settings = cfg["margin_monitor"]
+        rows_path = (Path(resolve_output_path(cfg["data"]["artifacts_dir"]))
+                     / f"{cfg.get('data_kind', 'grpo')}_monitor.parquet")
+        monitor_prompts = pd.read_parquet(rows_path, columns=["prompt"])["prompt"].tolist()
+
+        def served_margins(prompts):
+            trainer.vllm_generation.sync_weights()
+            return vllm_margins(trainer.vllm_generation, tokenizer, prompts, chat_kwargs)
+
+        margin = _margin_monitor_class()(
+            monitor_prompts, served_margins, output_dir,
+            int(settings.get("steps", cfg.get("decision_eval_steps", 25))), settings,
+            cfg.get("sft_benchmark"))
+        trainer.add_callback(margin)
+        log.info("margin monitor on %d rows of %s", len(monitor_prompts), rows_path)
+
     manifest = {
         "mitigation_family": "grpo",
         "objective": "grpo",
@@ -642,6 +825,7 @@ def train(cfg: dict, trainer_cls=None, reward_funcs=None, trainer_kwargs: dict |
     trainer.save_model(str(output_dir))
     # A trainer that stops itself (dapo.DAPOTrainer, when its prompts run dry) says why.
     status = ("aborted: hire rate left the band" if monitor and monitor.aborted
+              else margin.reason if margin and margin.aborted
               else getattr(trainer, "stop_reason", None) or "done")
     if C.is_main_process():
         tokenizer.save_pretrained(str(output_dir))

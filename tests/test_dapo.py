@@ -381,7 +381,7 @@ def _fake_training(monkeypatch, tmp_path):
             self.vllm_generation = None
 
         def add_callback(self, callback):
-            pass
+            built.setdefault("callbacks", []).append(callback)
 
         def train(self, resume_from_checkpoint=None):
             built["resume"] = resume_from_checkpoint
@@ -436,6 +436,25 @@ def test_grpo_train_defaults_are_grpos_and_dapo_records_its_objective(monkeypatc
     assert manifest["loss_type"] == "dapo" and manifest["steps_per_generation"] == 16
     assert manifest["sft_checkpoint"] == "outputs/sft/qwen3.5-9b_en_only_sft_v3_additional"
     assert manifest["status"] == "done"
+
+
+def test_grpo_train_adds_the_margin_monitor_on_the_builds_monitor_rows(monkeypatch, tmp_path):
+    import pandas as pd
+    import trl
+
+    trainer_cls, built = _fake_training(monkeypatch, tmp_path)
+    monkeypatch.setattr(trl, "GRPOTrainer", trainer_cls)
+    data = tmp_path / "data"
+    data.mkdir()
+    pd.DataFrame({"prompt": ["a", "b", "c"]}).to_parquet(data / "grpo_monitor.parquet")
+    cfg = _cpu_cfg(GRPO_CONFIG, tmp_path)
+    cfg.update(data={"artifacts_dir": str(data)}, margin_monitor={
+        "edges": list(G.MARGIN_EDGES), "share_ref_hire": [0.125] * 8,
+        "share_ref_reject": [0.125] * 8, "tpr_drop_stop": 0.08})
+    G.train(cfg)
+    monitors = [c for c in built["callbacks"] if type(c).__name__ == "MarginMonitorCallback"]
+    assert len(monitors) == 1 and monitors[0].prompts == ["a", "b", "c"]
+    assert monitors[0].every == 25 and monitors[0].tpr_drop_stop == 0.08
 
 
 @pytest.mark.parametrize("status, refused", [("done", False), ("training", False),
