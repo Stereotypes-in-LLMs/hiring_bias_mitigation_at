@@ -119,28 +119,35 @@ def prompt_digest(prompts: list[str]) -> str:
     return h.hexdigest()
 
 
-def score(label: str, model: str, rows: Path, gpu_memory_utilization: float) -> None:
+def score(label: str, model: str, rows: Path, gpu_memory_utilization: float,
+          output_dir: Path | None = None) -> None:
     from types import SimpleNamespace
 
     from vllm import LLM
 
     from hiring_bias_mitigation.mitigation.grpo import vllm_margins
 
+    out = output_dir or scores_dir()
+    target = out / f"{label}.parquet"
+    if target.exists():
+        raise FileExistsError(f"Refusing to overwrite calibration scores: {target}")
     prompts = pd.read_parquet(rows, columns=["prompt"])["prompt"].tolist()
     llm = LLM(model=model, gpu_memory_utilization=gpu_memory_utilization, max_model_len=8192,
-              trust_remote_code=True, seed=42, max_num_seqs=64, gdn_prefill_backend="triton")
+              trust_remote_code=True, seed=42, max_num_seqs=64, gdn_prefill_backend="triton",
+              language_model_only=True)
     margins = vllm_margins(SimpleNamespace(llm=llm), llm.get_tokenizer(), prompts,
                            {"enable_thinking": False})
-    out = scores_dir()
+    if len(margins) != len(prompts) or not np.isfinite(margins).all():
+        raise ValueError("Calibration scoring returned missing or nonfinite margins")
     out.mkdir(parents=True, exist_ok=True)
-    pd.DataFrame({"margin": margins}).assign(model=model, rows=str(rows),
+    pd.DataFrame({"margin": margins, "row_index": range(len(prompts))}).assign(model=model, rows=str(rows),
                                              prompts_sha1=prompt_digest(prompts)).to_parquet(
-        out / f"{label}.parquet", index=False)
+        target, index=False)
     print(f"{label}: {len(margins)} margins, hire share {np.mean(np.asarray(margins) > 0):.3f}")
 
 
-def load_scored(label: str) -> pd.DataFrame:
-    return pd.read_parquet(scores_dir() / f"{label}.parquet")
+def load_scored(label: str, output_dir: Path | None = None) -> pd.DataFrame:
+    return pd.read_parquet((output_dir or scores_dir()) / f"{label}.parquet")
 
 
 def transfer(parent_scores: pd.DataFrame, arm_scores: pd.DataFrame, parent: pd.DataFrame,
@@ -172,6 +179,7 @@ def main() -> None:
         if name == "validate":
             cmd.add_argument("--arm", action="append", required=True, help="LABEL=run name")
         if name == "transfer":
+            cmd.add_argument("--scores-dir", type=Path)
             cmd.add_argument("--parent-label", required=True, help="the parent's `score` label")
             cmd.add_argument("--arm", action="append", required=True,
                              help="LABEL=run name, LABEL being the arm's `score` label")
@@ -180,11 +188,12 @@ def main() -> None:
     cmd.add_argument("--model", required=True, help="a merged model directory")
     cmd.add_argument("--rows", required=True, help="a build's grpo_monitor.parquet")
     cmd.add_argument("--gpu-memory-utilization", type=float, default=0.8)
+    cmd.add_argument("--scores-dir", type=Path)
     args = parser.parse_args()
 
     if args.command == "score":
         score(args.label, args.model, Path(resolve_output_path(args.rows)),
-              args.gpu_memory_utilization)
+              args.gpu_memory_utilization, args.scores_dir)
         return
     parent = load_parent(args.parent)
     shares = bench_shares(parent["margin"], parent["gpt4o_hire"])
@@ -196,12 +205,12 @@ def main() -> None:
             print(f"  {key}: {shares[key]}")
         return
     if args.command == "transfer":
-        parent_scores = load_scored(args.parent_label)
+        parent_scores = load_scored(args.parent_label, args.scores_dir)
         print("arm | TPR change: benchmark, monitor | FPR change: benchmark, monitor (pp) | "
               "monitor rows per parent-margin bin")
         for spec in args.arm:
             label, run = spec.split("=", 1)
-            r = transfer(parent_scores, load_scored(label), parent, load_margins(run), shares)
+            r = transfer(parent_scores, load_scored(label, args.scores_dir), parent, load_margins(run), shares)
             print(f"{label} | {r['tpr_benchmark_pp']:+.2f}, {r['tpr_monitor_pp']:+.2f} | "
                   f"{r['fpr_benchmark_pp']:+.2f}, {r['fpr_monitor_pp']:+.2f} | "
                   f"{r['rows_per_bin']}")

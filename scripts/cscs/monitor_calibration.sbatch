@@ -31,6 +31,7 @@ type cost > /dev/null 2>&1 || cost() { shift 2; "$@"; }
 export HF_HUB_OFFLINE=1
 export PYTHONPATH="$REPO/src${PYTHONPATH:+:$PYTHONPATH}"
 ROWS=${ROWS:-artifacts/semisynthetic-v3/grpo-v3-all/grpo_monitor.parquet}
+SCORES_DIR=${SCORES_DIR:-$XW/outputs/monitor_calibration}
 read -r -a models <<< "${MODELS:?set MODELS}"
 read -r -a arms <<< "${ARMS:?set ARMS}"
 : "${PARENT_RUN:?set PARENT_RUN}" "${PARENT_LABEL:?set PARENT_LABEL}"
@@ -46,6 +47,7 @@ for ((i = 0; i < ${#models[@]}; i += 4)); do
     CUDA_VISIBLE_DEVICES=$g cost eval monitor-calibration \
       $PY scripts/monitor_calibration.py score --label "$label" --model "$XW/${entry#*=}" \
       --rows "$ROWS" --gpu-memory-utilization 0.6 \
+      --scores-dir "$SCORES_DIR" \
       > "$XW/logs/xw-monitor-cal-${SLURM_JOB_ID:-local}-$label.log" 2>&1 &
     pids+=($!)
   done
@@ -59,5 +61,5 @@ step "transfer: monitor projection against the benchmark"
 arm_args=()
 for a in "${arms[@]}"; do arm_args+=(--arm "$a"); done
 $PY scripts/monitor_calibration.py transfer --parent "$PARENT_RUN" \
-  --parent-label "$PARENT_LABEL" "${arm_args[@]}"
+  --parent-label "$PARENT_LABEL" --scores-dir "$SCORES_DIR" "${arm_args[@]}"
 echo "STAGE monitor-calibration OK"
