@@ -1456,6 +1456,64 @@ The verdict is "better". No response names the attribute: the attribute-mention 
   - With training, the DPO run cost 4.56 GPU-h. With round 3's data, arm `dpo_v3_5k` holds 18.78 GPU-h.
   - The context comparisons and the decision diff ran on the login node.
 
+#### DPO_V3_4880 against GRPO's best, GRPO-v3-all checkpoint 525 (descriptive; user, 2026-10-22)
+
+The user asked for the comparison with the best GRPO arm. That is GRPO-v3-all's checkpoint 525, the one GRPO arm the standard rates better than SFT-v3. It is exploratory: it was chosen after the final adapter's audit (`docs/GRPO_V3.md`). DPO_V3_4880's step 305 was declared before training. Both are one seed. Nothing here was pre-registered.
+
+**In one sentence.** The two are equally stable on the benchmark; they differ in where they decide. DPO_V3_4880 keeps SFT-v3's hire rate, and GRPO-525 hires 3.7 points less, mostly pairs GPT-4o hires.
+
+- **Observed.**
+  - **Against SFT-v3.** The standard gives both the same verdict, at almost the same size:
+    - DPO_V3_4880: −1.03 pp [−1.81, −0.28], at 22.8% hires;
+    - GRPO-525: −1.02 pp [−1.99, −0.12], at 19.1%.
+    - SFT-v3 is moved 0.3 points of hire rate for the first and 3.5 for the second.
+  - **Against each other, matched.** At each arm's own hire rate, the other arm, moved there, is the less stable one:
+    - at 22.8%, DPO_V3_4880 has 0.93% and GRPO-525 1.83%, −0.90 pp [−1.95, +0.14];
+    - at 19.1%, GRPO-525 has 1.04% and DPO_V3_4880 1.92%, −0.89 pp [−1.96, +0.12].
+    - Both intervals reach 0.
+  - **Against each other, raw.** Each arm is at its own hire rate. Of the 900 pair × condition sets, DPO_V3_4880 fixes 15 and breaks 14 against GRPO-525: −0.11 pp [−1.33, +1.11], sign test p = 1. In within-group sets, 24 are unstable against 28.
+  - **Where they differ.** 1,478 of the 31,050 decisions differ.
+    - 1,456 are on attributed prompts. In 1,295 of these, DPO_V3_4880 hires where GRPO-525 rejects, 1,104 of them where GPT-4o hires.
+    - 80% of the changed attributed prompts sit in 35 sets, where more than 90% of the variants changed: whole pairs that GRPO-525 rejects and DPO_V3_4880 hires.
+    - On attribute-free prompts, 20 of the 22 differences are DPO_V3_4880 hiring where GRPO-525 rejects, 16 of them where GPT-4o hires.
+  - **Hire rate and agreement.** Both are SFT-v3's under DPO_V3_4880 and lower under GRPO-525, as the table shows. GRPO-525's hire rate where GPT-4o hires is 9.30 pp under SFT-v3's, inside the 10 pp guardrail by 0.7 pp.
+  - **Training cost.** 4.04 GPU-h in 1:01 for DPO_V3_4880 (job 5118984), 23.46 GPU-h in 5:52 for GRPO-v3-all (job 5116822).
+- **Interpretation.**
+  - On this benchmark, DPO_V3_4880 reaches GRPO-525's stability gain without GRPO-525's loss of hires, at a sixth of its training compute.
+  - The mirrored matched comparisons fit a reading in which moving a model's cut-off away from where it decides adds instability by itself. If so, a matched comparison favours the arm that is not moved, and arms far from SFT-v3's hire rate gain from the standard's matching more than arms near it. Not confirmed.
+- **Unknown.**
+  - Second seeds, for both.
+  - How GRPO would do at SFT-v3's hire rate. No audited GRPO checkpoint is there; the monitor's projections did not carry over to the benchmark (`docs/GRPO_V3.md`).
+  - Which arm is right on the 35 whole-pair differences, beyond GPT-4o's verdict.
+
+| | SFT-v3 | GRPO-525 | DPO_V3_4880 |
+|---|---|---|---|
+| change against SFT-v3, matched, pp [95% CI] | | −1.02 [−1.99, −0.12] | −1.03 [−1.81, −0.28] |
+| how the checkpoint was chosen | | after the final adapter's audit (exploratory) | declared before training |
+| hire rate, all prompts / attribute-free | 22.75% / 23.8% | 19.09% / 19.1% | 22.80% / 23.1% |
+| hire rate where GPT-4o hires / rejects | 57.7% / 5.3% | 48.4% / 4.4% | 58.4% / 5.0% |
+| agreement with GPT-4o, all prompts / attribute-free | 82.40% / 82.9% | 79.87% / 80.0% | 82.82% / 82.7% |
+| unstable within-group sets, raw | 1.85% | 1.04% | 0.89% |
+| flips: any / reject→hire / hire→reject | 2.00 / 0.63 / 6.39% | 0.61 / 0.36 / 1.68% | 1.08 / 0.49 / 3.03% |
+| group parity, mean absolute deviation | 0.25 pp | 0.17 pp | 0.13 pp |
+| merge kept | 100% | 97.5% | 95.9% |
+| GPU-h: training / the arm in all | 21.64 / 22.09 | 23.46 / 28.02 | 4.04 / 18.78 |
+
+- **Sources.**
+  - Rows: `reports/reference_metrics.csv`; attribute-free rows from `eval/results/<run>.json`.
+  - Matched comparisons: `reports/operating_point/v2/` (both directions, `conforms: true`).
+  - Raw comparison: `reports/decision_diff/Qwen3.5-9B--en--dpo--adapter--en_only_dpo_v3_4880_step305--vs--Qwen3.5-9B--en--grpo--adapter--en_only_grpo_v3_all_step525/`.
+- **GPU-h.** From `scripts/cost_report.py --no-sacct` by arm (`sft_v3`, `grpo_v3_all`, `dpo_v3_5k`).
+  - GRPO-v3-all's arm holds its top-ups (3.56), its training and both of its evaluations.
+  - It also builds on round 3's pairs, whose 14.22 GPU-h are booked under `dpo_v3_5k`, so the two arm totals overlap and must not be added.
+  - Both start from SFT-v3, whose cost is in neither total. SFT-v3's own total leaves out its data, booked under `sft_v3_data`.
+
+**A pair where they differ** (`prompts_changed.csv`, attribute-free). Pair `363bf583…`, Product manager; GPT-4o hires.
+
+- GRPO-525 rejects: "Lacks required SQL, data modeling, and product discovery experience. Background is primarily sales-focused rather than technical product management."
+- DPO_V3_4880 hires: "Strong PM background with US client experience and Agile expertise aligns well with our growth goals and technical requirements."
+- DPO_V3_4880 hires the pair's 68 attributed prompts as well, and GRPO-525 rejects them all.
+
 ### Reading
 
 - **Where SFT-v3's mistakes are.** They sit where it did not train. Its tipped mistakes per row rose from 2.3% on round 1's pairs to 4.4%–4.7% on new djinni_new pairs and 6.3% on new RJDB pairs. Without the attribute, it agrees with the anchor on 91.9% of new djinni_new samples, against 98.8% before. More pairs from the same pool, not more samples of the same rows, is what made 5,000 reachable at 14 GPU-h.

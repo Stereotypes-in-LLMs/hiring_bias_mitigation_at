@@ -47,9 +47,9 @@
   "primary_ci_low_pp": -1.9869731800766286,
   "primary_ci_high_pp": -0.11767773520647105,
   "primary_conforms": true,
-  "primary_other_comparisons": null,
+  "primary_other_comparisons": "Qwen3.5-9B--en--dpo--adapter--en_only_dpo_v3_4880_step305",
   "raw_sha256": "8aa10fa86e39a1be",
-  "code_commit": "aa8aa57",
+  "code_commit": "3e7898e",
   "code_uncommitted": false,
-  "computed_at": "2026-10-22T07:36:19Z"
+  "computed_at": "2026-10-22T09:05:08Z"
 }
