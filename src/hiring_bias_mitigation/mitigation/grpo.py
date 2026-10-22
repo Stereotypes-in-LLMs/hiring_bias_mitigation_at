@@ -550,7 +550,12 @@ def grpo_config_candidates(cfg: dict) -> dict:
     return {key: cfg[key] for key in GRPO_CONFIG_PASSTHROUGH if key in cfg}
 
 
-def train(cfg: dict) -> C.TrainArtifacts:
+def train(cfg: dict, trainer_cls=None, reward_funcs=None, trainer_kwargs: dict | None = None,
+          manifest_extra=None) -> C.TrainArtifacts:
+    """GRPO by default. A variant of the objective (mitigation/dapo.py) passes its trainer class,
+    its rewards, extra keyword arguments for the trainer, and `manifest_extra`, a function of the
+    GRPOConfig whose keys are added to run_config.json; the data, the policy, the weight sync,
+    the monitors and the manifest stay this function's."""
     from ..utils.seed import set_seed
 
     set_seed(cfg.get("seed", 42))
@@ -576,14 +581,15 @@ def train(cfg: dict) -> C.TrainArtifacts:
 
     args = GRPOConfig(**base_args,
                       **C.supported_kwargs(GRPOConfig, grpo_config_candidates(cfg), "GRPOConfig"))
-    trainer = GRPOTrainer(
+    trainer = (trainer_cls or GRPOTrainer)(
         model=model,
-        reward_funcs=REWARD_FUNCS,
+        reward_funcs=reward_funcs or REWARD_FUNCS,
         args=args,
         train_dataset=train_ds,
         processing_class=tokenizer,
         peft_config=C.peft_config(cfg),
         callbacks=C.memory_guard_callbacks(cfg) + C.cost_callbacks(),
+        **(trainer_kwargs or {}),
     )
     policy = trainer.accelerator.unwrap_model(trainer.model)
     install_weight_sync(trainer.vllm_generation, policy)
@@ -621,6 +627,8 @@ def train(cfg: dict) -> C.TrainArtifacts:
         "n_train": len(train_ds),
         "sft_checkpoint": cfg.get("sft_checkpoint"),
     }
+    if manifest_extra is not None:
+        manifest.update(manifest_extra(args))
     # Before training as well: a run cut by a time limit never reaches the final write, and
     # its checkpoint-N adapters need `sft_checkpoint` to be merged with their SFT parent.
     if C.is_main_process():
@@ -628,11 +636,13 @@ def train(cfg: dict) -> C.TrainArtifacts:
     resume = C.last_checkpoint(output_dir) if cfg.get("resume") else None
     if resume:
         log.info("resuming from %s", resume)
-    log.info("GRPO %s on %d prompts x %d generations", cfg["base_model"], len(train_ds),
-             args.num_generations)
+    log.info("%s %s on %d prompts x %d generations", manifest["objective"].upper(),
+             cfg["base_model"], len(train_ds), args.num_generations)
     trainer.train(resume_from_checkpoint=resume)
     trainer.save_model(str(output_dir))
-    status = "aborted: hire rate left the band" if monitor and monitor.aborted else "done"
+    # A trainer that stops itself (dapo.DAPOTrainer, when its prompts run dry) says why.
+    status = ("aborted: hire rate left the band" if monitor and monitor.aborted
+              else getattr(trainer, "stop_reason", None) or "done")
     if C.is_main_process():
         tokenizer.save_pretrained(str(output_dir))
         C.write_run_manifest(cfg, output_dir, {**manifest, "status": status})
