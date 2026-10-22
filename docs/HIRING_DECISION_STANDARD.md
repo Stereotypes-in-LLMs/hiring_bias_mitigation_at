@@ -53,7 +53,16 @@ H = 0 时，支持率写 `null`，不能写成 100%。这时仍须有正面的�
 
 ## 放进哪些 prompt
 
-完整规则、数值门槛、输出字段和政策哈希已经进入生成的英文审计 prompt。新审计或新锚点标注都必须引用这一版本，并携带冻结的 JD 清单。用生成器读取配置文件，避免在多个 prompt 中各维护一份规则。
+完整规则、数值门槛、输出字段和政策哈希统一从配置生成。新复核采用下面两个入口，各自记录 prompt_id 和输入 prompt 的 SHA-256：
+
+| 阶段 | prompt_id | 输入与约束 |
+|---|---|---|
+| 仅看 JD 提取清单 | `hiring-evidence-v1-jd-only-1` | 只接收 JD 和案例 ID，没有 CV、锚点或模型结果入口 |
+| 用冻结清单审 CV | `hiring-evidence-v1-frozen-review-1` | 先校验清单政策哈希、字段和 JD 引文，再绑定 JD、清单和 CV；缺清单或不匹配就停止 |
+
+清单需要在看到 CV 前完成。第二阶段若发现清单抽取存在实质问题，返回 review 并说明，交回 JD 阶段复核，不能用当前候选人的经历临时改条件。`build_review_prompt` 通过 JSON 绑定输入，不对源文本递归替换占位符。
+
+两个新模板分别位于 `docs/prompts/hiring_evidence_v1_jd.txt` 和 `docs/prompts/hiring_evidence_v1_review.txt`。历史模板 `hiring_evidence_v1.txt` 保留以复现旧审阅。新模板实施同一 v1 判断规则，没有放宽或提高 hire 门槛；既有 80 份审阅仍属于原 prompt 记录，不能声称已经用新模板再次运行。
 
 本次先用于文本复核。现有 benchmark、SFT/GRPO/DAPO 训练 prompt、解析器和指标协议未切换。旧流程只有 hire/reject；它还会将 interview、shortlist、conditional hire 解析为 hire。直接替换会改变任务定义和有效输出分母，旧数值就不能视为同一实验中的模型差异。
 
@@ -71,6 +80,10 @@ H = 0 时，支持率写 `null`，不能写成 100%。这时仍须有正面的�
 
 这一程序确认的是纠正方向，不保证冻结 SFT 教师一定能纠正。SFT 给出的理由还要单独核查，不能因其决策正确就照抄。
 
+目前采用 `configs/teacher75_correction_workflow_v1.json` 准备纠正数据。配置固定原审计 15 个来源文件的 SHA-256，包括 JD/CV、清单、账本、采样汇总和旧审阅 prompt。入口先比对指纹，再读取 40 份冻结清单及 80 份审阅记录，复算全部 75 行，核对已保存的分类和候选。源文本即使只新增一句、审阅有增减、引文或哈希错误、旧候选混入，都会停止导出。原始 7 行或 75 行清单不能代替这一校验。
+
+本次输出中，3 行标为 `label_only_candidate`；13 行标为 `excluded_anchor_problem`；59 行标为 `excluded_pending_review`。每行都有 `training_ready=false`，原教师理由仍为 `teacher_rationale_approved_for_reuse=false`。这些字段区分“审阅支持标签方向”和“已经可以作为训练样本”。具体方案见 [纠正方案](TEACHER75_CORRECTION_PLAN.md)。
+
 两位审阅者仍是模型审阅者，不是人工 gold。校验器能验证引文和算式，不能自动证明功能推断、年限相关性、OR 子项判断或 JD 抽取完整性。
 
 ## 已有审计如何归档
@@ -84,17 +97,22 @@ H = 0 时，支持率写 `null`，不能写成 100%。这时仍须有正面的�
 | v1 定向复核 | 原先 7 行纠正候选对应的 4 个 pair，每对两份新意见 | 按冻结的可量化标准重新确认候选 |
 | v1 全量复审 | 全部 40 个 pair、75 行，共 80 份新意见 | 更新全部分类和冻结 SFT 教师纠正目标 |
 
-现在共有四轮文本审阅，后两轮使用同一 v1 标准。最新全量复审已覆盖全部 40 个 pair、75 行，每个 pair 都有两份新意见；旧审阅作为历史记录保留。样本重叠，不能相加作为独立样本数。最新分类和纠正目标见 [全量复审报告](TEACHER75_STANDARD_AUDIT.md)。
+现在共有四轮文本审阅，后两轮使用同一 v1 标准。最新全量复审已覆盖全部 40 个 pair、75 行，每个 pair 都有两份新意见；旧审阅作为历史记录保留。样本重叠，不能相加作为独立样本数。最新分类和纠正目标见 [全量复审报告](TEACHER75_STANDARD_AUDIT.md)。本次入口校验不增加一轮模型审阅。
 
 ## 仓库使用
 
 ```bash
 uv run python scripts/hiring_standard.py \
   --policy configs/hiring_decision_standard_v1.json \
-  --render-prompt docs/prompts/hiring_evidence_v1.txt
-uv run python -m pytest tests/test_hiring_standard.py -q
+  --render-job-prompt docs/prompts/hiring_evidence_v1_jd.txt \
+  --render-review-prompt docs/prompts/hiring_evidence_v1_review.txt
+uv run python scripts/prepare_teacher_corrections.py \
+  --config configs/teacher75_correction_workflow_v1.json \
+  --output /path/to/a/new/teacher75_v1_application
+uv run python -m pytest tests/test_hiring_standard.py tests/test_hiring_workflow.py \
+  tests/test_teacher75_standard_analysis.py tests/test_prepare_teacher_corrections.py -q
 ```
 
-`policy_sha256` 是规范 JSON 的 SHA-256：UTF-8、键排序、紧凑分隔符、保留 Unicode、禁止 NaN/Infinity。它不是文件字节哈希。英文 prompt 中的三个输入占位符应逐个替换；JSON 示例中的大括号不是模板占位符。
+`policy_sha256` 是规范 JSON 的 SHA-256：UTF-8、键排序、紧凑分隔符、保留 Unicode、禁止 NaN/Infinity。它不是文件字节哈希。新调用方使用 `build_job_rubric_prompt` 和 `build_review_prompt` 绑定输入。导出只接受新的目录，不覆盖历史来源，且不调用模型或启动训练。
 
 源码依据：`src/hiring_bias_mitigation/data/prompts.py` 的 baseline/structured_rubric/second_pass，`generation/synth.py` 的 REFERENCE_PROMPT，`eval/parsing.py` 的二元解析，`docs/EVAL_STANDARD.md` 和 `docs/METRICS.md`。既有监控提交为 `8d7063f`，paired probe 提交为 `0f8c856`。
