@@ -1311,6 +1311,29 @@ A training pair from batch 2, as written (`dpo_v3_5k_train.parquet`; `samples.md
 - **chosen**, hire: "Strong telecom OSS/BSS background, proven leadership, and UNIX skills align perfectly with requirements. Experience with US clients and complex testing validates suitability."
 - **rejected**, SFT-v3's own sample, reject: "Missing required MVS mainframe experience and advanced Unix shell automation skills. Lacks explicit Waterfall environment background."
 
+#### DPO_V3_4880: pre-registration
+
+Written on 2026-10-22 at about 09:00, before training. The user asked for "DPO_V3_4800 on the new pairs from sftv3", then "rename 4880": DPO from SFT-v3 on the 4,880 accepted pairs. The run's files carry `dpo_v3_4880`; the data keeps its name, `dpo_v3_5k`.
+
+- **Question.** Does DPO on round 3's 4,880 on-policy pairs, starting from SFT-v3, lower the share of unstable within-group sets at matched hire rate against SFT-v3, and stay inside the guardrails? The hypothesis is that it does. The set is three times round 2's on-policy pairs, and most of its pairs come from candidates SFT-v3 never trained on, as the benchmark's do. The result counts against the hypothesis if the 95% interval reaches 0 or above, or if a guardrail fails.
+- **Control.**
+  - **The decision:** SFT-v3, the reference arm, whose audit and margin pass are on disk (job 5108977): `compare-arms --against configs/audit/qwen3.5-9b_en_sft_v3_additional_gh200.yaml`.
+  - **Context:** the run on round 2's 1,568 on-policy pairs (+0.13 pp [−0.64, +0.96] against SFT-v3, job 5114592) and DPO-v3, whose margin passes are on disk. These comparisons are descriptive.
+- **Expected.** No size is predicted beyond the hypothesis. 1,568 on-policy pairs left SFT-v3's stability where it was.
+- **Data.** `configs/data/en_only_dpo_v3_5k.yaml`, `data_kind: dpo_v3_5k`: 4,880 training and 350 validation pairs. djinni_new's 3,790 pairs fail D4 and are in by the user's decision. No row is longer than 2,466 tokens, so `max_seq_len` 3072 cuts none (`reports/v3_new_data/dpo_v3_4880_token_lengths.json`).
+- **Settings.** As the on-policy-only run and DPO-v3: beta 0.3, sigmoid plus 0.2 NLL on `chosen`, lr 5e-5, 10 warmup steps, effective batch 16, one epoch (305 steps), `max_seq_len` 3072. The config (`configs/mitigation/dpo/qwen3.5-9b_en_only_dpo_v3_4880_gh200.yaml`) differs from the on-policy-only run's in the data and the names only.
+- **Stop conditions.** As DPO-v3's:
+  - `memory_floor_gb` 12;
+  - a non-finite loss;
+  - more than 5% unreadable decisions on the 64 validation prompts at any evaluation after the first;
+  - the hire-rate gate: below 0.75 on hire-anchor validation prompts at the last two evaluations means a report before the audit;
+  - at most 8 GPU-h for training (a 2-hour job). The set has 1.24 times DPO-v3's training tokens, so at DPO-v3's rate it takes about 4.1 GPU-h.
+- **Checkpoint and split.** The final checkpoint, step 305, is declared now as the one audited (`configs/audit/qwen3.5-9b_en_dpo_v3_4880_step305_gh200.yaml`). `dpo_v3_5k_validation` gives `eval_loss` and the decision readout. The benchmark audit is the final test, spent once with `scripts/cscs/evaluate_arm.sbatch` against SFT-v3.
+- **Cost.** Arm `dpo_v3_5k`, with the round's data jobs.
+- **What it cannot settle.**
+  - Seed noise: it is one seed, like the earlier DPO runs.
+  - Against the 1,568-pair run, it changes both the number of pairs and where they come from, so a difference between the two cannot be put on either.
+
 ### Reading
 
 - **Where SFT-v3's mistakes are.** They sit where it did not train. Its tipped mistakes per row rose from 2.3% on round 1's pairs to 4.4%–4.7% on new djinni_new pairs and 6.3% on new RJDB pairs. Without the attribute, it agrees with the anchor on 91.9% of new djinni_new samples, against 98.8% before. More pairs from the same pool, not more samples of the same rows, is what made 5,000 reachable at 14 GPU-h.
@@ -1362,4 +1385,11 @@ python scripts/build_balanced_dpo.py build --artifacts-dir artifacts/semisynthet
 python scripts/v3_additional_data.py --config configs/generation/v3_new_pairs_2.yaml --stage dpo_v3
 CHECKS=artifacts/semisynthetic-v3/new-pairs-2/dpo_v3_5k_checks scripts/cscs/submit.sh -p normal -t 01:00:00 \
     scripts/cscs/dpo_v3_checks.sbatch
+# DPO_V3_4880
+python scripts/sft_token_lengths.py --config configs/mitigation/dpo/qwen3.5-9b_en_only_dpo_v3_4880_gh200.yaml \
+    --limit 2048 --out reports/v3_new_data/dpo_v3_4880_token_lengths.json
+CONFIG=configs/mitigation/dpo/qwen3.5-9b_en_only_dpo_v3_4880_gh200.yaml scripts/cscs/submit.sh -p normal -t 02:00:00 \
+    scripts/cscs/train_dpo.sbatch
+AUDIT=configs/audit/qwen3.5-9b_en_dpo_v3_4880_step305_gh200.yaml \
+AGAINST=configs/audit/qwen3.5-9b_en_sft_v3_additional_gh200.yaml scripts/cscs/submit.sh scripts/cscs/evaluate_arm.sbatch
 ```
