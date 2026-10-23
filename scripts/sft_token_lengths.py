@@ -1,4 +1,4 @@
-"""Token lengths of an SFT config's rows as its trainer renders them, against `max_seq_len`.
+"""Token lengths of an SFT or DPO config's rows as its trainer renders them, against `max_seq_len`.
 
     python scripts/sft_token_lengths.py \\
         --config configs/mitigation/sft/qwen3.5-9b_en_only_sft_v3_additional_gh200.yaml \\
@@ -8,7 +8,15 @@ TRL cuts a row longer than `max_seq_len` at the end, and under a completion-only
 the target. This reads the splits through the trainer's own loader and chat rendering
 (`training_common.load_generated_dataset`, `sft.render_chat`), every validation row included,
 and counts per pool source the rows over the config's `max_seq_len` and over each `--limit`.
+For a DPO config (`stage: dpo`) the rows go through `dpo._to_conversational`, and a row's
+length is the prompt with the longer of its two responses: TRL 1.x truncates DPO rows at
+`max_length` from the end too (`truncation_mode` keep_start), which would cut the responses
+the preference margin is taken over.
 CPU only; the tokenizer is the base model's.
+
+    python scripts/sft_token_lengths.py \\
+        --config configs/mitigation/dpo/qwen3.5-9b_en_only_dpo_v3_gh200.yaml \\
+        --limit 2048 --out reports/v3_new_data/dpo_token_lengths.json
 """
 
 from __future__ import annotations
@@ -41,7 +49,7 @@ def main() -> None:
 
     parser = argparse.ArgumentParser(description=__doc__,
                                      formatter_class=argparse.RawDescriptionHelpFormatter)
-    parser.add_argument("--config", required=True, help="an SFT training config")
+    parser.add_argument("--config", required=True, help="an SFT or DPO training config")
     parser.add_argument("--limit", type=int, action="append", default=[],
                         help="also count the rows over this many tokens; repeatable")
     parser.add_argument("--by", default="pool_source", help="the column to break counts down by")
@@ -50,7 +58,8 @@ def main() -> None:
 
     cfg = load_config(args.config)
     cfg.pop("eval_limit_rows", None)  # every validation row, not the trainer's subsample
-    splits = C.load_generated_dataset(cfg, cfg.get("data_kind", "sft"))
+    dpo = cfg.get("stage") == "dpo"
+    splits = C.load_generated_dataset(cfg, cfg.get("data_kind", "dpo" if dpo else "sft"))
     tokenizer = AutoTokenizer.from_pretrained(cfg["base_model"], trust_remote_code=True)
     max_seq_len = int(cfg.get("max_seq_len", 2048))
     limits = sorted({max_seq_len, *args.limit})
@@ -60,10 +69,19 @@ def main() -> None:
               "by": args.by, "splits": {}}
     for name, dataset in splits.items():
         frame = dataset.to_pandas()
-        rendered = S.render_chat(dataset, tokenizer, cfg.get("chat_template_kwargs"))
-        texts = [p + c for p, c in zip(rendered["prompt"], rendered["completion"])]
-        frame["n_tokens"] = [len(ids) for ids in
-                             tokenizer(texts, add_special_tokens=False)["input_ids"]]
+        if dpo:
+            from hiring_bias_mitigation.mitigation import dpo as P
+
+            rendered = P._to_conversational(dataset, tokenizer, cfg.get("chat_template_kwargs"))
+            sides = [[len(ids) for ids in tokenizer(
+                [p + r for p, r in zip(rendered["prompt"], rendered[side])],
+                add_special_tokens=False)["input_ids"]] for side in ("chosen", "rejected")]
+            frame["n_tokens"] = [max(c, r) for c, r in zip(*sides)]
+        else:
+            rendered = S.render_chat(dataset, tokenizer, cfg.get("chat_template_kwargs"))
+            texts = [p + c for p, c in zip(rendered["prompt"], rendered["completion"])]
+            frame["n_tokens"] = [len(ids) for ids in
+                                 tokenizer(texts, add_special_tokens=False)["input_ids"]]
         groups = (frame[args.by].fillna("missing") if args.by in frame.columns
                   else pd.Series("all", index=frame.index))
         report["splits"][name] = {

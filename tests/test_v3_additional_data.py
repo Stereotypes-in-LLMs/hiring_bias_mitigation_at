@@ -268,6 +268,42 @@ def test_a_job_without_the_biased_pass_still_reads_the_stop_conditions(setup):
     assert "invariant_yield" in check["readout"] and "biased_yield" not in check["readout"]
 
 
+def test_a_later_round_draws_new_parts_into_its_own_directory(setup, tmp_path):
+    """Round 3 reads the first round's pool and never redraws a part SFT-v3 trained on."""
+    mod, cfg, _, out = setup
+    pool = pd.read_parquet(out / "pool" / "pairs_en.parquet")
+    pool["part"] = pool["source"] + "-" + (pool["order"] // 2).map("{:03d}".format)
+    pool.to_parquet(out / "pool" / "pairs_en.parquet", index=False)
+    mod.stage_generate(cfg, ["djinni_new-000", "rjdb-000"], ["votes", "invariant"])
+    mod.stage_assemble(cfg)
+    first_sft = {s: pd.read_parquet(out / f"sft_{s}.parquet") for s in ("train", "validation")}
+
+    later = {**cfg, "artifacts_dir": "artifacts/new-pairs",
+             "pool_dir": "artifacts/additional/pool", "earlier_rounds": ["artifacts/additional"]}
+    new = tmp_path / "artifacts" / "new-pairs"
+    with pytest.raises(SystemExit, match="earlier round"):
+        mod.stage_generate(later, ["djinni_new-000"], ["votes", "invariant"])
+    with pytest.raises(SystemExit, match="pool"):
+        mod.stage_pool(later)
+    mod.stage_generate(later, ["all"], ["votes", "invariant"])
+    assert sorted(p.name for p in (new / "parts").iterdir()) == ["djinni_new-001", "rjdb-001"]
+    mod.stage_assemble(later)
+    raw = pd.read_parquet(new / "raw" / "en_invariant.parquet")
+    assert set(raw["pair_id"]) == set(pool.loc[pool["part"].str.endswith("-001"), "pair_id"])
+    # The first round's outputs are untouched.
+    for split, frame in first_sft.items():
+        pd.testing.assert_frame_equal(pd.read_parquet(out / f"sft_{split}.parquet"), frame)
+    # The split is the pool's: the same seeded draw over every candidate of the pool.
+    assert mod.validation_candidates(later, pool) == mod.validation_candidates(cfg, pool)
+
+    # A candidate that reached an earlier round's SFT data stops the assembly.
+    leaked = first_sft["train"].copy()
+    leaked.loc[0, "candidate_id"] = raw["candidate_id"].iloc[0]
+    leaked.to_parquet(out / "sft_train.parquet", index=False)
+    with pytest.raises(ValueError, match="candidate"):
+        mod.stage_assemble(later)
+
+
 def test_r2em_drops_rows_the_vote_overturns_and_its_legacy_pool(setup, tmp_path):
     mod, cfg, _, out = setup
     r2 = tmp_path / "r2em"
@@ -382,6 +418,31 @@ def test_dpo_v3_refuses_an_on_policy_pair_against_its_vote(dpo_v3):
     write([flipped, train[1]], validation)
     with pytest.raises(ValueError, match="against their pair's vote anchor"):
         mod.stage_dpo_v3(cfg)
+
+
+def test_dpo_v3_builds_an_on_policy_only_set_from_a_later_round(dpo_v3, tmp_path):
+    """Round 3: no r2em_v3, the vote anchors from several directories, the files renamed."""
+    mod, cfg, out, *_ = dpo_v3
+    later = tmp_path / "artifacts" / "new-pairs-2"
+    later.mkdir(parents=True)
+    anchors = pd.read_parquet(out / "anchors_en.parquet")
+    anchors[anchors["pair_id"] == "n2"].to_parquet(later / "anchors_en.parquet")
+    anchors[anchors["pair_id"] != "n2"].to_parquet(out / "anchors_en.parquet")
+    spec = {**cfg["dpo_v3"], "r2em": False, "name": "dpo_v3_5k",
+            "anchors_from": [str(out), str(later)]}
+    mod.stage_dpo_v3({**cfg, "artifacts_dir": "artifacts/new-pairs-2", "dpo_v3": spec})
+    train = pd.read_parquet(later / "dpo_v3_5k_train.parquet")
+    assert train["dpo_v3_part"].tolist() == ["onpolicy_v3", "onpolicy_v3"]
+    assert train["anchor_hire_votes"].tolist() == [8, 1]
+    assert sorted(p.name for p in (later / "dpo_v3_5k_checks").iterdir()) == ["djinni_new",
+                                                                             "rjdb"]
+    report = json.loads((later / "dpo_v3_5k_report.json").read_text())
+    assert report["train"]["rows_by_part"] == {"onpolicy_v3": 2}
+    assert not (later / "dpo_v3_train.parquet").exists()
+    # A pair anchored in two of the directories is refused.
+    anchors.to_parquet(later / "anchors_en.parquet")
+    with pytest.raises(ValueError, match="two of"):
+        mod.stage_dpo_v3({**cfg, "artifacts_dir": "artifacts/new-pairs-2", "dpo_v3": spec})
 
 
 def test_dpo_v3_refuses_a_candidate_on_both_sides_of_the_split(dpo_v3):

@@ -166,6 +166,7 @@ def selection_by(rows: pd.DataFrame, attributed: list[list[str]],
                 for d in _decisions(free_by_pair[str(pair)], lang)]
         picked = selected[selected[by] == value] if len(selected) else selected
         strategies = picked["rejected_strategy"].value_counts() if len(picked) else {}
+        tipped = picked[picked["rejected_strategy"] == TIPPED] if len(picked) else picked
         out[str(value)] = {
             "rows": len(part), "pairs": len(pair_ref),
             "reference_hire_share": _share([r == "hire" for r in references]),
@@ -178,26 +179,34 @@ def selection_by(rows: pd.DataFrame, attributed: list[list[str]],
                 for side in ("hire", "reject")},
             "selected": {str(k): int(v) for k, v in dict(strategies).items()},
             "tipped_per_row": round(int(dict(strategies).get(TIPPED, 0)) / len(part), 4),
+            # The side each source's error-mass balance will be short of.
+            "tipped_by_reference": {side: int((tipped["reference_decision"] == side).sum())
+                                    if len(tipped) else 0 for side in ("hire", "reject")},
         }
     return out
 
 
-def filter_rows(rows: pd.DataFrame, row_filter: dict | None) -> pd.DataFrame:
-    """The rows matching every `column: value` of `row_filter`, re-indexed; None keeps all.
+def filter_rows(rows: pd.DataFrame, row_filter: dict | list[dict] | None) -> pd.DataFrame:
+    """The rows `row_filter` keeps, re-indexed; None keeps all.
 
-    A top-up run samples one slice of the pool harder (the hire rows at k=32). Its prompt keys
-    are positions in the filtered rows, which is why the index is reset. A list value matches
-    any of its items: V3's top-up takes the hire rows of two pool sources only.
+    A dict keeps the rows matching every `column: value` of it, and a list value matches any of
+    its items. A list of dicts keeps the rows matching any one of them: V3's top-up takes the
+    hire rows of djinni_new and kaggle_linkedin and the reject rows of RJDB, each source's short
+    side. A top-up run samples one slice of the pool harder (k=32); its prompt keys are positions
+    in the filtered rows, which is why the index is reset.
     """
     if not row_filter:
         return rows
-    mask = pd.Series(True, index=rows.index)
-    for column, value in row_filter.items():
-        if isinstance(value, (list, tuple)):
-            mask &= rows[column].isin(list(value))
-        else:
-            mask &= rows[column] == value
-    return rows[mask].reset_index(drop=True)
+    keep = pd.Series(False, index=rows.index)
+    for one in (row_filter if isinstance(row_filter, list) else [row_filter]):
+        mask = pd.Series(True, index=rows.index)
+        for column, value in one.items():
+            if isinstance(value, (list, tuple)):
+                mask &= rows[column].isin(list(value))
+            else:
+                mask &= rows[column] == value
+        keep |= mask
+    return rows[keep].reset_index(drop=True)
 
 
 #: A rationale with one of these addresses one gender. Reused under another attribute it

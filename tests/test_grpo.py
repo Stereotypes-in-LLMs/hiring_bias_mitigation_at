@@ -131,6 +131,43 @@ def test_signal_balance_gives_both_halves_the_same_pull():
     assert not train.duplicated(G.ROW_KEY).any()
 
 
+def _mixed_pull(rows: pd.DataFrame, informative_untipped: dict) -> pd.DataFrame:
+    """Tipped rows err 3 of 8 times; the first `informative_untipped[side]` untipped rows of a
+    side 1 of 8 times; every other row never."""
+    rate = []
+    for side, group in rows.groupby("reference_decision", sort=False):
+        seen = 0
+        for tipped in group["tipped"]:
+            wrong = 3 / 8 if tipped else (1 / 8 if seen < informative_untipped[side] else 0.0)
+            seen += not tipped
+            rate.append(1 - wrong if side == "hire" else wrong)
+    counts = {p: (round(r * 8), 8) for p, r in zip(rows["prompt"], rate)}
+    return G.attach_sft_rates(rows, counts)
+
+
+def test_pull_fill_takes_rows_with_signal_before_rows_without():
+    rows = _mixed_pull(_rows(200, 200, 20, 20), {"hire": 30, "reject": 30})
+    random, _ = G.signal_balanced_train(rows, 100, seed=4)
+    pulled, plan = G.signal_balanced_train(rows, 100, seed=4, fill="pull")
+    assert pulled["reference_decision"].value_counts().to_dict() == {"hire": 50, "reject": 50}
+    for side in ("hire", "reject"):
+        assert plan[side]["drawn_tipped"] == 20  # attribute-tipped rows still go first
+        assert plan[side]["drawn_informative"] == 50
+        assert plan[side]["available_informative"] == 50
+    assert (pulled["pull"] > 0).sum() == 100 > (random["pull"] > 0).sum()
+    assert pulled["pull"].sum() > random["pull"].sum()
+    with pytest.raises(ValueError, match="fill"):
+        G.signal_balanced_train(rows, 100, fill="best")
+
+
+def test_informative_half_is_the_smaller_side_with_a_sampled_error():
+    rows = _mixed_pull(_rows(200, 200, 20, 20), {"hire": 30, "reject": 70})
+    assert G.informative_half(rows) == 50
+    train, plan = G.signal_balanced_train(rows, 2 * G.informative_half(rows), fill="pull")
+    assert plan["hire"]["drawn_informative"] == 50  # the short side uses every one
+    assert (train["pull"] > 0).all()
+
+
 def test_signal_balance_refuses_a_side_too_small_and_is_seeded():
     rows = _with_pull(_rows(30, 400, 10, 100), {"hire": 0.5, "reject": 0.5},
                       {"hire": 1.0, "reject": 0.0})
@@ -292,6 +329,21 @@ def test_projected_hire_rate_carries_relative_changes_onto_sfts_benchmark_rates(
     base = {"hire_rate_ref_hire": 1.0, "hire_rate_ref_reject": 1.0}
     assert grpo.projected_hire_rate(r1, base, n_side=10_000)["hire_rate_projected"] == \
         pytest.approx(0.191, abs=0.002)
+
+
+def test_the_monitor_projects_onto_its_own_sft_parents_benchmark_rates():
+    pytest.importorskip("transformers")
+    rows = pd.DataFrame({"reference_decision": ["hire", "reject"]})
+    default = grpo._decision_monitor_class()(rows, None, ".", 25, (0.2, 0.4), None)
+    assert default.sft_benchmark == grpo.SFT_BENCHMARK
+    # SFT-v3 (reports/reference_metrics.csv): 57.73% where GPT-4o hires, 5.266% where it rejects
+    v3 = {"hire_rate_ref_hire": 0.5773, "hire_rate_ref_reject": 0.05266}
+    monitor = grpo._decision_monitor_class()(rows, None, ".", 25, (0.15, 0.35), None,
+                                             sft_benchmark=v3)
+    assert monitor.sft_benchmark["reference_hire_share"] == 0.333
+    same = {"hire_rate_ref_hire": 1.0, "hire_rate_ref_reject": 0.2}
+    out = grpo.projected_hire_rate(same, same, 128, monitor.sft_benchmark)
+    assert out["hire_rate_projected"] == pytest.approx(0.333 * 0.5773 + 0.667 * 0.05266)
 
 
 def test_merged_into_base_runs_the_pushed_weights_and_restores_the_base_bit_for_bit():

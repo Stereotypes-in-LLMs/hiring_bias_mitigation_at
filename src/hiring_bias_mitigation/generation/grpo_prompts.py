@@ -156,8 +156,18 @@ def attach_sft_rates(rows: pd.DataFrame, *counts: dict) -> pd.DataFrame:
     return rows.assign(sft_hire_rate=rate, sft_samples=n, pull=np.sqrt(wrong * (1 - wrong)))
 
 
-def signal_balanced_train(rows: pd.DataFrame, n: int, seed: int = 42,
-                          column: str = "pull") -> tuple[pd.DataFrame, dict]:
+#: `fill: pull` takes, within this share of the target, the k with the most tipped rows.
+PULL_TOLERANCE = 0.01
+
+
+def informative_half(rows: pd.DataFrame, column: str = "pull") -> int:
+    """The largest half both verdicts can fill with rows of nonzero `column`: `--n-train auto`."""
+    return int(min((rows[rows["reference_decision"] == side][column] > 0).sum()
+                   for side in SIDES))
+
+
+def signal_balanced_train(rows: pd.DataFrame, n: int, seed: int = 42, column: str = "pull",
+                          fill: str = "random") -> tuple[pd.DataFrame, dict]:
     """`n` prompts, exactly half per reference verdict, the two halves carrying the same summed
     `column` (by default GRPO's `pull`) as nearly as the rows allow.
 
@@ -165,15 +175,26 @@ def signal_balanced_train(rows: pd.DataFrame, n: int, seed: int = 42,
     first k tipped and the first half-k untipped. Every side's largest pull (k as large as the
     half and its tipped rows allow) is computed; the smaller of those is the target, and each
     side takes the k whose pull comes closest to it.
+
+    `fill="random"` (grpo-02, grpo-v3) keeps the shuffled order, so the untipped rows that fill
+    a half are a random draw, most of them without a sampled error. `fill="pull"` orders tipped
+    and untipped rows by `column`, highest first (ties in the shuffled order), so a half fills
+    with the rows that carry signal before any that carry none; among the k within
+    PULL_TOLERANCE of the target it takes the largest, keeping attribute-tipped rows first.
     """
     if n % 2:
         raise ValueError(f"n={n} cannot split exactly in half")
+    if fill not in ("random", "pull"):
+        raise ValueError(f"fill must be random or pull, not {fill!r}")
     rng = np.random.default_rng(seed)
     half, options = n // 2, {}
     for side in SIDES:
         pool = rows[rows["reference_decision"] == side]
         tipped = pool[pool["tipped"]].iloc[rng.permutation(int(pool["tipped"].sum()))]
         rest = pool[~pool["tipped"]].iloc[rng.permutation(int((~pool["tipped"]).sum()))]
+        if fill == "pull":
+            tipped = tipped.sort_values(column, ascending=False, kind="stable")
+            rest = rest.sort_values(column, ascending=False, kind="stable")
         low, high = max(0, half - len(rest)), min(half, len(tipped))
         if low > high:
             raise ValueError(f"only {len(pool)} {side}-reference rows for a half of {half}")
@@ -184,12 +205,18 @@ def signal_balanced_train(rows: pd.DataFrame, n: int, seed: int = 42,
     target = min(pulls.max() for *_, pulls in options.values())
     parts, plan = [], {f"target_{column}": round(float(target), 2)}
     for side, (tipped, rest, ks, pulls) in options.items():
-        i = int(np.argmin(np.abs(pulls - target)))
+        distance = np.abs(pulls - target)
+        i = int(np.argmin(distance))
+        if fill == "pull":
+            i = int(np.flatnonzero(distance <= max(distance[i], PULL_TOLERANCE * target))[-1])
         k = int(ks[i])
         chosen = pd.concat([tipped.iloc[:k], rest.iloc[:half - k]])
         parts.append(chosen)
         plan[side] = {"available": len(tipped) + len(rest), "available_tipped": len(tipped),
                       "drawn_tipped": k, "drawn_untipped": half - k,
+                      "available_informative": int((tipped[column] > 0).sum()
+                                                   + (rest[column] > 0).sum()),
+                      "drawn_informative": int((chosen[column] > 0).sum()),
                       column: round(float(pulls[i]), 2),
                       "error_mass": round(float(np.where(side == "hire",
                                                          1 - chosen["sft_hire_rate"],
