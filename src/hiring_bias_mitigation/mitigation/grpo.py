@@ -722,11 +722,43 @@ def train(cfg: dict, trainer_cls=None, reward_funcs=None, trainer_kwargs: dict |
     set_seed(cfg.get("seed", 42))
     C.wandb_init(cfg)
     output_dir = C.resolve_run_dir(cfg)
+    continuation = None
+    resume = None
+    if cfg.get("continuation"):
+        from ..utils.config import resolve_output_path
+        from . import grpo_continuation
+
+        continuation = grpo_continuation.load_contract(
+            cfg["continuation"], cfg, output_dir, resolve_output_path)
+        resume = grpo_continuation.choose_resume(
+            continuation, C.last_checkpoint(output_dir) if cfg.get("resume") else None)
     if C.is_main_process():
         C.wandb_resume(cfg, output_dir)
 
     splits = C.load_generated_dataset(cfg, cfg.get("data_kind", "grpo"))
     direct_contract = None
+    full_contract = None
+    if cfg.get("full_benchmark_monitor"):
+        from ..utils.config import resolve_output_path
+        from . import full_benchmark_monitor
+
+        if continuation is None:
+            raise ValueError("full_benchmark_monitor is only authorized for the continuation pilot")
+        if cfg.get("benchmark_dev_monitor") or cfg.get("margin_monitor"):
+            raise ValueError("full_benchmark_monitor replaces the dev and projection monitors")
+        if int(cfg.get("save_steps", 25)) != 5 or int(cfg.get("max_steps", -1)) != 500:
+            raise ValueError("full benchmark pilot requires save_steps=5 and absolute max_steps=500")
+        full_contract = full_benchmark_monitor.load_contract(
+            cfg["full_benchmark_monitor"], cfg.get("sft_checkpoint"), resolve_output_path)
+        frozen_source = full_contract["manifest"]["continuation_source"]
+        current_source = continuation["settings"]
+        if (Path(resolve_output_path(frozen_source["source_checkpoint"])).resolve()
+                != continuation["source"] or any(
+                    frozen_source[key] != current_source[key]
+                    for key in ("source_step", "target_learning_rate", "source_learning_rate",
+                                "max_steps", "world_size", "source_files_sha256"))):
+            raise ValueError("full benchmark monitor and continuation source identities differ")
+        full_benchmark_monitor.validate_train_isolation(full_contract, splits["train"])
     if cfg.get("benchmark_dev_monitor"):
         from ..utils.config import resolve_output_path
         from .benchmark_dev_monitor import (
@@ -761,6 +793,11 @@ def train(cfg: dict, trainer_cls=None, reward_funcs=None, trainer_kwargs: dict |
 
     args = GRPOConfig(**base_args,
                       **C.supported_kwargs(GRPOConfig, grpo_config_candidates(cfg), "GRPOConfig"))
+    continuation_callback = None
+    if continuation is not None:
+        source_args = grpo_continuation.load_source_arguments(continuation)
+        grpo_continuation.validate_arguments(continuation, args, source_args)
+        continuation_callback = grpo_continuation.callback_class()(continuation, resume, source_args)
     trainer = (trainer_cls or GRPOTrainer)(
         model=model,
         reward_funcs=reward_funcs or REWARD_FUNCS,
@@ -768,7 +805,8 @@ def train(cfg: dict, trainer_cls=None, reward_funcs=None, trainer_kwargs: dict |
         train_dataset=train_ds,
         processing_class=tokenizer,
         peft_config=C.peft_config(cfg),
-        callbacks=C.memory_guard_callbacks(cfg) + C.cost_callbacks(),
+        callbacks=C.memory_guard_callbacks(cfg) + C.cost_callbacks()
+        + ([continuation_callback] if continuation_callback is not None else []),
         **(trainer_kwargs or {}),
     )
     policy = trainer.accelerator.unwrap_model(trainer.model)
@@ -784,7 +822,7 @@ def train(cfg: dict, trainer_cls=None, reward_funcs=None, trainer_kwargs: dict |
         trainer.add_callback(_sync_validation_class()(
             trainer, check["prompt"].tolist(), output_dir,
             int(cfg.get("sync_validate_steps", 0)), chat_kwargs))
-        if direct_contract is None:
+        if direct_contract is None and full_contract is None:
             band = cfg.get("hire_rate_band", [0.20, 0.40])
             monitor = _decision_monitor_class()(
                 eval_rows(rows, int(cfg.get("decision_eval_rows", 256)), seed), tokenizer,
@@ -812,6 +850,19 @@ def train(cfg: dict, trainer_cls=None, reward_funcs=None, trainer_kwargs: dict |
         trainer.add_callback(direct_monitor)
         log.info("direct benchmark-dev monitor on %d rows; legacy projection monitors disabled",
                  len(direct_contract["rows"]))
+
+    full_monitor = None
+    if full_contract is not None:
+        def score_full_local(rows):
+            return full_benchmark_monitor.served_decisions(
+                trainer.vllm_generation, tokenizer, rows, full_contract["manifest"]["scorer"])
+
+        # The callback shards rows across all four ranks; score_full_local must not shard.
+        full_monitor = full_benchmark_monitor.callback_class()(
+            full_contract, score_full_local, trainer.vllm_generation.sync_weights, output_dir)
+        trainer.add_callback(full_monitor)
+        log.info("direct full benchmark pilot monitor on %d rows; checks every five updates",
+                 len(full_contract["rows"]))
 
     margin = None
     if cfg.get("margin_monitor"):
@@ -845,16 +896,26 @@ def train(cfg: dict, trainer_cls=None, reward_funcs=None, trainer_kwargs: dict |
         "n_train": len(train_ds),
         "sft_checkpoint": cfg.get("sft_checkpoint"),
     }
+    if continuation is not None:
+        manifest["continuation"] = {
+            **continuation["settings"], "identity_sha256": continuation["identity_sha256"],
+            "resume_from_checkpoint": resume, "rng_limitation": continuation["rng_limitation"],
+        }
+        manifest["training_arguments"] = args.to_dict()
     if direct_contract is not None:
         manifest["benchmark_dev_monitor"] = direct_contract["identity"]
         manifest["benchmark_dev_monitor_identity_sha256"] = direct_contract["identity_sha256"]
+    if full_contract is not None:
+        manifest["full_benchmark_monitor"] = full_contract["identity"]
+        manifest["full_benchmark_monitor_identity_sha256"] = full_contract["identity_sha256"]
     if manifest_extra is not None:
         manifest.update(manifest_extra(args))
     # Before training as well: a run cut by a time limit never reaches the final write, and
     # its checkpoint-N adapters need `sft_checkpoint` to be merged with their SFT parent.
     if C.is_main_process():
         C.write_run_manifest(cfg, output_dir, {**manifest, "status": "training"})
-    resume = C.last_checkpoint(output_dir) if cfg.get("resume") else None
+    if continuation is None:
+        resume = C.last_checkpoint(output_dir) if cfg.get("resume") else None
     if resume:
         log.info("resuming from %s", resume)
     log.info("%s %s on %d prompts x %d generations", manifest["objective"].upper(),
@@ -862,7 +923,8 @@ def train(cfg: dict, trainer_cls=None, reward_funcs=None, trainer_kwargs: dict |
     trainer.train(resume_from_checkpoint=resume)
     trainer.save_model(str(output_dir))
     # A trainer that stops itself (dapo.DAPOTrainer, when its prompts run dry) says why.
-    status = (direct_monitor.reason if direct_monitor and direct_monitor.aborted
+    status = (full_monitor.reason if full_monitor and full_monitor.aborted
+              else direct_monitor.reason if direct_monitor and direct_monitor.aborted
               else "aborted: hire rate left the band" if monitor and monitor.aborted
               else margin.reason if margin and margin.aborted
               else getattr(trainer, "stop_reason", None) or "done")
