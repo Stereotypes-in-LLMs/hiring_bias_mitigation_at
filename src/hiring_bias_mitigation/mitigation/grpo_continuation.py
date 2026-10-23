@@ -163,6 +163,27 @@ def choose_resume(contract: dict, latest_checkpoint: str | None) -> str:
     return str(latest)
 
 
+def initialize_tracking_after_resume(accelerator, initialize_tracking, broadcast_error) -> None:
+    """Write tracking metadata only after every rank has checked the fresh output.
+
+    Call after Trainer construction, when Accelerator has initialized distributed
+    synchronization. W&B first sets up its run in on_train_begin, so the run ID is
+    still available before that callback while no rank can fail its empty check
+    on another rank's new wandb_run_id file.
+    """
+    accelerator.wait_for_everyone()
+    error = None
+    if accelerator.is_main_process:
+        try:
+            initialize_tracking()
+        except Exception as exc:
+            error = f"{type(exc).__name__}: {exc}"
+    error = broadcast_error(error)
+    if error is not None:
+        raise RuntimeError(f"continuation tracking initialization failed: {error}")
+    accelerator.wait_for_everyone()
+
+
 def validate_arguments(contract: dict, args, source_args) -> dict:
     """Only the declared LR, run length and monitoring/checkpoint settings may change."""
     changes = {}

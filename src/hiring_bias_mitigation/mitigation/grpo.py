@@ -732,7 +732,7 @@ def train(cfg: dict, trainer_cls=None, reward_funcs=None, trainer_kwargs: dict |
             cfg["continuation"], cfg, output_dir, resolve_output_path)
         resume = grpo_continuation.choose_resume(
             continuation, C.last_checkpoint(output_dir) if cfg.get("resume") else None)
-    if C.is_main_process():
+    if continuation is None and C.is_main_process():
         C.wandb_resume(cfg, output_dir)
 
     splits = C.load_generated_dataset(cfg, cfg.get("data_kind", "grpo"))
@@ -809,6 +809,9 @@ def train(cfg: dict, trainer_cls=None, reward_funcs=None, trainer_kwargs: dict |
         + ([continuation_callback] if continuation_callback is not None else []),
         **(trainer_kwargs or {}),
     )
+    if continuation is not None:
+        grpo_continuation.initialize_tracking_after_resume(
+            trainer.accelerator, lambda: C.wandb_resume(cfg, output_dir), _broadcast)
     policy = trainer.accelerator.unwrap_model(trainer.model)
     install_weight_sync(trainer.vllm_generation, policy)
 
