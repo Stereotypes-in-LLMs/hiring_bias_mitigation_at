@@ -4,10 +4,11 @@
 job at a time, and replacement of the semisynthetic projection monitor with direct measurement
 on a benchmark dev split. No training is authorized by this protocol.
 
-The candidate split and parent decisions are frozen. The callback is prepared, but the proposed
-dev stopping policy has not been validated. In particular, the cached final checkpoint is
-above the dev -8 pp line while failing the full-benchmark -10 pp guardrail. Do not describe the
-new monitor as a verified guarantee of that final guardrail.
+The candidate split and parent decisions remain frozen. Job 5127818 completed the trajectory
+and the proposed dev stopping policy **failed the retrospective check**: full first fails its
+10 pp guardrail at retained step 150, while dev first triggers its 8 pp alarm at 400. The
+callback is implemented, but this fixed dev policy must not be enabled as the sole full-safety
+monitor. The manifest remains `training_authorized=false`; no training is authorized.
 
 The small Git receipt is `configs/analysis/benchmark_dev_monitor_v1.json`. It pins the split,
 manifest, parent model and cached checks. Large row files remain under
@@ -106,8 +107,9 @@ needed. No split ID was changed after reading these results.
 | final-571 | 47.62319 | -10.10628 | 48.20009 | -7.90089 | -13.70455 |
 
 Neither endpoint alone triggers the frozen dev 8 pp line. Final-571 nevertheless fails the
-full 10 pp guardrail. The full trajectory must establish whether an earlier irreversible dev
-stop would have triggered. Until then, the policy remains unvalidated. Direct measurement
+full 10 pp guardrail. At the time of this cached endpoint check the earlier trajectory was pending.
+The completed replay below now establishes a dev stop at 400, which is too late to prevent
+the first observed full failure at 150. Direct measurement
 removes the semisynthetic projection assumption; it does not remove dev/remainder differences.
 Do not choose a different split to make this observed discrepancy disappear.
 
@@ -115,7 +117,7 @@ Checkpoint-525 still passes the original full 10 pp guardrail. Its recorded matc
 change, -1.02 pp with 95% interval [-1.99, -0.12], remains a valid description of that audit.
 It was selected after the final adapter audit, so the conclusion remains exploratory under
 `EVAL_STANDARD` rule 3. Full delta below -8 pp does not mean its dev delta is below -8 pp.
-Eligibility under the new dev rule depends on the whole earlier trajectory, which is pending.
+The completed earlier trajectory below rules out selecting 525 under the new dev stopping policy.
 TPR-only inference cannot independently establish a fairness gain for any newly selected model.
 
 Plot full, dev and historical-remainder generated TPR in optimizer-step order. Show both the
@@ -123,6 +125,24 @@ Plot full, dev and historical-remainder generated TPR in optimizer-step order. S
 crossing and its predecessor. Missing intermediate checkpoints bracket the crossing; they do
 not identify an exact stopping step. Any policy revision informed by this trajectory must be
 reported as development, not independent validation.
+
+## Completed checkpoint replay, 2026-10-23
+
+See `docs/GRPO_CHECKPOINT_TRAJECTORY.md` and the experiment's `trajectory.json` and
+`threshold_review.json` for all 20 checkpoints. First retained crossings are full 8 pp = 150,
+full 10 pp failure = 150, dev 8 pp = 400, and dev 10 pp failure = 550. At 150 the full/dev
+deltas are -10.21256/-7.80739 pp. Dev 8 pp therefore missed the first observed full failure.
+
+Checkpoint 525 cannot be selected after the dev rule's first stop at 400, despite its later
+recovery. Its original full-10 TPR pass and historical exploratory result remain recorded.
+Keep 8 pp as the early-stop target and 10 pp as the final guardrail; relaxing dev to 10 pp
+would stop still later and does not solve the mismatch. The current dev bank is not a
+validated sole safety gate. Full 8 pp also first triggers at 150, after the 10 pp guardrail
+has already failed, so the 25-step schedule provides no guaranteed 2 pp warning buffer.
+
+Steps 25/50/75 were not retained. All first-crossing statements are limited to the retained
+checkpoints; the full earlier history and behavior between samples remain unknown. No
+split IDs, labels, published historical results or training authorization were changed.
 
 ## Reproducing the frozen bank
 
