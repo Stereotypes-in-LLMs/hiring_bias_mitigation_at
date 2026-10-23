@@ -5,6 +5,20 @@
 本提交冻结来源、候选人顺序和分区、统一标注程序、目标权重、8 个模型及候选告警规则。
 它没有生成新标签，没有运行新模型评分，也没有启用训练。
 
+## 2026-10-23：后续改用 benchmark dev 直接监控
+
+用户随后明确改为：仅对 GRPO-v3-all 各 checkpoint 做 benchmark 推理，一次提交一个作业，
+并以 benchmark dev 切分上的直接 TPR 测量替代投影监控。
+当前入口见 `docs/BENCHMARK_DEV_MONITOR.md` 和
+`configs/analysis/benchmark_dev_monitor_v1.json`。候选人划分在读取新的 checkpoint 结果前冻结；
+历史 benchmark 已参与开发，剩余分区不是独立未见 test。新 dev 8 pp 停线尚未验证，
+原 full benchmark 10 pp 最终护栏保持不变；checkpoint-525 的结论仍属探索性。
+
+下文的 Djinni 独立候选补充、统一二分类盲标和投影验证方案保留为历史记录及未来标签研究。
+本次直接 dev 实验不继续推进它，也不把未完成的盲标或投影校准当作已经通过。
+**RJDB 的 reject 锚点可疑**这一结论保留，仍待按统一协议盲审确认。
+本次没有授权训练，直接监控的 manifest 保持 `training_authorized=false`。
+
 ## 现有监控怎么计算，哪里需要修
 
 `mitigation/grpo.py::MarginMonitorCallback` 在更新前读取 SFT-v3 margin，每 25 步读取当前

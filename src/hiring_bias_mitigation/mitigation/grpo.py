@@ -726,6 +726,25 @@ def train(cfg: dict, trainer_cls=None, reward_funcs=None, trainer_kwargs: dict |
         C.wandb_resume(cfg, output_dir)
 
     splits = C.load_generated_dataset(cfg, cfg.get("data_kind", "grpo"))
+    direct_contract = None
+    if cfg.get("benchmark_dev_monitor"):
+        from ..utils.config import resolve_output_path
+        from .benchmark_dev_monitor import (
+            load_contract,
+            require_training_ready,
+            validate_train_isolation,
+        )
+
+        if cfg.get("margin_monitor"):
+            raise ValueError("benchmark_dev_monitor replaces margin_monitor; configure only one")
+        direct_contract = load_contract(cfg["benchmark_dev_monitor"], cfg.get("sft_checkpoint"),
+                                        resolve_output_path)
+        require_training_ready(direct_contract)
+        if "candidate_id" not in splits["train"].column_names:
+            raise ValueError("benchmark_dev_monitor requires training candidate IDs")
+        validate_train_isolation(
+            direct_contract["rows"], splits["train"]["candidate_id"],
+            direct_contract["manifest"]["split"]["candidate_ids"])
     model, tokenizer = C.load_model_and_tokenizer(cfg)
     chat_kwargs = cfg.get("chat_template_kwargs")
     train_ds = render_prompts(splits["train"], tokenizer, chat_kwargs)
@@ -765,18 +784,34 @@ def train(cfg: dict, trainer_cls=None, reward_funcs=None, trainer_kwargs: dict |
         trainer.add_callback(_sync_validation_class()(
             trainer, check["prompt"].tolist(), output_dir,
             int(cfg.get("sync_validate_steps", 0)), chat_kwargs))
-        band = cfg.get("hire_rate_band", [0.20, 0.40])
-        monitor = _decision_monitor_class()(
-            eval_rows(rows, int(cfg.get("decision_eval_rows", 256)), seed), tokenizer,
-            output_dir, int(cfg.get("decision_eval_steps", 25)), (float(band[0]), float(band[1])),
-            chat_kwargs,
-            int(cfg.get("decision_eval_max_new_tokens", 96)),
-            vllm_generation=trainer.vllm_generation,
-            sft_benchmark=cfg.get("sft_benchmark"))
-        trainer.add_callback(monitor)
+        if direct_contract is None:
+            band = cfg.get("hire_rate_band", [0.20, 0.40])
+            monitor = _decision_monitor_class()(
+                eval_rows(rows, int(cfg.get("decision_eval_rows", 256)), seed), tokenizer,
+                output_dir, int(cfg.get("decision_eval_steps", 25)),
+                (float(band[0]), float(band[1])),
+                chat_kwargs,
+                int(cfg.get("decision_eval_max_new_tokens", 96)),
+                vllm_generation=trainer.vllm_generation,
+                sft_benchmark=cfg.get("sft_benchmark"))
+            trainer.add_callback(monitor)
     else:
-        log.warning("no validation split: the vLLM sync is NOT validated and no hire-rate "
-                    "monitor runs")
+        log.warning("no validation split: the vLLM sync is NOT validated; legacy hire-rate "
+                    "monitor is unavailable")
+
+    direct_monitor = None
+    if direct_contract is not None:
+        from .benchmark_dev_monitor import callback_class, served_decisions
+
+        def score_benchmark_dev(rows):
+            return served_decisions(trainer.vllm_generation, tokenizer, rows,
+                                    direct_contract["manifest"]["scorer"])
+
+        direct_monitor = callback_class()(
+            direct_contract, score_benchmark_dev, trainer.vllm_generation.sync_weights, output_dir)
+        trainer.add_callback(direct_monitor)
+        log.info("direct benchmark-dev monitor on %d rows; legacy projection monitors disabled",
+                 len(direct_contract["rows"]))
 
     margin = None
     if cfg.get("margin_monitor"):
@@ -810,6 +845,9 @@ def train(cfg: dict, trainer_cls=None, reward_funcs=None, trainer_kwargs: dict |
         "n_train": len(train_ds),
         "sft_checkpoint": cfg.get("sft_checkpoint"),
     }
+    if direct_contract is not None:
+        manifest["benchmark_dev_monitor"] = direct_contract["identity"]
+        manifest["benchmark_dev_monitor_identity_sha256"] = direct_contract["identity_sha256"]
     if manifest_extra is not None:
         manifest.update(manifest_extra(args))
     # Before training as well: a run cut by a time limit never reaches the final write, and
@@ -824,7 +862,8 @@ def train(cfg: dict, trainer_cls=None, reward_funcs=None, trainer_kwargs: dict |
     trainer.train(resume_from_checkpoint=resume)
     trainer.save_model(str(output_dir))
     # A trainer that stops itself (dapo.DAPOTrainer, when its prompts run dry) says why.
-    status = ("aborted: hire rate left the band" if monitor and monitor.aborted
+    status = (direct_monitor.reason if direct_monitor and direct_monitor.aborted
+              else "aborted: hire rate left the band" if monitor and monitor.aborted
               else margin.reason if margin and margin.aborted
               else getattr(trainer, "stop_reason", None) or "done")
     if C.is_main_process():
