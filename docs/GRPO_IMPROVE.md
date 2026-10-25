@@ -273,6 +273,16 @@ Both arms start from SFT-v3 for 200 steps and are read as in section 3, against 
 - **Check before the run.** A three-step smoke on `debug` (`r2a_anchor_smoke.yaml`) for the
   anchor's forward and backward under DDP. CPU tests: `tests/test_grpo_operating_anchor.py`.
 - **Cost.** About 12 GPU-h with the smoke; the anchor adds 4 short forwards per micro-step.
+- **Amendment after a failure, before any result (2026-10-25, 15:30).** Run 5141612 hung at step
+  2: a DDP bucket all-reduce that rank 3 never reached, NCCL timeout, 2.72 GPU-h lost; nothing
+  is evaluated. The penalty was added to each micro-step's loss with its forward through the
+  unwrapped module beside DDP's; the three-step smoke (5141458, 0.79 GPU-h) had passed. The
+  anchor is now a callback after gradient clipping (`grpo_operating_anchor.OperatingAnchorCallback`):
+  its gradient comes from `torch.autograd.grad`, which DDP's hooks never see, and is summed over
+  ranks with one all_reduce per step. `rows_per_step` now counts rows per optimizer step and rank:
+  8, so 32 rows a step against the first version's 128, at a quarter of its forward cost. The
+  weight, rows, hypothesis and criteria are unchanged. A six-step smoke checks it first. This
+  is retry 1 of 3.
 
 ### R2-b — a third of the learning rate (parameter)
 

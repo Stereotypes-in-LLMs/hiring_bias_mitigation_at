@@ -1,6 +1,6 @@
 # Hand-written -- NOT produced by generate_experiment_configs.py.
 #
-# Smoke for R2-a (r2a_anchor.yaml): three steps on debug, to check the anchor's forward and
+# Smoke for R2-a (r2a_anchor.yaml): six steps on debug, to check the anchor's forward and
 # backward under DDP before the real run. Not a result.
 stage: grpo
 objective: grpo
@@ -35,7 +35,7 @@ log_completions: false
 # Optimisation: 8 completions per GPU per micro-step x 4 GPUs x 8 accumulation = 256
 # completions = 16 prompts x 16 per step, GRPO-v3's 16 prompts per step.
 num_train_epochs: 1
-max_steps: 3
+max_steps: 6
 learning_rate: 3.0e-05
 lr_scheduler_type: constant_with_warmup
 warmup_steps: 5
@@ -72,4 +72,4 @@ gradient_checkpointing_kwargs:
 operating_point_anchor:
   rows: artifacts/semisynthetic-v3/grpo-anchor-djinni-band/anchor.parquet
   weight: 10.0
-  rows_per_step: 4
+  rows_per_step: 8

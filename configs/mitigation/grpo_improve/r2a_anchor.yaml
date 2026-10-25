@@ -76,4 +76,4 @@ gradient_checkpointing_kwargs:
 operating_point_anchor:
   rows: artifacts/semisynthetic-v3/grpo-anchor-djinni-band/anchor.parquet
   weight: 10.0
-  rows_per_step: 4
+  rows_per_step: 8

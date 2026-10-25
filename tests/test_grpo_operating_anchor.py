@@ -13,22 +13,21 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
 
 from hiring_bias_mitigation.mitigation.grpo_operating_anchor import (  # noqa: E402
     anchor_penalty,
-    trainer_class,
+    callback_class,
 )
 
 HIRE, REJECT, VOCAB = 1, 2, 4
 
 
 class Toy(torch.nn.Module):
-    """Logits from a per-token table, plus a trainable 'adapter' bias on hire."""
+    """Logits from a fixed per-token table, plus a trainable 'adapter' bias on hire."""
 
     def __init__(self):
         super().__init__()
-        self.table = torch.nn.Parameter(torch.zeros(10, VOCAB), requires_grad=False)
-        self.table.data[:, HIRE] = torch.linspace(-1, 1, 10)
+        self.register_buffer("table", torch.zeros(10, VOCAB))
+        self.table[:, HIRE] = torch.linspace(-1, 1, 10)
         self.adapter = torch.nn.Parameter(torch.zeros(()))
         self.enabled = True
-        self.training = True
 
     def forward(self, input_ids, logits_to_keep=None):
         logits = self.table[input_ids].clone()
@@ -45,21 +44,16 @@ class Toy(torch.nn.Module):
             self.enabled = True
 
 
-class Tok:
-    def __call__(self, text, add_special_tokens=False, return_tensors="pt"):
-        return {"input_ids": torch.tensor([[int(c) for c in text]])}
+def tok(text, add_special_tokens=False, return_tensors="pt"):
+    return {"input_ids": torch.tensor([[int(c) for c in text]])}
 
 
-class FakeBase:
-    def __init__(self, model):
-        self.model = model
-        self.processing_class = Tok()
-        self.accelerator = SimpleNamespace(process_index=0, device="cpu",
-                                           unwrap_model=lambda m: m)
-        self._metrics = {"train": defaultdict(list)}
-
-    def compute_loss(self, model, inputs, return_outputs=False, num_items_in_batch=None):
-        return torch.zeros(())
+def make(weight=10.0, k=3):
+    metrics = defaultdict(list)
+    cb = callback_class()(tokenizer=tok, prompts=["01", "05", "09"], weight=weight,
+                          rows_per_step=k, seed=0, token_ids=(HIRE, REJECT), rank=0, world=1,
+                          metrics=metrics)
+    return cb, metrics
 
 
 def test_penalty_is_the_squared_mean_shift():
@@ -67,28 +61,40 @@ def test_penalty_is_the_squared_mean_shift():
     assert torch.isclose(shift, torch.tensor(0.1)) and torch.isclose(pen, torch.tensor(0.1))
 
 
-def test_no_penalty_at_the_reference_and_a_restoring_gradient_away_from_it():
-    model = Toy()
-    cls = trainer_class(FakeBase, prompts=["01", "05", "09"], weight=10.0, rows_per_step=2,
-                        seed=0, token_ids=(HIRE, REJECT))
-    trainer = cls(model)
-    assert float(trainer.compute_loss(model, {})) == 0.0
-    model.adapter.data.fill_(1.0)  # the policy now hires more than SFT on every prompt
-    loss = trainer.compute_loss(model, {})
-    loss.backward()
-    assert float(loss) > 0 and model.adapter.grad > 0  # descent lowers the hire bias
-    assert trainer._metrics["train"]["anchor/shift"][-1] > 0
-    # the reference was cached with the adapter disabled
-    assert all(0 < v < 1 for v in trainer._anchor_ref.values())
+def test_no_gradient_at_the_reference():
+    model, (cb, metrics) = Toy(), make()
+    cb.on_pre_optimizer_step(None, None, None, model=model)
+    assert float(model.adapter.grad) == 0.0 and metrics["anchor/shift"] == [0.0]
 
 
-def test_reference_does_not_move_with_the_policy():
-    model = Toy()
-    cls = trainer_class(FakeBase, prompts=["01", "05", "09"], weight=1.0, rows_per_step=3,
-                        seed=0, token_ids=(HIRE, REJECT))
-    trainer = cls(model)
-    trainer.compute_loss(model, {})
-    before = dict(trainer._anchor_ref)
+def test_gradient_matches_autograd_of_the_penalty_and_adds_to_existing_grad():
+    model, (cb, metrics) = Toy(), make(weight=10.0, k=3)
+    model.adapter.data.fill_(1.0)  # the policy hires more than SFT on every prompt
+    model.adapter.grad = torch.tensor(0.5)
+    cb.on_pre_optimizer_step(None, None, None, model=model)
+    # the same penalty by plain autograd
+    ref_model = Toy()
+    ref_model.adapter.data.fill_(1.0)
+    ids = [torch.tensor([[0, 1]]), torch.tensor([[0, 5]]), torch.tensor([[0, 9]])]
+
+    def prob(m, x):
+        lg = m(x).logits[0, -1]
+        return torch.sigmoid(lg[HIRE] - lg[REJECT])
+
+    with ref_model.disable_adapter():
+        p_ref = torch.stack([prob(ref_model, x) for x in ids]).detach()
+    pen, _ = anchor_penalty(torch.stack([prob(ref_model, x) for x in ids]), p_ref, 10.0)
+    pen.backward()
+    assert torch.isclose(model.adapter.grad, 0.5 + ref_model.adapter.grad, atol=1e-6)
+    assert model.adapter.grad > 0.5  # descent lowers the hire bias
+    assert metrics["anchor/shift"][-1] > 0
+
+
+def test_reference_is_cached_and_does_not_move_with_the_policy():
+    model, (cb, _) = Toy(), make()
+    cb.on_pre_optimizer_step(None, None, None, model=model)
+    before = dict(cb.ref)
     model.adapter.data.fill_(-2.0)
-    trainer.compute_loss(model, {})
-    assert trainer._anchor_ref == before
+    model.adapter.grad = None
+    cb.on_pre_optimizer_step(None, None, None, model=model)
+    assert cb.ref == before
