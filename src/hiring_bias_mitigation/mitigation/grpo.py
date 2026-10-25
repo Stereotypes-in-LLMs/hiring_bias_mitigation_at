@@ -736,6 +736,30 @@ def train(cfg: dict, trainer_cls=None, reward_funcs=None, trainer_kwargs: dict |
         C.wandb_resume(cfg, output_dir)
 
     splits = C.load_generated_dataset(cfg, cfg.get("data_kind", "grpo"))
+    diagnostics_settings = cfg.get("rollout_diagnostics") or {}
+    if not isinstance(diagnostics_settings, dict) or set(diagnostics_settings) - {"enabled"}:
+        raise ValueError("rollout_diagnostics accepts only an enabled boolean")
+    detailed_diagnostics = diagnostics_settings.get("enabled", False)
+    if not isinstance(detailed_diagnostics, bool):
+        raise ValueError("rollout_diagnostics.enabled must be a boolean")
+    anchor_metadata_receipt = None
+    diagnostics_strata = ()
+    if detailed_diagnostics:
+        if trainer_cls is not None:
+            raise ValueError("detailed rollout diagnostics support the default GRPO trainer only")
+        from ..utils.config import resolve_output_path
+        from .grpo_anchor_metadata import attach_anchor_metadata
+
+        anchor_metadata_receipt = {"schema": "grpo-anchor-metadata-splits-v1", "splits": {}}
+        for split in ("train", "validation"):
+            if split in splits:
+                splits[split], receipt = attach_anchor_metadata(
+                    splits[split], split=split, resolve_path=resolve_output_path)
+                anchor_metadata_receipt["splits"][split] = receipt
+        diagnostics_strata = sorted({
+            f"{row['reference_decision']}/{row['winning_votes']}_of_{row['decided_draws']}"
+            for split in anchor_metadata_receipt["splits"] for row in splits[split]
+        })
     direct_contract = None
     full_contract = None
     if cfg.get("full_benchmark_monitor"):
@@ -809,6 +833,11 @@ def train(cfg: dict, trainer_cls=None, reward_funcs=None, trainer_kwargs: dict |
         + ([continuation_callback] if continuation_callback is not None else []),
         **(trainer_kwargs or {}),
     )
+    from .grpo_diagnostics import install as install_count_diagnostics
+
+    count_diagnostics_receipt = install_count_diagnostics(
+        trainer, parse_decision=lambda completion, lang: parse_output(completion, lang).decision,
+        output_dir=output_dir, detailed=detailed_diagnostics, strata=diagnostics_strata)
     if continuation is not None:
         grpo_continuation.initialize_tracking_after_resume(
             trainer.accelerator, lambda: C.wandb_resume(cfg, output_dir), _broadcast)
@@ -899,6 +928,9 @@ def train(cfg: dict, trainer_cls=None, reward_funcs=None, trainer_kwargs: dict |
         "n_train": len(train_ds),
         "sft_checkpoint": cfg.get("sft_checkpoint"),
     }
+    manifest["rollout_diagnostics"] = count_diagnostics_receipt
+    if anchor_metadata_receipt is not None:
+        manifest["rollout_diagnostics"]["anchor_metadata"] = anchor_metadata_receipt
     if continuation is not None:
         manifest["continuation"] = {
             **continuation["settings"], "identity_sha256": continuation["identity_sha256"],

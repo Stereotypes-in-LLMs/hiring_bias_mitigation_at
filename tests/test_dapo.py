@@ -379,12 +379,32 @@ def _fake_training(monkeypatch, tmp_path):
             self.model = kwargs["model"]
             self.accelerator = SimpleNamespace(unwrap_model=lambda m: m)
             self.vllm_generation = None
+            self.args = kwargs["args"]
+            self.num_generations = self.args.num_generations
+            self.use_vllm = self.args.use_vllm
+            self.vllm_importance_sampling_correction = self.args.vllm_importance_sampling_correction
+            self.vllm_importance_sampling_mode = self.args.vllm_importance_sampling_mode
+            self.vllm_importance_sampling_clip_max = self.args.vllm_importance_sampling_clip_max
+            self.vllm_importance_sampling_clip_min = self.args.vllm_importance_sampling_clip_min
+            self.tools = self.environments = None
 
         def add_callback(self, callback):
             built.setdefault("callbacks", []).append(callback)
 
+        def _calculate_rewards(self, inputs, prompts, completions, completion_ids_list):
+            raise AssertionError("this wiring test must not evaluate rewards")
+
+        def _generate_and_score_completions(self, inputs):
+            raise AssertionError("this wiring test must not generate completions")
+
+        def log(self, logs, start_time=None):
+            raise AssertionError("this wiring test must not execute trainer logging")
+
         def train(self, resume_from_checkpoint=None):
             built["resume"] = resume_from_checkpoint
+            built["count_diagnostics_installed"] = self._count_diagnostics_installed
+            assert self._calculate_rewards.__func__ is not FakeTrainer._calculate_rewards
+            assert self.log.__func__ is not FakeTrainer.log
 
         def save_model(self, path):
             pass
@@ -421,6 +441,9 @@ def test_grpo_train_defaults_are_grpos_and_dapo_records_its_objective(monkeypatc
     assert built["reward_funcs"] == G.REWARD_FUNCS and "dynamic_sampling" not in built
     assert manifest["objective"] == "grpo" and manifest["mitigation_family"] == "grpo"
     assert manifest["status"] == "done" and manifest["beta"] == 0.04
+    assert built["count_diagnostics_installed"]
+    assert manifest["rollout_diagnostics"]["basic_count_weighted_logging"] is True
+    assert manifest["rollout_diagnostics"]["detailed"] is False
     assert manifest["sft_checkpoint"] == "outputs/sft/qwen3.5-9b_en_only_sft_v3_additional"
 
     built.clear()
@@ -436,6 +459,9 @@ def test_grpo_train_defaults_are_grpos_and_dapo_records_its_objective(monkeypatc
     assert manifest["loss_type"] == "dapo" and manifest["steps_per_generation"] == 16
     assert manifest["sft_checkpoint"] == "outputs/sft/qwen3.5-9b_en_only_sft_v3_additional"
     assert manifest["status"] == "done"
+    assert built["count_diagnostics_installed"]
+    assert manifest["rollout_diagnostics"]["basic_count_weighted_logging"] is True
+    assert manifest["rollout_diagnostics"]["detailed"] is False
 
 
 def test_grpo_train_adds_the_margin_monitor_on_the_builds_monitor_rows(monkeypatch, tmp_path):
@@ -455,6 +481,73 @@ def test_grpo_train_adds_the_margin_monitor_on_the_builds_monitor_rows(monkeypat
     monitors = [c for c in built["callbacks"] if type(c).__name__ == "MarginMonitorCallback"]
     assert len(monitors) == 1 and monitors[0].prompts == ["a", "b", "c"]
     assert monitors[0].every == 25 and monitors[0].tpr_drop_stop == 0.08
+    assert built["count_diagnostics_installed"]
+
+
+def test_detailed_diagnostics_attach_both_splits_before_render_and_record_sources(
+    monkeypatch, tmp_path
+):
+    import trl
+    from datasets import Dataset
+
+    from hiring_bias_mitigation.mitigation import (
+        decision_eval,
+        grpo_anchor_metadata,
+        grpo_diagnostics,
+    )
+
+    trainer_cls, built = _fake_training(monkeypatch, tmp_path)
+    trainer_cls.__name__ = "GRPOTrainer"
+    monkeypatch.setattr(trl, "GRPOTrainer", trainer_cls)
+    splits = {
+        "train": Dataset.from_dict({"prompt": ["train"] * 32,
+                                    "reference_decision": ["hire"] * 32}),
+        "validation": Dataset.from_dict({"prompt": ["validation"] * 16,
+                                         "reference_decision": ["reject"] * 16}),
+    }
+    monkeypatch.setattr(C, "load_generated_dataset", lambda cfg, kind: splits)
+    events = []
+
+    def attach(dataset, *, split, resolve_path):
+        events.append("attach_" + split)
+        votes, draws = (5, 8) if split == "train" else (4, 6)
+        dataset = dataset.add_column("prompt_id", [f"{split}-{i}" for i in range(len(dataset))])
+        dataset = dataset.add_column("winning_votes", [votes] * len(dataset))
+        dataset = dataset.add_column("decided_draws", [draws] * len(dataset))
+        return dataset, {"split": split, "rows": len(dataset), "source_sha256": split + "-sha"}
+
+    def render(dataset, tokenizer, kwargs):
+        events.append("render")
+        assert {"prompt_id", "winning_votes", "decided_draws"} <= set(dataset.column_names)
+        return dataset
+
+    original_install = grpo_diagnostics.install
+
+    def record_install(trainer, **kwargs):
+        built["diagnostics_strata"] = kwargs["strata"]
+        return original_install(trainer, **kwargs)
+
+    monkeypatch.setattr(grpo_anchor_metadata, "attach_anchor_metadata", attach)
+    monkeypatch.setattr(grpo_diagnostics, "install", record_install)
+    monkeypatch.setattr(G, "render_prompts", render)
+    monkeypatch.setattr(decision_eval, "eval_rows", lambda rows, count, seed: rows)
+    monkeypatch.setattr(G, "_sync_validation_class", lambda: lambda *args, **kwargs: object())
+    monkeypatch.setattr(G, "_decision_monitor_class", lambda: lambda *args, **kwargs:
+                        SimpleNamespace(aborted=False))
+    cfg = _cpu_cfg(GRPO_CONFIG, tmp_path)
+    cfg["rollout_diagnostics"] = {"enabled": True}
+    G.train(cfg)
+    assert events == ["attach_train", "attach_validation", "render"]
+    assert built["diagnostics_strata"] == ["hire/5_of_8", "reject/4_of_6"]
+    assert splits["validation"]["prompt_id"][0] == "validation-0"
+    assert built["count_diagnostics_installed"]
+    manifest = json.loads((tmp_path / "run_config.json").read_text())
+    metadata = manifest["rollout_diagnostics"]["anchor_metadata"]
+    assert metadata["schema"] == "grpo-anchor-metadata-splits-v1"
+    assert metadata["splits"] == {
+        "train": {"split": "train", "rows": 32, "source_sha256": "train-sha"},
+        "validation": {"split": "validation", "rows": 16, "source_sha256": "validation-sha"},
+    }
 
 
 @pytest.mark.parametrize("status, refused", [("done", False), ("training", False),
