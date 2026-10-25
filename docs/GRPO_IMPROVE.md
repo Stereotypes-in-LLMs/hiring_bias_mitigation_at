@@ -337,6 +337,39 @@ Both arms start from SFT-v3 for 200 steps and are read as in section 3, against 
   correlated with the benchmark TPR (r = −0.86, five points), sign unexplained.
 - **Not a candidate.** Every checkpoint fails the standard's 80% merge guardrail.
 
+## 9. Round 3: registration
+
+### R3 — a full epoch with the learning rate decayed at the end (parameter)
+
+- **Why this one.** Three facts so far. GRPO's gain shows late: GRPO-v3-all's seven checkpoints
+  425–571 all sit at a proxy of −0.70 pp or below (section 5). Its fixes persist across
+  checkpoints while its breaks are transient (section 5, "Which sets move"). And the swing
+  shrinks with the step size (R2-b), while neither a decision-bias projection (A1) nor an
+  anchor on held-out rows (R2-a) stops it. Decaying the learning rate over the late phase
+  should freeze the walk and keep the fixes.
+- **Hypothesis.** GRPO-v3-all with its learning rate decayed linearly to 0 over its last 146
+  steps beats SFT-v3 under the standard at its final checkpoint, with every guardrail passing.
+- **Change.** GRPO-v3-all's config (`qwen3.5-9b_en_only_grpo_v3_all_gh200.yaml`), seed 42 and
+  every setting the same, except `lr_scheduler_type: warmup_stable_decay` with
+  `num_decay_steps: 146` (3e-5 to step 425, then linear to 0 at 571). Config
+  `configs/mitigation/grpo_improve/r3_wsd.yaml`. vLLM's sampling is not seeded per step, so
+  steps 1–425 are a new draw of GRPO-v3-all's recipe, not a copy of it.
+- **Control and decision.** SFT-v3, by `evaluate_arm.sbatch` (op-margin-v2 compare-arms on all
+  31,050 prompts and 2,700 sets). **The audited checkpoint is the final adapter, step 571,
+  declared now.** Audit config `configs/audit/qwen3.5-9b_en_grpo_improve_r3_wsd_gh200.yaml`.
+  The benchmark has been read many times in development, so the verdict is labelled
+  exploratory, as checkpoint 525's was.
+- **For.** Δ < 0 with the 95% interval below 0, all four guardrails passing. Over 475, 500, 525
+  and 550 (trajectory scorer), the TPR SD falls from its 425–475 level and stays under 3 pp.
+- **Against.** An interval reaching 0, a Δ above 0, or a failed guardrail. A late TPR swing like
+  GRPO-v3-all's (SD over 4 pp at 475–550) would say the decay does not freeze the walk.
+- **Within-run readings.** Checkpoints 425, 450, 475, 500, 525 and 550 on the trajectory scorer
+  (`configs/analysis/grpo_improve_r3_wsd_trajectory.json`); they do not choose the checkpoint.
+- **Second seed.** If the verdict is "better" by 1 pp or less, the standard asks for a second
+  seed. That is another ~25 GPU-h, inside the budget; it is run only if the first seed passes.
+- **Cost.** Training ≈ 571 steps × 33 s + start-up ≈ 5.5 h on 4 GPUs ≈ 22 GPU-h; trajectory
+  scoring ≈ 2.5; evaluate_arm ≈ 1.2. About 26 GPU-h. Time limit 7 h 30 min, `resume: true`.
+
 ## 8. Ledger
 
 | # | Arm | Job(s) | GPU-h | State |
