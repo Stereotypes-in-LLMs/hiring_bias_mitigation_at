@@ -8,7 +8,7 @@ data_kind: grpo
 base_model: Qwen/Qwen3.5-9B
 sft_checkpoint: outputs/sft/qwen3.5-9b_en_only_sft_v3_additional
 data_config: configs/data/en_only_grpo_v3_all.yaml
-output_dir: outputs/grpo/grpo_improve_r2a_anchor_smoke
+output_dir: outputs/grpo/grpo_improve_r2a_anchor_smoke2
 chat_template_kwargs:
   enable_thinking: false
 use_lora: true
