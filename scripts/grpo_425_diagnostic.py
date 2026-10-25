@@ -32,6 +32,7 @@ BASE_REVISION = "c202236235762e1c871ad0ccb60c8ee5ba337b9a"
 KEY = ["pair_id", "protected_group", "protected_attr", "condition"]
 ARMS = ("cpu_historical", "gpu_historical", "cpu_live", "gpu_live")
 OUTPUT_DIRECTORY = "outputs/grpo_425_diagnostic/startup52_20261025"
+RETRY_OUTPUT_DIRECTORY = "outputs/grpo_425_diagnostic/startup52_retry1_20261025"
 CODE = [
     "scripts/grpo_425_diagnostic.py",
     "scripts/cscs/grpo_425_diagnostic.sbatch",
@@ -249,7 +250,7 @@ def matched_controls(rows, mismatch_ids):
     return selected
 
 
-def prepare(out, extra_code):
+def prepare(out, extra_code, retry_of=None):
     import pandas as pd
     from huggingface_hub import snapshot_download
 
@@ -259,9 +260,61 @@ def prepare(out, extra_code):
 
     if out.exists():
         raise FileExistsError("new diagnostic output directory required")
-    if out != Path(resolve_output_path(OUTPUT_DIRECTORY)).resolve():
+    authorized = RETRY_OUTPUT_DIRECTORY if retry_of is not None else OUTPUT_DIRECTORY
+    if out != Path(resolve_output_path(authorized)).resolve():
         raise ValueError("only the authorized isolated diagnostic output directory may be written")
+    retry = None
+    if retry_of is not None:
+        original = Path(resolve_output_path(OUTPUT_DIRECTORY)).resolve()
+        if Path(resolve_output_path(str(retry_of))).resolve() != original:
+            raise ValueError("retry must preserve the original diagnostic as its parent")
+        parent_fingerprint = fingerprint(original / "manifest.json")
+        if parent_fingerprint["sha256"] != (
+            "17801b2f69082e58971faefcd7b6e2648113b76ffa9f86ab72194d86bd20f396"
+        ):
+            raise ValueError("original diagnostic manifest bytes changed")
+        parent = read(original / "manifest.json")
+        check_binding(parent)
+        if parent["binding_sha256"] != (
+            "02f0ee627287d26e01e3a98129dbc5a5fa74c582d8ccd004cb8dd1046f071753"
+        ):
+            raise ValueError("unexpected original diagnostic binding")
+        validate_protocol(parent["protocol"])
+        if parent["prepared_commit"] != "4b5061a6cc85e45392d2c1ae29ab28735957c2ba":
+            raise ValueError("unexpected original diagnostic commit")
+        if read(original / "progress.json")["status"] != "failed":
+            raise ValueError("retry parent must be the preserved failed diagnostic")
+        if read(original / "execution.json")["job_id"] != "5140642":
+            raise ValueError("unexpected original diagnostic job")
+        retry = {
+            "parent_manifest": parent_fingerprint,
+            "parent_progress": fingerprint(original / "progress.json"),
+            "parent_execution": fingerprint(original / "execution.json"),
+            "parent_binding_sha256": parent["binding_sha256"],
+            "parent_job_id": "5140642",
+            "reuse_old_measurements": False,
+            "reconstruct_all_weights": True,
+            "rerun_all_four_cells_in_one_allocation": True,
+            "smoke": {
+                "weights": "cpu",
+                "process_group": "separate four-rank torchrun before formal cells",
+                "request_rule": "first frozen canonical row in each rank::4 shard",
+                "warmup": "unchanged256; two original weight pushes and cache resets",
+                "required": "all four rank receipts; actual token IDs and valid decisions",
+                "decision_matching_required": False,
+                "included_in_benchmark_metrics": False,
+                "persistent_compiler_caches_may_be_warmed": True,
+            },
+        }
     code = [ROOT / p for p in CODE] + [Path(p).resolve() for p in extra_code]
+    if retry is not None:
+        code.extend(
+            ROOT / p
+            for p in [
+                "scripts/cscs/grpo_425_diagnostic_retry1.sbatch",
+                "docs/GRPO_425_STARTUP_DIAGNOSTIC_RETRY1.md",
+            ]
+        )
     committed(code)
     prior = Path(
         resolve_output_path("outputs/grpo_low_lr_pilot/grpo_v3_all_lr3e6_from425_retry1_20261023")
@@ -409,6 +462,24 @@ def prepare(out, extra_code):
             "and no strict gate is relaxed.",
         ],
     }
+    if retry is not None:
+        if (
+            manifest["rows"] != parent["rows"]
+            or manifest["failed_startup_raw"] != parent["failed_startup_raw"]
+            or manifest["source_trajectory"] != parent["source_trajectory"]
+            or manifest["mismatch_prompt_ids"] != parent["mismatch_prompt_ids"]
+            or controls != read(parent["matched_controls"]["path"])
+            or manifest["warmup"]["sha256"] != parent["warmup"]["sha256"]
+        ):
+            raise ValueError("retry changes original rows, targets, controls, or warmup")
+        manifest["retry"] = retry
+        manifest["inputs"].extend(
+            retry[key] for key in ["parent_manifest", "parent_progress", "parent_execution"]
+        )
+        manifest["limitations"].append(
+            "A separate disposable four-rank smoke process precedes all four fresh engines; "
+            "persistent compiler caches may be warmed. No smoke request enters a formal engine."
+        )
     manifest["binding_sha256"] = digest(manifest)
     atomic(out / "manifest.json", manifest)
     atomic(out / "progress.json", {"status": "prepared", "training_authorized": False})
@@ -1041,13 +1112,15 @@ def push_weights(llm, model_dir, names):
         if result is not None:
             loaded.update(result)
         del value
-    llm.reset_prefix_cache()
+    cache_reset = llm.reset_prefix_cache()
+    if cache_reset is not True:
+        raise RuntimeError("live prefix-cache reset did not acknowledge success")
     return {
         "source_names": names,
         "source_names_sha256": digest(names),
         "loaded_names": sorted(loaded),
         "per_tensor_loader_returns": observations,
-        "reset_prefix_cache": True,
+        "reset_prefix_cache": cache_reset,
         "name_note": "Loader returns may be packed internal names; "
         "no HF-to-packed byte equality is asserted.",
     }
@@ -1067,7 +1140,7 @@ def served_parameters(llm):
     ]
 
 
-def score_live(out, m, kind):
+def score_live(out, m, kind, smoke=False):
     import pandas as pd
     import torch
     from transformers import AutoTokenizer
@@ -1081,17 +1154,35 @@ def score_live(out, m, kind):
     if world != 4:
         raise ValueError("live engine requires the frozen four-rank context")
     arm = kind + "_live"
-    folder = out / "arms" / arm / f"rank-{rank}"
+    if smoke and (kind != "cpu" or "retry" not in m):
+        raise ValueError("smoke is authorized only for the repaired retry and CPU weights")
+    folder = (out / "smoke" / "live" if smoke else out / "arms" / arm) / f"rank-{rank}"
     if folder.exists() and any(folder.iterdir()):
         raise ValueError("live rank already has evidence; do not overwrite or repeat inference")
     folder.mkdir(parents=True, exist_ok=True)
     torch.cuda.set_device(local_rank)
     torch.distributed.init_process_group("nccl", device_id=torch.device("cuda", local_rank))
     started = time.monotonic()
+
+    def stage(name):
+        atomic(
+            folder / "stage.json",
+            {
+                "stage": name,
+                "rank": rank,
+                "smoke": smoke,
+                "binding_sha256": m["binding_sha256"],
+                "elapsed_seconds": time.monotonic() - started,
+            },
+        )
+
+    stage("process_group_ready")
     weights = weight_result(out, kind, m)
     live_weights = weight_result(out, "gpu", m)
     names = live_weights["serving_tensor_names"]
     expected = token_rows(out, m)[rank::4]
+    if smoke:
+        expected = expected[:1]
     tokenizer = AutoTokenizer.from_pretrained(
         m["sft_directory"], trust_remote_code=True, local_files_only=True
     )
@@ -1115,11 +1206,13 @@ def score_live(out, m, kind):
         "enable_sleep_mode": False,
         "quantization": None,
     }
+    stage("constructing_engine")
     llm = LLM(**args)
     atomic(
         folder / "engine.json",
         {"requested": args, "effective": engine_info(llm), "runtime": runtime_info()},
     )
+    stage("first_weight_push")
     before = push_weights(llm, weights["model_directory"], names)
     atomic(folder / "weight_push1.json", before)
     warmup = pd.read_parquet(m["warmup"]["path"])
@@ -1128,6 +1221,7 @@ def score_live(out, m, kind):
     ]
     ids = decision_token_ids(tokenizer, WORDS["en"])
     warm_params = SamplingParams(max_tokens=1, temperature=0.0, logprob_token_ids=list(ids))
+    stage("warmup")
     warm = llm.generate(warm_texts, warm_params, use_tqdm=False)
     warm_margins = [
         o.outputs[0].logprobs[0][ids[0]].logprob - o.outputs[0].logprobs[0][ids[1]].logprob
@@ -1143,8 +1237,10 @@ def score_live(out, m, kind):
             "limitation": "vLLM margin warmup only; no HF reference forward or optimizer memory.",
         },
     )
+    stage("second_weight_push")
     after = push_weights(llm, weights["model_directory"], names)
     atomic(folder / "weight_push2.json", after)
+    stage("served_parameter_receipt")
     atomic(
         folder / "served_tensor_hashes.json",
         {
@@ -1153,18 +1249,23 @@ def score_live(out, m, kind):
         },
     )
     rows = pd.read_parquet(m["rows"]["path"]).iloc[rank::4]
+    if smoke:
+        rows = rows.iloc[:1]
     wrapped = [_chat_wrap(tokenizer, p, {"enable_thinking": False}) for p in rows.prompt]
     if wrapped != [r["wrapped_prompt"] for r in expected]:
         raise ValueError("live wrapping differs from frozen input")
     params = SamplingParams(max_tokens=512, temperature=0.0, top_p=1.0, n=1, seed=42)
+    stage("generating_frozen_requests")
     requests = llm.generate(wrapped, params, use_tqdm=False)
     records, differences = check_request_outputs(requests, expected)
     pd.DataFrame(records).to_parquet(folder / "request_outputs.parquet", index=False)
     atomic(folder / "input_differences.json", differences)
+    stage("generation_saved")
     receipt = {
         "binding_sha256": m["binding_sha256"],
         "arm": arm,
         "rank": rank,
+        "smoke": smoke,
         "status": "failed" if differences else "complete",
         "rows": len(records),
         "sampling_params": repr(params),
@@ -1178,6 +1279,42 @@ def score_live(out, m, kind):
         raise ValueError("actual vLLM live input differs from frozen token IDs")
     torch.distributed.barrier()
     torch.distributed.destroy_process_group()
+
+
+def collect_smoke(out, m):
+    """Validate disposable GPU smoke output without promoting it to benchmark evidence."""
+    import pandas as pd
+
+    from hiring_bias_mitigation.eval.parsing import parse_frame
+
+    if "retry" not in m:
+        raise ValueError("smoke requires the explicit repaired retry manifest")
+    expected = token_rows(out, m)
+    rows = pd.read_parquet(m["rows"]["path"])
+    receipts = []
+    for rank in range(4):
+        path = out / "smoke/live" / f"rank-{rank}" / "result.json"
+        result = bound_result(path, m)
+        if not result or result.get("rank") != rank or result.get("smoke") is not True:
+            raise ValueError("missing matching completed smoke rank")
+        records = pd.read_parquet(path.parent / "request_outputs.parquet").to_dict("records")
+        if len(records) != 1 or records[0]["prompt_id"] != expected[rank]["prompt_id"]:
+            raise ValueError("smoke must use exactly the predeclared first row per rank")
+        parsed = parse_frame(rows.iloc[[rank]].assign(raw_output=[records[0]["raw_output"]]))
+        if parsed.iloc[0].decision not in {"hire", "reject"}:
+            raise ValueError("smoke produced an invalid decision")
+        receipts.append(fingerprint(path))
+    atomic(
+        out / "smoke/result.json",
+        {
+            "status": "complete",
+            "binding_sha256": m["binding_sha256"],
+            "rows": 4,
+            "training_authorized": False,
+            "included_in_benchmark_metrics": False,
+            "files": receipts,
+        },
+    )
 
 
 def collect_live(out, m, kind):
@@ -1360,6 +1497,11 @@ def run(out, m):
         ("collect_gpu_live", "cpu", ["collect-live", "--kind", "gpu"]),
         ("summarize", "cpu", ["summarize"]),
     ]
+    if "retry" in m:
+        phases[4:4] = [
+            ("live_smoke", "all", ["smoke-live", "--kind", "cpu"]),
+            ("collect_live_smoke", "cpu", ["collect-smoke"]),
+        ]
     completed = []
     for name, devices, arguments in phases:
         env = os.environ.copy()
@@ -1429,6 +1571,8 @@ def main():
             "compare-weights",
             "score-historical",
             "score-live",
+            "smoke-live",
+            "collect-smoke",
             "collect-live",
             "summarize",
         ],
@@ -1436,12 +1580,13 @@ def main():
     parser.add_argument("--output-dir", required=True)
     parser.add_argument("--extra-code", action="append", default=[])
     parser.add_argument("--kind", choices=["cpu", "gpu"])
+    parser.add_argument("--retry-of")
     args = parser.parse_args()
     from hiring_bias_mitigation.utils.config import resolve_output_path
 
     out = Path(resolve_output_path(args.output_dir)).resolve()
     if args.command == "prepare":
-        prepare(out, args.extra_code)
+        prepare(out, args.extra_code, args.retry_of)
         return
     m = load_manifest(out, full_verify=args.command == "run")
     functions = {
@@ -1453,7 +1598,13 @@ def main():
         "score-live": score_live,
         "collect-live": collect_live,
         "summarize": summarize,
+        "collect-smoke": collect_smoke,
     }
+    if args.command == "smoke-live":
+        if args.kind != "cpu":
+            parser.error("smoke-live requires --kind cpu")
+        score_live(out, m, "cpu", smoke=True)
+        return
     if args.command in ["make-weights", "score-historical", "score-live", "collect-live"]:
         if not args.kind:
             parser.error("--kind is required for this phase")

@@ -330,3 +330,66 @@ def test_actual_vllm_runtime_parameter_snapshot_is_cpu_only_and_read_only(monkey
     assert parameter.data_ptr() == pointer
     assert parameter.detach().view(torch.uint8).numpy().tobytes() == before
     assert torch.cuda.is_initialized() == cuda_initialized
+
+
+@pytest.mark.parametrize("acknowledged", [True, False, None])
+def test_live_weight_push_requires_actual_cache_reset_acknowledgement(monkeypatch, acknowledged):
+    tensor = SimpleNamespace(to=lambda device: "device-value")
+    model = SimpleNamespace(load_weights=lambda values: {"packed.weight"})
+    llm = SimpleNamespace(
+        llm_engine=SimpleNamespace(
+            model_executor=SimpleNamespace(
+                driver_worker=SimpleNamespace(model_runner=SimpleNamespace(model=model))
+            )
+        ),
+        reset_prefix_cache=lambda: acknowledged,
+    )
+    monkeypatch.setattr(D, "tensor_inventory", lambda path: {"source.weight": path})
+    monkeypatch.setattr(D, "read_tensor", lambda path, name: tensor)
+    if acknowledged is True:
+        assert D.push_weights(llm, "/unused", ["source.weight"])["reset_prefix_cache"] is True
+    else:
+        with pytest.raises(RuntimeError, match="cache reset"):
+            D.push_weights(llm, "/unused", ["source.weight"])
+
+
+@pytest.mark.parametrize("smoke_fails", [False, True])
+def test_retry_waits_for_disposable_smoke_before_any_formal_arm(tmp_path, monkeypatch, smoke_fails):
+    calls = []
+    monkeypatch.setenv("SLURM_JOB_ID", "test-allocation")
+
+    def run(command, **kwargs):
+        command_name = next(
+            word
+            for word in command
+            if word
+            in {
+                "token-check",
+                "make-weights",
+                "compare-weights",
+                "smoke-live",
+                "collect-smoke",
+                "score-historical",
+                "score-live",
+                "collect-live",
+                "summarize",
+            }
+        )
+        calls.append(command_name)
+        return SimpleNamespace(returncode=int(smoke_fails and command_name == "smoke-live"))
+
+    monkeypatch.setattr(D.subprocess, "run", run)
+    manifest = {"binding_sha256": "test-binding", "retry": {}}
+    if smoke_fails:
+        with pytest.raises(RuntimeError, match="live_smoke"):
+            D.run(tmp_path, manifest)
+        assert "score-historical" not in calls and "score-live" not in calls
+    else:
+        D.run(tmp_path, manifest)
+        assert calls.index("collect-smoke") < calls.index("score-historical")
+        assert [name for name in calls if name.startswith("score-")] == [
+            "score-historical",
+            "score-historical",
+            "score-live",
+            "score-live",
+        ]
