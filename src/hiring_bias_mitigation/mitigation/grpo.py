@@ -815,6 +815,15 @@ def train(cfg: dict, trainer_cls=None, reward_funcs=None, trainer_kwargs: dict |
 
     from trl import GRPOConfig, GRPOTrainer
 
+    bias_projection = bool((cfg.get("bias_projection") or {}).get("enabled", False))
+    if bias_projection:
+        if trainer_cls is not None or detailed_diagnostics:
+            raise ValueError("bias_projection supports the default GRPO trainer without "
+                             "detailed rollout diagnostics")
+        from .grpo_bias_projection import trainer_class as bias_projected
+
+        trainer_cls = bias_projected(
+            GRPOTrainer, lambda completion, lang: parse_output(completion, lang).decision)
     args = GRPOConfig(**base_args,
                       **C.supported_kwargs(GRPOConfig, grpo_config_candidates(cfg), "GRPOConfig"))
     continuation_callback = None
@@ -929,6 +938,7 @@ def train(cfg: dict, trainer_cls=None, reward_funcs=None, trainer_kwargs: dict |
         "sft_checkpoint": cfg.get("sft_checkpoint"),
     }
     manifest["rollout_diagnostics"] = count_diagnostics_receipt
+    manifest["bias_projection"] = bias_projection
     if anchor_metadata_receipt is not None:
         manifest["rollout_diagnostics"]["anchor_metadata"] = anchor_metadata_receipt
     if continuation is not None:

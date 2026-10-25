@@ -118,12 +118,29 @@ method arms are listed apart.
 - **Cost.** About 11 GPU-h.
 - **Why first.** Every other arm is read against it, and seed 42's checkpoints 25–75 were not kept.
 
-### A1 — bias anchor (method; registered before submission)
+### A1 — bias projection (method)
 
-Planned: an auxiliary loss on a fixed set of held-out **Djinni** prompts in SFT-v3's 10–90% band,
-penalising the squared difference between the policy's and SFT-v3's mean decision margin. It pins
-one scalar, the operating point, and leaves the ordering free. Djinni only, because the monitor
-calibration found RJDB rows move the opposite way (`GRPO_MONITOR8.md`).
+- **Hypothesis.** The TPR swing is the first-order push of each step on one shared decision bias:
+  with one or two informative groups a step, the step's net push toward hire or reject is close
+  to a coin flip. Removing that push removes the swing, and leaves the learning that orders
+  prompts against each other.
+- **Change.** `bias_projection: {enabled: true}` on A0's config (`mitigation/grpo_bias_projection.py`).
+  With s_i = ±1 for a hire or reject decision, the gradient of the policy loss with respect to a
+  bias on every prompt's decision logit is ½ Σ A_i s_i. Each step subtracts α (s_i − mean_g s)
+  from every advantage, with one α for the whole gathered batch, so that Σ A′_i s_i = 0. Group
+  sums stay zero, groups whose decisions agree are untouched, and a batch with informative
+  groups on one verdict only still trains the difference between them. Detailed rollout
+  diagnostics are off (the plain trainer only); `bias_projection/*` is logged instead. Config
+  `configs/mitigation/grpo_improve/a1_bias_projection.yaml`; CPU tests
+  `tests/test_grpo_bias_projection.py`.
+- **Expected if it holds.** TPR SD over checkpoints 100–200 under 2 pp and no checkpoint below
+  −8 pp, against A0's swing. The mean proxy matched change no worse than A0's (within 0.3 pp).
+  The logged `push_before` changes sign from step to step without a trend.
+- **Against it.** A swing within 30% of A0's: the drift does not come from the first-order bias
+  push, and some other direction (feedback wording, the KL term, second-order effects) moves the
+  operating point. Or a stable TPR with a proxy matched change clearly worse than A0's (by more
+  than 0.5 pp): the bias push carried the fairness gain.
+- **Cost.** About 11 GPU-h; the projection itself is two gathers a step.
 
 ### A2 — consistency reward (method; registered before submission)
 
@@ -136,3 +153,4 @@ answer within a pair block, with `normalize_then_sum`. It targets the evaluated 
 | # | Arm | Job(s) | GPU-h | State |
 |---|---|---|---|---|
 | — | CPU diagnosis (section 2) | none | 0 | done |
+| 1 | A0 control, training | 5140665 | | running |
