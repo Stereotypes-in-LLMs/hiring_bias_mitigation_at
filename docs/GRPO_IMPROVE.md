@@ -185,10 +185,71 @@ method arms are listed apart.
 - Twice the prompts per step at the same lr (explanation 2 through noise), if A0's swing is
   large and A1 does not remove it.
 
-## 5. Ledger
+## 5. Round 1 result (A0, A1, A2)
+
+**In one sentence.** None of the three short runs lowers the proxy matched instability against
+SFT-v3, and the bias projection doubled the TPR swing instead of removing it. Development
+readings on the exposed benchmark, one seed each.
+
+| arm (200 steps from SFT-v3) | TPR SD, 100–200 | largest neighbour TPR change | TPR change range vs SFT-v3 | checkpoints < −10 pp | mean proxy matched change | proxy range | raw unstable, mean | zero-std groups, mean |
+|---|---|---|---|---|---|---|---|---|
+| GRPO-v3-all, seed 42 (history, job 5127818) | 6.8 pp | 15.2 | −10.2 to +5.0 | 1 | −0.53 pp | −0.88 to +0.04 | 1.71% | 0.81 |
+| A0 control, seed 43 | 5.9 | 13.9 | −2.5 to +11.4 | 0 | −0.12 | −0.55 to +0.39 | 1.80% | 0.79 |
+| A1 bias projection | **12.2** | **27.3** | −15.6 to +16.2 | 2 | −0.05 | −0.65 to +0.24 | 1.75% | 0.78 |
+| A2 consistency reward | 5.2 | 7.7 | −5.6 to +7.5 | 0 | +0.05 | −0.46 to +0.97 | 2.04% | 0.85 |
+
+Source: `$HBM_OUTPUT_ROOT/outputs/grpo_improve/compare_round1/{summary.csv,curves.csv,curves.svg}`;
+per checkpoint `outputs/grpo_improve/diag_{a0,a1,a2}/trajectory_diagnostics.csv` and
+`transitions.csv`; raw decisions `outputs/checkpoint_benchmark/grpo_improve_{a0_seed43,
+a1_bias_projection,a2_consistency}/steps/step-NNNN/raw.parquet`. SFT-v3: TPR 57.73%, raw
+unstable 1.85%.
+
+**Against each registration.**
+
+- **A0.** For: the swing reproduces at seed 43 (SD 5.9 pp ≥ 4), at other steps and in the other
+  direction (lenient: +11.4 pp at step 200 against seed 42's −10.2 at 150). Against: the
+  per-verdict counts of mixed groups do not predict the sign of a window's TPR change. Over
+  176–200 both verdicts had 25 mixed groups and TPR rose 13.9 pp; correlation of the net count
+  with the TPR change over the five windows −0.14 (`rollout_diagnostics.jsonl`). In training
+  rollouts, the sampled hire rate where the anchor hires fell from 0.58 to 0.01 by step ~19 and
+  was back at 0.49 by step ~28 (job 5140665's log).
+- **A1. Hypothesis refuted.** With the first-order push on a shared decision bias set to zero
+  every step (logged `push_after` ~1e-15), the swing doubled. The registered reading: the
+  drift does not come from the first-order bias push. The likelier role of that push is a
+  restoring force: when the policy drifts to reject, the hire-anchored groups become
+  informative and push back. Removing it removed the brake, not the engine.
+- **A2. Not better.** Mean proxy +0.05 against A0's −0.12 (registered: at least 0.3 pp better),
+  and TPR leaves ±5 pp at two checkpoints. It changes fewer decisions against SFT-v3 (656–1,302
+  against A0's 1,121–2,031) and its largest neighbour change is about half A0's.
+
+**What this says about the three explanations.**
+
+- *Rollout signal (1).* Unchanged by any arm: 0.78–0.85 zero-std groups over 100–200.
+- *Update size (2).* The operating point moves by several pp per 25 steps in every arm, and
+  not through the decision-bias gradient. Candidates left: Adam's per-parameter scaling with a
+  constant lr (the update does not shrink when the signal does, and its direction is not the
+  gradient's), the KL term, or learning on feedback tokens. Not separated yet.
+- *Target mismatch (3).* Supported again: the training-rollout hire rates and the benchmark TPR
+  stay uncorrelated in every arm (r between −0.14 and 0.19).
+- *Seed noise in the readout.* The same config at seeds 42 and 43 gives mean proxies of −0.53
+  and −0.12. A difference between two single-seed short arms below ~0.5 pp is not readable.
+
+**Two facts from existing outputs, CPU only.**
+
+- Over GRPO-v3-all's whole history the proxy is −0.53 pp on average at 100–200, +0.09 at
+  225–400 and −0.83 at 425–571, where all seven checkpoints sit at −0.70 or below while TPR
+  swings by 30 pp (`compare_history/`). Whatever gain GRPO has shows late and survives the
+  operating-point swing.
+- The mean-of-7 weight average (`checkpoint_average/.../average/raw.parquet`): TPR −3.0 pp,
+  proxy −0.32 pp [−1.37, +0.67]. Averaging centred the operating point and lost about half of
+  the late checkpoints' gain.
+
+## 6. Ledger
 
 | # | Arm | Job(s) | GPU-h | State |
 |---|---|---|---|---|
 | — | CPU diagnosis (section 2) | none | 0 | done |
-| 1 | A0 control, training | 5140665 | | running |
-| 2 | A1 bias projection, training | 5140670 | | submitted |
+| 1 | A0 control: training, scoring | 5140665, 5141030 | 8.47 + 2.03 | done |
+| 2 | A1 bias projection: training, scoring | 5140670, 5141105 | 8.44 + 2.04 | done, refuted |
+| 3 | A2 consistency reward: training, scoring | 5140696, 5141121 | 8.40 + 2.03 | done, not better |
+| | **Total** | | **31.41 of 150** | 3 of 50 experiments, 0 retries |
