@@ -73,6 +73,13 @@ built by `scripts/build_grpo_free_target.py`). On those rows the reward teaches 
 hiring standard, not invariance to the attribute, and the two kinds push the decision bias in
 opposite directions, about equally often.
 
+The paired probe of 2026-10-22 points the same way (`$HBM_OUTPUT_ROOT/outputs/paired_probe/
+20261022-dapo-final-sft-v3-k16/report.md`; 16 samples of each training row with and without
+the attribute). Rows where all 16 attributed samples miss the anchor rise from 336 under SFT-v3
+to 1,170 under DAPO-v3-all's final adapter, and 1,081 of the 1,170 also miss it on all 16
+attribute-free samples. What RL moved on its own training rows is mostly the case judgement,
+not the response to the attribute.
+
 **One reading that ties them together, not confirmed.** By step ~125 the policy is sure of
 almost every training prompt. From then on neither the reward nor the KL term (β 0.04 on a
 per-token mean of ~38 tokens) holds the hire/reject bias where the benchmark's borderline
