@@ -13,12 +13,14 @@ import hashlib
 import importlib.metadata
 import importlib.util
 import json
+import math
 import os
 import shutil
 import subprocess
 import sys
 import time
 from datetime import datetime, timezone
+from enum import Enum
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -476,6 +478,73 @@ def runtime_info():
     }
 
 
+def config_snapshot(value, _active=None):
+    """Read declared settings without copying or inspecting runtime tensors/modules."""
+    kind = type(value)
+    type_name = f"{kind.__module__}.{kind.__qualname__}"
+    if value is None or kind in (str, bool, int):
+        return value
+    if kind is float:
+        return value if math.isfinite(value) else {"_type": type_name, "_value": str(value)}
+    if isinstance(value, Enum):
+        return config_snapshot(value.value, _active)
+    if isinstance(value, Path) or (
+        kind.__module__ == "torch" and kind.__name__ in {"dtype", "device"}
+    ):
+        return str(value)
+    if any(
+        (base.__module__, base.__name__)
+        in {("torch", "Tensor"), ("torch.nn.modules.module", "Module")}
+        for base in kind.__mro__
+    ):
+        return {"_type": type_name, "_omitted": "runtime tensor or module"}
+
+    active = set() if _active is None else _active
+    if id(value) in active:
+        return {"_type": type_name, "_omitted": "cycle"}
+    active.add(id(value))
+    try:
+
+        def field_snapshot(name, item):
+            if type(name) is str and name == "static_forward_context":
+                result = {
+                    "_type": f"{type(item).__module__}.{type(item).__qualname__}",
+                    "_omitted": "runtime layer registry; not traversed",
+                }
+                if type(item) is dict:
+                    result["count"] = len(item)
+                return result
+            return config_snapshot(item, active)
+
+        if kind is dict:
+            if all(type(key) is str for key in value):
+                return {key: field_snapshot(key, item) for key, item in value.items()}
+            return {
+                "_type": type_name,
+                "entries": [
+                    [config_snapshot(key, active), field_snapshot(key, item)]
+                    for key, item in value.items()
+                ],
+            }
+        if kind in (list, tuple):
+            return [config_snapshot(item, active) for item in value]
+        if kind in (set, frozenset):
+            return sorted((config_snapshot(item, active) for item in value), key=json.dumps)
+        if dataclasses.is_dataclass(kind):
+            return {
+                field.name: field_snapshot(field.name, getattr(value, field.name))
+                for field in dataclasses.fields(kind)
+            }
+        if any(
+            base.__module__ == "pydantic.main" and base.__name__ == "BaseModel"
+            for base in kind.__mro__
+        ):
+            return {name: field_snapshot(name, getattr(value, name)) for name in kind.model_fields}
+        return {"_type": type_name, "_omitted": "runtime object"}
+    finally:
+        active.remove(id(value))
+
+
 def engine_info(llm):
     config = llm.llm_engine.vllm_config
     sections = {}
@@ -486,14 +555,7 @@ def engine_info(llm):
         "parallel_config",
         "compilation_config",
     ]:
-        item = getattr(config, name, None)
-        if dataclasses.is_dataclass(item):
-            item = dataclasses.asdict(item)
-        elif hasattr(item, "model_dump"):
-            item = item.model_dump()
-        else:
-            item = str(item)
-        sections[name] = json.loads(json.dumps(item, default=str))
+        sections[name] = config_snapshot(getattr(config, name, None))
     return sections
 
 
