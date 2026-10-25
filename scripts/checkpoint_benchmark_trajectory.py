@@ -200,8 +200,12 @@ def prepare(config_path):
                          if (p / "adapter_model.safetensors").is_file())
     if checkpoints != config["expected_steps"]:
         raise ValueError(f"retained checkpoint inventory changed: {checkpoints}")
+    # `score_steps` scores a declared subset of the retained checkpoints (default: all of them).
+    scored = config.get("score_steps", checkpoints)
+    if not set(scored) <= set(checkpoints):
+        raise ValueError(f"score_steps not retained: {sorted(set(scored) - set(checkpoints))}")
     steps = [{"step": 0, "adapter": str(Path(resolve_output_path(config["parent_adapter"])))},
-             *[{"step": n, "adapter": str(run / f"checkpoint-{n}")} for n in checkpoints]]
+             *[{"step": n, "adapter": str(run / f"checkpoint-{n}")} for n in scored]]
     inputs = [fingerprint(ROOT / p) for p in CODE]
     inputs += [fingerprint(config_path), fingerprint(ROOT / config["audit_config"]),
                fingerprint(ROOT / "data/benchmark/reference_feedback_en.csv"),
@@ -277,7 +281,7 @@ def prepare(config_path):
                 "prompt_text_sha256": digest(prompts), "software": software(),
                 "benchmark_partition": partition,
                 "prepared_commit": git_commit(), "status": "inference_only_exploratory",
-                "missing_saved_steps": [25, 50, 75],
+                "missing_saved_steps": config.get("missing_saved_steps", [25, 50, 75]),
                 "created_utc": datetime.now(timezone.utc).isoformat()}
     manifest["binding_sha256"] = digest(manifest)
     atomic_json(out / "manifest.json", manifest)
