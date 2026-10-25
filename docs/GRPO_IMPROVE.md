@@ -307,7 +307,28 @@ Both arms start from SFT-v3 for 200 steps and are read as in section 3, against 
   any null.
 - **Cost.** About 11 GPU-h.
 
-## 7. Ledger
+## 7. Round 2 results
+
+### R2-b — lr 1e-5: the swing shrinks, less than in proportion (training 5141460, scoring 5142302)
+
+| | TPR SD, 100–200 | largest neighbour change | TPR change range | mean proxy matched | decisions changed vs SFT-v3 | changed in SFT-v3's 10–90% band | merge kept |
+|---|---|---|---|---|---|---|---|
+| A0, lr 3e-5 | 5.9 pp | 13.9 | −2.5 to +11.4 | −0.12 pp | 1,121–2,031 | 44–72% | ≥ 80% (gate) |
+| R2-b, lr 1e-5 | 3.4 | 5.6 | −3.7 to +4.3 | −0.31 | 543–750 | 87–92% | 49–63% |
+
+(`outputs/grpo_improve/diag_r2b/`, `compare_round2_partial/`; merge kept from each step's
+`result.json`.)
+
+- **Against the registration.** Neither line is crossed: the SD is above the 2.5 pp of "for"
+  and below the 4.1 pp of "against". A third of the learning rate takes 42% off the SD and 60%
+  off the largest neighbour change.
+- **Reading.** Partial support for explanation 2: the swing depends on the step size, but
+  less than linearly. The served models keep only half of their updates in the bf16 merge, so
+  the readout understates what was trained; the training-rollout hire rates are, for once,
+  correlated with the benchmark TPR (r = −0.86, five points), sign unexplained.
+- **Not a candidate.** Every checkpoint fails the standard's 80% merge guardrail.
+
+## 8. Ledger
 
 | # | Arm | Job(s) | GPU-h | State |
 |---|---|---|---|---|
@@ -315,4 +336,8 @@ Both arms start from SFT-v3 for 200 steps and are read as in section 3, against 
 | 1 | A0 control: training, scoring | 5140665, 5141030 | 8.47 + 2.03 | done |
 | 2 | A1 bias projection: training, scoring | 5140670, 5141105 | 8.44 + 2.04 | done, refuted |
 | 3 | A2 consistency reward: training, scoring | 5140696, 5141121 | 8.40 + 2.03 | done, not better |
-| | **Total** | | **31.41 of 150** | 3 of 50 experiments, 0 retries |
+| 4 | R2-a anchor, first smoke (debug) | 5141458 | 0.79 | passed 3 steps |
+| 5 | R2-a anchor, first run | 5141612 | 2.72 | **failed**: DDP all-reduce hang at step 2 |
+| 6 | R2-b lr 1e-5: training, scoring | 5141460, 5142302 | 8.47 + 2.04 | done, partial support |
+| 7 | R2-a anchor, second smoke (callback) | 5142306 | 0.83 | passed 6 steps; weight amended to 1 |
+| 8 | R2-a anchor v2, training | 5142344 | | running (retry 1 of 3) |
