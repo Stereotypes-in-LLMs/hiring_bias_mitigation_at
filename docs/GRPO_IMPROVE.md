@@ -370,6 +370,33 @@ Both arms start from SFT-v3 for 200 steps and are read as in section 3, against 
 - **Cost.** Training ≈ 571 steps × 33 s + start-up ≈ 5.5 h on 4 GPUs ≈ 22 GPU-h; trajectory
   scoring ≈ 2.5; evaluate_arm ≈ 1.2. About 26 GPU-h. Time limit 7 h 30 min, `resume: true`.
 
+### R2-a — operating-point anchor: the anchor rows held, the benchmark did not (training 5142344, scoring 5143013, 5143090)
+
+| | TPR SD | largest neighbour change | TPR change range | below −8 pp | mean proxy matched | merge kept |
+|---|---|---|---|---|---|---|
+| A0 | 5.9 pp (5 checkpoints) | 13.9 | −2.5 to +11.4 | 0 | −0.12 pp | ≥ 80% |
+| R2-a | 5.6 (4 checkpoints) | 12.5 | −8.1 to +4.3 | 1 (step 150) | −0.19 | 76.4% at 100 (not scored), 80.4–85.3% after |
+
+- **Hypothesis refuted.** The SD is within 30% of A0's. Checkpoint 100 failed the 80% merge gate
+  (the anchor held the update small early) and was not scored.
+- **The anchor did its own job.** `anchor/shift`, the mean hire-probability shift on the 222
+  held-out Djinni rows, stayed between −0.014 and +0.011 per 25-step window through step 175
+  (+0.052 over 176–200), while the benchmark TPR fell 12.5 pp from step 125 to 150 and rose 10.7
+  pp to 175. The held-out rows SFT-v3 is unsure of do not carry the benchmark's 25-step swings.
+  The 0.93 correlation across finished arms was a correlation of large, lasting shifts.
+- **Side effects.** Zero-std groups 0.23 over steps 1–25 against A0's 0.72 (A0 had collapsed to
+  reject there), training-rollout hire rates steadier; neither showed on the benchmark.
+- Outputs: `outputs/grpo_improve/diag_r2a/`, `compare_round2/`. The first scoring job
+  (5143008) failed in 10 s on a manifest the login node had not finished writing; the second
+  (5143013) stopped at checkpoint 100's merge gate after scoring 125–175; 5143090 scored 200.
+
+### Round 2 in one paragraph
+
+The step size moves the swing (R2-b: −42% SD at a third of the lr, at the cost of the merge
+guardrail); restoring forces do not, whether on the shared decision bias (A1, the swing
+doubled) or on held-out borderline rows (R2-a, unchanged). Whatever moves the benchmark
+threshold every 25 steps is not visible in the training rollouts or in the held-out rows.
+
 ## 8. Ledger
 
 | # | Arm | Job(s) | GPU-h | State |
@@ -382,4 +409,6 @@ Both arms start from SFT-v3 for 200 steps and are read as in section 3, against 
 | 5 | R2-a anchor, first run | 5141612 | 2.72 | **failed**: DDP all-reduce hang at step 2 |
 | 6 | R2-b lr 1e-5: training, scoring | 5141460, 5142302 | 8.47 + 2.04 | done, partial support |
 | 7 | R2-a anchor, second smoke (callback) | 5142306 | 0.83 | passed 6 steps; weight amended to 1 |
-| 8 | R2-a anchor v2, training | 5142344 | | running (retry 1 of 3) |
+| 8 | R2-a anchor v2: training, scoring (3 jobs) | 5142344, 5143008, 5143013, 5143090 | 11.00 + 0.00 + 1.06 + 0.26 | done, refuted (retry 1 of 3) |
+| 9 | R3 lr decay, full epoch: training | 5143102 | | running |
+| | **Total so far** | | **59.1 of 150** | 6 arms of 50, 1 retry |
