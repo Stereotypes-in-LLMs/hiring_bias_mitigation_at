@@ -244,6 +244,15 @@ unstable 1.85%.
   proxy −0.32 pp [−1.37, +0.67]. Averaging centred the operating point and lost about half of
   the late checkpoints' gain.
 
+**Which sets move (CPU, the same 20 checkpoints).** SFT-v3 has 50 unstable within-group sets.
+Across GRPO-v3-all's seven late checkpoints (425–571), 27 of them are stable in all seven and
+every one of the 50 in at least four; but only one new unstable set recurs in at least four
+of the seven. The early checkpoints (100–200) look the same: 18 of the 50 fixed in all five,
+5 new sets recurring in at least three. GRPO's fixes persist; its breaks are transient and
+differ from checkpoint to checkpoint, as the threshold walk would make them. (Computed inline
+from the `steps/step-NNNN/raw.parquet` files with `reference_metrics.SET`; to be scripted if
+it enters a claim.)
+
 ## 6. Round 2: registrations
 
 Both arms start from SFT-v3 for 200 steps and are read as in section 3, against A0.
