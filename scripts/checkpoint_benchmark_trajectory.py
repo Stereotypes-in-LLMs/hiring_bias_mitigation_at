@@ -364,8 +364,10 @@ def score_next(out, requested_step=None):
     MG.merged_dir_for = lambda adapter: merged
     MG.merge(item["adapter"])
     retention = MG.recorded_retention(merged)
-    if not retention or retention[-1]["kept_fraction"] < .8:
-        raise ValueError("new merge does not satisfy 80% retention guardrail")
+    # A diagnostic run may declare a lower floor (`min_merge_retention`); the standard's is 80%.
+    floor = float(manifest["config"].get("min_merge_retention", .8))
+    if not retention or retention[-1]["kept_fraction"] < floor:
+        raise ValueError(f"new merge keeps less than {floor:.0%} of the update")
     merged_files = [fingerprint(p) for p in sorted(merged.glob("*.safetensors"))]
     cfg = {**manifest["audit_config"], "model": str(merged)}
     cfg.pop("mitigation", None)

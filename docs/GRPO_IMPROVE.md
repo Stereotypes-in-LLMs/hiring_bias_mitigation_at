@@ -244,7 +244,54 @@ unstable 1.85%.
   proxy −0.32 pp [−1.37, +0.67]. Averaging centred the operating point and lost about half of
   the late checkpoints' gain.
 
-## 6. Ledger
+## 6. Round 2: registrations
+
+Both arms start from SFT-v3 for 200 steps and are read as in section 3, against A0.
+
+### R2-a — operating-point anchor (method)
+
+- **Hypothesis.** The benchmark's threshold drifts because nothing holds it once the training
+  rows are settled (round 1: A1's removal of the restoring push doubled the swing). A restoring
+  force on held-out prompts like the benchmark's borderline ones holds it, and the late GRPO
+  gain does not depend on the drift.
+- **Evidence before running.** On the monitor calibration's seven finished arms (job 5123830),
+  the mean SFT-relative margin shift on these 222 rows correlates 0.93 with the arm's
+  benchmark TPR change (development evidence, 30 candidates).
+- **Change.** A0's config plus `operating_point_anchor` (`mitigation/grpo_operating_anchor.py`):
+  each micro-step and rank forwards 4 anchor prompts with the decision prefix, and the loss
+  gains 10 · (mean p_policy − mean p_SFT)², p the hire probability of the decision token, p_SFT
+  with the LoRA disabled. The anchor rows (`scripts/build_grpo_anchor_rows.py` →
+  `artifacts/semisynthetic-v3/grpo-anchor-djinni-band/`) are the 222 Djinni monitor rows, 30
+  held-out candidates, with SFT-v3's margin in its 10–90% band; none is in training or the
+  benchmark. Weight 10 is set before running: a shift of 0.1 in mean hire probability costs
+  0.1, five times GRPO-v3-all's typical loss. Logged as `anchor/shift`, `anchor/penalty`.
+- **Expected if it holds.** TPR SD over 100–200 under 3 pp, every checkpoint within ±8 pp, and
+  the proxy matched change within 0.3 pp of A0's or better. `anchor/shift` stays under 0.05.
+- **Against it.** A swing within 30% of A0's (5.9 pp): held-out Djinni rows do not carry the
+  benchmark's threshold. A stable TPR with a proxy worse than A0's by more than 0.5 pp: the
+  anchor costs the fairness gain.
+- **Check before the run.** A three-step smoke on `debug` (`r2a_anchor_smoke.yaml`) for the
+  anchor's forward and backward under DDP. CPU tests: `tests/test_grpo_operating_anchor.py`.
+- **Cost.** About 12 GPU-h with the smoke; the anchor adds 4 short forwards per micro-step.
+
+### R2-b — a third of the learning rate (parameter)
+
+- **Hypothesis.** The operating point moves because each update is too large for the signal
+  (explanation 2), whatever its direction.
+- **Change.** `learning_rate: 1.0e-05` on A0's config, nothing else (`r2b_lr1e5.yaml`).
+- **Expected if it holds.** TPR SD under 2.5 pp and fewer decisions changed against SFT-v3,
+  roughly in proportion to the learning rate.
+- **Against it.** A swing within 30% of A0's: the step size does not set the swing, and the
+  walk comes from something that does not scale with lr (Adam's normalised steps hold
+  their size only in proportion to lr, so this would point at the data or the sampling).
+- **What it cannot be.** An arm of the standard: the bf16 merge will likely keep under 80% of
+  so small an update (the pilot at 1e-5 kept 58%). Its checkpoints are scored with a declared
+  floor of 30% (`min_merge_retention` in its trajectory config) and the kept share is reported
+  beside each reading. The served model is then only part of the trained one, which weakens
+  any null.
+- **Cost.** About 11 GPU-h.
+
+## 7. Ledger
 
 | # | Arm | Job(s) | GPU-h | State |
 |---|---|---|---|---|

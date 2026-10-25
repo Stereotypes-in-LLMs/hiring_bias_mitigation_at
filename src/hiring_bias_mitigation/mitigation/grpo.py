@@ -843,6 +843,28 @@ def train(cfg: dict, trainer_cls=None, reward_funcs=None, trainer_kwargs: dict |
 
         trainer_cls = bias_projected(
             GRPOTrainer, lambda completion, lang: parse_output(completion, lang).decision)
+    anchor = cfg.get("operating_point_anchor") or {}
+    if anchor:
+        if trainer_cls is not None or detailed_diagnostics:
+            raise ValueError("operating_point_anchor supports the default GRPO trainer without "
+                             "detailed rollout diagnostics or another trainer variant")
+        import pandas as pd
+
+        from ..eval.backends import _chat_wrap
+        from ..eval.margins import PREFIX, WORDS, decision_token_ids
+        from ..utils.config import resolve_output_path
+        from .grpo_operating_anchor import trainer_class as anchored
+
+        anchor_rows = pd.read_parquet(resolve_output_path(anchor["rows"]))
+        anchor_prompts = [_chat_wrap(tokenizer, p, chat_kwargs) + PREFIX
+                          for p in anchor_rows["prompt"]]
+        trainer_cls = anchored(
+            GRPOTrainer, prompts=anchor_prompts, weight=float(anchor["weight"]),
+            rows_per_step=int(anchor["rows_per_step"]), seed=int(cfg.get("seed", 42)),
+            token_ids=decision_token_ids(tokenizer, WORDS["en"]))
+        log.info("operating-point anchor: %d rows from %s, weight %g, %d rows per micro-step",
+                 len(anchor_prompts), anchor["rows"], float(anchor["weight"]),
+                 int(anchor["rows_per_step"]))
     args = GRPOConfig(**base_args,
                       **C.supported_kwargs(GRPOConfig, grpo_config_candidates(cfg), "GRPOConfig"))
     continuation_callback = None
@@ -968,6 +990,7 @@ def train(cfg: dict, trainer_cls=None, reward_funcs=None, trainer_kwargs: dict |
     }
     manifest["rollout_diagnostics"] = count_diagnostics_receipt
     manifest["bias_projection"] = bias_projection
+    manifest["operating_point_anchor"] = anchor or None
     if anchor_metadata_receipt is not None:
         manifest["rollout_diagnostics"]["anchor_metadata"] = anchor_metadata_receipt
     if continuation is not None:
