@@ -65,6 +65,14 @@ stays there, while the benchmark TPR swings. Across checkpoints the two are unco
 (r = −0.04; window change against window change, r = −0.22). Training reward climbs, the
 matched instability does not move.
 
+**A data fact behind explanation 3.** On 3,366 of the 9,140 training rows (37%) the vote anchor
+and SFT-v3's own attribute-free majority (8 samples at temperature 1, from the round-3 pools)
+disagree: 1,580 hire-anchored rows where SFT-v3 rejects without the attribute, and 1,786
+reject-anchored rows where it hires (`artifacts/semisynthetic-v3/grpo-v3-all-free/report.json`,
+built by `scripts/build_grpo_free_target.py`). On those rows the reward teaches a different
+hiring standard, not invariance to the attribute, and the two kinds push the decision bias in
+opposite directions, about equally often.
+
 **One reading that ties them together, not confirmed.** By step ~125 the policy is sure of
 almost every training prompt. From then on neither the reward nor the KL term (β 0.04 on a
 per-token mean of ~38 tokens) holds the hire/reject bias where the benchmark's borderline
@@ -142,11 +150,33 @@ method arms are listed apart.
   than 0.5 pp): the bias push carried the fairness gain.
 - **Cost.** About 11 GPU-h; the projection itself is two gathers a step.
 
-### A2 — consistency reward (method; registered before submission)
+### A2 — consistency reward (method)
 
-Planned: `GDPO_CONSISTENCY_PLAN.md`'s reward, agreement with the model's own attribute-free
-answer within a pair block, with `normalize_then_sum`. It targets the evaluated quantity
-(explanation 3) and gives variance on prompts the anchor reward no longer splits (explanation 1).
+- **Hypothesis.** Rewarding agreement with the model's own attribute-free answer targets the
+  evaluated quantity (explanation 3), and on the 37% of rows where the anchor contradicts that
+  answer it cancels the push toward a new standard, which is also a source of the bias swing.
+- **Change.** A third reward, `grpo.free_consistency_reward`: SFT-v3's sampled attribute-free
+  hire share for the pair when the completion hires, one minus it when it rejects. Summed with
+  the decision and format rewards before the usual group normalisation (`sum_then_normalize`,
+  weight 1 each). The data are grpo-v3-all's rows, order and splits unchanged, plus
+  `free_hire_rate` (`configs/data/en_only_grpo_v3_all_free.yaml`). Static target: SFT-v3's
+  answer, not the current policy's; the plan's on-policy pair blocks
+  (`GDPO_CONSISTENCY_PLAN.md`) are left for later. Config
+  `configs/mitigation/grpo_improve/a2_consistency.yaml`; tests `tests/test_grpo_free_target.py`.
+- **Expected if it holds.** Mean proxy matched change at least 0.3 pp better than A0's, with TPR
+  change against SFT-v3 within ±5 pp at every scored checkpoint.
+- **Against it.** A proxy matched change within 0.3 pp of A0's or worse: the conflicting rows
+  are not what keeps GRPO from adding invariance. A TPR drop past −8 pp: the target pulls the
+  operating point.
+- **Cost.** About 11 GPU-h; the reward adds a lookup.
+
+### Later candidates, not registered
+
+- A1 + A2 together, if each helps on its own.
+- A bias anchor on held-out Djinni prompts in SFT-v3's 10–90% band (penalise the policy's mean
+  decision margin moving from SFT-v3's), if A1 shows the drift is not first-order.
+- Twice the prompts per step at the same lr (explanation 2 through noise), if A0's swing is
+  large and A1 does not remove it.
 
 ## 5. Ledger
 
@@ -154,3 +184,4 @@ answer within a pair block, with `normalize_then_sum`. It targets the evaluated 
 |---|---|---|---|---|
 | — | CPU diagnosis (section 2) | none | 0 | done |
 | 1 | A0 control, training | 5140665 | | running |
+| 2 | A1 bias projection, training | 5140670 | | submitted |

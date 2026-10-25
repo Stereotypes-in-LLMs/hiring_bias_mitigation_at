@@ -11,8 +11,7 @@ import torch
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
 
-from hiring_bias_mitigation.mitigation.grpo_bias_projection import (  # noqa: E402
-    project_bias, trainer_class)
+from hiring_bias_mitigation.mitigation.grpo_bias_projection import project_bias, trainer_class  # noqa: E402
 
 G = 16
 

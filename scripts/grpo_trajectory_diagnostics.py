@@ -28,6 +28,7 @@ from __future__ import annotations
 
 import argparse
 import importlib.util
+import itertools
 import json
 import os
 import sys
@@ -42,7 +43,8 @@ sys.path.insert(0, str(REPO / "src"))
 
 from hiring_bias_mitigation.analysis.reference_metrics import KEY, SET  # noqa: E402
 
-_spec = importlib.util.spec_from_file_location("opc", REPO / "scripts" / "operating_point_control.py")
+_spec = importlib.util.spec_from_file_location(
+    "opc", REPO / "scripts" / "operating_point_control.py")
 opc = importlib.util.module_from_spec(_spec)
 _spec.loader.exec_module(opc)
 
@@ -96,7 +98,7 @@ def transitions(frames: dict[int, pd.DataFrame], parent_margins: pd.DataFrame) -
     parent's margin (|margin| < 2.197 is the parent's 10-90% hire-probability band)."""
     margin = parent_margins.set_index(KEY)["margin"]
     steps, rows = sorted(frames), []
-    for a, b in zip(steps, steps[1:]):
+    for a, b in itertools.pairwise(steps):
         left = frames[a].set_index(KEY)["decision"]
         right = frames[b].set_index(KEY)["decision"].reindex(left.index)
         ref = frames[a].set_index(KEY)["ref"]
@@ -109,7 +111,8 @@ def transitions(frames: dict[int, pd.DataFrame], parent_margins: pd.DataFrame) -
             "one_way_share": float(max(to_hire.sum(), (changed & ~to_hire).sum())
                                    / max(changed.sum(), 1)),
             "changed_ref_hire": int((changed & (ref == "hire")).sum()),
-            "changed_in_parent_band": float((m[changed].abs() < 2.197).mean()) if changed.any() else np.nan,
+            "changed_in_parent_band": (float((m[changed].abs() < 2.197).mean())
+                                       if changed.any() else np.nan),
             "all_in_parent_band": float((m.abs() < 2.197).mean()),
         })
     return pd.DataFrame(rows)
@@ -138,7 +141,8 @@ def main() -> None:
     args = ap.parse_args()
 
     root = Path(os.environ.get("HBM_OUTPUT_ROOT", "/ritom/scratch/cscs/zhang/xw"))
-    margins = pd.read_parquet(root / "outputs/operating_point/v2" / f"{args.parent}--adapter.parquet")
+    margins = pd.read_parquet(
+        root / "outputs/operating_point/v2" / f"{args.parent}--adapter.parquet")
     parent_raw = args.parent_raw or root / "outputs/raw" / f"{args.parent}.parquet"
     parent_dec = decisions(parent_raw)[[*KEY, "decision"]] if parent_raw.exists() else None
 
@@ -182,8 +186,8 @@ def main() -> None:
                        "official": official})
     summary = {"parent": args.parent, "trajectory": str(args.trajectory),
                "run_dir": str(args.run_dir), "checks": checks,
-               "corr_tpr_vs_train_hire_ref_hire": float(table[["tpr_pct", "sampled_hire_rate_ref_hire"]]
-                                                       .corr().iloc[0, 1]),
+               "corr_tpr_vs_train_hire_ref_hire": float(
+                   table["tpr_pct"].corr(table["sampled_hire_rate_ref_hire"])),
                "corr_dtpr_vs_dtrain_hire_ref_hire": float(
                    table["delta_tpr_step_pp"].corr(table["sampled_hire_rate_ref_hire"].diff()))}
     (args.out / "summary.json").write_text(json.dumps(summary, indent=2, default=str) + "\n")

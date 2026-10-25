@@ -10,7 +10,8 @@ no prompt, row or split changes: `tests/test_grpo_free_target.py` and the report
 
     python scripts/build_grpo_free_target.py \
         --source artifacts/semisynthetic-v3/grpo-v3-all \
-        --pool artifacts/semisynthetic-v3/onpolicy-new --pool artifacts/semisynthetic-v3/onpolicy-new2 \
+        --pool artifacts/semisynthetic-v3/onpolicy-new \
+        --pool artifacts/semisynthetic-v3/onpolicy-new2 \
         --out artifacts/semisynthetic-v3/grpo-v3-all-free
 """
 from __future__ import annotations
@@ -39,12 +40,14 @@ def free_rates(pool: Path) -> pd.DataFrame:
     """Per pair: SFT-v3's attribute-free hire share and the number of decided samples."""
     prompts = pd.read_parquet(pool / "prompts.parquet").reset_index(drop=True)
     free = prompts[prompts["kind"] == "attr_free"]
-    samples = pd.concat(pd.read_parquet(f) for f in sorted((pool / "raw/samples").glob("*.parquet")))
+    chunks = sorted((pool / "raw/samples").glob("*.parquet"))
+    samples = pd.concat(pd.read_parquet(f) for f in chunks)
     samples = samples[samples["item"].isin(free.index)]
     if not (samples.drop_duplicates("item").set_index("item")["prompt"]
             == free.loc[samples["item"].unique(), "prompt"]).all():
         raise ValueError(f"{pool}: sample prompts differ from prompts.parquet")
-    samples = samples.assign(decision=[parse_output(t, "en").decision for t in samples["raw_output"]],
+    decisions = [parse_output(t, "en").decision for t in samples["raw_output"]]
+    samples = samples.assign(decision=decisions,
                              pair_id=free.loc[samples["item"], "key"].to_numpy())
     decided = samples[samples["decision"].isin(["hire", "reject"])]
     out = decided.groupby("pair_id")["decision"].agg(
