@@ -283,6 +283,12 @@ Both arms start from SFT-v3 for 200 steps and are read as in section 3, against 
   8, so 32 rows a step against the first version's 128, at a quarter of its forward cost. The
   weight, rows, hypothesis and criteria are unchanged. A six-step smoke checks it first. This
   is retry 1 of 3.
+- **Second amendment, from the smoke, before any result.** The six-step smoke (5142306, 0.83
+  GPU-h) ran clean at 25–35 s a step. Its `anchor/shift` changed sign every step at about
+  ±0.014, the sampling noise of 32 rows, while the anchor's gradient norm was 3–7 against
+  the policy gradient's 0.5–0.8 after clipping. At weight 10 the anchor would add a noise
+  direction ten times the policy's every step. The weight is now **1**: about the policy
+  gradient's size at noise level, and about 4.6 at a real shift of 0.1.
 
 ### R2-b — a third of the learning rate (parameter)
 
