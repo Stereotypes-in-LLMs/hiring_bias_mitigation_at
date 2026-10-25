@@ -128,6 +128,33 @@ def balanced_validation(rows: pd.DataFrame, n: int, seed: int = 42) -> pd.DataFr
     return pd.concat(parts).sort_index().reset_index(drop=True)
 
 
+#: Bins of the SFT parent's sampled hire rate for the margin monitor's rows (the last bin
+#: includes 1.0). The benchmark's TPR moved where the parent hires 50-99% of the time: GRPO-v3-all
+#: and DAPO-v3-all lost 59-71 pp of those hires and 2-5 pp where it hires over 99%. Of the 128
+#: hire rows of grpo-v3-all's monitor, 74% sat in that last bin (docs/DAPO_V3.md, monitor).
+MONITOR_RATE_BINS = (0.0, 0.01, 0.1, 0.3, 0.5, 0.7, 0.9, 0.99, 1.0)
+
+
+def monitor_rows(rows: pd.DataFrame, per_bin: int, seed: int = 42) -> tuple[pd.DataFrame, dict]:
+    """Held-out rows for the margin monitor (mitigation/grpo.py, MarginMonitorCallback): up to
+    `per_bin` from each MONITOR_RATE_BINS bin of the parent's sampled hire rate, whatever their
+    reference verdict. The monitor reads how decisions move at each level of the parent's
+    confidence and weights the levels as the benchmark has them, so it needs every level
+    covered, not the pool's mix."""
+    rng = np.random.default_rng(seed)
+    edges = np.asarray(MONITOR_RATE_BINS)
+    index = np.clip(np.searchsorted(edges, rows["sft_hire_rate"].to_numpy(), side="right") - 1,
+                    0, len(edges) - 2)
+    parts, plan = [], {}
+    for b in range(len(edges) - 1):
+        pool = rows[index == b]
+        parts.append(_draw(pool, per_bin, rng))
+        close = "]" if b == len(edges) - 2 else ")"
+        plan[f"[{edges[b]:g}, {edges[b + 1]:g}{close}"] = {"available": len(pool),
+                                                           "drawn": len(parts[-1])}
+    return pd.concat(parts).sort_index().reset_index(drop=True), plan
+
+
 def sample_hire_counts(samples: pd.DataFrame, lang: str = "en") -> dict[str, tuple[int, int]]:
     """prompt -> (hire decisions, samples) over the student's stored samples
     (`raw/samples/chunk-*.parquet`: one row per prompt and sample)."""

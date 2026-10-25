@@ -138,6 +138,68 @@ What this suggests for the data, not yet built or tested: a pool several times l
 - Evaluation job 5120574, 18:18, commit bb3fe73. That commit merges `xinyang/v3-additional-data` for evaluate_arm's vLLM memory wait (3e7898e).
 - Costs are recorded under `dapo_v3_all`.
 
+## The training monitor, fixed (2026-10-22, after the result)
+
+The user asked for this before any change to DAPO: "First fix the training monitor so it can see a TPR drop".
+
+**What was wrong.** Neither run's decision monitor came near the TPR guardrail that both failed on the benchmark. Readings are its projected hire rate where GPT-4o hires, against SFT-v3, from `decision_eval.jsonl` and `decision_served_eval.jsonl` in each run's output directory.
+
+| run | the monitor's lowest reading | at the audited checkpoint's last reading | benchmark |
+|---|---|---|---|
+| DAPO-v3-all | −2.5 pp (step 50) | −1.0 pp (step 75) | −10.10 pp |
+| GRPO-v3-all | −8.1 pp (served, step 375) | −5.5 pp (step 550) | −10.11 pp |
+| GRPO-v3-all, checkpoint 525 | | −1.5 pp (step 525) | −9.30 pp |
+
+**Why.** The benchmark's TPR moved where SFT-v3 was unsure, and the monitor's rows were ones it was sure of.
+- Of the monitor's 128 hire rows (`grpo-v3-all/grpo_validation.parquet`, `sft_hire_rate`), 74% sit where SFT-v3 hires with ≥ 99% probability.
+- Of the benchmark's prompts where GPT-4o hires, 37% sit there. SFT-v3 puts the rest across the scale: 27% under 1% hire probability, and 13% between 30% and 90%.
+- Per bin of SFT-v3's margin, over all attributed benchmark prompts, the changes in hire share are below. Bins are SFT-v3's hire probability; DAPO-v3-all lost 64–68 pp of the hires between 50% and 90% and 3 pp above 99%.
+
+| arm | <1% | 1–10% | 10–30% | 30–50% | 50–70% | 70–90% | 90–99% | ≥99% |
+|---|---|---|---|---|---|---|---|---|
+| GRPO-v3-all | 0.0 | +1.7 | +9.1 | +14.3 | −74.0 | −48.6 | −22.6 | −4.4 |
+| DAPO-v3-all | 0.0 | 0.0 | +1.1 | +5.0 | −68.0 | −63.8 | −27.8 | −2.7 |
+| DPO_V3_4880 | 0.0 | 0.0 | +7.0 | +24.8 | −10.1 | −2.0 | 0.0 | 0.0 |
+| share of the GPT-4o-hire prompts | 0.269 | 0.085 | 0.043 | 0.026 | 0.046 | 0.057 | 0.102 | 0.373 |
+
+(`scripts/monitor_calibration.py validate` and `calibrate`, on the op-margin-v2 margins in `outputs/operating_point/v2/`.)
+
+**What changed** (`mitigation/grpo.py`, `MarginMonitorCallback`; opt in with a `margin_monitor` block).
+- **Rows.** `grpo_monitor.parquet`: held-out rows drawn up to 96 per bin of SFT-v3's sampled hire rate, whatever their reference (`grpo_prompts.monitor_rows`; `build_grpo_prompts.py --monitor-per-bin 96 --monitor-only`). For grpo-v3-all this is 696 rows from 222 held-out candidates (`monitor.json`); no training candidate is among them, and the build's splits are unchanged (sha256 checked).
+- **Readout.** Decision margins of the served weights every 25 steps, with the op-margin-v2 scorer through rank 0's vLLM engine (`vllm_margins`). The parent's margins are scored before the first update and kept in `margin_monitor_parent.json`.
+- **Projection.** Each bin's change in hire share since the parent (bins on the parent's margin), weighted by the share of benchmark prompts SFT-v3 puts in that bin, where GPT-4o hires for TPR and where it rejects for FPR (`project_from_margins`).
+- **Stop.** The run saves and stops when the projected TPR has fallen more than `tpr_drop_stop` (0.08, before the 10 pp guardrail). Its status is `aborted: projected TPR fell more than 8 pp`.
+
+**Checked on the benchmark itself** (`monitor_calibration.py validate`). With the benchmark's own prompts in place of held-out rows, the binned estimate follows every arm's TPR change.
+
+| arm | TPR change, actual | estimate | FPR change, actual | estimate |
+|---|---|---|---|---|
+| GRPO-v3 | −1.03 | −1.34 | −0.18 | −0.03 |
+| GRPO-v3-all | −9.61 | −9.20 | −0.90 | −1.10 |
+| GRPO-v3-all, checkpoint 525 | −8.82 | −8.28 | −0.77 | −1.05 |
+| DAPO-v3-all | −9.61 | −10.41 | −1.94 | −1.54 |
+| DPO-v3 | −0.49 | −1.04 | −0.25 | +0.02 |
+| on-policy-only DPO | −2.39 | −2.13 | −0.01 | −0.14 |
+| DPO_V3_4880 | +1.24 | +0.37 | −0.21 | +0.23 |
+
+TPR changes here are by margins on the 30,600 attributed prompts; the standard's TPR (`reference_metrics.csv`) also counts the attribute-free prompts, and is −10.10 against −9.61 for DAPO-v3-all.
+
+**Not yet checked: transfer.** Whether held-out rows move as benchmark prompts at the same parent margin do. `scripts/cscs/monitor_calibration.sbatch` scores the monitor rows with the eight arms' merged models and sets each projection against the benchmark (about 1 GPU-h). Until it has run, the monitor is untested on held-out rows.
+
+**The calibration for runs from SFT-v3** (`monitor_calibration.py calibrate --parent Qwen3.5-9B--en--sft--adapter--en_only_sft_v3_additional`). It goes into the next run's config; DAPO-v3-all's config stays as it ran.
+
+```yaml
+margin_monitor:
+  edges: [-4.595, -2.197, -0.847, 0.0, 0.847, 2.197, 4.595]
+  share_ref_hire: [0.2691, 0.0849, 0.0428, 0.0263, 0.0459, 0.057, 0.1016, 0.3725]
+  share_ref_reject: [0.9086, 0.0194, 0.0109, 0.0084, 0.0032, 0.0128, 0.0182, 0.0184]
+  reference_hire_share: 0.3333
+  tpr_drop_stop: 0.08
+  steps: 25
+```
+
+The calibration uses one fact about the benchmark: how SFT-v3's margins spread over it. That is the same kind of fact as SFT-v3's benchmark TPR and FPR, which `sft_benchmark` already uses. No trained arm's benchmark result enters it.
+
 ## Reproducing
 
 From a Daint login node, one submission at a time:
