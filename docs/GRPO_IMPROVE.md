@@ -411,4 +411,4 @@ threshold every 25 steps is not visible in the training rollouts or in the held-
 | 7 | R2-a anchor, second smoke (callback) | 5142306 | 0.83 | passed 6 steps; weight amended to 1 |
 | 8 | R2-a anchor v2: training, scoring (3 jobs) | 5142344, 5143008, 5143013, 5143090 | 11.00 + 0.00 + 1.06 + 0.26 | done, refuted (retry 1 of 3) |
 | 9 | R3 lr decay, full epoch: training | 5143102 | | running |
-| | **Total so far** | | **59.1 of 150** | 6 arms of 50, 1 retry |
+| | **Total so far** | | **58.6 of 150** | 6 arms of 50, 1 retry |
