@@ -11,6 +11,9 @@
 set -euo pipefail
 export REPO=${REPO:-/ritom/scratch/cscs/zhang/xw/hiring_bias_mitigation_at-dapo}
 source "$REPO/scripts/cscs/env.sh"
+# An env.sh without `cost` (main before the recorder, an older checkout): run the step
+# unrecorded rather than fail.
+type cost > /dev/null 2>&1 || cost() { shift 2; "$@"; }
 export PATH="$XW/venv/bin:$PATH"
 export HF_HUB_OFFLINE=1
 export VLLM_USE_V2_MODEL_RUNNER=0
