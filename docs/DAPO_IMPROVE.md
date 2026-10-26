@@ -1,5 +1,11 @@
 # DAPO-improve: DAPO-v3-all with GRPO-improve's learning-rate shape
 
+**Result (2026-10-26).** R3's learning-rate shape turns DAPO-v3-all around: D1 (lr held to step
+62, decayed to 0 at 84) reaches −0.83 pp [−1.95, +0.31] against DAPO-v3-all's +0.85 pp
+[−0.23, +2.12], and passes the TPR guardrail it failed (−5.42 against −10.10 pp). By the
+standard it is still not better: the interval reaches 0. Adding R3's KL term (D2) does not
+help: −0.34 pp [−1.49, +0.83]. One seed each; DAPO training is not bit-deterministic.
+
 Started 2026-10-26 on `xinyang/dapo` (with `xinyang/grpo-improve` merged at b39c501), at the
 user's request: "用这个lr配置，剩下的时间探索DAPO让它更好". "This lr configuration" is GRPO-improve
 R3's (`GRPO_IMPROVE.md`): the learning rate held at 3e-5, then decayed linearly to 0 over the
@@ -71,3 +77,46 @@ and 72 were scored on all 31,050 benchmark prompts by `scripts/checkpoint_benchm
   D1's and Δ below D1's.
 - **Against.** Δ and TPR no better than D1's: the KL term is not what DAPO is missing.
 - **Cost.** ≈ 6 GPU-h with the reference forward, 0.5 for the evaluation. Runs beside D1.
+
+## 4. Results (training 5147717 and 5147722, evaluation 5148330 and 5148359)
+
+Every comparison ran at commit b8d106f with no uncommitted code, `conforms: true`, on all
+31,050 prompts and 2,700 sets (`reports/operating_point/v2/…dapo_improve_d{1_decay,2_decay_kl}--vs--…sft_v3_additional.json`;
+`reports/reference_metrics.csv`). The audited models are the final adapters, step 84, as
+declared; both runs reached `max_steps` (`status: done`), not the dry-pool stop.
+
+| arm, against SFT-v3 | matched change, pp [95% CI] | TPR | agreement | merge kept | hire rate | raw unstable | verdict |
+|---|---|---|---|---|---|---|---|
+| DAPO-v3-all (constant lr, β 0) | +0.85 [−0.23, +2.12] | −10.10 pp | −2.03 pp | 87.4% | 18.0% (margin) | 2.22% | not better, TPR fails |
+| **D1** (decay 62→84, β 0) | **−0.83 [−1.95, +0.31]** | **−5.42** | −0.97 | 85.0% | 20.11% | 1.37% | not better: the interval reaches 0 |
+| D2 (D1 + β 0.04) | −0.34 [−1.49, +0.83] | −5.78 | −1.28 | 84.7% | 20.18% | 1.85% | not better: the interval reaches 0 |
+| context: GRPO-improve R3 | −0.71 [−1.89, +0.39] | −5.03 | −0.75 | 97.2% | 20.15% | 1.52% | not better; recorded as better by the user |
+
+- **D1 against its registration.** For needs the interval below 0: not met. Against needs
+  Δ ≥ +0.85 or a TPR failure: not met either. D1 is the best point estimate of any arm in
+  GRPO-improve or DAPO-improve, and on its context reading (Δ below DAPO-v3-all's, TPR above
+  −10 pp) it holds.
+- **D2 against its registration.** Against: Δ and TPR are no better than D1's. The KL term is
+  not what DAPO is missing; at β 0.04 the point estimate is half of D1's.
+- **Not a paired comparison.** Unlike GRPO (`GRPO_IMPROVE.md`, R3), DAPO training is not
+  bit-deterministic at a fixed seed: D1's checkpoint 24 already hashes differently from
+  DAPO-v3-all's. So D1 against DAPO-v3-all mixes the schedule with a new draw of the run; the
+  1.7 pp between them is larger than the 0.4 pp seed spread seen in GRPO-improve, but one draw
+  each.
+- **Not measured.** No checkpoint trajectory of D1 or D2 (whether the decay window is where the
+  difference arises), no second seed.
+
+**Cost.** 0.80 (DAPO-v3-all's checkpoints) + 4.22 + 4.51 (training) + 0.50 + 0.50 (evaluation) =
+10.5 GPU-h under `dapo_improve`. With GRPO-improve's 86.2: **96.7 of 150 GPU-h** in all.
+
+## 5. Reproducing
+
+```bash
+export REPO=$PWD HBM_COST_ARM=dapo_improve
+CONFIG=configs/mitigation/dapo/dapo_improve_d1_decay.yaml \
+  scripts/cscs/submit.sh -p normal -t 02:30:00 scripts/cscs/train_dapo.sbatch
+AUDIT=configs/audit/qwen3.5-9b_en_dapo_improve_d1_decay_gh200.yaml \
+AGAINST=configs/audit/qwen3.5-9b_en_sft_v3_additional_gh200.yaml \
+  scripts/cscs/submit.sh scripts/cscs/evaluate_arm.sbatch
+# D2: the same with dapo_improve_d2_decay_kl
+```
