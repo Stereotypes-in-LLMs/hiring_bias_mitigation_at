@@ -66,7 +66,7 @@ STAGE_ORDER = ("datagen", "train", "eval", "patching", "other")
 JOB_STAGE = {
     "xw-sft": "train", "xw-dpo": "train", "xw-grpo": "train", "xw-dapo": "train",
     "xw-audit": "eval", "xw-opc": "eval", "xw-eval-arm": "eval", "xw-dpo-eval": "eval",
-    "xw-grpo-signal": "eval", "xw-merge-retention": "eval",
+    "xw-grpo-signal": "eval", "xw-merge-retention": "eval", "xw-monitor-cal": "eval",
     "xw-env": "other", "xw-download": "other", "xw-seeds-tests": "other",
     "xw-seeds-tests2": "other",
 }
