@@ -489,6 +489,37 @@ Over 475–550, the registered window, R3's TPR SD is 2.8 pp: under the 3 pp of 
   (`outputs/grpo/grpo_improve_r4_tipped_v2`, audit run suffix `…r4_tipped_v2`), so the
   cancelled attempt's files stay as they were.
 
+### R4 result (training 5148796, evaluation 5152422)
+
+**In one sentence.** Not better by the standard, −0.73 pp [−1.64, +0.19] at the declared final
+checkpoint (step 259), every guardrail passing (TPR −4.70 pp, agreement −1.31 pp, merge kept
+90.5%, undecided 0%). Comparison at commit 208a9ad, `conforms: true`
+(`reports/operating_point/v2/…r4_tipped_v2--vs--…sft_v3_additional.json`).
+
+- **Against the registration.** For needs the interval below 0: not met. Against lists "Δ above
+  R3's −0.71": not met either (−0.73). Tipped rows alone, 45% of the data and 45% of the steps,
+  give R3's point estimate with a slightly narrower interval.
+- **Reading.** The 3,366 rows on which the anchor contradicts SFT-v3's own answer cost compute
+  without adding measurable invariance. Not confirmed beyond one seed.
+- **Cost.** 10.85 + 0.51 = 11.36 GPU-h.
+
+## 10b. Round 5: seed replicates of the GRPO + decay recipes (registration, 2026-10-26)
+
+- **Why.** Every arm so far is one draw. Two GRPO seeds of one config differed by 0.4 pp (A0
+  against GRPO-v3-all); three DAPO draws of D1 spread over 1.1 pp and its −0.83 did not
+  reproduce (`DAPO_IMPROVE.md`, section 6). R3 is the recipe the user recorded as better and
+  will scale up; R4 matches it at half the compute. The budget (raised to 200 GPU-h) is best
+  spent on whether those two point estimates survive a seed.
+- **Change.** `seed: 43` and `seed: 44` on R4's config, and `seed: 43` on R3's, nothing else
+  (`configs/mitigation/grpo_improve/{r4_tipped_seed43,r4_tipped_seed44,r3_wsd_seed43}.yaml`;
+  audits `configs/audit/qwen3.5-9b_en_grpo_improve_{…}_gh200.yaml`). Final adapters, declared now.
+- **For** (the recipe reproduces). Each replicate Δ < 0 with every guardrail passing; R4's
+  three seeds averaging below −0.5 pp.
+- **Against.** A replicate with Δ ≥ 0, or a failed guardrail.
+- **What it cannot decide.** Each seed keeps its own verdict; pooling seeds into one interval is
+  not in `EVAL_STANDARD.md` and would be the user's decision.
+- **Cost.** 2 × 11.4 + 24.2 ≈ 47 GPU-h, to about 164 of 200.
+
 ## 11. Where this leaves the goal
 
 What the evidence supports:
@@ -536,4 +567,7 @@ reproduce it at its final step.
 | 8 | R2-a anchor v2: training, scoring (3 jobs) | 5142344, 5143008, 5143013, 5143090 | 11.00 + 0.00 + 1.06 + 0.26 | done, refuted (retry 1 of 3) |
 | 9 | R3 lr decay, full epoch: training, evaluate_arm, trajectory | 5143102, 5146713, 5146764 | 23.66 + 0.50 + 2.06 | done, not better; guardrails pass |
 | 10 | R4 tipped rows + decay: training | 5147006 | 1.36 | **cancelled** at step 25 by the user; no result |
-| | **Total** | | **86.2 of 150** | 8 arms of 50 (7 with a result), 1 retry |
+| 11 | R4 rerun: training, evaluate_arm | 5148796, 5152422 | 10.85 + 0.51 | done, not better (−0.73); guardrails pass |
+| — | DAPO-improve (`DAPO_IMPROVE.md`) | | 19.6 | D1, D2, D1 seeds 43/44 |
+| 12 | Round 5: R4 seeds 43/44, R3 seed 43 | | | registered |
+| | **Total so far** | | **117.1 of 200** | 1 retry |
