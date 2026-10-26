@@ -458,6 +458,15 @@ What the evidence supports:
    benchmark and one seed per arm, no variant still on the list is likely to reach an
    interval below 0.
 
+**Which benchmark rows swing (CPU, GRPO-v3-all's 20 checkpoints; computed inline).** 3,215 of
+31,050 rows flip at least 4 times over the 19 windows. They come in whole pairs: 68 of the 450
+pairs, with a median 92% of a pair's 69 variants swinging together, so the swing is a
+case-level judgement, not a response to the attribute, which is why it moves TPR far more
+than instability. The pairs are ones SFT-v3 is unsure of (median |margin| 1.75 against 14.5
+elsewhere), 76% of them GPT-4o hires, spread over 55 candidates (the top 10 carry 34%). One
+reading of R2-a's failure, not confirmed: its 30 anchor pairs are few enough for the penalty
+to be met on those pairs alone, without holding a threshold shared with these 68.
+
 What it does not support: any GRPO variant beating SFT-v3 under the standard at a declared
 checkpoint. Checkpoint 525's "better" remains exploratory, and R3 at the same seed did not
 reproduce it at its final step.
