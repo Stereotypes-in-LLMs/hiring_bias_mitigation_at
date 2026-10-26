@@ -471,6 +471,32 @@ What it does not support: any GRPO variant beating SFT-v3 under the standard at 
 checkpoint. Checkpoint 525's "better" remains exploratory, and R3 at the same seed did not
 reproduce it at its final step.
 
+## 13. Round 4: registration
+
+### R4 — tipped rows only, with R3's late decay (method: the data)
+
+- **Why.** The one hypothesis on explanation 3 still untested at the standard: on 37% of the
+  training rows the anchor contradicts SFT-v3's own attribute-free answer, so the reward teaches
+  a standard, not invariance (section 2). A2 tried to cancel those rows with a reward and did
+  not move the proxy; removing them is the direct test. R3's decay is kept because it is the
+  one change that kept the TPR guardrail.
+- **Hypothesis.** GRPO on rows where the attribute flips SFT-v3's decision, and only those,
+  lowers matched instability against SFT-v3 more than R3 does, and beats SFT-v3 under the
+  standard at its final checkpoint.
+- **Change.** R3's config with the data replaced by grpo-v3-all's tipped rows, balanced: all
+  2,077 tipped reject rows and 2,077 of the 2,985 tipped hire rows (seed 42),
+  `scripts/build_grpo_tipped_subset.py` → `artifacts/semisynthetic-v3/grpo-v3-all-tipped/`
+  (919 pairs). One epoch is 259 steps; the decay covers the last 67 (26%, as R3's 146 of
+  571). Validation and monitor rows unchanged. Config `configs/mitigation/grpo_improve/r4_tipped.yaml`.
+- **Control and decision.** SFT-v3 by `evaluate_arm.sbatch`; the final adapter, declared now
+  (`configs/audit/qwen3.5-9b_en_grpo_improve_r4_tipped_gh200.yaml`). R3 is context.
+  Exploratory label as before (exposed benchmark).
+- **For.** Δ < 0 with the interval below 0 and every guardrail passing.
+- **Against.** The interval reaches 0, Δ above R3's −0.71, or a guardrail fails. 4,154 rows is
+  45% of R3's data, so a weaker result could also be the smaller dose; that would be stated.
+- **Cost.** ≈ 259 × 36 s + start-up ≈ 2.8 h on 4 GPUs ≈ 11 GPU-h, plus 0.5 for the evaluation.
+  No trajectory scoring.
+
 ## 12. Ledger
 
 | # | Arm | Job(s) | GPU-h | State |
@@ -485,4 +511,5 @@ reproduce it at its final step.
 | 7 | R2-a anchor, second smoke (callback) | 5142306 | 0.83 | passed 6 steps; weight amended to 1 |
 | 8 | R2-a anchor v2: training, scoring (3 jobs) | 5142344, 5143008, 5143013, 5143090 | 11.00 + 0.00 + 1.06 + 0.26 | done, refuted (retry 1 of 3) |
 | 9 | R3 lr decay, full epoch: training, evaluate_arm, trajectory | 5143102, 5146713, 5146764 | 23.66 + 0.50 + 2.06 | done, not better; guardrails pass |
-| | **Total** | | **84.8 of 150** | 7 arms of 50, 1 retry |
+| 10 | R4 tipped rows + decay: training | | | registered |
+| | **Total so far** | | **84.8 of 150** | 7 arms of 50, 1 retry |
