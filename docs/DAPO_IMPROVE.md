@@ -7,7 +7,7 @@ standard it is still not better: the interval reaches 0. Adding R3's KL term (D2
 help: −0.34 pp [−1.49, +0.83]. One seed each; DAPO training is not bit-deterministic.
 
 Started 2026-10-26 on `xinyang/dapo` (with `xinyang/grpo-improve` merged at b39c501), at the
-user's request: "用这个lr配置，剩下的时间探索DAPO让它更好". "This lr configuration" is GRPO-improve
+user's request, translated from Chinese: "Use this lr configuration and spend the remaining time exploring how to improve DAPO." "This lr configuration" is GRPO-improve
 R3's (`GRPO_IMPROVE.md`): the learning rate held at 3e-5, then decayed linearly to 0 over the
 last 26% of the run. R3 was recorded as better than SFT-v3 on the user's decision (−0.71 pp
 [−1.89, +0.39], every guardrail passing). The comparison is [`EVAL_STANDARD.md`](EVAL_STANDARD.md),

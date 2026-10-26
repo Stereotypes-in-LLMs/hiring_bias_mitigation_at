@@ -1,6 +1,6 @@
 # GRPO lower learning rate pilot
 
-Status: preregistered for one bounded training job, authorized by the user's 2026-10-23 request "降 LR 小试". No other training arm is authorized by this protocol.
+Status: preregistered for one bounded training job, authorized by the user's 2026-10-23 request, translated from Chinese, to "try a small run with a lower LR." No other training arm is authorized by this protocol.
 
 ## Question and intervention
 

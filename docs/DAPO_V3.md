@@ -74,7 +74,7 @@ What this suggests for the data, not yet built or tested: a pool several times l
   - An 11 h 15 min limit (45 GPU-h on four GPUs), as GRPO-v3-all; the user is asked before `resume: true` continues it.
 - **Selection and test.** The final adapter is audited, whichever stop ends the run. The benchmark audit is spent once.
 - **Order.** After GRPO-v3-all's comparison (exploratory step-525 audit, job 5119034) has finished, and with the account's queue otherwise empty: one job at a time. The code is committed before submission.
-- **Decided by the user (2026-10-22): "β=0 加严格平衡".**
+- **Decided by the user (2026-10-22, translated from Chinese): "β=0 with strict balancing."**
   - β 0, as DAPO. In GRPO-v3-all, β 0.04 held the mean per-token KL to SFT-v3 at 0.016–0.034 through training (job 5116822's log), and the hire rate where GPT-4o hires still fell 10.11 pp. The KL is averaged over ~38 completion tokens, of which the decision is one or two. Our reading, not measured on the decision token: it held the wording more than the decision.
   - The strict verdict balance stays on. It is not part of DAPO, so a win of this run does not say whether DAPO or the balance did it. The ablation for that is the same run with `dynamic_sampling_balance: false`, a second full training.
 - **Decided by the user (2026-10-22): "Use grpo-v3-all's prompts as they are for DAPO-v3-all, and keep max rounds at 8".**

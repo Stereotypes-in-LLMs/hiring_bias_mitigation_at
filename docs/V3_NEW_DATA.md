@@ -8,7 +8,7 @@ A second round, at the end of this page, trains SFT-v3 on the result and builds 
 
 ## Pre-registration
 
-Written on 2026-10-20 at about 11:00 CEST, before any generation, after the user asked for new data from the v3 pipeline ("这是 v3，换了 v1 anchor，调整了 mention_attribute 策略，用这个新管线生成新数据，之后我统一开始训练 v3 SFT，DPO").
+Written on 2026-10-20 at about 11:00 CEST, before any generation, after the user asked for new data from the v3 pipeline. Translated from Chinese: "This is v3, with the v1 anchors replaced and the mention_attribute strategy adjusted. Generate new data with this pipeline; afterward I will start v3 SFT and DPO training together."
 
 ### Question
 
@@ -419,7 +419,7 @@ Sixty-four prompts are a coarse readout: one prompt is 1.6 points of agreement. 
 
 #### SFT-v3 on the benchmark: pre-registration
 
-Written on 2026-10-20 at about 22:50, before any audit of SFT-v3. The user asked for the evaluation as soon as SFT finished ("SFT跑完了？来eval"), on the `debug` partition beside the running sample job ("debug同时跑一个").
+Written on 2026-10-20 at about 22:50, before any audit of SFT-v3. The user asked for evaluation as soon as SFT finished, saying "Has SFT finished? Run eval," and for it to run on the `debug` partition beside the running sample job, saying "Run one on debug at the same time." Both quotations are translated from Chinese.
 
 - **Question.** Does SFT-v3 lower the share of unstable within-group counterfactual sets at matched hire rate, against the cell's declared reference arm, SFT v1 (`Qwen3.5-9B--en--sft--adapter--en_only_cscs`, `analysis/eval_standard.py`), and stay inside the guardrails? The hypothesis is that it does: it is trained on 7.5 times the rows, with vote anchors. The result counts against the hypothesis if the 95% interval reaches 0 or above.
 - **Control.** SFT v1's GH200 audit and its op-margin-v2 margin pass, both on disk. For context, SFT-v3 is also compared with the base model at matched hire rate, through the base pass of SFT v1's config (`compare-arms --against-which base`, CPU only), as r2em-100 was.
@@ -761,9 +761,9 @@ The tables are `docs/dpo_data/v3_{dpo,r2em,djinni_new,kaggle_linkedin,rjdb}_*`, 
 
 #### Decision: r2em_v3 stays (user, 2026-10-21)
 
-Shown the per-source checks and the data-quality report, the user decided "保留" (keep). V3's DPO set keeps r2em_v3 although it fails D3 (0.701) and D4 (97.7%). It stays as built: 3,839 training and 442 validation pairs, read through `configs/data/en_only_dpo_v3.yaml`. The failures stay recorded, and `dpo_v3_part` lets a run or a readout set the r2em part apart.
+Shown the per-source checks and the data-quality report, the user decided to "keep it," translated from Chinese. V3's DPO set keeps r2em_v3 although it fails D3 (0.701) and D4 (97.7%). It stays as built: 3,839 training and 442 validation pairs, read through `configs/data/en_only_dpo_v3.yaml`. The failures stay recorded, and `dpo_v3_part` lets a run or a readout set the r2em part apart.
 
-The same message asked for more on-policy pairs: "采到5000". How that is reached, and at what cost, follows.
+The same message asked for more on-policy pairs: "Sample until we reach 5000," translated from Chinese. How that is reached, and at what cost, follows.
 
 #### DPO-v3: pre-registration
 
@@ -897,7 +897,7 @@ The verdict is "not better: the interval reaches 0".
 
 #### DPO on the on-policy pairs alone: pre-registration
 
-Written on 2026-10-21 at about 15:50, before training. After DPO-v3's verdict the user judged DPO ineffective so far ("感觉DPO没效果"). Of the checks offered, the user chose this one: "只用 on-policy 的 1,568 对做 DPO，然后评测".
+Written on 2026-10-21 at about 15:50, before training. After DPO-v3's verdict the user judged DPO ineffective so far, saying "DPO does not seem effective," translated from Chinese. Of the checks offered, the user chose this one: "Train DPO using only the 1,568 on-policy pairs, then evaluate," also translated from Chinese.
 
 - **Question.** Was r2em_v3 what made DPO-v3 worse than SFT-v3? It was 59% of DPO-v3's rows and was sampled from SFT v1. This run trains DPO on the on-policy pairs alone, from SFT-v3. The decision is against SFT-v3; the comparison with DPO-v3 is descriptive.
 - **Hypothesis and what counts against it.** If r2em_v3 drove DPO-v3's +0.94 pp, this run's change against SFT-v3 is at or below 0. If it is at or above DPO-v3's +0.94, or its interval stays above 0, r2em_v3 was not the cause, and DPO on these on-policy pairs does not help either.
@@ -1022,7 +1022,7 @@ The verdict is "not better: the interval reaches 0". The merge kept less of this
 
 ### Pre-registration
 
-Written on 2026-10-21 at about 17:20 CEST, before any job of this round. DPO on the 1,568 on-policy pairs alone was not better than SFT-v3. The user then judged "DPO need大量好数据，但是好数据难找" and decided "DPO一般训练规模都上万，想先增加好数据到5千对".
+Written on 2026-10-21 at about 17:20 CEST, before any job of this round. DPO on the 1,568 on-policy pairs alone was not better than SFT-v3. The user then judged that "DPO needs a lot of good data, but good data is hard to find" and decided that "DPO training usually uses over ten thousand examples; I want to first increase good data to 5,000 pairs." Both quotations are translated from Chinese.
 
 #### Question
 

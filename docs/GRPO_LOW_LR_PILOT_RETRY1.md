@@ -1,6 +1,6 @@
 # GRPO lower-LR pilot: authorized retry 1
 
-On 2026-10-23 the user explicitly confirmed: "425→500、LR `3e-6`、full TPR 下降 8 pp 停训". This authorizes one replacement job after attempt5130709 failed before any optimizer update or benchmark inference.
+On 2026-10-23 the user explicitly confirmed, translated from Chinese: "425→500, LR `3e-6`, stop training if full TPR drops by 8 pp." This authorizes one replacement job after attempt5130709 failed before any optimizer update or benchmark inference.
 
 The experimental protocol in `GRPO_LOW_LR_PILOT.md` is unchanged. The correction in commit `d2cd1ae55d9c02cd2933d167acd2351cb6693902` synchronizes the ranks before writing W&B metadata. It preserves the strict fresh-directory check and does not alter learning, inference, data, labels or stopping rules. The corrected code passed 102 CPU tests, including four real multiprocessing regression tests. The GPU startup gate is still required.
 

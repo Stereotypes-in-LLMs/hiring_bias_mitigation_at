@@ -1,6 +1,6 @@
 # GRPO from SFT-v3
 
-**Status (2026-10-22, the user's decision): GRPO is recorded as better than SFT-v3.** The model is GRPO-v3-all, checkpoint-525: −1.02 pp unstable within-group sets at matched hire rate, [−1.99, −0.12], with every guardrail passing (round 3 below). The user: "记录GRPO更好（最终我们会用更多数据，现在不用花太多时间验证)". The decision does not wait for the second seed the standard asks for at about 1 pp, because the final runs will use more data.
+**Status (2026-10-22, the user's decision): GRPO is recorded as better than SFT-v3.** The model is GRPO-v3-all, checkpoint-525: −1.02 pp unstable within-group sets at matched hire rate, [−1.99, −0.12], with every guardrail passing (round 3 below). The user, translated from Chinese: "Record GRPO as better. We will eventually use more data, so do not spend too much time validating it now." The decision does not wait for the second seed the standard asks for at about 1 pp, because the final runs will use more data.
 
 What stays on the record:
 
@@ -130,13 +130,13 @@ The training config is `configs/mitigation/grpo/qwen3.5-9b_en_only_grpo_v3_new_g
 
 ### Stopped (job 5115959)
 
-The user stopped the training at about 20:14 ("先停训练"). It was at step 4 of 187, before any checkpoint or monitor reading. The vLLM sync check at step 0 had passed (decision agreement 1.000, rank correlation 0.9996). Nothing of it is evaluated. The prompt set and configs stay on disk as built.
+The user stopped the training at about 20:14, saying "stop training for now," translated from Chinese. It was at step 4 of 187, before any checkpoint or monitor reading. The vLLM sync check at step 0 had passed (decision agreement 1.000, rank correlation 0.9996). Nothing of it is evaluated. The prompt set and configs stay on disk as built.
 
 ## Round 3: GRPO-v3-all, every new pair and every suggested change
 
 ### Pre-registration (2026-10-21, about 20:30, before the second batch's data exists)
 
-The user replaced GRPO-v3-new: "等数据生成完，用所有新的数据。按你提的建议都改了，然后跑。" That is: wait for round 3's data, use all of it, and apply each change suggested after GRPO-v3-new's prompts were built.
+The user replaced GRPO-v3-new with this instruction, translated from Chinese: "Wait for data generation to finish, use all the new data, apply all your suggested changes, and then run." That is: wait for round 3's data, use all of it, and apply each change suggested after GRPO-v3-new's prompts were built.
 
 - **Question and control.** As round 2. Does it lower unstable within-group sets at matched hire rate against SFT-v3? GRPO-v3 is context.
 - **For and against.** As round 2: Δ < 0 with the interval below 0 and every guardrail passing, or not.

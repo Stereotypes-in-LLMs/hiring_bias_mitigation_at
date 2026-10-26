@@ -4,7 +4,7 @@
 R3, GRPO-v3-all with the learning rate decayed linearly to 0 over its last 146 steps, final
 adapter (step 571, declared before training): −0.71 pp unstable within-group sets at matched
 hire rate, [−1.89, +0.39], every guardrail passing (TPR −5.03 pp, agreement −0.75 pp, merge kept
-97.2%, undecided 0%; job 5146713). The user: "Δ −0.71 [−1.89, +0.39] 可以视为更好了".
+97.2%, undecided 0%; job 5146713). The user, translated from Chinese: "Δ −0.71 [−1.89, +0.39] can be regarded as an improvement."
 
 What stays on the record:
 
