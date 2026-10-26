@@ -21,7 +21,7 @@ lora_dropout: 0.0              # dropout makes the policy's log-probs noisy agai
 disable_dropout: true
 # DAPO
 loss_type: dapo                # token-level: every completion token of the batch weighs the same
-beta: 0.04                     # no KL term, no reference forward pass
+beta: 0.04                     # KL toward SFT-v3 (the LoRA disabled), as GRPO-v3-all and R3
 epsilon: 0.2
 epsilon_high: 0.28
 dynamic_sampling: true
