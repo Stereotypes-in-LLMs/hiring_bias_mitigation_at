@@ -120,3 +120,21 @@ AGAINST=configs/audit/qwen3.5-9b_en_sft_v3_additional_gh200.yaml \
   scripts/cscs/submit.sh scripts/cscs/evaluate_arm.sbatch
 # D2: the same with dapo_improve_d2_decay_kl
 ```
+
+## 6. D1 at seeds 43 and 44 (registration, 2026-10-26)
+
+- **Why.** D1 is the best point estimate of GRPO-improve and DAPO-improve (−0.83 pp), from one
+  draw, and DAPO is not bit-deterministic. The standard asks a method within 1 pp for a second
+  seed with the same sign; GRPO-improve saw a 0.4 pp spread between two seeds of one config.
+  The user asked to spend the remaining time on DAPO with R3's lr shape; repeating D1 is the
+  cheapest check of whether its result is the schedule or the draw.
+- **Change.** D1's config with `seed: 43` and `seed: 44`, nothing else
+  (`configs/mitigation/dapo/dapo_improve_d1_decay_seed{43,44}.yaml`; audits
+  `configs/audit/qwen3.5-9b_en_dapo_improve_d1_decay_seed{43,44}_gh200.yaml`). Final adapters,
+  declared now.
+- **For** (D1's result reproduces). Both Δ < 0, both TPR guardrails passing; the mean of the
+  three draws below −0.5 pp.
+- **Against.** Either Δ ≥ 0, or a TPR guardrail failure: D1's −0.83 was largely the draw.
+- **What it cannot decide.** Each seed keeps its own verdict under the standard; pooling three
+  seeds into one interval is not part of `EVAL_STANDARD.md` and would be the user's decision.
+- **Cost.** 2 × (≈ 4.3 training + 0.5 evaluation) ≈ 9.6 GPU-h, leaving about 44 of the 150.
