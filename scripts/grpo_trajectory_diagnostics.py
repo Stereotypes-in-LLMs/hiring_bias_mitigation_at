@@ -136,6 +136,9 @@ def main() -> None:
     ap.add_argument("--parent", required=True, help="parent run name (op-margin-v2 margins)")
     ap.add_argument("--parent-raw", type=Path, help="parent raw parquet, for decision changes")
     ap.add_argument("--out", type=Path, required=True)
+    ap.add_argument("--extra", nargs="*", default=[],
+                    help="STEP=RAW pairs: a checkpoint audited outside the trajectory, e.g. the "
+                         "final adapter's outputs/raw/<run>.parquet")
     ap.add_argument("--check", nargs="*", default=[],
                     help="STEP=RUN pairs whose official op-margin-v2 report checks the proxy")
     args = ap.parse_args()
@@ -154,6 +157,9 @@ def main() -> None:
         step = int(d.name.split("-")[1])
         if (d / "raw.parquet").exists() and step not in frames:
             frames[step] = decisions(d / "raw.parquet")
+    for item in args.extra:
+        step, raw = item.split("=", 1)
+        frames.setdefault(int(step), decisions(Path(raw)))
     rows = [checkpoint_row(s, f, margins, parent_dec) for s, f in sorted(frames.items())]
     ckpt = pd.DataFrame(rows).sort_values("step")
     moves = transitions(frames, margins)

@@ -352,8 +352,10 @@ Both arms start from SFT-v3 for 200 steps and are read as in section 3, against 
 - **Change.** GRPO-v3-all's config (`qwen3.5-9b_en_only_grpo_v3_all_gh200.yaml`), seed 42 and
   every setting the same, except `lr_scheduler_type: warmup_stable_decay` with
   `num_decay_steps: 146` (3e-5 to step 425, then linear to 0 at 571). Config
-  `configs/mitigation/grpo_improve/r3_wsd.yaml`. vLLM's sampling is not seeded per step, so
-  steps 1–425 are a new draw of GRPO-v3-all's recipe, not a copy of it.
+  `configs/mitigation/grpo_improve/r3_wsd.yaml`. *Correction after the run:* steps 1–425 turned
+  out to be bit-identical to GRPO-v3-all's (the adapters of checkpoints 100, 300 and 425 have
+  the same SHA-256); they first differ at 450. Training is deterministic at a fixed seed, so
+  R3 is GRPO-v3-all itself with the decay applied from step 425: a paired comparison.
 - **Control and decision.** SFT-v3, by `evaluate_arm.sbatch` (op-margin-v2 compare-arms on all
   31,050 prompts and 2,700 sets). **The audited checkpoint is the final adapter, step 571,
   declared now.** Audit config `configs/audit/qwen3.5-9b_en_grpo_improve_r3_wsd_gh200.yaml`.
@@ -397,7 +399,70 @@ guardrail); restoring forces do not, whether on the shared decision bias (A1, th
 doubled) or on held-out borderline rows (R2-a, unchanged). Whatever moves the benchmark
 threshold every 25 steps is not visible in the training rollouts or in the held-out rows.
 
-## 8. Ledger
+## 10. Round 3 result: R3 freezes the operating point, the gain stays inside the noise
+
+**In one sentence.** By the standard R3 is not better than SFT-v3, −0.71 pp [−1.89, +0.39]
+at the declared final checkpoint, with every guardrail passing; against GRPO-v3-all's own
+final adapter it keeps the operating point (TPR −5.0 against −10.1 pp) but does not widen the
+gain. Evaluation job 5146713, commit 3d89a72, `conforms: true`.
+
+| step 571, against SFT-v3 | GRPO-v3-all (constant lr) | R3 (lr decayed 425→571) |
+|---|---|---|
+| matched change, pp [95% CI] | −0.56 [−1.61, +0.41] | **−0.71 [−1.89, +0.39]** |
+| verdict | not better (TPR guardrail fails) | not better: the interval reaches 0 |
+| TPR change vs SFT-v3 | −10.11 pp | **−5.03 pp** |
+| agreement with GPT-4o change | −2.70 pp | −0.75 pp |
+| hire rate, all prompts | 18.71% | 20.15% |
+| raw unstable within-group sets | 1.11% | 1.52% |
+| merge kept | 97.7% | 97.2% |
+
+(`reports/reference_metrics.csv`, `reports/operating_point/v2/…r3_wsd--vs--…sft_v3_additional.json`.)
+
+**Within the run** (trajectory job 5146764; `outputs/grpo_improve/diag_r3/`, `compare_round3/`):
+
+| checkpoints 425–571 (7) | TPR SD | largest neighbour change | TPR change range | below −8 pp | mean proxy matched |
+|---|---|---|---|---|---|
+| GRPO-v3-all | 10.4 pp | 24.9 | −14.4 to +15.6 | 4 | −0.83 pp |
+| R3 | **3.0** | 5.9 | −5.0 to +2.2 | 0 | −0.44 |
+
+Over 475–550, the registered window, R3's TPR SD is 2.8 pp: under the 3 pp of "for". From step
+525 on, fewer than 125 decisions change per 25 steps, against 600–3,200 at constant lr.
+
+- **Against the registration.** The swing line holds; the decision line fails (the interval
+  reaches 0). Hypothesis not supported as a whole.
+- **Reading.** Decaying the lr freezes the threshold walk and with it the TPR lottery, which is
+  what made GRPO-v3-all fail its guardrail. It does not add invariance: the proxy over the
+  late phase is weaker than at constant lr (−0.44 against −0.83), as the weight average's was
+  (−0.32). Not confirmed which way: a difference of 0.4 pp is inside one seed's spread.
+- **Checked: the proxy gain is not an operating-point artefact.** Over all 51 scored
+  checkpoints of the seven arms, the proxy correlates −0.09 with |TPR change| and 0.84 with the
+  arm's own raw instability; SFT-v3's matched instability stays at 1.9–2.3% whichever way the
+  arm's TPR sits.
+
+## 11. Where this leaves the goal
+
+What the evidence supports:
+
+1. *Rollout signal (explanation 1).* Real and unfixed by any arm: zero-variance groups pass 0.8
+   by step ~125 in every arm. More signal on its own did not help (A2, R2-a had more signal
+   early, no better proxy; DAPO before this round).
+2. *Update size (explanation 2).* The operating-point swing scales with the step size (R2-b,
+   R3) and not with the decision-bias gradient (A1) or an anchor (R2-a). Decaying the lr is
+   the one change that removed the TPR guardrail failure without breaking another guardrail.
+3. *Target mismatch (explanation 3).* The benchmark's threshold moves while the training
+   rollouts and held-out borderline rows stay put; 37% of the training rows reward a different
+   standard, not invariance; a consistency reward against SFT-v3's own answer did not move the
+   proxy (A2).
+4. *Readout resolution.* Two seeds of one config differ by 0.4 pp of mean proxy; the standard's
+   interval is ±1.1 pp. Every GRPO variant here sits at −1.0 to +0.1 pp. Within this
+   benchmark and one seed per arm, no variant still on the list is likely to reach an
+   interval below 0.
+
+What it does not support: any GRPO variant beating SFT-v3 under the standard at a declared
+checkpoint. Checkpoint 525's "better" remains exploratory, and R3 at the same seed did not
+reproduce it at its final step.
+
+## 12. Ledger
 
 | # | Arm | Job(s) | GPU-h | State |
 |---|---|---|---|---|
@@ -410,5 +475,5 @@ threshold every 25 steps is not visible in the training rollouts or in the held-
 | 6 | R2-b lr 1e-5: training, scoring | 5141460, 5142302 | 8.47 + 2.04 | done, partial support |
 | 7 | R2-a anchor, second smoke (callback) | 5142306 | 0.83 | passed 6 steps; weight amended to 1 |
 | 8 | R2-a anchor v2: training, scoring (3 jobs) | 5142344, 5143008, 5143013, 5143090 | 11.00 + 0.00 + 1.06 + 0.26 | done, refuted (retry 1 of 3) |
-| 9 | R3 lr decay, full epoch: training | 5143102 | | running |
-| | **Total so far** | | **58.6 of 150** | 6 arms of 50, 1 retry |
+| 9 | R3 lr decay, full epoch: training, evaluate_arm, trajectory | 5143102, 5146713, 5146764 | 23.66 + 0.50 + 2.06 | done, not better; guardrails pass |
+| | **Total** | | **84.8 of 150** | 7 arms of 50, 1 retry |
