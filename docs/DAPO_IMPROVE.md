@@ -52,3 +52,22 @@ and 72 were scored on all 31,050 benchmark prompts by `scripts/checkpoint_benchm
   undo what DAPO's last steps do.
 - **Cost.** DAPO-v3-all trained 85 steps in 65 min; ≈ 5 GPU-h with start-up, 0.5 for the
   evaluation.
+
+## 3. D2 — D1 with the KL term back (parameter)
+
+- **Why.** R3, the arm recorded as better, is GRPO with β 0.04 toward SFT-v3; DAPO-v3-all ran at
+  β 0 (the user's choice for that arm, `DAPO_V3.md`). Both of DAPO-v3-all's failures, the
+  24→48 move to reject and the late loss of stability with a rising gradient norm, are what a
+  missing pull toward the parent would allow. D1 tests the lr shape alone; D2 adds the one
+  other setting R3 has and DAPO lacks.
+- **Hypothesis.** With β 0.04 and D1's schedule, DAPO keeps its TPR within −5 pp and does not
+  lose stability late.
+- **Change.** `beta: 0.04` on D1's config, nothing else
+  (`configs/mitigation/dapo/dapo_improve_d2_decay_kl.yaml`; audit
+  `configs/audit/qwen3.5-9b_en_dapo_improve_d2_decay_kl_gh200.yaml`). The dry-pool stop and the
+  verdict balance stay on.
+- **Decision.** As D1: the final adapter by `evaluate_arm.sbatch` against SFT-v3, declared now.
+- **For.** Δ < 0 with the interval below 0, every guardrail passing. Context: TPR change above
+  D1's and Δ below D1's.
+- **Against.** Δ and TPR no better than D1's: the KL term is not what DAPO is missing.
+- **Cost.** ≈ 6 GPU-h with the reference forward, 0.5 for the evaluation. Runs beside D1.
