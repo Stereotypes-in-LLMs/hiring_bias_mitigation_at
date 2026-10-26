@@ -352,7 +352,34 @@ Both arms start from SFT-v3 for 200 steps and are read as in section 3, against 
   correlated with the benchmark TPR (r = −0.86, five points), sign unexplained.
 - **Not a candidate.** Every checkpoint fails the standard's 80% merge guardrail.
 
-## 9. Round 3: registration
+### R2-a — operating-point anchor: the anchor rows held, the benchmark did not (training 5142344, scoring 5143013, 5143090)
+
+| | TPR SD | largest neighbour change | TPR change range | below −8 pp | mean proxy matched | merge kept |
+|---|---|---|---|---|---|---|
+| A0 | 5.9 pp (5 checkpoints) | 13.9 | −2.5 to +11.4 | 0 | −0.12 pp | ≥ 80% |
+| R2-a | 5.6 (4 checkpoints) | 12.5 | −8.1 to +4.3 | 1 (step 150) | −0.19 | 76.4% at 100 (not scored), 80.4–85.3% after |
+
+- **Hypothesis refuted.** The SD is within 30% of A0's. Checkpoint 100 failed the 80% merge gate
+  (the anchor held the update small early) and was not scored.
+- **The anchor did its own job.** `anchor/shift`, the mean hire-probability shift on the 222
+  held-out Djinni rows, stayed between −0.014 and +0.011 per 25-step window through step 175
+  (+0.052 over 176–200), while the benchmark TPR fell 12.5 pp from step 125 to 150 and rose 10.7
+  pp to 175. The held-out rows SFT-v3 is unsure of do not carry the benchmark's 25-step swings.
+  The 0.93 correlation across finished arms was a correlation of large, lasting shifts.
+- **Side effects.** Zero-std groups 0.23 over steps 1–25 against A0's 0.72 (A0 had collapsed to
+  reject there), training-rollout hire rates steadier; neither showed on the benchmark.
+- Outputs: `outputs/grpo_improve/diag_r2a/`, `compare_round2/`. The first scoring job
+  (5143008) failed in 10 s on a manifest the login node had not finished writing; the second
+  (5143013) stopped at checkpoint 100's merge gate after scoring 125–175; 5143090 scored 200.
+
+### Round 2 in one paragraph
+
+The step size moves the swing (R2-b: −42% SD at a third of the lr, at the cost of the merge
+guardrail); restoring forces do not, whether on the shared decision bias (A1, the swing
+doubled) or on held-out borderline rows (R2-a, unchanged). Whatever moves the benchmark
+threshold every 25 steps is not visible in the training rollouts or in the held-out rows.
+
+## 8. Round 3: registration
 
 ### R3 — a full epoch with the learning rate decayed at the end (parameter)
 
@@ -387,34 +414,7 @@ Both arms start from SFT-v3 for 200 steps and are read as in section 3, against 
 - **Cost.** Training ≈ 571 steps × 33 s + start-up ≈ 5.5 h on 4 GPUs ≈ 22 GPU-h; trajectory
   scoring ≈ 2.5; evaluate_arm ≈ 1.2. About 26 GPU-h. Time limit 7 h 30 min, `resume: true`.
 
-### R2-a — operating-point anchor: the anchor rows held, the benchmark did not (training 5142344, scoring 5143013, 5143090)
-
-| | TPR SD | largest neighbour change | TPR change range | below −8 pp | mean proxy matched | merge kept |
-|---|---|---|---|---|---|---|
-| A0 | 5.9 pp (5 checkpoints) | 13.9 | −2.5 to +11.4 | 0 | −0.12 pp | ≥ 80% |
-| R2-a | 5.6 (4 checkpoints) | 12.5 | −8.1 to +4.3 | 1 (step 150) | −0.19 | 76.4% at 100 (not scored), 80.4–85.3% after |
-
-- **Hypothesis refuted.** The SD is within 30% of A0's. Checkpoint 100 failed the 80% merge gate
-  (the anchor held the update small early) and was not scored.
-- **The anchor did its own job.** `anchor/shift`, the mean hire-probability shift on the 222
-  held-out Djinni rows, stayed between −0.014 and +0.011 per 25-step window through step 175
-  (+0.052 over 176–200), while the benchmark TPR fell 12.5 pp from step 125 to 150 and rose 10.7
-  pp to 175. The held-out rows SFT-v3 is unsure of do not carry the benchmark's 25-step swings.
-  The 0.93 correlation across finished arms was a correlation of large, lasting shifts.
-- **Side effects.** Zero-std groups 0.23 over steps 1–25 against A0's 0.72 (A0 had collapsed to
-  reject there), training-rollout hire rates steadier; neither showed on the benchmark.
-- Outputs: `outputs/grpo_improve/diag_r2a/`, `compare_round2/`. The first scoring job
-  (5143008) failed in 10 s on a manifest the login node had not finished writing; the second
-  (5143013) stopped at checkpoint 100's merge gate after scoring 125–175; 5143090 scored 200.
-
-### Round 2 in one paragraph
-
-The step size moves the swing (R2-b: −42% SD at a third of the lr, at the cost of the merge
-guardrail); restoring forces do not, whether on the shared decision bias (A1, the swing
-doubled) or on held-out borderline rows (R2-a, unchanged). Whatever moves the benchmark
-threshold every 25 steps is not visible in the training rollouts or in the held-out rows.
-
-## 10. Round 3 result: R3 freezes the operating point, the gain stays inside the noise
+## 9. Round 3 result: R3 freezes the operating point, the gain stays inside the noise
 
 **In one sentence.** By the standard R3 is not better than SFT-v3, −0.71 pp [−1.89, +0.39]
 at the declared final checkpoint, with every guardrail passing; against GRPO-v3-all's own
@@ -454,6 +454,37 @@ Over 475–550, the registered window, R3's TPR SD is 2.8 pp: under the 3 pp of 
   arm's own raw instability; SFT-v3's matched instability stays at 1.9–2.3% whichever way the
   arm's TPR sits.
 
+## 10. Round 4: registration (cancelled)
+
+### R4 — tipped rows only, with R3's late decay (method: the data)
+
+- **Why.** The one hypothesis on explanation 3 still untested at the standard: on 37% of the
+  training rows the anchor contradicts SFT-v3's own attribute-free answer, so the reward teaches
+  a standard, not invariance (section 2). A2 tried to cancel those rows with a reward and did
+  not move the proxy; removing them is the direct test. R3's decay is kept because it is the
+  one change that kept the TPR guardrail.
+- **Hypothesis.** GRPO on rows where the attribute flips SFT-v3's decision, and only those,
+  lowers matched instability against SFT-v3 more than R3 does, and beats SFT-v3 under the
+  standard at its final checkpoint.
+- **Change.** R3's config with the data replaced by grpo-v3-all's tipped rows, balanced: all
+  2,077 tipped reject rows and 2,077 of the 2,985 tipped hire rows (seed 42),
+  `scripts/build_grpo_tipped_subset.py` → `artifacts/semisynthetic-v3/grpo-v3-all-tipped/`
+  (919 pairs). One epoch is 259 steps; the decay covers the last 67 (26%, as R3's 146 of
+  571). Validation and monitor rows unchanged. Config `configs/mitigation/grpo_improve/r4_tipped.yaml`.
+- **Control and decision.** SFT-v3 by `evaluate_arm.sbatch`; the final adapter, declared now
+  (`configs/audit/qwen3.5-9b_en_grpo_improve_r4_tipped_gh200.yaml`). R3 is context.
+  Exploratory label as before (exposed benchmark).
+- **For.** Δ < 0 with the interval below 0 and every guardrail passing.
+- **Against.** The interval reaches 0, Δ above R3's −0.71, or a guardrail fails. 4,154 rows is
+  45% of R3's data, so a weaker result could also be the smaller dose; that would be stated.
+- **Cost.** ≈ 259 × 36 s + start-up ≈ 2.8 h on 4 GPUs ≈ 11 GPU-h, plus 0.5 for the evaluation.
+  No trajectory scoring.
+- **Cancelled (2026-10-26, 09:38), no result.** After the user recorded R3 as better, they asked
+  to cancel R4. Job 5147006 was at step 25 of 259 when cancelled, with no checkpoint saved;
+  nothing of it is evaluated, and it says nothing about the hypothesis. 1.36 GPU-h. The data
+  (`artifacts/semisynthetic-v3/grpo-v3-all-tipped/`), configs and this registration stay as
+  built, for a later run.
+
 ## 11. Where this leaves the goal
 
 What the evidence supports:
@@ -486,32 +517,6 @@ What it does not support: any GRPO variant beating SFT-v3 under the standard at 
 checkpoint. Checkpoint 525's "better" remains exploratory, and R3 at the same seed did not
 reproduce it at its final step.
 
-## 13. Round 4: registration
-
-### R4 — tipped rows only, with R3's late decay (method: the data)
-
-- **Why.** The one hypothesis on explanation 3 still untested at the standard: on 37% of the
-  training rows the anchor contradicts SFT-v3's own attribute-free answer, so the reward teaches
-  a standard, not invariance (section 2). A2 tried to cancel those rows with a reward and did
-  not move the proxy; removing them is the direct test. R3's decay is kept because it is the
-  one change that kept the TPR guardrail.
-- **Hypothesis.** GRPO on rows where the attribute flips SFT-v3's decision, and only those,
-  lowers matched instability against SFT-v3 more than R3 does, and beats SFT-v3 under the
-  standard at its final checkpoint.
-- **Change.** R3's config with the data replaced by grpo-v3-all's tipped rows, balanced: all
-  2,077 tipped reject rows and 2,077 of the 2,985 tipped hire rows (seed 42),
-  `scripts/build_grpo_tipped_subset.py` → `artifacts/semisynthetic-v3/grpo-v3-all-tipped/`
-  (919 pairs). One epoch is 259 steps; the decay covers the last 67 (26%, as R3's 146 of
-  571). Validation and monitor rows unchanged. Config `configs/mitigation/grpo_improve/r4_tipped.yaml`.
-- **Control and decision.** SFT-v3 by `evaluate_arm.sbatch`; the final adapter, declared now
-  (`configs/audit/qwen3.5-9b_en_grpo_improve_r4_tipped_gh200.yaml`). R3 is context.
-  Exploratory label as before (exposed benchmark).
-- **For.** Δ < 0 with the interval below 0 and every guardrail passing.
-- **Against.** The interval reaches 0, Δ above R3's −0.71, or a guardrail fails. 4,154 rows is
-  45% of R3's data, so a weaker result could also be the smaller dose; that would be stated.
-- **Cost.** ≈ 259 × 36 s + start-up ≈ 2.8 h on 4 GPUs ≈ 11 GPU-h, plus 0.5 for the evaluation.
-  No trajectory scoring.
-
 ## 12. Ledger
 
 | # | Arm | Job(s) | GPU-h | State |
@@ -526,5 +531,5 @@ reproduce it at its final step.
 | 7 | R2-a anchor, second smoke (callback) | 5142306 | 0.83 | passed 6 steps; weight amended to 1 |
 | 8 | R2-a anchor v2: training, scoring (3 jobs) | 5142344, 5143008, 5143013, 5143090 | 11.00 + 0.00 + 1.06 + 0.26 | done, refuted (retry 1 of 3) |
 | 9 | R3 lr decay, full epoch: training, evaluate_arm, trajectory | 5143102, 5146713, 5146764 | 23.66 + 0.50 + 2.06 | done, not better; guardrails pass |
-| 10 | R4 tipped rows + decay: training | | | registered |
-| | **Total so far** | | **84.8 of 150** | 7 arms of 50, 1 retry |
+| 10 | R4 tipped rows + decay: training | 5147006 | 1.36 | **cancelled** at step 25 by the user; no result |
+| | **Total** | | **86.2 of 150** | 8 arms of 50 (7 with a result), 1 retry |
