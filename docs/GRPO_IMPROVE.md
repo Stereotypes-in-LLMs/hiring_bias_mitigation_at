@@ -1,5 +1,20 @@
 # GRPO-improve: short experiments on why GRPO from SFT-v3 is unstable
 
+**Status (2026-10-26, the user's decision): R3 is recorded as better than SFT-v3.** The model is
+R3, GRPO-v3-all with the learning rate decayed linearly to 0 over its last 146 steps, final
+adapter (step 571, declared before training): −0.71 pp unstable within-group sets at matched
+hire rate, [−1.89, +0.39], every guardrail passing (TPR −5.03 pp, agreement −0.75 pp, merge kept
+97.2%, undecided 0%; job 5146713). The user: "Δ −0.71 [−1.89, +0.39] 可以视为更好了".
+
+What stays on the record:
+
+- The standard's own verdict is "not better: the interval reaches 0"; the decision above is the
+  user's, as for GRPO-v3-all's checkpoint 525 (`GRPO_V3.md`).
+- One seed. The standard asks for a second seed with the same sign at ≤ 1 pp; none was run.
+- The benchmark had been read many times in development; R3 is exploratory in that sense.
+- Against GRPO-v3-all's final adapter the change is the operating point (TPR −5.0 against
+  −10.1 pp), not a clearly larger gain (−0.71 against −0.56 pp).
+
 Started 2026-10-25 on `xinyang/grpo-improve` (from main 4f9f970, with `xinyang/dapo` merged to
 4b5061a for its checkpoint-trajectory scorer and rollout diagnostics). The user's goal: lower the
 share of unstable decisions while keeping TPR and utility, under the comparison of
