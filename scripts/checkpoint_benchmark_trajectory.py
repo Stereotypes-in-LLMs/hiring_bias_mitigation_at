@@ -200,8 +200,12 @@ def prepare(config_path):
                          if (p / "adapter_model.safetensors").is_file())
     if checkpoints != config["expected_steps"]:
         raise ValueError(f"retained checkpoint inventory changed: {checkpoints}")
+    # `score_steps` scores a declared subset of the retained checkpoints (default: all of them).
+    scored = config.get("score_steps", checkpoints)
+    if not set(scored) <= set(checkpoints):
+        raise ValueError(f"score_steps not retained: {sorted(set(scored) - set(checkpoints))}")
     steps = [{"step": 0, "adapter": str(Path(resolve_output_path(config["parent_adapter"])))},
-             *[{"step": n, "adapter": str(run / f"checkpoint-{n}")} for n in checkpoints]]
+             *[{"step": n, "adapter": str(run / f"checkpoint-{n}")} for n in scored]]
     inputs = [fingerprint(ROOT / p) for p in CODE]
     inputs += [fingerprint(config_path), fingerprint(ROOT / config["audit_config"]),
                fingerprint(ROOT / "data/benchmark/reference_feedback_en.csv"),
@@ -277,7 +281,7 @@ def prepare(config_path):
                 "prompt_text_sha256": digest(prompts), "software": software(),
                 "benchmark_partition": partition,
                 "prepared_commit": git_commit(), "status": "inference_only_exploratory",
-                "missing_saved_steps": [25, 50, 75],
+                "missing_saved_steps": config.get("missing_saved_steps", [25, 50, 75]),
                 "created_utc": datetime.now(timezone.utc).isoformat()}
     manifest["binding_sha256"] = digest(manifest)
     atomic_json(out / "manifest.json", manifest)
@@ -360,8 +364,10 @@ def score_next(out, requested_step=None):
     MG.merged_dir_for = lambda adapter: merged
     MG.merge(item["adapter"])
     retention = MG.recorded_retention(merged)
-    if not retention or retention[-1]["kept_fraction"] < .8:
-        raise ValueError("new merge does not satisfy 80% retention guardrail")
+    # A diagnostic run may declare a lower floor (`min_merge_retention`); the standard's is 80%.
+    floor = float(manifest["config"].get("min_merge_retention", .8))
+    if not retention or retention[-1]["kept_fraction"] < floor:
+        raise ValueError(f"new merge keeps less than {floor:.0%} of the update")
     merged_files = [fingerprint(p) for p in sorted(merged.glob("*.safetensors"))]
     cfg = {**manifest["audit_config"], "model": str(merged)}
     cfg.pop("mitigation", None)

@@ -115,6 +115,25 @@ def format_reward(completions: list[str], **_) -> list[float]:
     return [FORMAT_REWARD if well_formed(c) else 0.0 for c in completions]
 
 
+def free_consistency_reward(completions: list[str], free_hire_rate: list[float],
+                            lang: list[str] | None = None, **_) -> list[float]:
+    """Agreement with SFT-v3's own attribute-free answer for the pair: its sampled hire share
+    when the completion hires, one minus it when the completion rejects, 0 without a decision.
+
+    Why (docs/GRPO_IMPROVE.md, A2). On 3,366 of grpo-v3-all's 9,140 rows the vote anchor and
+    SFT-v3's attribute-free majority disagree, so the decision reward there teaches a different
+    hiring standard, not invariance to the attribute. This reward pays for answering as the
+    model answers without the attribute; `free_hire_rate` comes from
+    scripts/build_grpo_free_target.py.
+    """
+    langs = lang or ["en"] * len(completions)
+    out = []
+    for c, g, p in zip(completions, langs, free_hire_rate, strict=True):
+        d = parse_output(c, g).decision
+        out.append(float(p) if d == HIRE else 1.0 - float(p) if d == REJECT else 0.0)
+    return out
+
+
 REWARD_FUNCS = [decision_reward, format_reward]
 
 
@@ -815,6 +834,19 @@ def train(cfg: dict, trainer_cls=None, reward_funcs=None, trainer_kwargs: dict |
 
     from trl import GRPOConfig, GRPOTrainer
 
+    bias_projection = bool((cfg.get("bias_projection") or {}).get("enabled", False))
+    if bias_projection:
+        if trainer_cls is not None or detailed_diagnostics:
+            raise ValueError("bias_projection supports the default GRPO trainer without "
+                             "detailed rollout diagnostics")
+        from .grpo_bias_projection import trainer_class as bias_projected
+
+        trainer_cls = bias_projected(
+            GRPOTrainer, lambda completion, lang: parse_output(completion, lang).decision)
+    anchor = cfg.get("operating_point_anchor") or {}
+    if anchor and (trainer_cls is not None or detailed_diagnostics):
+        raise ValueError("operating_point_anchor supports the default GRPO trainer without "
+                         "detailed rollout diagnostics or another trainer variant")
     args = GRPOConfig(**base_args,
                       **C.supported_kwargs(GRPOConfig, grpo_config_candidates(cfg), "GRPOConfig"))
     continuation_callback = None
@@ -822,6 +854,15 @@ def train(cfg: dict, trainer_cls=None, reward_funcs=None, trainer_kwargs: dict |
         source_args = grpo_continuation.load_source_arguments(continuation)
         grpo_continuation.validate_arguments(continuation, args, source_args)
         continuation_callback = grpo_continuation.callback_class()(continuation, resume, source_args)
+    consistency = bool((cfg.get("consistency_reward") or {}).get("enabled", False))
+    if consistency:
+        if reward_funcs is not None or detailed_diagnostics:
+            raise ValueError("consistency_reward supports the default rewards without detailed "
+                             "rollout diagnostics")
+        if "free_hire_rate" not in train_ds.column_names:
+            raise ValueError("consistency_reward needs a free_hire_rate column "
+                             "(scripts/build_grpo_free_target.py)")
+        reward_funcs = [*REWARD_FUNCS, free_consistency_reward]
     trainer = (trainer_cls or GRPOTrainer)(
         model=model,
         reward_funcs=reward_funcs or REWARD_FUNCS,
@@ -833,6 +874,25 @@ def train(cfg: dict, trainer_cls=None, reward_funcs=None, trainer_kwargs: dict |
         + ([continuation_callback] if continuation_callback is not None else []),
         **(trainer_kwargs or {}),
     )
+    if anchor:
+        import pandas as pd
+
+        from ..eval.backends import _chat_wrap
+        from ..eval.margins import PREFIX, WORDS, decision_token_ids
+        from ..utils.config import resolve_output_path
+        from .grpo_operating_anchor import callback_class as anchor_callback
+
+        anchor_rows = pd.read_parquet(resolve_output_path(anchor["rows"]))
+        trainer.add_callback(anchor_callback()(
+            tokenizer=tokenizer,
+            prompts=[_chat_wrap(tokenizer, p, chat_kwargs) + PREFIX for p in anchor_rows["prompt"]],
+            weight=float(anchor["weight"]), rows_per_step=int(anchor["rows_per_step"]),
+            seed=int(cfg.get("seed", 42)), token_ids=decision_token_ids(tokenizer, WORDS["en"]),
+            rank=trainer.accelerator.process_index, world=trainer.accelerator.num_processes,
+            metrics=trainer._metrics["train"]))
+        log.info("operating-point anchor: %d rows from %s, weight %g, %d rows per step and rank",
+                 len(anchor_rows), anchor["rows"], float(anchor["weight"]),
+                 int(anchor["rows_per_step"]))
     from .grpo_diagnostics import install as install_count_diagnostics
 
     count_diagnostics_receipt = install_count_diagnostics(
@@ -924,11 +984,14 @@ def train(cfg: dict, trainer_cls=None, reward_funcs=None, trainer_kwargs: dict |
         "beta": args.beta,
         "num_generations": args.num_generations,
         "rewards": {"decision": DECISION_REWARD, "format": FORMAT_REWARD,
-                    "feedback_words": list(FEEDBACK_WORDS)},
+                    "feedback_words": list(FEEDBACK_WORDS),
+                    **({"free_consistency": 1.0} if consistency else {})},
         "n_train": len(train_ds),
         "sft_checkpoint": cfg.get("sft_checkpoint"),
     }
     manifest["rollout_diagnostics"] = count_diagnostics_receipt
+    manifest["bias_projection"] = bias_projection
+    manifest["operating_point_anchor"] = anchor or None
     if anchor_metadata_receipt is not None:
         manifest["rollout_diagnostics"]["anchor_metadata"] = anchor_metadata_receipt
     if continuation is not None:

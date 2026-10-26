@@ -731,7 +731,8 @@ def training_arguments(cfg: dict, output_dir: Path, has_eval: bool, n_train: int
     # DDP with LoRA: unused-parameter search off, non-reentrant checkpointing. Passed only when
     # a config sets them, so single-GPU configs keep transformers' defaults.
     kwargs.update({key: cfg[key] for key in ("ddp_find_unused_parameters",
-                                              "gradient_checkpointing_kwargs") if key in cfg})
+                                              "gradient_checkpointing_kwargs",
+                                              "lr_scheduler_kwargs") if key in cfg})
     return TrainingArguments(
         output_dir=str(output_dir),
         num_train_epochs=cfg.get("num_train_epochs", 2),

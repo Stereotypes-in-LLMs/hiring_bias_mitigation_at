@@ -4,3 +4,6 @@
  新的 DPO data source:训练 SFT-v3 → 用 SFT-v3 回答属性变体 → 找出被属性影响的实际错误 → 教师核验 → 构建偏好对, + 旧 r2em
  new eval table： 带判定的汇总表是 reports/reference_metrics.csv，逐对比较的长表是 reports/comparisons.csv
  GPU usage
+ DPO>SFT
+ GRPO~DPO
+ DAPO<SFT
