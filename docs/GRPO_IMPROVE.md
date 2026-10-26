@@ -484,6 +484,10 @@ Over 475–550, the registered window, R3's TPR SD is 2.8 pp: under the 3 pp of 
   nothing of it is evaluated, and it says nothing about the hypothesis. 1.36 GPU-h. The data
   (`artifacts/semisynthetic-v3/grpo-v3-all-tipped/`), configs and this registration stay as
   built, for a later run.
+- **Rerun (2026-10-26, after the user added 50 GPU-h: "继续探索，再加50hourGPU 预算").** The
+  registration above holds unchanged; only the output directory is new
+  (`outputs/grpo/grpo_improve_r4_tipped_v2`, audit run suffix `…r4_tipped_v2`), so the
+  cancelled attempt's files stay as they were.
 
 ## 11. Where this leaves the goal
 

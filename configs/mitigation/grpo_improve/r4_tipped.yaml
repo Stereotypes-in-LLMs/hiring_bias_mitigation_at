@@ -12,7 +12,7 @@ data_kind: grpo
 base_model: Qwen/Qwen3.5-9B
 sft_checkpoint: outputs/sft/qwen3.5-9b_en_only_sft_v3_additional
 data_config: configs/data/en_only_grpo_v3_all_tipped.yaml
-output_dir: outputs/grpo/grpo_improve_r4_tipped
+output_dir: outputs/grpo/grpo_improve_r4_tipped_v2
 chat_template_kwargs:
   enable_thinking: false
 use_lora: true
@@ -55,7 +55,7 @@ seed: 42
 logging_steps: 1
 memory_floor_gb: 12
 wandb_project: hiring-bias-mitigation
-wandb_run_name: grpo-improve-r4-tipped
+wandb_run_name: grpo-improve-r4-tipped-v2
 # Is vLLM serving the policy? HF + PEFT margins against vLLM's on 256 held-out prompts when a
 # segment starts and every 50 steps (mitigation/grpo.py, SyncValidationCallback).
 sync_validate_rows: 256
