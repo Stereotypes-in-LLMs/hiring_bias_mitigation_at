@@ -138,3 +138,27 @@ AGAINST=configs/audit/qwen3.5-9b_en_sft_v3_additional_gh200.yaml \
 - **What it cannot decide.** Each seed keeps its own verdict under the standard; pooling three
   seeds into one interval is not part of `EVAL_STANDARD.md` and would be the user's decision.
 - **Cost.** 2 × (≈ 4.3 training + 0.5 evaluation) ≈ 9.6 GPU-h, leaving about 44 of the 150.
+
+### Result: D1's −0.83 does not reproduce; its guardrails do (training 5148756, 5148757; evaluation 5149884, 5149883)
+
+| D1 (DAPO + R3's lr shape) | matched change, pp [95% CI] | TPR | agreement | merge kept | verdict |
+|---|---|---|---|---|---|
+| seed 42 (§4) | −0.83 [−1.95, +0.31] | −5.42 pp | −0.97 pp | 85.0% | not better |
+| seed 43 | **+0.28** [−0.92, +1.53] | +0.47 | +0.88 | 84.6% | not better |
+| seed 44 | −0.22 [−1.46, +1.05] | −4.04 | −0.66 | 85.0% | not better |
+| mean of the three | −0.26 | −3.0 | | | |
+
+Comparisons at commit aa83e51, no uncommitted code, `conforms: true`
+(`reports/operating_point/v2/…dapo_improve_d1_decay_seed{43,44}--vs--…sft_v3_additional.json`).
+
+- **Against the registration.** Against holds: seed 43's Δ is above 0. D1's −0.83 was mostly
+  the draw.
+- **What does reproduce.** Every draw passes every guardrail; the TPR change stays within
+  −5.4 to +0.5 pp, against DAPO-v3-all's −10.1 (one draw). The late decay keeps DAPO's
+  operating point, as it kept GRPO's in R3; it does not add invariance that survives a seed.
+- **The seed spread.** 1.1 pp across three draws of one DAPO config, against 0.4 pp across two
+  GRPO seeds (`GRPO_IMPROVE.md`, section 5). At one seed per arm no DAPO difference under ~1 pp
+  is readable, and the standard's interval is ±1.1–1.2 pp on top of that.
+
+**Cost.** 4.08 + 3.98 (training) + 0.50 + 0.50 (evaluation) = 9.06 GPU-h. DAPO-improve so far:
+19.6 GPU-h.
