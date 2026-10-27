@@ -14,7 +14,7 @@ last 26% of the run. R3 was recorded as better than SFT-v3 on the user's decisio
 unchanged; the reference arm is SFT-v3.
 
 **Budget.** What is left of GRPO-improve's 150 GPU-h, 3 jobs at once, 3 retries (one used):
-63.0 GPU-h at the start of this page. Costs go under `HBM_COST_ARM=dapo_improve`.
+63.0 GPU-h at the start of this page. Raised to 200 GPU-h in all on 2026-10-26 (user: "继续探索，再加50hourGPU 预算"). Costs go under `HBM_COST_ARM=dapo_improve`.
 
 ## 1. What DAPO-v3-all did (inference only, job 5147613)
 
@@ -120,3 +120,49 @@ AGAINST=configs/audit/qwen3.5-9b_en_sft_v3_additional_gh200.yaml \
   scripts/cscs/submit.sh scripts/cscs/evaluate_arm.sbatch
 # D2: the same with dapo_improve_d2_decay_kl
 ```
+
+## 6. D1 at seeds 43 and 44 (registration, 2026-10-26)
+
+- **Why.** D1 is the best point estimate of GRPO-improve and DAPO-improve (−0.83 pp), from one
+  draw, and DAPO is not bit-deterministic. The standard asks a method within 1 pp for a second
+  seed with the same sign; GRPO-improve saw a 0.4 pp spread between two seeds of one config.
+  The user asked to spend the remaining time on DAPO with R3's lr shape; repeating D1 is the
+  cheapest check of whether its result is the schedule or the draw.
+- **Change.** D1's config with `seed: 43` and `seed: 44`, nothing else
+  (`configs/mitigation/dapo/dapo_improve_d1_decay_seed{43,44}.yaml`; audits
+  `configs/audit/qwen3.5-9b_en_dapo_improve_d1_decay_seed{43,44}_gh200.yaml`). Final adapters,
+  declared now.
+- **For** (D1's result reproduces). Both Δ < 0, both TPR guardrails passing; the mean of the
+  three draws below −0.5 pp.
+- **Against.** Either Δ ≥ 0, or a TPR guardrail failure: D1's −0.83 was largely the draw.
+- **What it cannot decide.** Each seed keeps its own verdict under the standard; pooling three
+  seeds into one interval is not part of `EVAL_STANDARD.md` and would be the user's decision.
+- **Cost.** 2 × (≈ 4.3 training + 0.5 evaluation) ≈ 9.6 GPU-h, leaving about 44 of the 150.
+
+### Result: D1's −0.83 does not reproduce; its guardrails do (training 5148756, 5148757; evaluation 5149884, 5149883)
+
+| D1 (DAPO + R3's lr shape) | matched change, pp [95% CI] | TPR | agreement | merge kept | verdict |
+|---|---|---|---|---|---|
+| seed 42 (§4) | −0.83 [−1.95, +0.31] | −5.42 pp | −0.97 pp | 85.0% | not better |
+| seed 43 | **+0.28** [−0.92, +1.53] | +0.47 | +0.88 | 84.6% | not better |
+| seed 44 | −0.22 [−1.46, +1.05] | −4.04 | −0.66 | 85.0% | not better |
+| mean of the three | −0.26 | −3.0 | | | |
+
+Comparisons at commit aa83e51, no uncommitted code, `conforms: true`
+(`reports/operating_point/v2/…dapo_improve_d1_decay_seed{43,44}--vs--…sft_v3_additional.json`).
+
+- **Against the registration.** Against holds: seed 43's Δ is above 0. D1's −0.83 was mostly
+  the draw.
+- **What does reproduce.** Every draw passes every guardrail; the TPR change stays within
+  −5.4 to +0.5 pp, against DAPO-v3-all's −10.1 (one draw). The late decay keeps DAPO's
+  operating point, as it kept GRPO's in R3; it does not add invariance that survives a seed.
+- **The seed spread.** 1.1 pp across three draws of one DAPO config, against 0.4 pp across two
+  GRPO seeds (`GRPO_IMPROVE.md`, section 5). At one seed per arm no DAPO difference under ~1 pp
+  is readable, and the standard's interval is ±1.1–1.2 pp on top of that.
+
+**Cost.** 4.08 + 3.98 (training) + 0.50 + 0.50 (evaluation) = 9.06 GPU-h. DAPO-improve so far:
+19.6 GPU-h.
+
+**Closed (2026-10-27, the user's decision).** Wrapped up with GRPO-improve
+(`GRPO_IMPROVE.md`, section 11): the late lr decay is the default for DAPO too; D2's KL term is
+not. DAPO-improve spent 19.6 GPU-h.

@@ -484,6 +484,72 @@ Over 475–550, the registered window, R3's TPR SD is 2.8 pp: under the 3 pp of 
   nothing of it is evaluated, and it says nothing about the hypothesis. 1.36 GPU-h. The data
   (`artifacts/semisynthetic-v3/grpo-v3-all-tipped/`), configs and this registration stay as
   built, for a later run.
+- **Rerun (2026-10-26, after the user added 50 GPU-h: "继续探索，再加50hourGPU 预算").** The
+  registration above holds unchanged; only the output directory is new
+  (`outputs/grpo/grpo_improve_r4_tipped_v2`, audit run suffix `…r4_tipped_v2`), so the
+  cancelled attempt's files stay as they were.
+
+### R4 result (training 5148796, evaluation 5152422)
+
+**In one sentence.** Not better by the standard, −0.73 pp [−1.64, +0.19] at the declared final
+checkpoint (step 259), every guardrail passing (TPR −4.70 pp, agreement −1.31 pp, merge kept
+90.5%, undecided 0%). Comparison at commit 208a9ad, `conforms: true`
+(`reports/operating_point/v2/…r4_tipped_v2--vs--…sft_v3_additional.json`).
+
+- **Against the registration.** For needs the interval below 0: not met. Against lists "Δ above
+  R3's −0.71": not met either (−0.73). Tipped rows alone, 45% of the data and 45% of the steps,
+  give R3's point estimate with a slightly narrower interval.
+- **Reading.** The 3,366 rows on which the anchor contradicts SFT-v3's own answer cost compute
+  without adding measurable invariance. Not confirmed beyond one seed.
+- **Cost.** 10.85 + 0.51 = 11.36 GPU-h.
+
+## 10b. Round 5: seed replicates of the GRPO + decay recipes (registration, 2026-10-26)
+
+- **Why.** Every arm so far is one draw. Two GRPO seeds of one config differed by 0.4 pp (A0
+  against GRPO-v3-all); three DAPO draws of D1 spread over 1.1 pp and its −0.83 did not
+  reproduce (`DAPO_IMPROVE.md`, section 6). R3 is the recipe the user recorded as better and
+  will scale up; R4 matches it at half the compute. The budget (raised to 200 GPU-h) is best
+  spent on whether those two point estimates survive a seed.
+- **Change.** `seed: 43` and `seed: 44` on R4's config, and `seed: 43` on R3's, nothing else
+  (`configs/mitigation/grpo_improve/{r4_tipped_seed43,r4_tipped_seed44,r3_wsd_seed43}.yaml`;
+  audits `configs/audit/qwen3.5-9b_en_grpo_improve_{…}_gh200.yaml`). Final adapters, declared now.
+- **For** (the recipe reproduces). Each replicate Δ < 0 with every guardrail passing; R4's
+  three seeds averaging below −0.5 pp.
+- **Against.** A replicate with Δ ≥ 0, or a failed guardrail.
+- **What it cannot decide.** Each seed keeps its own verdict; pooling seeds into one interval is
+  not in `EVAL_STANDARD.md` and would be the user's decision.
+- **Cost.** 2 × 11.4 + 24.2 ≈ 47 GPU-h, to about 164 of 200.
+
+### Round 5 result: every GRPO + decay draw is below 0, none by enough (training 5153183–5, evaluation 5161859–61)
+
+| recipe, against SFT-v3 | seed | matched change, pp [95% CI] | TPR | verdict |
+|---|---|---|---|---|
+| GRPO-v3-all, constant lr | 42 | −0.56 [−1.61, +0.41] | −10.11 | not better, TPR fails |
+| R3: GRPO + decay | 42 | −0.71 [−1.89, +0.39] | −5.03 | not better (recorded better by the user) |
+| R3 | 43 | −0.23 [−1.07, +0.65] | −2.28 | not better |
+| R4: tipped rows + decay | 42 | −0.73 [−1.64, +0.19] | −4.70 | not better |
+| R4 | 43 | −0.44 [−1.30, +0.41] | +1.11 | not better |
+| R4 | 44 | −0.16 [−0.96, +0.59] | +1.01 | not better |
+| DAPO-v3-all, constant lr | 42 | +0.85 [−0.23, +2.12] | −10.10 | not better, TPR fails |
+| D1: DAPO + decay | 42 / 43 / 44 | −0.83 / +0.28 / −0.22 | −5.4 / +0.5 / −4.0 | not better ×3 |
+| D2: DAPO + decay + β 0.04 | 42 | −0.34 [−1.49, +0.83] | −5.78 | not better |
+
+Every evaluation conforms (committed code); every decay arm passes every guardrail, merge kept
+84.6–97.4%. Figure and table: `$HBM_OUTPUT_ROOT/outputs/grpo_improve/seeds/{seeds.svg,seeds.csv}`
+(`scripts/grpo_improve_seed_plot.py`, from `reports/reference_metrics.csv`).
+
+- **Against the registration.** For asked each replicate below 0 with guardrails passing:
+  met, all three. It also asked R4's three seeds to average below −0.5 pp: not met (−0.44).
+  Against (a Δ ≥ 0 or a guardrail failure): not met.
+- **What the seeds show.** GRPO with the late decay is below SFT-v3 in all five draws, by
+  −0.16 to −0.73 pp (mean −0.45). DAPO with it is below in two of three (mean −0.26). The
+  standard's per-run interval is ±0.8 to ±1.2 pp, so no single draw can clear 0 at this size.
+  A five-of-five sign is descriptive only: R3 and R4 differ in their data, and pooling draws
+  into one test is not part of `EVAL_STANDARD.md`.
+- **What is robust.** The TPR guardrail: 8 of 8 decay runs pass it (TPR −5.8 to +1.1 pp),
+  0 of 2 constant-lr runs do. R4's later seeds even hire slightly more than SFT-v3 where
+  GPT-4o hires.
+- **Cost.** 10.94 + 10.76 + 23.44 (training) + 0.50 × 3 (evaluation) = 46.65 GPU-h.
 
 ## 11. Where this leaves the goal
 
@@ -513,6 +579,28 @@ elsewhere), 76% of them GPT-4o hires, spread over 55 candidates (the top 10 carr
 reading of R2-a's failure, not confirmed: its 30 anchor pairs are few enough for the penalty
 to be met on those pairs alone, without holding a threshold shared with these 68.
 
+**Stopping (2026-10-27): no hypothesis left in scope.** Under `EVAL_STANDARD.md` a method is
+judged one seed at a time, and its interval is ±0.8 to ±1.2 pp. Across rounds 1–5 every
+change that improved anything did so by at most ~0.5 pp on average (GRPO + decay: five draws,
+−0.16 to −0.73, mean −0.45; DAPO + decay: three draws, mean −0.26), while every change aimed at
+a larger gain (bias projection, consistency reward, anchor, lower lr, KL for DAPO, tipped-only
+data) did not move the mean beyond seed noise. No remaining single-run arm is expected to
+clear an interval of that width, so no further run is worth its GPU-h under the current
+standard. Two proposals go to the user, since each changes the budget's use or the criterion:
+
+1. **Stop and merge.** Adopt the late lr decay as the GRPO/DAPO default (it is the one change
+   that kept every guardrail in 8 of 8 runs), merge `xinyang/rl-improve-2`, leave 36 GPU-h
+   unspent.
+2. **A pooled multi-seed estimate (a criterion change).** Three more R4 seeds (≈ 34 GPU-h) and
+   one candidate-clustered bootstrap over the six seeds, registered beside, not instead of,
+   the standard. At the observed spread its interval would be about ±0.5 pp, enough to tell
+   −0.45 from 0 if the effect is real.
+
+**Closed (2026-10-27, the user's decision): proposal 1.** The user: "到此收尾：把
+xinyang/rl-improve-2 合并进 main，删掉它的 worktree，保留分支。" The late lr decay is the
+default for GRPO and DAPO from here; no pooled multi-seed estimate is run; 163.8 of 200 GPU-h
+were spent and 36.2 left unspent.
+
 What it does not support: any GRPO variant beating SFT-v3 under the standard at a declared
 checkpoint. Checkpoint 525's "better" remains exploratory, and R3 at the same seed did not
 reproduce it at its final step.
@@ -532,4 +620,7 @@ reproduce it at its final step.
 | 8 | R2-a anchor v2: training, scoring (3 jobs) | 5142344, 5143008, 5143013, 5143090 | 11.00 + 0.00 + 1.06 + 0.26 | done, refuted (retry 1 of 3) |
 | 9 | R3 lr decay, full epoch: training, evaluate_arm, trajectory | 5143102, 5146713, 5146764 | 23.66 + 0.50 + 2.06 | done, not better; guardrails pass |
 | 10 | R4 tipped rows + decay: training | 5147006 | 1.36 | **cancelled** at step 25 by the user; no result |
-| | **Total** | | **86.2 of 150** | 8 arms of 50 (7 with a result), 1 retry |
+| 11 | R4 rerun: training, evaluate_arm | 5148796, 5152422 | 10.85 + 0.51 | done, not better (−0.73); guardrails pass |
+| — | DAPO-improve (`DAPO_IMPROVE.md`) | | 19.6 | D1, D2, D1 seeds 43/44 |
+| 12 | Round 5: R4 seeds 43/44, R3 seed 43: training, evaluate_arm | 5153183–5, 5161859–61 | 46.65 | done; all below 0, none better |
+| | **Total** | | **163.8 of 200** | 1 retry |

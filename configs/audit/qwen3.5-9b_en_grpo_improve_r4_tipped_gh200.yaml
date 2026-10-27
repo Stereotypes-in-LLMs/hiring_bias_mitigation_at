@@ -26,7 +26,7 @@ protected_groups:
 - military_status
 - gender
 - religion
-run_suffix: en_only_grpo_improve_r4_tipped
+run_suffix: en_only_grpo_improve_r4_tipped_v2
 mitigation:
   family: grpo
-  lora_path: outputs/grpo/grpo_improve_r4_tipped
+  lora_path: outputs/grpo/grpo_improve_r4_tipped_v2
