@@ -1,0 +1,14 @@
+# Hand-written -- NOT produced by generate_experiment_configs.py.
+# Counterfactual decision distillation rows (scripts/build_decision_distill_data.py;
+# docs/DECISION_DISTILL.md): grpo-v3-all's 9,140 attributed training rows, each with its pair's
+# attribute-free prompt, plus that attribute-free prompt as a row of its own for each of the
+# 1,767 pairs. Read as distill_train.parquet by mitigation/decision_distill.py.
+name: en_only_distill_v3_all
+artifacts_dir: artifacts/semisynthetic-v3/distill-v3-all
+seed: 42
+protected_groups:
+- military_status
+- gender
+- religion
+languages:
+- en
