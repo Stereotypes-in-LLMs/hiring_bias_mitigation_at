@@ -624,3 +624,35 @@ reproduce it at its final step.
 | — | DAPO-improve (`DAPO_IMPROVE.md`) | | 19.6 | D1, D2, D1 seeds 43/44 |
 | 12 | Round 5: R4 seeds 43/44, R3 seed 43: training, evaluate_arm | 5153183–5, 5161859–61 | 46.65 | done; all below 0, none better |
 | | **Total** | | **163.8 of 200** | 1 retry |
+
+## 13. Reopened (2026-10-27): round 6, GRPO on top of decision distillation (registration)
+
+The user reopened GRPO ("重开 GRPO", translated: "Reopen GRPO") after recording decision
+distillation (`DECISION_DISTILL.md`) as better than SFT-v3. Nothing below runs before the user
+approves the budget.
+
+- **Why.** Two findings meet here. GRPO's signal dies because the policy is confident: the
+  share of groups whose 16 rollouts all get one reward is 0.59 / 0.66 over R4's first 50 steps
+  and 0.93 / 0.89 over steps 51–100 (seeds 42 / 43, `frac_reward_zero_std` in each run's
+  `trainer_state.json`). Decision distillation halves the margin scale (`DECISION_DISTILL.md`,
+  5b), most on the ~35 borderline pairs, and raises TPR by 1.1–1.3 pp where GRPO + decay at
+  seed 42 lowered it by 4.7–5.4. A distilled start should keep more groups split, and has TPR
+  headroom for GRPO's cost.
+- **Change (method: the start point).** R4's config (tipped rows + late decay, 259 steps), with
+  `sft_checkpoint` set to the distillation run instead of SFT-v3, seed-matched: GRPO seed 42 on
+  `outputs/distill/decision_distill_seed42`, seed 43 on `…seed43`. `load_merged` and the
+  audit's merge both follow the adapter chain, so training starts from SFT-v3 + distillation and
+  the evaluation merges [SFT-v3, distillation, GRPO]. The hire-rate monitor's `sft_benchmark`
+  becomes the distilled start's benchmark rates (TPR 0.5894 / FPR 0.05647 for seed 42; 0.5901 /
+  0.0544 for seed 43, `reference_metrics.csv`). Nothing else changes; final adapters, declared now.
+- **Comparisons.** The standard, against SFT-v3. For context, compare-arms against the
+  seed-matched distillation run (does GRPO add anything on top of its start?).
+- **For.** Both seeds Δ < 0 against SFT-v3 with every guardrail, and each below its
+  distillation start (−0.42 / −0.59); `frac_reward_zero_std` over steps 1–50 below R4's at the
+  same seed (0.59 / 0.66).
+- **Against.** Zero-variance share not lower than R4's (the explanation-1 link fails); or Δ not
+  below the distillation start's (GRPO adds nothing); or a guardrail fails.
+- **Stop conditions.** A six-step smoke on `debug` first (the two-adapter chain under vLLM
+  colocate; the sync validation must pass); the hire-rate band 15–35%; `memory_floor_gb` 12.
+- **Cost.** Smoke ≈ 0.8 GPU-h; per seed ≈ 10.9 training + 0.5 evaluation (R4's). ≈ 23.6 GPU-h,
+  within GRPO-improve's unspent 36.2 if the user reopens that budget.

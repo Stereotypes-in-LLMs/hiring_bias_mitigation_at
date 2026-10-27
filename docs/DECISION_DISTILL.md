@@ -164,6 +164,10 @@ outnumber new errors 258 / 209, 249 / 150, 243 / 202.
   code leaves the verdict at "better, pending a second seed". Whether the rule now reads as
   met is the user's decision. Seed 43 is one of three draws, and its interval clears 0 by
   0.03 pp.
+- **Decided (2026-10-27, the user).** "Decision distillation counts as better: seeds 42 and 44
+  have the same sign, so the second-seed rule is met." Recorded as better against SFT-v3 on
+  that reading of rule 4; the generated verdict in `reference_metrics.csv` is unchanged, and
+  section 5b's caveat (part of the margin change is scale compression) stands beside it.
 
 ### Reading
 
