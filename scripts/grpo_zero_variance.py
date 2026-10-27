@@ -1,9 +1,12 @@
 #!/usr/bin/env python
 """GRPO rollout signal by step (docs/GRPO_IMPROVE.md, section 13): TRL's `frac_reward_zero_std`,
 the share of groups whose rollouts all got one reward and so give no gradient, read from each
-run's last `trainer_state.json`. Writes the per-step CSV, the window means the round-6
-registration names (steps 1-50, 51-100, 101 to the end), and a one-panel SVG. No plotting
-library is needed.
+run's last `trainer_state.json`. Beside it, from `rollout_diagnostics.jsonl` when the run has
+one, the share of sampled completions that agree with the reward's reference decision, on each
+reference side (hire where the reference hires, reject where it rejects): a start that already
+agrees more leaves more groups all correct. Writes the per-step CSV, the window means the
+round-6 registration names (steps 1-50, 51-100, 101 to the end), and a one-panel SVG. No
+plotting library is needed.
 
     python scripts/grpo_zero_variance.py \
         --out $HBM_OUTPUT_ROOT/outputs/grpo_improve/zero_variance_r6 \
@@ -30,8 +33,23 @@ def history(run_dir: Path) -> pd.DataFrame:
         states.append(run_dir / "trainer_state.json")
     if not states:
         raise FileNotFoundError(f"no trainer_state.json under {run_dir}")
-    rows = [h for h in json.loads(states[-1].read_text())["log_history"] if COLUMN in h]
-    return pd.DataFrame(rows)
+    rows = pd.DataFrame([h for h in json.loads(states[-1].read_text())["log_history"]
+                         if COLUMN in h])
+    diag = run_dir / "rollout_diagnostics.jsonl"
+    if diag.exists():
+        basic = []
+        for line in diag.read_text().splitlines():
+            d = json.loads(line)
+            if d.get("mode") == "train":
+                b = d["basic"]
+                basic.append({"step": d["global_step"],
+                              "correct_ref_hire": b.get("sampled_hire_rate_ref_hire"),
+                              "correct_ref_reject": (None if b.get("sampled_hire_rate_ref_reject")
+                                                     is None
+                                                     else 1 - b["sampled_hire_rate_ref_reject"])})
+        rows = rows.merge(pd.DataFrame(basic).drop_duplicates("step", keep="last"),
+                          on="step", how="left")
+    return rows
 
 
 def main() -> None:
@@ -46,7 +64,8 @@ def main() -> None:
         frames.append(history(Path(path)).assign(label=label))
     table = pd.concat(frames, ignore_index=True)
     args.out.mkdir(parents=True, exist_ok=True)
-    keep = ["label", "step", COLUMN] + [c for c in ("reward", "reward_std", "kl") if c in table]
+    extra = ("correct_ref_hire", "correct_ref_reject", "reward", "reward_std", "kl")
+    keep = ["label", "step", COLUMN] + [c for c in extra if c in table]
     table[keep].to_csv(args.out / "zero_variance.csv", index=False)
 
     windows = []
@@ -56,6 +75,9 @@ def main() -> None:
             w = g[(g["step"] >= lo) & (g["step"] <= hi)]
             name = f"steps_{lo}_{hi if hi < 10**6 else 'end'}"
             row[name] = round(float(w[COLUMN].mean()), 4) if len(w) else None
+            for c in ("correct_ref_hire", "correct_ref_reject"):
+                if c in w and lo == 1:
+                    row[f"{c}_{name}"] = round(float(w[c].mean()), 4)
         windows.append(row)
     windows = pd.DataFrame(windows)
     windows.to_csv(args.out / "windows.csv", index=False)
