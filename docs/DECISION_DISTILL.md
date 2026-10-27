@@ -5,6 +5,13 @@ methods from the earlier survey, pick the one that looks most promising now and 
 50 GPU-h." Branch `xinyang/decision-distill` (from main 9addb30). The comparison is
 [`EVAL_STANDARD.md`](EVAL_STANDARD.md), unchanged; the reference arm is SFT-v3.
 
+**Where the GRPO goal stands.** GRPO-improve (`GRPO_IMPROVE.md`, section 11) ended on
+2026-10-27 by its third end condition, no hypothesis left in scope, and the user closed it
+(proposal 1, merge). Its acceptance condition was not met: no GRPO or DAPO run is better
+under `EVAL_STANDARD.md`. R3 is recorded better by the user; its standard verdict stays "not
+better: the interval reaches 0" (−0.71 [−1.89, +0.39]). This document is a different
+method, not a GRPO variant, and its verdicts do not change that.
+
 **Budget.** 50 GPU-h, separate from GRPO-improve's (163.8 spent of its 200). At most 3 jobs at
 once, 3 retries. Costs under `HBM_COST_ARM=decision_distill`.
 
@@ -160,27 +167,66 @@ outnumber new errors 258 / 209, 249 / 150, 243 / 202.
 
 ### Reading
 
-- **Fact.** Each seed lowers unstable sets at matched hire rate by 0.42–0.70 pp, raises TPR
-  against GPT-4o by 1.1–1.3 pp where every GRPO/DAPO + decay draw at seed 42 lowered it by 4.7–5.4,
-  and halves the within-set margin spread against SFT-v3 (0.12 against 0.22 nats), where GRPO
-  raised it (0.30–0.34).
-- **Interpretation.** The dense loss reaches what it targets, the attributed decision's
-  distance from the attribute-free one, and it does so without moving the operating point or
-  costing utility. The greedy decision, which is what the standard counts, moves much less
-  than the margins: two-thirds of changed decisions move toward the attribute-free verdict, a
-  third away, and a few pairs (`d20d7247…`) move a whole group against it. That is the
-  survey sceptic's mechanism in part: matching a soft target near 0.5 shrinks the gap without
-  fixing which side of the boundary each variant lands on. Not confirmed; see the open questions.
-- **Unknown.** Whether the reversed pairs come from the teacher's own soft verdict on them
-  (SFT-v3 near 0.5 on the attribute-free CV) or from generalisation across pairs; whether more
-  than one epoch, or a sharpened target, turns the margin shrinkage into more greedy fixes.
+- **Fact.** Each seed lowers unstable sets at matched hire rate by 0.42–0.70 pp and raises TPR
+  against GPT-4o by 1.1–1.3 pp, where every GRPO/DAPO + decay draw at seed 42 lowered it by
+  4.7–5.4. The within-set margin spread halves against SFT-v3 (0.12 against 0.22 nats), but so
+  does every margin (section 5b): the spread is not evidence of invariance.
+- **Interpretation.** The gain sits on the ~35 pairs SFT-v3 is unsure of, and the loss moves
+  them in both directions: two-thirds of changed decisions toward the attribute-free verdict,
+  a third away, a few pairs (`d20d7247…`) a whole group against it. Section 5b reads this as
+  the sceptic's mechanism: the two-token KL hardly penalises a confident margin shrinking, so
+  the student compresses its whole decision scale, and on borderline pairs that leaves each
+  variant, and the attribute-free prompt itself, close to the boundary. Not confirmed as the
+  cause of the reversals.
+- **Unknown.** Whether a loss that cannot be met by shrinking the scale (a sharpened target,
+  a hinge on the greedy sign, or a variance penalty on margins over a set) turns the same
+  signal into more fixes.
+
+### 5b. Check: the teacher's margin on the pairs that moved (CPU, 2026-10-27, computed inline)
+
+Margins from the op-margin-v2 files
+(`$HBM_OUTPUT_ROOT/outputs/operating_point/v2/<run>--adapter.parquet`, nats, mean over a pair's
+attribute-free prompts), joined to each seed's `pairs.csv`; a pair counts as "toward" or "away"
+by whichever of its changed variants are more.
+
+| seed | toward: pairs, variants, SFT-v3 attr-free \|m\| median | away: pairs, variants, \|m\| median |
+|---|---|---|
+| 42 | 17, 311, 0.87 | 7, 152, 1.50 |
+| 43 | 16, 240, 0.75 | 8, 151, 1.37 |
+| 44 | 18, 284, 0.75 | 6, 161, 1.12 |
+
+SFT-v3's attribute-free \|m\| over all 450 pairs has median 12.88; 35 pairs are under 2. Both
+the pairs that moved toward their attribute-free verdict and those that moved away are among
+these. On the away pairs the teacher is not at 0.5 (a median hire-or-reject probability of
+0.75–0.82), so the reversal is not simply a target that allows either side.
+
+What the student does to its own attribute-free margins:
+
+| seed | median \|m\|, all pairs (SFT-v3 12.88) | pairs under 2: median \|m\| (SFT-v3 0.75), share shrunk | attribute-free sign flips |
+|---|---|---|---|
+| 42 | 6.00 | 0.38, 69% | 8 of 450 |
+| 43 | 6.37 | 0.38, 71% | 7 |
+| 44 | 6.62 | 0.38, 71% | 8 |
+
+The worst reversed pair at seed 43, `d20d7247…`, goes from −1.63 under SFT-v3 to −0.38 under
+the student on its attribute-free prompt, `fb160439…` from +1.63 to +0.50, `fdf3b944…` from
++0.50 to 0.00.
+
+- **Fact.** Distillation halves the margin scale everywhere, on attribute-free prompts too
+  (×0.47–0.51), about the same factor as the within-set spread (×0.53–0.57). The anchor rows did
+  not hold SFT-v3's attribute-free decision on 7–8 pairs, all borderline.
+- **Interpretation.** The two-token KL is nearly flat in a confident margin (at q ≈ 1, moving
+  p from 12.9 to 6 nats costs almost nothing), so nothing in the loss holds the scale, and the
+  student lowers its confidence across the board. Most of the halved spread is that scale, not
+  invariance. The matched gain comes from the borderline pairs, where a compressed scale
+  leaves variants on either side of the threshold, hence the two-to-one split of moves.
+- **What it suggests.** A loss that the student cannot meet by shrinking the scale. Not run.
 
 ### Open questions
 
-1. On pairs like `d20d7247…`, what is SFT-v3's attribute-free hire probability? If it sits near
-   0.5, the target allows either side and the reversal is the sceptic's case; if it is far
-   from 0.5, the student generalised against its own target. CPU-cheap: read the teacher's
-   margin for the reversed pairs from SFT-v3's op-margin-v2 margins file.
+1. Would a target that keeps the scale (temperature-sharpened teacher, a margin-matching loss
+   in nats instead of the two-token KL, or a hinge on the greedy sign of the attribute-free
+   decision) turn the same signal into fixes without the reversals?
 2. Is the gain at its ceiling after one epoch? The attributed KL is still falling at the
    decay (0.013–0.023 at the end).
 3. Does it combine with R3? The two act on different things (distillation on the attributed
