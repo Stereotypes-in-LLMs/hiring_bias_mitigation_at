@@ -14,7 +14,7 @@ last 26% of the run. R3 was recorded as better than SFT-v3 on the user's decisio
 unchanged; the reference arm is SFT-v3.
 
 **Budget.** What is left of GRPO-improve's 150 GPU-h, 3 jobs at once, 3 retries (one used):
-63.0 GPU-h at the start of this page. Raised to 200 GPU-h in all on 2026-10-26 (user: "继续探索，再加50hourGPU 预算"). Costs go under `HBM_COST_ARM=dapo_improve`.
+63.0 GPU-h at the start of this page. Raised to 200 GPU-h in all on 2026-10-26 (the user, translated from Chinese: "Keep exploring; add 50 GPU-h to the budget."). Costs go under `HBM_COST_ARM=dapo_improve`.
 
 ## 1. What DAPO-v3-all did (inference only, job 5147613)
 

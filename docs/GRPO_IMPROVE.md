@@ -484,7 +484,7 @@ Over 475–550, the registered window, R3's TPR SD is 2.8 pp: under the 3 pp of 
   nothing of it is evaluated, and it says nothing about the hypothesis. 1.36 GPU-h. The data
   (`artifacts/semisynthetic-v3/grpo-v3-all-tipped/`), configs and this registration stay as
   built, for a later run.
-- **Rerun (2026-10-26, after the user added 50 GPU-h: "继续探索，再加50hourGPU 预算").** The
+- **Rerun (2026-10-26, after the user added 50 GPU-h, translated from Chinese: "Keep exploring; add 50 GPU-h to the budget.").** The
   registration above holds unchanged; only the output directory is new
   (`outputs/grpo/grpo_improve_r4_tipped_v2`, audit run suffix `…r4_tipped_v2`), so the
   cancelled attempt's files stay as they were.
@@ -596,8 +596,8 @@ standard. Two proposals go to the user, since each changes the budget's use or t
    the standard. At the observed spread its interval would be about ±0.5 pp, enough to tell
    −0.45 from 0 if the effect is real.
 
-**Closed (2026-10-27, the user's decision): proposal 1.** The user: "到此收尾：把
-xinyang/rl-improve-2 合并进 main，删掉它的 worktree，保留分支。" The late lr decay is the
+**Closed (2026-10-27, the user's decision): proposal 1.** The user, translated from Chinese:
+"Wrap up here: merge xinyang/rl-improve-2 into main, delete its worktree, keep the branch." The late lr decay is the
 default for GRPO and DAPO from here; no pooled multi-seed estimate is run; 163.8 of 200 GPU-h
 were spent and 36.2 left unspent.
 
