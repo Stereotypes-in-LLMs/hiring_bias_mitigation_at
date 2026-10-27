@@ -520,6 +520,37 @@ checkpoint (step 259), every guardrail passing (TPR −4.70 pp, agreement −1.3
   not in `EVAL_STANDARD.md` and would be the user's decision.
 - **Cost.** 2 × 11.4 + 24.2 ≈ 47 GPU-h, to about 164 of 200.
 
+### Round 5 result: every GRPO + decay draw is below 0, none by enough (training 5153183–5, evaluation 5161859–61)
+
+| recipe, against SFT-v3 | seed | matched change, pp [95% CI] | TPR | verdict |
+|---|---|---|---|---|
+| GRPO-v3-all, constant lr | 42 | −0.56 [−1.61, +0.41] | −10.11 | not better, TPR fails |
+| R3: GRPO + decay | 42 | −0.71 [−1.89, +0.39] | −5.03 | not better (recorded better by the user) |
+| R3 | 43 | −0.23 [−1.07, +0.65] | −2.28 | not better |
+| R4: tipped rows + decay | 42 | −0.73 [−1.64, +0.19] | −4.70 | not better |
+| R4 | 43 | −0.44 [−1.30, +0.41] | +1.11 | not better |
+| R4 | 44 | −0.16 [−0.96, +0.59] | +1.01 | not better |
+| DAPO-v3-all, constant lr | 42 | +0.85 [−0.23, +2.12] | −10.10 | not better, TPR fails |
+| D1: DAPO + decay | 42 / 43 / 44 | −0.83 / +0.28 / −0.22 | −5.4 / +0.5 / −4.0 | not better ×3 |
+| D2: DAPO + decay + β 0.04 | 42 | −0.34 [−1.49, +0.83] | −5.78 | not better |
+
+Every evaluation conforms (committed code); every decay arm passes every guardrail, merge kept
+84.6–97.4%. Figure and table: `$HBM_OUTPUT_ROOT/outputs/grpo_improve/seeds/{seeds.svg,seeds.csv}`
+(`scripts/grpo_improve_seed_plot.py`, from `reports/reference_metrics.csv`).
+
+- **Against the registration.** For asked each replicate below 0 with guardrails passing:
+  met, all three. It also asked R4's three seeds to average below −0.5 pp: not met (−0.44).
+  Against (a Δ ≥ 0 or a guardrail failure): not met.
+- **What the seeds show.** GRPO with the late decay is below SFT-v3 in all five draws, by
+  −0.16 to −0.73 pp (mean −0.45). DAPO with it is below in two of three (mean −0.26). The
+  standard's per-run interval is ±0.8 to ±1.2 pp, so no single draw can clear 0 at this size.
+  A five-of-five sign is descriptive only: R3 and R4 differ in their data, and pooling draws
+  into one test is not part of `EVAL_STANDARD.md`.
+- **What is robust.** The TPR guardrail: 8 of 8 decay runs pass it (TPR −5.8 to +1.1 pp),
+  0 of 2 constant-lr runs do. R4's later seeds even hire slightly more than SFT-v3 where
+  GPT-4o hires.
+- **Cost.** 10.94 + 10.76 + 23.44 (training) + 0.50 × 3 (evaluation) = 46.65 GPU-h.
+
 ## 11. Where this leaves the goal
 
 What the evidence supports:
@@ -569,5 +600,5 @@ reproduce it at its final step.
 | 10 | R4 tipped rows + decay: training | 5147006 | 1.36 | **cancelled** at step 25 by the user; no result |
 | 11 | R4 rerun: training, evaluate_arm | 5148796, 5152422 | 10.85 + 0.51 | done, not better (−0.73); guardrails pass |
 | — | DAPO-improve (`DAPO_IMPROVE.md`) | | 19.6 | D1, D2, D1 seeds 43/44 |
-| 12 | Round 5: R4 seeds 43/44, R3 seed 43 | | | registered |
-| | **Total so far** | | **117.1 of 200** | 1 retry |
+| 12 | Round 5: R4 seeds 43/44, R3 seed 43: training, evaluate_arm | 5153183–5, 5161859–61 | 46.65 | done; all below 0, none better |
+| | **Total** | | **163.8 of 200** | 1 retry |
