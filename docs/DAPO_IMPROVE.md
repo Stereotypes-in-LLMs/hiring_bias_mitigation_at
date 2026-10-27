@@ -162,3 +162,7 @@ Comparisons at commit aa83e51, no uncommitted code, `conforms: true`
 
 **Cost.** 4.08 + 3.98 (training) + 0.50 + 0.50 (evaluation) = 9.06 GPU-h. DAPO-improve so far:
 19.6 GPU-h.
+
+**Closed (2026-10-27, the user's decision).** Wrapped up with GRPO-improve
+(`GRPO_IMPROVE.md`, section 11): the late lr decay is the default for DAPO too; D2's KL term is
+not. DAPO-improve spent 19.6 GPU-h.

@@ -596,6 +596,11 @@ standard. Two proposals go to the user, since each changes the budget's use or t
    the standard. At the observed spread its interval would be about ±0.5 pp, enough to tell
    −0.45 from 0 if the effect is real.
 
+**Closed (2026-10-27, the user's decision): proposal 1.** The user: "到此收尾：把
+xinyang/rl-improve-2 合并进 main，删掉它的 worktree，保留分支。" The late lr decay is the
+default for GRPO and DAPO from here; no pooled multi-seed estimate is run; 163.8 of 200 GPU-h
+were spent and 36.2 left unspent.
+
 What it does not support: any GRPO variant beating SFT-v3 under the standard at a declared
 checkpoint. Checkpoint 525's "better" remains exploratory, and R3 at the same seed did not
 reproduce it at its final step.
