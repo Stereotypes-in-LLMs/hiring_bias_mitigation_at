@@ -579,6 +579,23 @@ elsewhere), 76% of them GPT-4o hires, spread over 55 candidates (the top 10 carr
 reading of R2-a's failure, not confirmed: its 30 anchor pairs are few enough for the penalty
 to be met on those pairs alone, without holding a threshold shared with these 68.
 
+**Stopping (2026-10-27): no hypothesis left in scope.** Under `EVAL_STANDARD.md` a method is
+judged one seed at a time, and its interval is ±0.8 to ±1.2 pp. Across rounds 1–5 every
+change that improved anything did so by at most ~0.5 pp on average (GRPO + decay: five draws,
+−0.16 to −0.73, mean −0.45; DAPO + decay: three draws, mean −0.26), while every change aimed at
+a larger gain (bias projection, consistency reward, anchor, lower lr, KL for DAPO, tipped-only
+data) did not move the mean beyond seed noise. No remaining single-run arm is expected to
+clear an interval of that width, so no further run is worth its GPU-h under the current
+standard. Two proposals go to the user, since each changes the budget's use or the criterion:
+
+1. **Stop and merge.** Adopt the late lr decay as the GRPO/DAPO default (it is the one change
+   that kept every guardrail in 8 of 8 runs), merge `xinyang/rl-improve-2`, leave 36 GPU-h
+   unspent.
+2. **A pooled multi-seed estimate (a criterion change).** Three more R4 seeds (≈ 34 GPU-h) and
+   one candidate-clustered bootstrap over the six seeds, registered beside, not instead of,
+   the standard. At the observed spread its interval would be about ±0.5 pp, enough to tell
+   −0.45 from 0 if the effect is real.
+
 What it does not support: any GRPO variant beating SFT-v3 under the standard at a declared
 checkpoint. Checkpoint 525's "better" remains exploratory, and R3 at the same seed did not
 reproduce it at its final step.
