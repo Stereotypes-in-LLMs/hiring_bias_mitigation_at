@@ -697,3 +697,10 @@ counts by reference side are identical in both logs), so the comparison is paire
 - **Cost.** 0.65 (smoke) + 10.89 (training) + 0.50 (evaluation) = 12.04 GPU-h, from
   `reports/cost/steps.csv`; 24.2 of the reopened 36.2 unspent. Seed 43 (≈11.4) is not
   submitted: it cannot change the registered outcome.
+
+### Round 6 closed (2026-10-28, the user)
+
+The user decided not to run seed 43 ("GRPO 第 6 轮的 seed 43不跑了", translated: "don't run round
+6's seed 43"). Round 6 ends on seed 42 alone, with the registered Against conditions holding
+(Δ not below the distilled start; zero-variance share higher than R4's). 12.04 GPU-h used; 24.2
+of the reopened 36.2 left unspent. The configs for seed 43 stay committed (821c3de), unrun.
