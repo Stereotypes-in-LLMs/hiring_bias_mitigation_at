@@ -69,3 +69,15 @@ benchmark grid. Nothing here feeds back into a checkpoint or a hyperparameter.
 
 **Cost, before the smoke.** Her pass: 1.4 GPU-h per spec on an RTX 6000 Ada. Four specs ≈ 6,
 six patching runs ≈ 6–8 (to be re-estimated from the smoke), smoke ≈ 0.5.
+
+**Smoke (job 5184624, 2026-10-28, 3.5 min on debug).** 64 grid rows per spec, fla kernels.
+Decision agreement with each spec's own audit: base 100%, distill43 100%, distill42 100%,
+sft_v3 95.3%, below the 97% line. The three sft_v3 disagreements are ties: HF fp32 margins
+−0.06, −0.19 and +0.06 logits, against vLLM's +0.25, +0.125 and −0.125 in the op-margin-v2 pass;
+over the 64 rows, HF fp32 against vLLM correlates at r = 0.99976 with a median |difference| of
+0.087 logits (bf16 spacing is 0.125). `reports/interp/margins_summary-*-grid-en-limit64.json`.
+
+**Amendment, before any full pass or result (2026-10-28).** On 64 rows one tied set decides
+the agreement share, so the stop condition moves to the full grid, where `02_margins.py` reports
+it on 31,050 rows: agreement ≥ 97% there, else stop. The smoke's purpose, whether the HF spec is
+the evaluated model, is met by the margin correlation above.
