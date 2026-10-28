@@ -44,7 +44,9 @@ AUDIT_RUN = {"base": "Qwen3.5-9B--en--baseline", "sft": "Qwen3.5-9B--en--sft--ad
              "distill42": "Qwen3.5-9B--en--sft--adapter--en_only_decision_distill_seed42",
              "distill43": "Qwen3.5-9B--en--sft--adapter--en_only_decision_distill_seed43",
              "distill43_t0_20":
-                 "Qwen3.5-9B--en--sft--adapter--en_only_decision_distill_l0_20_seed43"}
+                 "Qwen3.5-9B--en--sft--adapter--en_only_decision_distill_l0_20_seed43",
+             "dpo4880": "Qwen3.5-9B--en--dpo--adapter--en_only_dpo_v3_4880_step305",
+             "grpo525": "Qwen3.5-9B--en--grpo--adapter--en_only_grpo_v3_all_step525"}
 #: The same base audit under the name it has on the CSCS output drive.
 AUDIT_FALLBACK = {"base": "Qwen3.5-9B--en--baseline--cscs"}
 META_COLUMNS = ["dataset", *KEY, "candidate_id", "job_id", "group_id", "prompt_uid"]

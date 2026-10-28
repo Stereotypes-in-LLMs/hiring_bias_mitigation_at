@@ -18,6 +18,10 @@ adapters:
   distill43_l21_31: outputs/distill/decision_distill_seed43
   # Trained on layers 0-20 only (lora_layer_range; docs/DISTILL_LAYERS.md), not masked.
   distill43_t0_20: outputs/distill/decision_distill_l0_20_seed43
+  # The best DPO and GRPO arms by the standard (docs/RL_PATCHING.md), each a fresh LoRA trained
+  # on SFT-v3 merged (run_config.json: sft_checkpoint), so stacked as the distillation is.
+  dpo4880: outputs/dpo/qwen3.5-9b_en_only_dpo_v3_4880/checkpoint-305
+  grpo525: outputs/grpo/qwen3.5-9b_en_only_grpo_v3_all/checkpoint-525
 
 specs:
   base: {adapters: []}
@@ -32,6 +36,8 @@ specs:
   distill43_l0_20: {adapters: [sft_v3, distill43_l0_20], reference: sft_v3}
   distill43_l21_31: {adapters: [sft_v3, distill43_l21_31], reference: sft_v3}
   distill43_t0_20: {adapters: [sft_v3, distill43_t0_20], reference: sft_v3}
+  dpo4880: {adapters: [sft_v3, dpo4880], reference: sft_v3}
+  grpo525: {adapters: [sft_v3, grpo525], reference: sft_v3}
 
 adapter_layers:
   distill43_l0_20: [0, 20]
