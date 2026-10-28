@@ -95,3 +95,117 @@ replaced; the correction was decided with them in view.
 **Patching job 5184970 died** in the AtP backward: fla 0.6 sends one GDN backward kernel to
 tilelang, which needs nvcc. `interp.sbatch` now sets `FLA_DISABLE_BACKEND_DISPATCH=1`; a check
 (job 5185032) ran 4 pairs through all 194 patches, AtP and the head verification.
+
+## Result (2026-10-28)
+
+**One sentence.** Fact: distillation keeps SFT-v3's attribute pathway exactly where it was (same
+hub, same top head, same depth) and turns every part of it down to about a third, a little more
+at the end of the network than at the hub. Interpretation: the attribute effect shrinks because
+the whole decision readout is compressed, not because the pathway was cut. Unknown: whether
+this is what makes the stability gain, or only how the KL loss happens to reach its target.
+
+Jobs: margins 5184648 (31,050 rows × 4 specs), noise floor 5185093, patching 5185108 and 5185258
+(64 identical pairs per contrast, selected on SFT-v3's |Δm| ≥ 0.5; seed 42). Code 8ea29b4.
+Per-pair and per-component files: `reports/interp/patching/<spec>-grid-<contrast>-n64-s42-sel_sft_v3/`,
+`reports/interp/distill/{distill43,distill42}/{sensitivity,components,heads,residual,noise_floor}.csv`.
+Key curve: `reports/interp/distill/distill43/residual.svg`.
+
+**Margin pass reproduces the audits** (amended check): HF fp32 decisions agree with each spec's
+own audit on 99.23% (base), 99.67% (SFT-v3), 99.60% (distill43), 99.62% (distill42) of 31,050
+rows (`reports/interp/margins_summary-*-grid-en.json`).
+
+**(a) Sensitivity.** Mean |Δm| on all 450 pairs, SFT-v3 → distill43: 0.499 → 0.204 (implicit
+combat), 0.345 → 0.157 (explicit combat), 0.409 → 0.189 (atheist vs Christian, implicit); all
+attribute-free margins shrink by r_scale 0.464 (distill42: 0.446).
+
+| ρ, distill / SFT-v3 | registered | 95% CI | noise-corrected (post hoc) | 95% CI |
+|---|---|---|---|---|
+| implicit combat, s43 | 0.884 | 0.79–0.96 | 0.849 | 0.75–0.94 |
+| explicit combat, s43 | 0.982 | 0.88–1.05 | 0.920 | 0.82–1.00 |
+| atheist, implicit, s43 | 0.994 | 0.89–1.05 | 0.934 | 0.84–0.99 |
+| implicit combat, s42 | 0.873 | 0.78–0.95 | 0.854 | 0.76–0.95 |
+| explicit combat, s42 | 1.043 | 0.95–1.12 | 0.959 | 0.87–1.04 |
+| atheist, implicit, s42 | 1.030 | 0.93–1.09 | 0.949 | 0.87–1.00 |
+
+Margin noise per row: SFT-v3 0.082 logits, distill43 0.046, distill42 0.043 (it scales with the
+margins), so the correction is small; most of the change from the registered column is the
+switch from mean |Δm| to root-mean-square.
+
+**(b) Components** (real patching, suffix positions, logits per pair, distill / SFT-v3):
+
+| run | hub (attn L11 + L15) kept | readout (MLP31) kept | hub − readout | L15.H11 (AtP) kept | profile r | kept, layers ≤11 / 12–20 / ≥21 |
+|---|---|---|---|---|---|---|
+| implicit combat, s43 | 0.390 | 0.249 | +0.141 | 0.335 | 0.908 | 0.46 / 0.35 / 0.30 |
+| explicit combat, s43 | 0.439 | 0.281 | +0.157 | 0.408 | 0.957 | 0.41 / 0.38 / 0.32 |
+| atheist, implicit, s43 | 0.413 | 0.309 | +0.104 | 0.457 | 0.979 | 0.40 / 0.37 / 0.33 |
+| implicit combat, s42 | 0.357 | 0.219 | +0.138 | 0.326 | 0.954 | 0.34 / 0.34 / 0.26 |
+| atheist, implicit, s42 | 0.432 | 0.297 | +0.135 | — | 0.973 | 0.42 / 0.39 / 0.33 |
+
+Under SFT-v3 the biggest carrier is still the layer-15 attention mixer (0.49 and 0.58 logits per
+pair on the two implicit contrasts) and the top head is still L15.H11 (0.29, 0.23, 0.18), the
+hub Marta's report found in the base model. The residual sweep places the arrival at the same
+depth in every spec: share reaching the decision tokens at layer 18 is 0.48 / 0.51 / 0.49
+(SFT-v3 / distill43 / distill42, implicit combat), at layer 20 0.85 / 0.88 / 0.88.
+
+**(c) Residual**, attribute difference at the last position, distill43 / SFT-v3: about 1.0 to
+layer 8, then falling slowly; mean over depths 15–20 0.873 / 0.841 / 0.886 (registered;
+noise-corrected 0.847 / 0.827 / 0.867), at the final pre-norm residual 0.71 / 0.67 / 0.71.
+distill42: 0.888 / 0.857 / 0.891, final 0.72 / 0.67 / 0.70.
+
+**Against the registration.** H1 (the pathway is cut) fails on every measure: ρ < 0.85 on at
+most one contrast, the hub keeps *more* than the readout in all five runs, and the residual at
+15–20 is below 0.85 on one of six. H0 (readout only) holds on (a), on (b) in four of five runs
+(explicit combat at +0.157, just past 0.15), and on (c) in five of six (implicit combat s43
+0.841). By the rule fixed in advance this is "mixed", and it lies next to H0.
+
+## Reading
+
+- **Supported.** Distillation does not reroute or cut the attribute pathway. It turns the whole
+  pathway down by a near-uniform factor, slightly more with depth, most at the final MLP and
+  the readout. At the output the attribute effect shrinks about as much as every margin does
+  (ρ 0.85–1.04). This is the mechanistic version of section 5b's global scale compression.
+- **Also supported, and small.** Inside the residual the attribute difference falls to about
+  0.85 of SFT-v3's by layers 15–20, before the readout, in both seeds: a modest attenuation
+  beyond pure scaling, strongest on implicit combat, the contrast with ρ consistently lowest.
+- **Contrast with Marta's SFT** (base → the Hub SFT adapter, a different comparison): her SFT
+  cut most at the movers (attention L11 and L15 kept 15% and 19%, MLP31 28%). Distillation on
+  top of SFT-v3 does the reverse: the hub keeps 0.36–0.44, the readout 0.22–0.31.
+- **Not shown.** That the compression causes the stability gain, rather than the borderline
+  pairs moving (section 5b); whether a loss that keeps the margin scale would still remove the
+  attribute effect.
+
+## Caveats
+
+- Pairs are selected on SFT-v3's own |Δm|, so its effect on them is inflated by its noise
+  (regression to the mean): "total effect kept" on the patched pairs (0.31–0.41) is below
+  r_attr on all pairs (0.39–0.47). Ratios between components are unaffected.
+- Three contrasts, 64 pairs each, one selection seed; explicit combat has 92 eligible pairs.
+- The noise correction was added after seeing (a) and (c); the registered values are kept.
+- Head numbers are AtP estimates; the real-patching verification is in each run's `verify.csv`
+  and was not summarised here.
+- Margins ran with fla dispatch on, patching with it off. The only dispatched kernel is a
+  backward one (tilelang `chunk_bwd_dqkwg`), and a 128-row rerun with dispatch off differs from
+  the full pass by the same 0.09 logits as a rerun with other batch neighbours (job 5185032).
+
+## Cost
+
+Smoke 0.15, margins 1.91, failed patching 0.23, check 0.09, noise floor 0.25, patching 1.23 +
+1.31 = **5.17 GPU-h** (`reports/cost/steps.csv`, jobs 5184624–5185258), within the 16 cap.
+Decision distillation's budget: 17.32 + 5.17 = 22.49 of 50.
+
+## Reproducing
+
+```bash
+export REPO=$PWD HBM_COST_ARM=decision_distill
+$PY scripts/interp/03_segments.py --dataset grid                                  # CPU
+TASKS="margins:base margins:sft_v3 margins:distill43 margins:distill42" \
+  MARGIN_ARGS="--resid --batch-size 16" scripts/cscs/submit.sh -t 04:00:00 scripts/cscs/interp.sbatch
+TASKS="margins:base margins:sft_v3 margins:distill43 margins:distill42" \
+  MARGIN_ARGS="--limit 2048 --chunk 256 --batch-size 16 --resid" \
+  scripts/cscs/submit.sh -p debug -t 00:30:00 scripts/cscs/interp.sbatch           # noise floor
+$PY scripts/interp/04_manifest.py --dataset grid                                  # CPU
+TASKS="patch:sft_v3:mil_combat_civ_impl:sft_v3 patch:distill43:mil_combat_civ_impl:sft_v3 ..." \
+  scripts/cscs/submit.sh -t 03:00:00 scripts/cscs/interp.sbatch
+$PY scripts/interp/20_distill_compare.py --spec distill43 --noise grid-en-limit2048 \
+  --contrast mil_combat_civ_impl --contrast mil_combat_civ_expl --contrast rel_atheist_christian_impl
+```
