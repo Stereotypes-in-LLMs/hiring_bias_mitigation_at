@@ -42,7 +42,9 @@ SET = ["pair_id", "condition"]  # 34 variants per set: the unit MITIGATION_FINDI
 AUDIT_RUN = {"base": "Qwen3.5-9B--en--baseline", "sft": "Qwen3.5-9B--en--sft--adapter--en_only",
              "sft_v3": "Qwen3.5-9B--en--sft--adapter--en_only_sft_v3_additional",
              "distill42": "Qwen3.5-9B--en--sft--adapter--en_only_decision_distill_seed42",
-             "distill43": "Qwen3.5-9B--en--sft--adapter--en_only_decision_distill_seed43"}
+             "distill43": "Qwen3.5-9B--en--sft--adapter--en_only_decision_distill_seed43",
+             "distill43_t0_20":
+                 "Qwen3.5-9B--en--sft--adapter--en_only_decision_distill_l0_20_seed43"}
 #: The same base audit under the name it has on the CSCS output drive.
 AUDIT_FALLBACK = {"base": "Qwen3.5-9B--en--baseline--cscs"}
 META_COLUMNS = ["dataset", *KEY, "candidate_id", "job_id", "group_id", "prompt_uid"]
