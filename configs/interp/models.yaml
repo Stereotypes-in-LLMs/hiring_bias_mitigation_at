@@ -1,0 +1,44 @@
+# Model specs for the patching pipeline (interp/spec.py). All specs share one base model and
+# are switched by activating LoRA adapters, never by reloading weights.
+base_model: Qwen/Qwen3.5-9B
+
+adapters:
+  sft: Stereotypes-in-LLMs/qwen3.5-9b-hiring-debias-sft-en
+  # Delivered by the DPO team; pass --adapter dpo=PATH or export HBM_DPO_ADAPTER.
+  dpo: ${HBM_DPO_ADAPTER}
+  # The 9B-en reference arm (docs/EVAL_STANDARD.md) and decision distillation on top of it
+  # (docs/DECISION_DISTILL.md); the distillation LoRA was trained on SFT-v3 merged, so its spec
+  # stacks the two adapters, as `dpo` does.
+  sft_v3: outputs/sft/qwen3.5-9b_en_only_sft_v3_additional
+  distill42: outputs/distill/decision_distill_seed42
+  distill43: outputs/distill/decision_distill_seed43
+  # The same seed-43 adapter, masked by layer (adapter_layers below): docs/DISTILL_PATCHING.md,
+  # "Layer-masked check". 0-20 holds the hub and the arrival (layers 11-20), 21-31 the readout.
+  distill43_l0_20: outputs/distill/decision_distill_seed43
+  distill43_l21_31: outputs/distill/decision_distill_seed43
+  # Trained on layers 0-20 only (lora_layer_range; docs/DISTILL_LAYERS.md), not masked.
+  distill43_t0_20: outputs/distill/decision_distill_l0_20_seed43
+  # The best DPO and GRPO arms by the standard (docs/RL_PATCHING.md), each a fresh LoRA trained
+  # on SFT-v3 merged (run_config.json: sft_checkpoint), so stacked as the distillation is.
+  dpo4880: outputs/dpo/qwen3.5-9b_en_only_dpo_v3_4880/checkpoint-305
+  grpo525: outputs/grpo/qwen3.5-9b_en_only_grpo_v3_all/checkpoint-525
+
+specs:
+  base: {adapters: []}
+  sft: {adapters: [sft]}
+  # Assumes the DPO LoRA was trained on top of the SFT model (merged SFT + new adapter), which
+  # equals stacking the two adapters. If the DPO run instead continued training the SFT
+  # adapter itself, change this to `adapters: [dpo]`. Confirm with the DPO team before S11.
+  dpo: {adapters: [sft, dpo], reference: sft}
+  sft_v3: {adapters: [sft_v3]}
+  distill42: {adapters: [sft_v3, distill42], reference: sft_v3}
+  distill43: {adapters: [sft_v3, distill43], reference: sft_v3}
+  distill43_l0_20: {adapters: [sft_v3, distill43_l0_20], reference: sft_v3}
+  distill43_l21_31: {adapters: [sft_v3, distill43_l21_31], reference: sft_v3}
+  distill43_t0_20: {adapters: [sft_v3, distill43_t0_20], reference: sft_v3}
+  dpo4880: {adapters: [sft_v3, dpo4880], reference: sft_v3}
+  grpo525: {adapters: [sft_v3, grpo525], reference: sft_v3}
+
+adapter_layers:
+  distill43_l0_20: [0, 20]
+  distill43_l21_31: [21, 31]

@@ -1,0 +1,20 @@
+{
+  "run": "Qwen3.5-9B--en--sft--adapter--en_only_decision_distill_seed43",
+  "against": "Qwen3.5-9B--en--sft--adapter--en_only_sft_v3_additional",
+  "inputs": {
+    "Qwen3.5-9B--en--sft--adapter--en_only_decision_distill_seed43": {
+      "path": "outputs/raw/Qwen3.5-9B--en--sft--adapter--en_only_decision_distill_seed43.parquet",
+      "sha256": "a53317c2d4b541edbebd3f8aabb1a6d689a178fd0295f5e9b67d2c8d2072f94d"
+    },
+    "Qwen3.5-9B--en--sft--adapter--en_only_sft_v3_additional": {
+      "path": "outputs/raw/Qwen3.5-9B--en--sft--adapter--en_only_sft_v3_additional.parquet",
+      "sha256": "15863af88ae90cf8de249a9b6d7f9bdf1de1a247bb0983af660112dfafe3a457"
+    }
+  },
+  "shared_prompts": 31050,
+  "changed_prompts": 403,
+  "code": {
+    "commit": "0e2833c45a802953d47ccd78134e223a2acd4b62",
+    "uncommitted": []
+  }
+}

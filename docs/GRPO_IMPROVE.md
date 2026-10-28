@@ -624,3 +624,76 @@ reproduce it at its final step.
 | — | DAPO-improve (`DAPO_IMPROVE.md`) | | 19.6 | D1, D2, D1 seeds 43/44 |
 | 12 | Round 5: R4 seeds 43/44, R3 seed 43: training, evaluate_arm | 5153183–5, 5161859–61 | 46.65 | done; all below 0, none better |
 | | **Total** | | **163.8 of 200** | 1 retry |
+
+## 13. Reopened (2026-10-27): round 6, GRPO on top of decision distillation (registration)
+
+The user reopened GRPO ("重开 GRPO", translated: "Reopen GRPO") after recording decision
+distillation (`DECISION_DISTILL.md`) as better than SFT-v3. Nothing below runs before the user
+approves the budget.
+
+- **Why.** Two findings meet here. GRPO's signal dies because the policy is confident: the
+  share of groups whose 16 rollouts all get one reward is 0.59 / 0.66 over R4's first 50 steps
+  and 0.93 / 0.89 over steps 51–100 (seeds 42 / 43, `frac_reward_zero_std` in each run's
+  `trainer_state.json`). Decision distillation halves the margin scale (`DECISION_DISTILL.md`,
+  5b), most on the ~35 borderline pairs, and raises TPR by 1.1–1.3 pp where GRPO + decay at
+  seed 42 lowered it by 4.7–5.4. A distilled start should keep more groups split, and has TPR
+  headroom for GRPO's cost.
+- **Change (method: the start point).** R4's config (tipped rows + late decay, 259 steps), with
+  `sft_checkpoint` set to the distillation run instead of SFT-v3, seed-matched: GRPO seed 42 on
+  `outputs/distill/decision_distill_seed42`, seed 43 on `…seed43`. `load_merged` and the
+  audit's merge both follow the adapter chain, so training starts from SFT-v3 + distillation and
+  the evaluation merges [SFT-v3, distillation, GRPO]. The hire-rate monitor's `sft_benchmark`
+  becomes the distilled start's benchmark rates (TPR 0.5894 / FPR 0.05647 for seed 42; 0.5901 /
+  0.0544 for seed 43, `reference_metrics.csv`). Nothing else changes; final adapters, declared now.
+- **Comparisons.** The standard, against SFT-v3. For context, compare-arms against the
+  seed-matched distillation run (does GRPO add anything on top of its start?).
+- **For.** Both seeds Δ < 0 against SFT-v3 with every guardrail, and each below its
+  distillation start (−0.42 / −0.59); `frac_reward_zero_std` over steps 1–50 below R4's at the
+  same seed (0.59 / 0.66).
+- **Against.** Zero-variance share not lower than R4's (the explanation-1 link fails); or Δ not
+  below the distillation start's (GRPO adds nothing); or a guardrail fails.
+- **Stop conditions.** A six-step smoke on `debug` first (the two-adapter chain under vLLM
+  colocate; the sync validation must pass); the hire-rate band 15–35%; `memory_floor_gb` 12.
+- **Cost.** Smoke ≈ 0.8 GPU-h; per seed ≈ 10.9 training + 0.5 evaluation (R4's). ≈ 23.6 GPU-h,
+  within GRPO-improve's unspent 36.2 if the user reopens that budget.
+
+### Round 6, seed 42 result: the zero-variance link fails, and GRPO does not add to its start (smoke 5167831, training 5167908, evaluation 5169910)
+
+Code: 821c3de (configs), d4153fd (the curve script); the evaluation conforms. Training: 259 steps,
+`outputs/grpo/grpo_improve_r6_distill_seed42`, final adapter as declared; the vLLM sync check
+passed at every check (step 0, 50, …, 250); projected hire rate 0.24–0.27, inside the band. The
+smoke ran six steps from the [SFT-v3, distillation] chain, sync agreement 0.996 at step 0.
+
+| seed 42, matched change in unstable sets | Δ, pp [95% CI] | TPR vs SFT-v3 | agreement | merge kept | verdict |
+|---|---|---|---|---|---|
+| R4 (from SFT-v3), against SFT-v3 | −0.73 [−1.64, +0.19] | −4.70 | −1.31 | 90.5% | not better |
+| distillation (the start), against SFT-v3 | −0.42 | +1.21 | +0.15 | 92.2% | not better |
+| **R6 (from distillation), against SFT-v3** | **−0.17 [−1.07, +0.75]** | **−3.31** | −0.74 | 92.0% | not better |
+| R6 against its distillation start (context) | −0.26 [−1.25, +0.63] | | | | |
+
+Rows: `reports/reference_metrics.csv`; intervals and matched thresholds:
+`reports/operating_point/v2/Qwen3.5-9B--en--grpo--adapter--en_only_grpo_improve_r6_distill_seed42--vs--*.json`.
+Every guardrail passes.
+
+Key curve: `$HBM_OUTPUT_ROOT/outputs/grpo_improve/zero_variance_r6/{zero_variance.svg,zero_variance.csv,windows.csv}`
+(`scripts/grpo_zero_variance.py`). R4 and R6 at seed 42 see the same batches (the per-step
+counts by reference side are identical in both logs), so the comparison is paired.
+
+| seed 42, mean over steps | zero-variance share 1–50 | 51–100 | 101–259 | agrees with reference, ref hire (1–50) | ref reject (1–50) |
+|---|---|---|---|---|---|
+| R4 | 0.589 | 0.928 | 0.951 | 0.823 | 0.846 |
+| R6 | 0.679 | 0.930 | 0.971 | 0.880 | 0.905 |
+
+- **Against the registration.** Δ < 0 with every guardrail: met. Below the distillation
+  start's −0.42: not met (−0.17). Zero-variance share over 1–50 below R4's 0.59: not met (0.68).
+  Two Against conditions hold, so round 6 cannot meet For whatever seed 43 shows.
+- **Reading, not confirmed.** The distilled start already agrees with the reward's reference
+  on more rollouts (0.88 / 0.90 against 0.82 / 0.85 on the same prompts), so more groups come
+  out all correct and carry no gradient. Halving the margin scale did not split groups because
+  the reward reads only the sign of the decision. The direct comparison with the start (−0.26)
+  and the difference of the two against SFT-v3 (−0.17 vs −0.42) disagree in sign, and both are
+  well inside ±1 pp: GRPO's effect on top of distillation is not measurable at this size. Its
+  TPR cost (−4.5 pp from the start) is measurable.
+- **Cost.** 0.65 (smoke) + 10.89 (training) + 0.50 (evaluation) = 12.04 GPU-h, from
+  `reports/cost/steps.csv`; 24.2 of the reopened 36.2 unspent. Seed 43 (≈11.4) is not
+  submitted: it cannot change the registered outcome.

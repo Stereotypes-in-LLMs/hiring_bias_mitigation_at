@@ -235,11 +235,21 @@ def _resolve_adapter(base_model: str) -> tuple[str, str | None]:
 
 
 def peft_config(cfg: dict):
-    """Builds a LoraConfig, or None for a full fine-tune."""
+    """Builds a LoraConfig, or None for a full fine-tune.
+
+    `lora_layer_range: [first, last]` (inclusive) puts the adapter on decoder layers first..last
+    only, matched on the `layers.<i>.` segment of the module name; unset, every layer.
+    """
     if not cfg.get("use_lora", True):
         return None
     from peft import LoraConfig
 
+    layers = {}
+    if (span := cfg.get("lora_layer_range")) is not None:
+        first, last = (int(i) for i in span)
+        if not 0 <= first <= last:
+            raise ValueError(f"lora_layer_range needs 0 <= first <= last: {span}")
+        layers = {"layers_to_transform": list(range(first, last + 1)), "layers_pattern": "layers"}
     return LoraConfig(
         r=cfg.get("lora_r", 32),
         lora_alpha=cfg.get("lora_alpha", 64),
@@ -247,6 +257,7 @@ def peft_config(cfg: dict):
         target_modules=cfg.get("lora_target_modules", DEFAULT_LORA_TARGETS),
         bias="none",
         task_type="CAUSAL_LM",
+        **layers,
     )
 
 
