@@ -39,7 +39,12 @@ log = get_logger("interp.margins")
 
 KEY = ["pair_id", "protected_group", "protected_attr", "condition"]
 SET = ["pair_id", "condition"]  # 34 variants per set: the unit MITIGATION_FINDINGS reports
-AUDIT_RUN = {"base": "Qwen3.5-9B--en--baseline", "sft": "Qwen3.5-9B--en--sft--adapter--en_only"}
+AUDIT_RUN = {"base": "Qwen3.5-9B--en--baseline", "sft": "Qwen3.5-9B--en--sft--adapter--en_only",
+             "sft_v3": "Qwen3.5-9B--en--sft--adapter--en_only_sft_v3_additional",
+             "distill42": "Qwen3.5-9B--en--sft--adapter--en_only_decision_distill_seed42",
+             "distill43": "Qwen3.5-9B--en--sft--adapter--en_only_decision_distill_seed43"}
+#: The same base audit under the name it has on the CSCS output drive.
+AUDIT_FALLBACK = {"base": "Qwen3.5-9B--en--baseline--cscs"}
 META_COLUMNS = ["dataset", *KEY, "candidate_id", "job_id", "group_id", "prompt_uid"]
 
 
@@ -87,7 +92,10 @@ def run_pass(frame: pd.DataFrame, model, tokenizer, ro, out_dir: Path, batch_siz
 
 def audit_check(margins: pd.DataFrame, spec: str) -> dict:
     run = AUDIT_RUN.get(spec)
-    path = Path(resolve_output_path("outputs/raw")) / f"{run}.parquet" if run else None
+    raw = Path(resolve_output_path("outputs/raw"))
+    if run and not (raw / f"{run}.parquet").exists() and spec in AUDIT_FALLBACK:
+        run = AUDIT_FALLBACK[spec]
+    path = raw / f"{run}.parquet" if run else None
     if path is None or not path.exists():
         return {"audit_run": run, "available": False}
     audit = pd.read_parquet(path, columns=[*KEY, "decision"])

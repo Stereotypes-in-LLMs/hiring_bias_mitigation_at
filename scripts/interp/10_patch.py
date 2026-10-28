@@ -49,15 +49,19 @@ COMPONENT_CLASSES = ("suffix", "late")
 
 
 def select_pairs(
-    manifest: pd.DataFrame, contrast: str, n: int, min_effect: float, seed: int
+    manifest: pd.DataFrame, contrast: str, n: int, min_effect: float, seed: int,
+    select_on: str = "base",
 ) -> pd.DataFrame:
+    column = f"dm_{select_on}"
+    if column not in manifest:
+        raise SystemExit(f"the manifest has no {column}; run 02_margins.py --spec {select_on}")
     rows = manifest[
         (manifest["contrast_id"] == contrast)
         & manifest["aligned"]
-        & (manifest["dm_base"].abs() >= min_effect)
+        & (manifest[column].abs() >= min_effect)
     ]
     if rows.empty:
-        raise SystemExit(f"no aligned pairs for {contrast} with |dm_base| >= {min_effect}")
+        raise SystemExit(f"no aligned pairs for {contrast} with |{column}| >= {min_effect}")
     return rows.sample(n=min(n, len(rows)), random_state=seed).reset_index(drop=True)
 
 
@@ -293,6 +297,11 @@ def main() -> None:
     parser.add_argument("--n-pairs", type=int, default=64)
     parser.add_argument("--min-effect", type=float, default=0.5)
     parser.add_argument(
+        "--select-on", default="base",
+        help="the spec whose effect selects the pairs: the reference of the comparison, never "
+        "the spec it is compared against (distill43 is patched on pairs chosen on sft_v3)",
+    )
+    parser.add_argument(
         "--token-budget", type=int, default=4800, help="rows x longest prompt per patching batch"
     )
     parser.add_argument(
@@ -307,12 +316,16 @@ def main() -> None:
 
     cfg = data_config()
     # The pair selection is part of a run's identity: a resumed run must patch the same pairs.
-    run = f"{args.contrast}-n{args.n_pairs}-s{args.seed}"
+    run = f"{args.contrast}-n{args.n_pairs}-s{args.seed}" + (
+        "" if args.select_on == "base" else f"-sel_{args.select_on}"
+    )
     name = f"{args.spec}-{args.dataset}-{run}"
     manifest = pd.read_parquet(
         interp_dir("manifest") / f"contrasts-{args.dataset}-{cfg['lang']}.parquet"
     )
-    pairs = select_pairs(manifest, args.contrast, args.n_pairs, args.min_effect, args.seed)
+    pairs = select_pairs(
+        manifest, args.contrast, args.n_pairs, args.min_effect, args.seed, args.select_on
+    )
     out_dir = interp_dir("patching", args.spec, args.dataset, run)
     selected = out_dir / "selected_pairs.parquet"
     if selected.exists():
@@ -355,6 +368,7 @@ def main() -> None:
         contrast=args.contrast,
         pairs=len(pairs),
         min_effect=args.min_effect,
+        select_on=args.select_on,
         seed=args.seed,
     )
     summarise_run(out_dir, name)

@@ -6,6 +6,12 @@ adapters:
   sft: Stereotypes-in-LLMs/qwen3.5-9b-hiring-debias-sft-en
   # Delivered by the DPO team; pass --adapter dpo=PATH or export HBM_DPO_ADAPTER.
   dpo: ${HBM_DPO_ADAPTER}
+  # The 9B-en reference arm (docs/EVAL_STANDARD.md) and decision distillation on top of it
+  # (docs/DECISION_DISTILL.md); the distillation LoRA was trained on SFT-v3 merged, so its spec
+  # stacks the two adapters, as `dpo` does.
+  sft_v3: outputs/sft/qwen3.5-9b_en_only_sft_v3_additional
+  distill42: outputs/distill/decision_distill_seed42
+  distill43: outputs/distill/decision_distill_seed43
 
 specs:
   base: {adapters: []}
@@ -14,3 +20,6 @@ specs:
   # equals stacking the two adapters. If the DPO run instead continued training the SFT
   # adapter itself, change this to `adapters: [dpo]`. Confirm with the DPO team before S11.
   dpo: {adapters: [sft, dpo], reference: sft}
+  sft_v3: {adapters: [sft_v3]}
+  distill42: {adapters: [sft_v3, distill42], reference: sft_v3}
+  distill43: {adapters: [sft_v3, distill43], reference: sft_v3}
