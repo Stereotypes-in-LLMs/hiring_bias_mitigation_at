@@ -29,7 +29,7 @@ distillation.
 
 | spec | run | matched change vs SFT-v3, pp [95% CI] | TPR vs ref |
 |---|---|---|---|
-| `dpo4880` | `Qwen3.5-9B--en--dpo--adapter--en_only_dpo_v3_4880_step305` (`outputs/dpo/qwen3.5-9b_en_only_dpo_v3_4880/checkpoint-305`) | −1.04 [−1.81, −0.28] | +0.70 |
+| `dpo4880` | `Qwen3.5-9B--en--dpo--adapter--en_only_dpo_v3_4880_step305` (`outputs/dpo/qwen3.5-9b_en_only_dpo_v3_4880/checkpoint-305`) | −1.03 [−1.81, −0.28] | +0.70 |
 | `grpo525` | `Qwen3.5-9B--en--grpo--adapter--en_only_grpo_v3_all_step525` (`outputs/grpo/qwen3.5-9b_en_only_grpo_v3_all/checkpoint-525`) | −1.02 [−1.99, −0.12] | −9.30 |
 | *context:* distillation s43 | (DISTILL_PATCHING.md) | −0.59 [−1.24, −0.03] | +1.29 |
 
