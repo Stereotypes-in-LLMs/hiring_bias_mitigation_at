@@ -1,0 +1,17 @@
+{
+  "spec": "distill43",
+  "dataset": "grid-en",
+  "rows": 31050,
+  "hire_rate_pct": 23.05636070853462,
+  "audit": {
+    "audit_run": "Qwen3.5-9B--en--sft--adapter--en_only_decision_distill_seed43",
+    "available": true,
+    "rows_matched": 31050,
+    "agreement_pct": 99.60386473429952,
+    "hire_rate_hf_pct": 23.05636070853462,
+    "hire_rate_audit_pct": 23.29790660225443,
+    "unstable_sets_hf_pct": 2.888888888888889,
+    "unstable_sets_audit_pct": 3.111111111111111,
+    "margin_bf16_minus_fp32_abs_mean": 0.04849797114729881
+  }
+}

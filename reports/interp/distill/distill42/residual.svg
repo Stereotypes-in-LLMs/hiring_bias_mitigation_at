@@ -1,0 +1,30 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="720" height="320" font-family="sans-serif" font-size="11">
+<rect width="720" height="320" fill="white"/>
+<text x="60" y="18" font-weight="bold">(c) attribute difference in the last-position residual, distill42 / sft_v3</text>
+<rect x="275.6" y="40" width="71.9" height="240" fill="#f2f2f2"/>
+<line x1="60" x2="520.0" y1="280.0" y2="280.0" stroke="#e0e0e0"/>
+<text x="54" y="284.0" text-anchor="end">0.00</text>
+<line x1="60" x2="520.0" y1="194.3" y2="194.3" stroke="#e0e0e0"/>
+<text x="54" y="198.3" text-anchor="end">0.50</text>
+<line x1="60" x2="520.0" y1="134.3" y2="134.3" stroke="#e0e0e0"/>
+<text x="54" y="138.3" text-anchor="end">0.85</text>
+<line x1="60" x2="520.0" y1="108.6" y2="108.6" stroke="#999"/>
+<text x="54" y="112.6" text-anchor="end">1.00</text>
+<line x1="60" x2="520.0" y1="82.9" y2="82.9" stroke="#e0e0e0"/>
+<text x="54" y="86.9" text-anchor="end">1.15</text>
+<text x="60.0" y="296" text-anchor="middle">0</text>
+<text x="117.5" y="296" text-anchor="middle">4</text>
+<text x="175.0" y="296" text-anchor="middle">8</text>
+<text x="232.5" y="296" text-anchor="middle">12</text>
+<text x="290.0" y="296" text-anchor="middle">16</text>
+<text x="347.5" y="296" text-anchor="middle">20</text>
+<text x="405.0" y="296" text-anchor="middle">24</text>
+<text x="462.5" y="296" text-anchor="middle">28</text>
+<text x="520.0" y="296" text-anchor="middle">32</text>
+<polyline points="60.0,nan 74.4,110.2 88.8,108.7 103.1,107.1 117.5,110.7 131.9,109.1 146.2,112.5 160.6,111.9 175.0,128.6 189.4,127.6 203.8,128.7 218.1,128.2 232.5,130.7 246.9,130.7 261.2,128.0 275.6,127.1 290.0,126.6 304.4,127.2 318.8,127.8 333.1,128.3 347.5,129.1 361.9,129.4 376.2,130.2 390.6,132.6 405.0,131.9 419.4,132.9 433.8,133.5 448.1,131.4 462.5,132.7 476.9,132.5 491.2,131.8 505.6,130.2 520.0,157.2" fill="none" stroke="#1f77b4" stroke-width="1.5"/>
+<text x="528.0" y="40" fill="#1f77b4">mil_combat_civ_expl</text>
+<polyline points="60.0,nan 74.4,108.5 88.8,107.1 103.1,109.5 117.5,110.0 131.9,113.1 146.2,113.9 160.6,115.2 175.0,118.9 189.4,119.0 203.8,120.1 218.1,123.7 232.5,126.6 246.9,131.6 261.2,129.6 275.6,128.9 290.0,131.6 304.4,132.9 318.8,133.3 333.1,135.1 347.5,136.8 361.9,137.4 376.2,139.2 390.6,141.9 405.0,141.8 419.4,143.1 433.8,143.4 448.1,141.1 462.5,142.1 476.9,142.0 491.2,142.0 505.6,141.5 520.0,166.1" fill="none" stroke="#d62728" stroke-width="1.5"/>
+<text x="528.0" y="54" fill="#d62728">mil_combat_civ_impl</text>
+<polyline points="60.0,nan 74.4,108.7 88.8,107.4 103.1,106.7 117.5,105.3 131.9,107.5 146.2,109.1 160.6,111.2 175.0,118.5 189.4,116.7 203.8,117.9 218.1,119.3 232.5,121.3 246.9,121.3 261.2,120.9 275.6,121.2 290.0,126.6 304.4,128.0 318.8,128.5 333.1,128.7 347.5,130.4 361.9,131.1 376.2,131.8 390.6,134.2 405.0,135.1 419.4,135.4 433.8,136.1 448.1,134.4 462.5,137.6 476.9,137.0 491.2,137.2 505.6,135.7 520.0,160.3" fill="none" stroke="#2ca02c" stroke-width="1.5"/>
+<text x="528.0" y="68" fill="#2ca02c">rel_atheist_christian_impl</text>
+<text x="280.0" y="314" text-anchor="middle">residual depth (the residual entering each layer; shaded 15-20)</text></svg>
