@@ -1,0 +1,46 @@
+# Hand-written -- NOT produced by generate_experiment_configs.py.
+#
+# Layer-restricted decision distillation, seed 43 (docs/DISTILL_LAYERS.md): decision_distill_seed43
+# with the LoRA on decoder layers 0-20 only (lora_layer_range; 83 of its 128 modules). Everything
+# else is identical. The audited checkpoint is the final adapter.
+#   HBM_COST_ARM=decision_distill REPO=$PWD CONFIG=configs/mitigation/distill/decision_distill_l0_20_seed43.yaml \
+#     scripts/cscs/submit.sh -p normal -t 02:00:00 scripts/cscs/train_distill.sbatch
+stage: decision_distill
+objective: decision_distill
+base_model: Qwen/Qwen3.5-9B
+sft_checkpoint: outputs/sft/qwen3.5-9b_en_only_sft_v3_additional
+data_config: configs/data/en_only_distill_v3_all.yaml
+output_dir: outputs/distill/decision_distill_l0_20_seed43
+chat_template_kwargs:
+  enable_thinking: false
+use_lora: true
+lora_r: 32
+lora_alpha: 64
+lora_dropout: 0.0
+lora_layer_range: [0, 20]          # decoder layers 0-20, inclusive
+# One prompt per device and micro-step (no padding): 4 GPUs x 8 accumulation = 32 rows a step,
+# 10,907 rows = 340 steps in one epoch.
+num_train_epochs: 1
+max_steps: -1
+learning_rate: 3.0e-05
+lr_scheduler_type: warmup_stable_decay   # GRPO-improve's default: decay over the last 26%
+lr_scheduler_kwargs:
+  num_decay_steps: 89
+  decay_type: linear
+warmup_steps: 5
+per_device_train_batch_size: 1
+gradient_accumulation_steps: 8
+gradient_checkpointing: true
+gradient_checkpointing_kwargs:
+  use_reentrant: false
+ddp_find_unused_parameters: false
+weight_decay: 0.0
+dtype: bfloat16
+seed: 43
+logging_steps: 5
+save_steps: 50
+save_total_limit: 10
+memory_floor_gb: 12
+resume: true
+wandb_project: hiring-bias-mitigation
+wandb_run_name: distill-decision_distill_l0_20_seed43

@@ -118,3 +118,32 @@ def test_builder_pairs_rows_and_adds_one_free_anchor_per_pair():
     assert set(out.loc[~out["is_free"], "free_prompt"]) == {"A", "B"}
     with pytest.raises(ValueError):
         B.build(rows, pd.Series({"a": "A"}))
+
+
+def test_lora_layer_range_puts_the_adapter_on_those_layers_only():
+    """lora_layer_range [0, 2] on a 4-layer Qwen3.5 (layer 3 the full-attention one): LoRA on
+    the MLPs of layers 0-2, none on layer 3's MLP or attention (docs/DISTILL_LAYERS.md)."""
+    import re
+
+    from peft import get_peft_model
+    from transformers import Qwen3_5ForCausalLM, Qwen3_5TextConfig
+
+    from hiring_bias_mitigation.mitigation import training_common as C
+
+    cfg = Qwen3_5TextConfig(
+        vocab_size=16, hidden_size=32, intermediate_size=48, num_hidden_layers=4,
+        num_attention_heads=2, num_key_value_heads=1, head_dim=16, linear_key_head_dim=8,
+        linear_value_head_dim=8, linear_num_key_heads=2, linear_num_value_heads=2,
+        layer_types=["linear_attention"] * 3 + ["full_attention"], pad_token_id=0)
+
+    def lora_layers(train_cfg):
+        model = get_peft_model(Qwen3_5ForCausalLM(cfg), C.peft_config(train_cfg))
+        names = [n for n, m in model.named_modules() if hasattr(m, "lora_A")]
+        return names, {int(re.search(r"\.layers\.(\d+)\.", n).group(1)) for n in names}
+
+    full, full_layers = lora_layers({"use_lora": True})
+    names, layers = lora_layers({"use_lora": True, "lora_layer_range": [0, 2]})
+    assert full_layers == {0, 1, 2, 3} and layers == {0, 1, 2}
+    assert len(names) == len(full) - 7  # layer 3: q, k, v, o + gate, up, down
+    with pytest.raises(ValueError):
+        C.peft_config({"use_lora": True, "lora_layer_range": [3, 1]})

@@ -145,7 +145,9 @@ def train(cfg: dict) -> C.TrainArtifacts:
     manifest = {"mitigation_family": "decision_distill", "objective": "decision_distill",
                 "n_train": len(train_ds), "n_free_rows": int(frame["is_free"].sum()),
                 "decision_token_ids": list(token_ids),
-                "sft_checkpoint": cfg.get("sft_checkpoint")}
+                "sft_checkpoint": cfg.get("sft_checkpoint"),
+                "lora_layer_range": cfg.get("lora_layer_range"),
+                "lora_modules": sum(1 for _, m in model.named_modules() if hasattr(m, "lora_A"))}
     if C.is_main_process():
         C.write_run_manifest(cfg, output_dir, {**manifest, "status": "training"})
     resume = C.last_checkpoint(output_dir) if cfg.get("resume") else None
