@@ -81,3 +81,17 @@ over the 64 rows, HF fp32 against vLLM correlates at r = 0.99976 with a median |
 the agreement share, so the stop condition moves to the full grid, where `02_margins.py` reports
 it on 31,050 rows: agreement ≥ 97% there, else stop. The smoke's purpose, whether the HF spec is
 the evaluated model, is met by the margin correlation above.
+
+**Second amendment, after measures (a) and (c) were computed (2026-10-28), so post hoc.** The
+same prompts scored in two passes with different batch neighbours differ by a mean 0.087 logits
+(64 rows, SFT-v3, both with fla dispatch on; dispatch off moves them by the same amount), i.e.
+each fp32 margin carries a batch-dependent bf16 noise of about 0.08 logits. Additive noise
+inflates mean |Δm| more for the spec with the smaller effect, which biases ρ in (a) towards 1,
+and the residual difference in (c) likewise. Added: a noise-floor pass (each spec's first
+2,048 grid rows rescored with different batch neighbours, `--chunk 256`) and noise-corrected
+versions of (a) and (c), reported next to the registered values. The registered values are not
+replaced; the correction was decided with them in view.
+
+**Patching job 5184970 died** in the AtP backward: fla 0.6 sends one GDN backward kernel to
+tilelang, which needs nvcc. `interp.sbatch` now sets `FLA_DISABLE_BACKEND_DISPATCH=1`; a check
+(job 5185032) ran 4 pairs through all 194 patches, AtP and the head verification.
