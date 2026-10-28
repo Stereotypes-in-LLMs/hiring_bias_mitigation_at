@@ -29,6 +29,10 @@ type cost > /dev/null 2>&1 || cost() { shift 2; "$@"; }
 [ -x "$PY" ] || { echo "FATAL: no venv at $XW/venv -- run scripts/cscs/build_env.sbatch first"; exit 3; }
 export HF_HUB_OFFLINE=1
 export PYTHONPATH="$REPO/src:$XW/pylib-fla${PYTHONPATH:+:$PYTHONPATH}"
+# fla 0.6 routes one GDN backward kernel (chunk_bwd_dqkwg) to tilelang when it is importable;
+# tilelang compiles with nvcc, which Daint's nodes lack (job 5184970 died in AtP's backward).
+# Dispatch off keeps every kernel on fla's own Triton path, as in the margin passes.
+export FLA_DISABLE_BACKEND_DISPATCH=1
 read -r -a tasks <<< "${TASKS:-}"
 [ ${#tasks[@]} -ge 1 ] && [ ${#tasks[@]} -le 4 ] \
   || { echo "FATAL: set TASKS to one to four entries, one per GPU"; exit 2; }
