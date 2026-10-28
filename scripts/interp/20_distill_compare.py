@@ -14,6 +14,13 @@
                      |r_L(A) - r_L(B)| / |r_L(B)| at the last position (02_margins.py --resid),
                      spec over ref
 
+With --noise NAME (a second margin pass over the first rows with other batch neighbours,
+e.g. grid-en-limit2048 from `02_margins.py --limit 2048 --chunk 256 --resid`), (a) and (c) also
+get noise-corrected versions (DISTILL_PATCHING.md, second amendment, post hoc): each margin
+carries batch-dependent bf16 noise, which inflates the smaller model's |dm| more. The noise of a
+within-set difference is read from how much it changes between the two passes; the corrected
+statistics are root-mean-squares with that noise variance subtracted.
+
 Inputs come from outputs/interp/{margins,manifest} and reports/interp/patching/; outputs go to
 reports/interp/distill/<spec>/ (CSVs and residual.svg). No GPU.
 """
@@ -40,7 +47,45 @@ def margins(spec: str, name: str) -> pd.DataFrame:
     return pd.read_parquet(interp_dir("margins", spec) / f"{name}.parquet")
 
 
-def sensitivity(manifest, m_ref, m_spec, spec, ref, contrasts, n_boot, seed) -> pd.DataFrame:
+def _pair_sq(values: np.ndarray, groups: np.ndarray) -> tuple[float, int]:
+    """Sum over within-group pairs i<j of |v_i - v_j|^2 (rows of `values`), and the pair count,
+    from K * sum |v|^2 - |sum v|^2 per group."""
+    total, count = 0.0, 0
+    v = values.reshape(len(values), -1).astype(np.float64)
+    for g in np.unique(groups):
+        x = v[groups == g]
+        k = len(x)
+        total += k * float((x ** 2).sum()) - float((x.sum(0) ** 2).sum())
+        count += k * (k - 1) // 2
+    return total, count
+
+
+def noise_floor(spec: str, name: str, noise: str) -> dict:
+    """Per-pass noise variance of a within-set margin difference, and per depth of a
+    within-set residual difference (squared norm), from two passes over the same prompts."""
+    full = margins(spec, name)
+    other = margins(spec, noise)
+    j = other[["prompt_uid", "margin_fp32"]].merge(
+        full[["prompt_uid", "pair_id", "protected_group", "condition", "margin_fp32"]],
+        on="prompt_uid", suffixes=("_n", "_f"))
+    j = j[j["condition"] != "attr_free"].reset_index(drop=True)
+    sets = (j["pair_id"] + "|" + j["protected_group"] + "|" + j["condition"]).to_numpy()
+    e = (j["margin_fp32_n"] - j["margin_fp32_f"]).to_numpy()
+    # A difference between passes of a within-set difference holds two passes' noise.
+    sq, n = _pair_sq(e[:, None], sets)
+    out = {"rows": len(j), "pairs": n, "var_dm": sq / n / 2,
+           "row_noise_sd": float(np.std(e) / np.sqrt(2))}
+    if any(interp_dir("margins", spec, noise).glob("resid-*.safetensors")):
+        uids = set(j["prompt_uid"])
+        a, b = resid_rows(spec, noise, uids), resid_rows(spec, name, uids)
+        diff = np.stack([a[u] - b[u] for u in j["prompt_uid"]])  # rows x depth x d
+        out["resid_sq"] = np.array([_pair_sq(diff[:, d], sets)[0] / n / 2
+                                    for d in range(diff.shape[1])])
+    return out
+
+
+def sensitivity(manifest, m_ref, m_spec, spec, ref, contrasts, n_boot, seed,
+                noise=None) -> pd.DataFrame:
     free = m_ref[m_ref["condition"] == "attr_free"][["candidate_id", "prompt_uid", "margin_fp32"]]
     free = free.merge(m_spec[["prompt_uid", "margin_fp32"]], on="prompt_uid",
                       suffixes=("_ref", "_spec"))
@@ -49,8 +94,10 @@ def sensitivity(manifest, m_ref, m_spec, spec, ref, contrasts, n_boot, seed) -> 
     for c in contrasts:
         rows = manifest[(manifest["contrast_id"] == c) & manifest["aligned"]]
         cands = np.array(sorted(set(rows["candidate_id"]) & set(free["candidate_id"])))
-        per = rows.assign(a_ref=rows[f"dm_{ref}"].abs(), a_spec=rows[f"dm_{spec}"].abs())
-        per = per.groupby("candidate_id")[["a_ref", "a_spec"]].agg(["sum", "count"])
+        per = rows.assign(a_ref=rows[f"dm_{ref}"].abs(), a_spec=rows[f"dm_{spec}"].abs(),
+                          q_ref=rows[f"dm_{ref}"] ** 2, q_spec=rows[f"dm_{spec}"] ** 2)
+        per = per.groupby("candidate_id")[["a_ref", "a_spec", "q_ref", "q_spec"]].agg(
+            ["sum", "count"])
         fr = free.assign(f_ref=free["margin_fp32_ref"].abs(), f_spec=free["margin_fp32_spec"].abs())
         fr = fr.set_index("candidate_id")
 
@@ -59,17 +106,28 @@ def sensitivity(manifest, m_ref, m_spec, spec, ref, contrasts, n_boot, seed) -> 
             r_attr = p[("a_spec", "sum")].sum() / p[("a_ref", "sum")].sum()
             f = fr.loc[chosen]
             r_scale = np.median(f["f_spec"]) / np.median(f["f_ref"])
-            return r_attr, r_scale, r_attr / r_scale
+            k = p[("q_ref", "count")].sum()
+            r_rms = np.sqrt(p[("q_spec", "sum")].sum() / p[("q_ref", "sum")].sum())
+            if noise is None:
+                r_corr = np.nan
+            else:
+                r_corr = np.sqrt((p[("q_spec", "sum")].sum() / k - noise[spec]["var_dm"])
+                                 / (p[("q_ref", "sum")].sum() / k - noise[ref]["var_dm"]))
+            return r_attr, r_scale, r_attr / r_scale, r_rms / r_scale, r_corr / r_scale
 
-        r_attr, r_scale, value = rho(cands)
-        boots = np.array([rho(cands[rng.integers(0, len(cands), len(cands))])[2]
+        r_attr, r_scale, value, rho_rms, rho_corr = rho(cands)
+        draws = np.array([rho(cands[rng.integers(0, len(cands), len(cands))])
                           for _ in range(n_boot)])
+        boots, boots_corr = draws[:, 2], draws[:, 4]
         out.append({"contrast": c, "pairs": len(rows), "candidates": len(cands),
                     f"mean_abs_dm_{ref}": float(per[("a_ref", "sum")].sum() / len(rows)),
                     f"mean_abs_dm_{spec}": float(per[("a_spec", "sum")].sum() / len(rows)),
                     "r_attr": r_attr, "r_scale": r_scale, "rho": value,
                     "rho_ci_low": float(np.quantile(boots, 0.025)),
-                    "rho_ci_high": float(np.quantile(boots, 0.975))})
+                    "rho_ci_high": float(np.quantile(boots, 0.975)),
+                    "rho_rms": rho_rms, "rho_noise_corrected": rho_corr,
+                    "rho_nc_ci_low": float(np.quantile(boots_corr, 0.025)),
+                    "rho_nc_ci_high": float(np.quantile(boots_corr, 0.975))})
     return pd.DataFrame(out)
 
 
@@ -120,21 +178,31 @@ def resid_rows(spec: str, name: str, uids: set[str]) -> dict[str, np.ndarray]:
     return out
 
 
-def residual(manifest, spec, ref, name, contrasts) -> pd.DataFrame:
+def residual(manifest, spec, ref, name, contrasts, noise=None) -> pd.DataFrame:
     rows = manifest[manifest["contrast_id"].isin(contrasts) & manifest["aligned"]]
     uids = set(rows["uid_a"]) | set(rows["uid_b"])
     r = {s: resid_rows(s, name, uids) for s in (ref, spec)}
     out = []
     for c, g in rows.groupby("contrast_id"):
-        rel = {}
+        rel, rms, corr = {}, {}, {}
         for s in (ref, spec):
             a = np.stack([r[s][u] for u in g["uid_a"]])
             b = np.stack([r[s][u] for u in g["uid_b"]])
-            rel[s] = (np.linalg.norm(a - b, axis=-1) / np.linalg.norm(b, axis=-1)).mean(0)
-        for layer in range(len(rel[ref])):
-            out.append({"contrast": c, "depth": layer, f"rel_diff_{ref}": rel[ref][layer],
-                        f"rel_diff_{spec}": rel[spec][layer],
-                        "ratio": rel[spec][layer] / rel[ref][layer]})
+            norm_b = np.linalg.norm(b, axis=-1)
+            sq = (np.linalg.norm(a - b, axis=-1) ** 2).mean(0)
+            rel[s] = (np.linalg.norm(a - b, axis=-1) / norm_b).mean(0)
+            rms[s] = np.sqrt(sq) / norm_b.mean(0)
+            if noise is not None and "resid_sq" in noise[s]:
+                corr[s] = np.sqrt(np.clip(sq - noise[s]["resid_sq"], 0, None)) / norm_b.mean(0)
+        with np.errstate(invalid="ignore", divide="ignore"):
+            for layer in range(len(rel[ref])):
+                row = {"contrast": c, "depth": layer, f"rel_diff_{ref}": rel[ref][layer],
+                       f"rel_diff_{spec}": rel[spec][layer],
+                       "ratio": rel[spec][layer] / rel[ref][layer],
+                       "ratio_rms": rms[spec][layer] / rms[ref][layer]}
+                if corr:
+                    row["ratio_noise_corrected"] = corr[spec][layer] / corr[ref][layer]
+                out.append(row)
     return pd.DataFrame(out)
 
 
@@ -180,13 +248,24 @@ def main() -> None:
     ap.add_argument("--name", default="grid-en")
     ap.add_argument("--n-boot", type=int, default=1000)
     ap.add_argument("--seed", type=int, default=0)
+    ap.add_argument("--noise", default=None, help="the second pass, e.g. grid-en-limit2048")
     args = ap.parse_args()
     out = report_dir("distill", args.spec)
     manifest = pd.read_parquet(interp_dir("manifest") / f"contrasts-{args.name}.parquet")
     pd.set_option("display.width", 200)
 
+    noise = None
+    if args.noise:
+        noise = {s: noise_floor(s, args.name, args.noise) for s in (args.ref, args.spec)}
+        rows = [{"spec": s, **{k: v for k, v in n.items() if k != "resid_sq"},
+                 **({f"resid_noise_rms_depth{d}": float(np.sqrt(x))
+                     for d, x in enumerate(n["resid_sq"])} if "resid_sq" in n else {})}
+                for s, n in noise.items()]
+        pd.DataFrame(rows).to_csv(out / "noise_floor.csv", index=False)
+        print("noise floor\n" + pd.DataFrame(rows)[["spec", "rows", "pairs", "var_dm",
+                                                     "row_noise_sd"]].to_string(index=False))
     sens = sensitivity(manifest, margins(args.ref, args.name), margins(args.spec, args.name),
-                       args.spec, args.ref, args.contrast, args.n_boot, args.seed)
+                       args.spec, args.ref, args.contrast, args.n_boot, args.seed, noise)
     sens.to_csv(out / "sensitivity.csv", index=False)
     print("(a) sensitivity\n" + sens.round(3).to_string(index=False))
 
@@ -215,14 +294,15 @@ def main() -> None:
         print("\n(b) no patching summaries for both specs yet")
 
     if any(interp_dir("margins", args.spec, args.name).glob("resid-*.safetensors")):
-        res = residual(manifest, args.spec, args.ref, args.name, args.contrast)
+        res = residual(manifest, args.spec, args.ref, args.name, args.contrast, noise)
         res.to_csv(out / "residual.csv", index=False)
         svg(res, out / "residual.svg",
             f"(c) attribute difference in the last-position residual, {args.spec} / {args.ref}")
-        mid = res[res["depth"].between(15, 20)].groupby("contrast")["ratio"].mean()
-        last = res[res["depth"] == res["depth"].max()].set_index("contrast")["ratio"]
+        cols = [c for c in ("ratio", "ratio_rms", "ratio_noise_corrected") if c in res]
+        mid = res[res["depth"].between(15, 20)].groupby("contrast")[cols].mean()
+        last = res[res["depth"] == res["depth"].max()].set_index("contrast")[cols]
         print("\n(c) residual ratio, mean over depths 15-20 and at the final depth\n"
-              + pd.DataFrame({"depth_15_20": mid, "final": last}).round(3).to_string())
+              + pd.concat({"depth_15_20": mid, "final": last}, axis=1).round(3).to_string())
 
 
 if __name__ == "__main__":
