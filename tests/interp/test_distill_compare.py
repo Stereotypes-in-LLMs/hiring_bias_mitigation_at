@@ -1,4 +1,4 @@
-"""scripts/interp/20_distill_compare.py: the normalised sensitivity rho (docs/DISTILL_PATCHING.md)."""
+"""scripts/interp/20_distill_compare.py: the normalised sensitivity rho (DISTILL_PATCHING.md)."""
 
 from __future__ import annotations
 
