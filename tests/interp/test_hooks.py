@@ -227,3 +227,27 @@ def test_gather_scatter_per_row_positions():
     out = scatter(x, pos, torch.zeros(2, 2, 3))
     assert out[0, 1].sum() == 0 and out[0, 4].sum() == 0 and out[0, 0].sum() != 0
     assert x[0, 1].sum() != 0, "scatter must not modify its input"
+
+
+def test_layer_mask_switches_the_adapter_off_outside_its_layers():
+    """spec.mask_adapter_layers: a layer-masked copy acts only on its layers, and the other
+    adapter on the same modules is untouched."""
+    import torch
+
+    from hiring_bias_mitigation.interp.spec import mask_adapter_layers
+
+    class Lora(torch.nn.Module):
+        def __init__(self):
+            super().__init__()
+            self.lora_A = torch.nn.ModuleDict({"keep": torch.nn.Identity(),
+                                               "masked": torch.nn.Identity()})
+            self.scaling = {"keep": 2.0, "masked": 2.0}
+
+    root = torch.nn.Module()
+    root.layers = torch.nn.ModuleList(torch.nn.Module() for _ in range(4))
+    for layer in root.layers:
+        layer.mlp = Lora()
+    kept, off = mask_adapter_layers(root, "masked", 1, 2)
+    assert (kept, off) == (2, 2)
+    assert [m.mlp.scaling["masked"] for m in root.layers] == [0.0, 2.0, 2.0, 0.0]
+    assert all(m.mlp.scaling["keep"] == 2.0 for m in root.layers)

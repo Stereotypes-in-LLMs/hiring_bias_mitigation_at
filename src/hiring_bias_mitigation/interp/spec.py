@@ -17,6 +17,7 @@ from __future__ import annotations
 
 import hashlib
 import os
+import re
 from contextlib import contextmanager
 from dataclasses import dataclass, field
 from pathlib import Path
@@ -41,6 +42,9 @@ class SpecSet:
     base_model: str
     adapter_paths: dict[str, str]
     specs: dict[str, ModelSpec] = field(default_factory=dict)
+    #: adapter name -> (first, last) decoder layer it acts on, both inclusive; every other
+    #: layer's LoRA delta is switched off (a layer-masked copy of a trained adapter)
+    adapter_layers: dict[str, tuple[int, int]] = field(default_factory=dict)
 
     def needed_adapters(self, names: list[str]) -> list[str]:
         order: list[str] = []
@@ -61,7 +65,9 @@ def load_spec_set(path: str | Path | None = None, overrides: dict[str, str] | No
         name: ModelSpec(name, tuple(body.get("adapters") or ()), body.get("reference"))
         for name, body in raw["specs"].items()
     }
-    return SpecSet(raw["base_model"], paths, specs)
+    layers = {name: (int(lo), int(hi)) for name, (lo, hi)
+              in (raw.get("adapter_layers") or {}).items()}
+    return SpecSet(raw["base_model"], paths, specs, layers)
 
 
 def resolve_adapter(path: str) -> str:
@@ -119,9 +125,37 @@ def load_models(spec_set: SpecSet, names: list[str], device: str = "cuda:0",
         for name in rest:
             model.load_adapter(resolve_adapter(spec_set.adapter_paths[name]), adapter_name=name)
         for name in adapters:
+            if name in spec_set.adapter_layers:
+                kept, off = mask_adapter_layers(model, name, *spec_set.adapter_layers[name])
+                log.info("adapter %s: layers %s only, %d LoRA modules kept, %d off", name,
+                         spec_set.adapter_layers[name], kept, off)
             log.info("adapter %s: %d LoRA modules", name, lora_module_count(model, name))
     model.eval()
     return model, tokenizer
+
+
+_LAYER = re.compile(r"(?:^|\.)layers\.(\d+)\.")
+
+
+def mask_adapter_layers(model, adapter: str, first: int, last: int) -> tuple[int, int]:
+    """Switches `adapter` off outside decoder layers first..last by zeroing its LoRA scaling
+    there (the delta is scaling * B @ A, so the module then computes the base weights).
+    Returns (modules kept, modules switched off)."""
+    kept = off = 0
+    for name, module in model.named_modules():
+        if not (hasattr(module, "lora_A") and adapter in getattr(module, "lora_A", {})):
+            continue
+        match = _LAYER.search(name)
+        if match is None:
+            raise ValueError(f"{name}: a LoRA module outside the decoder layers")
+        if first <= int(match.group(1)) <= last:
+            kept += 1
+        else:
+            module.scaling[adapter] = 0.0
+            off += 1
+    if not kept:
+        raise ValueError(f"adapter {adapter}: no LoRA module in layers {first}..{last}")
+    return kept, off
 
 
 def lora_module_count(model, adapter: str) -> int:

@@ -209,3 +209,27 @@ TASKS="patch:sft_v3:mil_combat_civ_impl:sft_v3 patch:distill43:mil_combat_civ_im
 $PY scripts/interp/20_distill_compare.py --spec distill43 --noise grid-en-limit2048 \
   --contrast mil_combat_civ_impl --contrast mil_combat_civ_expl --contrast rel_atheist_christian_impl
 ```
+
+## Layer-masked check (registration, 2026-10-28)
+
+Asked by the user ("Run masked check") after the result above.
+
+- **Question.** Where does distillation's compression act: in layers 0–20 (the hub and the
+  arrival) or 21–31 (the late layers and the readout)?
+- **Change.** Two specs of the seed-43 adapter with its LoRA scaling set to 0 outside a layer
+  range (`spec.mask_adapter_layers`; `adapter_layers` in `configs/interp/models.yaml`):
+  `distill43_l0_20` and `distill43_l21_31`, each stacked on SFT-v3 as `distill43` is. These are
+  not trained models: each half was trained with the other present.
+- **Measure.** Full-grid margins with `--resid` (as for the other specs), then
+  `20_distill_compare.py` against SFT-v3. Share of the full adapter's shrink a half reproduces,
+  on a log scale: s = log r_half / log r_full, for r_scale (all attribute-free margins) and for
+  r_attr on each of the three contrasts.
+- **Predictions.** Late: s(l21_31) ≥ 0.7 and s(l0_20) ≤ 0.3, for r_scale and for r_attr on all
+  three contrasts. Early: the reverse. Anything else: distributed, reported with s(l0_20) +
+  s(l21_31) (1 means the halves add on a log scale).
+- **Validity check, before reading s.** A residual at depth d depends only on layers < d, so at
+  depths ≤ 21 `distill43_l21_31` must match SFT-v3 (residual ratio 1) and `distill43_l0_20` must
+  match `distill43`, up to the batch noise floor; the logs must show 83 LoRA modules kept and 45
+  off for 0–20, 45 kept and 83 off for 21–31 (21 × 3 MLP + 5 × 4 attention, 11 × 3 + 3 × 4).
+- **Cost.** Two margin passes in one job, ≈ 1.2 GPU-h, from decision distillation's budget
+  (22.49 of 50 used).
