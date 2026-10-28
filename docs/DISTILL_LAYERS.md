@@ -87,3 +87,14 @@ benchmark. The grid margin pass in step 4 below is a measurement after the audit
 | 3 | evaluate_arm against SFT-v3, plus compare-arms against s43 | 0.5 |
 | 4 | interp margin pass on the grid with `--resid`, plus `20_distill_compare.py` against `sft_v3` | 0.6 |
 | | total | ≈ 6.6, cap 8 |
+
+## 2. Ledger
+
+GPU-h from the cost records (`$HBM_OUTPUT_ROOT/cost/records/*_<job>_*.json`, arm
+`decision_distill`). Code at 0bf68ae (training) and 036a7de (interp spec).
+
+| # | Step | Job | GPU-h | State |
+|---|---|---|---|---|
+| 1 | smoke | 5187340 | 0.43 | passed. `lora_modules` 83; adapter tensors on layers 0–20 only (166 = 83 × A/B); step-5 attributed KL 0.066 (the full-layer smoke: 0.066), anchor KL 0 |
+| 2 | training, seed 43 | 5187446 | 4.98 | done, 1 h 15 min; final adapter at step 341, as for the full-layer run |
+| 3 | evaluate_arm against SFT-v3 | | | |
