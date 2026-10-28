@@ -1,0 +1,3 @@
+half,depths,ratio_to_ref_min,ratio_to_ref_max,ratio_to_full_min,ratio_to_full_max
+distill43_l0_20,1-21,0.8099122,1.0180073,1.0,1.0
+distill43_l21_31,1-21,1.0,1.0,0.9823112270412991,1.234701736805545

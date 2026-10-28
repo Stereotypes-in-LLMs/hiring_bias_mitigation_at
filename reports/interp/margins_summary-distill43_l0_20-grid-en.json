@@ -1,0 +1,10 @@
+{
+  "spec": "distill43_l0_20",
+  "dataset": "grid-en",
+  "rows": 31050,
+  "hire_rate_pct": 23.25925925925926,
+  "audit": {
+    "audit_run": null,
+    "available": false
+  }
+}

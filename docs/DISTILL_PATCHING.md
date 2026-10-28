@@ -233,3 +233,33 @@ Asked by the user ("Run masked check") after the result above.
   off for 0–20, 45 kept and 83 off for 21–31 (21 × 3 MLP + 5 × 4 attention, 11 × 3 + 3 × 4).
 - **Cost.** Two margin passes in one job, ≈ 1.2 GPU-h, from decision distillation's budget
   (22.49 of 50 used).
+
+### Layer-masked result (job 5185597, 1.08 GPU-h)
+
+Validity, as registered: 83 LoRA modules kept / 45 off (0–20) and 45 / 83 (21–31) in the job log;
+at residual depths 1–21 `distill43_l0_20` equals `distill43` (ratio 1.000 at every depth) and
+`distill43_l21_31` equals SFT-v3 (1.000). Files: `reports/interp/distill/distill43/mask_shares.csv`,
+`mask_validity.csv`, and each half's `sensitivity.csv` / `residual.csv`.
+
+| against SFT-v3 | full adapter | layers 0–20 only | layers 21–31 only | s, 0–20 | s, 21–31 | sum |
+|---|---|---|---|---|---|---|
+| r_scale (all attribute-free margins) | 0.464 | 0.686 | 0.662 | 0.49 | 0.54 | 1.03 |
+| r_attr, implicit combat | 0.410 | 0.585 | 0.724 | 0.60 | 0.36 | 0.96 |
+| r_attr, explicit combat | 0.455 | 0.635 | 0.740 | 0.58 | 0.38 | 0.96 |
+| r_attr, atheist, implicit | 0.461 | 0.642 | 0.747 | 0.57 | 0.38 | 0.95 |
+| ρ (registered statistic), three contrasts | 0.88 / 0.98 / 0.99 | 0.85 / 0.93 / 0.94 | 1.09 / 1.12 / 1.13 | | | |
+
+- **Against the registration.** Neither half reaches s ≥ 0.7 on either statistic: the check
+  reads *distributed*. On a log scale the halves add (sums 0.95–1.03).
+- **Fact.** The global compression splits about evenly between the halves (0.49 / 0.54). The
+  attribute shrink does not: 0.57–0.60 of it comes from layers 0–20, 0.36–0.38 from 21–31. The
+  early half alone shrinks the attribute effect more than the margins (ρ 0.85–0.94); the late
+  half alone shrinks the margins more than the attribute effect (ρ 1.09–1.13).
+- **Reading, not confirmed.** Two parts. Layers 21–31 compress the readout as a whole, and
+  are not attribute-specific. Layers 0–20, where the hub and the arrival are, do the modest
+  attribute-specific part, the 0.85 seen in the residual at depths 15–20. This revises the
+  earlier reading "most at the readout": per component the late layers lose most, but over the
+  full adapter the early half removes more of the attribute effect.
+- **Caveat.** The halves are not trained models; each was trained with the other present, so
+  "share" is the effect of switching one half off, not what training either half alone would
+  give.
