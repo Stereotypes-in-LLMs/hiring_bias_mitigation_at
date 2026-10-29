@@ -1,5 +1,5 @@
 name,family,seeds,extra_gpu_h,delta_common_pp,delta_own_pp,tpr_common_vs_ref_pp,passes
-DPO_V3_4880,dpo,1,17.94,-0.815,-1.035,0.589,True
+DPO_V3_4880,dpo,2,17.94,-0.556,-0.564,0.548,True
 GRPO-v3-all final,grpo,1,39.63,-0.135,-0.557,-0.937,False
 GRPO-v3-all ckpt 525,grpo,1,37.9,-0.18,-1.017,-0.117,True
 GRPO+decay R3,grpo,2,39.725,-0.078,-0.468,0.464,True

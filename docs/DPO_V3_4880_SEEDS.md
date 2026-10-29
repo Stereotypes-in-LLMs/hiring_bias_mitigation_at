@@ -62,9 +62,29 @@ Written on 2026-10-29 before either training job was submitted.
 
 ## Ledger
 
+GPU-h are measured steps from `reports/cost/steps.csv`; allocated hours in brackets from
+`reports/cost/jobs.csv`.
+
 | # | Step | Job(s) | GPU-h | State |
 |---|---|---|---|---|
-| 1 | seed 43: training | | | |
-| 2 | seed 43: evaluation | | | |
-| 3 | seed 44: training | | | |
+| 1 | seed 43: training | 5198797 (commit 1912a3d) | 4.04 [4.06] | done 2026-10-29, 1:00:54, step 305 saved |
+| 2 | seed 43: evaluation | 5199636 (commit 1912a3d) | 0.50 [1.21] | done 2026-10-29, 0:18:09, verdict below |
+| 3 | seed 44: training | 5199738 | | submitted 2026-10-29 |
 | 4 | seed 44: evaluation | | | |
+
+Spent so far: 5.27 GPU-h allocated of the 12 GPU-h cap.
+
+## Result so far (seed 43; seed 44 pending)
+
+Against SFT-v3 at matched hire rate (`reports/reference_metrics.csv`,
+`reports/operating_point/v2/Qwen3.5-9B--en--dpo--adapter--en_only_dpo_v3_4880_seed43_step305--vs--Qwen3.5-9B--en--sft--adapter--en_only_sft_v3_additional.json`;
+served model `outputs/merged/qwen3.5-9b_en_only_dpo_v3_4880_seed43--checkpoint-305`):
+
+| Seed | Hire rate | Δ unstable, own point (pp) | Δ at SFT-v3's 22.51% (pp) | TPR vs GPT-4o vs SFT-v3 (pp) | Merge kept | Guardrails | Verdict |
+|---|---|---|---|---|---|---|---|
+| 42 | 22.79% | −1.03 [−1.81, −0.28] | −0.81 [−1.56, −0.15] | +0.70 | 95.85% | 4/4 pass | better |
+| 43 | 21.59% | −0.09 [−0.88, +0.66] | −0.30 [−1.00, +0.41] | −2.11 | 95.57% | 4/4 pass | not better: the interval reaches 0 |
+
+The common-point column comes from `reports/final/final_table.csv` (`delta_common_pp`,
+`ci_common_*`). Seed 43 keeps the sign the For rule asks for, Δ < 0, and passes every
+guardrail, so the round is not decided yet; seed 44 decides it.
