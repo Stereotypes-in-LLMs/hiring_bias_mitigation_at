@@ -31,8 +31,11 @@ source "${REPO:-/ritom/scratch/cscs/zhang/xw/hiring_bias_mitigation_at}/scripts/
 export HF_HUB_OFFLINE=1
 # The venv's editable install points at the main checkout; this job runs $REPO's code.
 export PYTHONPATH="$REPO/src${PYTHONPATH:+:$PYTHONPATH}"
-# A timing run without its cost record measures nothing: stop instead of running unrecorded.
-type cost > /dev/null 2>&1 || { echo "FATAL: env.sh has no cost recorder"; exit 3; }
+# An env.sh without `cost` (main before the recorder, an older checkout): define the
+# unrecorded fallback every sbatch has (tests/test_cost.py)...
+type cost > /dev/null 2>&1 || cost() { shift 2; "$@"; }
+# ...but a timing run without its cost record measures nothing: stop instead.
+type cost | grep -q 'utils.cost run' || { echo "FATAL: env.sh has no cost recorder"; exit 3; }
 "$PY" -c "import hiring_bias_mitigation.utils.cost" \
   || { echo "FATAL: the cost recorder does not import from $REPO/src"; exit 3; }
 cd "$REPO"
