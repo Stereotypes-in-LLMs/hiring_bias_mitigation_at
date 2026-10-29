@@ -226,6 +226,8 @@ def speedup(throughput_csv: Path, round_name: str = "b") -> None:
                          "scripts/cost_report.py after the timing job")
     # Energy is per step, model load included; steps.csv sits beside throughput.csv.
     energy = pd.read_csv(throughput_csv.parent / "steps.csv", dtype={"job_id": str})
+    # Only this round's steps: other jobs repeat (job, label) with no run name.
+    energy = energy[energy["label"].map(round_of) == round_name]
     steps = steps.merge(energy[["job_id", "label", "run_name", "gpu_energy_kwh"]],
                         on=["job_id", "label", "run_name"], how="left", validate="1:1")
     steps["repeat"] = steps["run_name"].map(_repeat)

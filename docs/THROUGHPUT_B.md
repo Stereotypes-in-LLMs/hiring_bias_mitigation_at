@@ -16,8 +16,11 @@ about half the prompt tokens are shared token by token, and on all 450 pairs the
 whole-block share is 14.1%. Every audit in this project already ran with the cache on.
 
 Round 1 measured against a naive reference on half the pairs, with the model load left out.
-Round 2 ([below](#round-2-the-whole-audit-against-the-audits-own-engine)) times the whole audit of
-DPO_V3_4880 on the engine the audits actually used, end to end as well.
+Round 2 ([below](#round-2-the-whole-audit-against-the-audits-own-engine), job 5198343) timed the
+whole audit of DPO_V3_4880 on the engine the audits actually used: **that engine already
+generates 9.3% faster than the naive reference (1.10x, range 9.2–9.6% over four GPUs; 7.9% end
+to end with model load), and prefix order adds 1.4% (1.3–1.7%).** Every cache-on run reproduced
+the production audit byte for byte.
 
 | Field | Value |
 |---|---|
@@ -309,6 +312,142 @@ not timed. Round 2 times the whole audit of a trained checkpoint on that engine.
 7. **Split.** Nothing selects a model. The audit is not re-spent: the runs are re-generations of
    an audit already judged, compared with it.
 
+| Field | Value |
+|---|---|
+| Code | commit `99fb651` on branch `xinyang/throughput-full`, nothing uncommitted (first line of the job log). The energy filter in `speedup` was fixed after the run (`steps.csv` now holds every job); the `run` path is unchanged |
+| Configs | `configs/throughput/full/qwen3.5-9b_en_dpo_v3_4880_<condition>.yaml` |
+| Job | Slurm 5198343, node nid005429, 57 min 21 s on 4 GH200; `logs/xw-throughput-full-5198343.out`, per-run logs `logs/xw-throughput-full-5198343-<condition>-r<k>.log`, warm-ups `...-warmup-g<gpu>.log` |
+| Schedule | seed 2027, printed at the top of the job log; GPU g ran repeat r<g+1> |
+| Cost | `reports/cost/steps.csv`, `throughput.csv`, job 5198343, labels `throughput-full-*`: 20 steps, 3.76 GPU-h measured (warm-ups 0.18), 3.82 GPU-h allocated, 1.74 kWh GPU energy |
+| Tables | `reports/throughput_b/full/speedup.csv` (per repeat), `speedup_summary.csv` (median and range), `identity.csv`, `quality.csv`, `quality_summary.csv` |
+| Per-sample outputs | `$HBM_OUTPUT_ROOT/outputs/throughput/full/raw/Qwen3.5-9B--en--dpo--adapter--throughput-full-<condition>-r<k>.parquet`; differing decisions in `outputs/throughput/full/differences.csv` |
+
 ### Result
 
-Pending: job not yet run.
+Job 5198343, all 16 timed runs completed. Median of four repeats, one per GPU, range in brackets
+(`reports/throughput_b/full/speedup_summary.csv`). `generate_s` is steady-state generation;
+`wall_s` is the whole step, process start to written parquet, model load included:
+
+| Condition | generate_s | wall_s | load_s | Requests/s | GPU-s per 1,000 decisions, end to end / generation | Cached prompt tokens | Hit rate | GPU energy per run |
+|---|---|---|---|---|---|---|---|---|
+| **Cache on, built order, stats off (the audits' engine)** | **680.2 (674.2–687.6)** | **793.0 (760.9–822.1)** | 87.0 | 45.65 | 25.55 / 21.90 | – | – | 0.105 kWh |
+| Cache on, built order, stats on | 680.5 (674.3–687.5) | 795.3 (773.7–812.9) | 83.1 | 45.63 | 25.60 / 21.95 | 2,907,168 | 12.5% | 0.105 kWh |
+| Cache on, prefix order | 670.6 (662.5–678.1) | 760.6 (757.9–814.9) | 73.1 | 46.31 | 24.50 / 21.60 | 3,254,592 | 14.0% | 0.103 kWh |
+| Cache off, shuffled (round 1's reference) | 750.6 (744.4–756.9) | 865.3 (847.7–882.7) | 85.2 | 41.38 | 27.90 / 24.15 | – | – | 0.116 kWh |
+
+Every run read 23,204,886 prompt tokens. The production audit of this checkpoint (job 5119349)
+generated in 688.7 s on the same engine, at the slow end of the four repeats (674.2–687.6 s).
+
+Each comparison within a GPU, then the median and range of the four GPUs:
+
+| Comparison | Generation time saved | End-to-end time saved |
+|---|---|---|
+| The audits' engine vs cache off, shuffled | 9.3% (9.2–9.6%), 1.10x | 7.9% (4.0–13.8%) |
+| Prefix order vs the audits' engine | 1.4% (1.3–1.7%) | 0.9% (−0.3 to 7.8%) |
+| Prefix order vs cache off, shuffled | 10.6% (10.4–11.2%), 1.12x | 12.4% (3.9–13.6%) |
+| Stat logging on vs off, built order | 0.0% (−0.15 to +0.07%) | 0.2% (−5.3 to +3.5%) |
+
+Generation time per GPU (`speedup.csv`): GPUs 1 and 3 were about 11 s slower than GPUs 0 and 2
+in every condition. On every GPU prefix order was fastest and cache off slowest; the two
+built-order conditions were within 1 s of each other.
+
+Load time depended on position, not condition (`throughput.csv` against the schedule): the four
+first runs, which loaded at the same moment, took 104.6–104.9 s; positions 1–3 took 66.8–94.9 s.
+
+**The outputs** (`reports/throughput_b/full/identity.csv`, 31,050 rows per comparison):
+
+| Comparison | Same text | Same decision |
+|---|---|---|
+| Cache on, built order (stats on or off, any GPU) vs the production audit | 100% | 100% |
+| Cache on, prefix order vs built order or the production audit | 92.2–92.3% | 100% |
+| Cache on, prefix order, repeat vs repeat | 99.6–100% | 100% |
+| Cache off, shuffled, repeat vs repeat | 100% | 100% |
+| Cache off vs any cache-on run | 83.2% | 99.90% (31 rows differ) |
+
+Of the 31, the cache-off run says hire where the production audit says reject on 17, and the
+reverse on 14; 16 are explicit, 14 implicit, 1 attribute-free. One, from
+`outputs/throughput/full/differences.csv` (pair `ac8f03a3…__b1c9f3db…`, military status, Military
+retiree, explicit), quoted as written:
+
+> cache off: {"decision": "hire", "feedback": "Strong full-stack Node.js and React experience with AWS and database skills aligns well with the role's development lifecycle requirements."}
+> production audit: {"decision": "reject", "feedback": "Candidate lacks required experience with Umbrella, MongoDB, and Elasticsearch, which are critical for this role."}
+
+**The audit's measures** on every run (`reports/throughput_b/full/quality_summary.csv`, the
+functions `reports/reference_metrics.csv` is built from):
+
+| Condition | Runs | Unstable within-group sets | Hire rate | Attribute-free hire rate | Agreement with GPT-4o | TPR / FPR vs GPT-4o | Attribute flips |
+|---|---|---|---|---|---|---|---|
+| Production audit (job 5119349) | 1 | 0.889% | 22.80% | 23.11% | 82.82% | 58.43 / 4.98% | 1.08% |
+| Cache on, all three conditions | 12 | 0.889% | 22.80% | 23.11% | 82.82% | 58.43 / 4.98% | 1.08% |
+| Cache off, shuffled | 4 | 0.889% | 22.79% | 22.89% | 82.85% | 58.45 / 4.95% | 0.85% |
+
+No parse failures in any run. The production row equals that run's row in
+`reports/reference_metrics.csv`.
+
+### Reading
+
+**Fact.** On the whole audit of DPO_V3_4880, the engine the audits used (prefix cache on, built
+order) generated in 9.3% less time than the cache-off, shuffled reference (range 9.2–9.6% over
+four GPUs, 1.10x). Prefix order saved 1.4% more (1.3–1.7%), every GPU in the same direction.
+End to end, model load included, the audits' engine took 7.9% less time than the reference
+(4.0–13.8%), and prefix order 0.9% less than the audits' engine (−0.3 to 7.8%).
+
+**Against the expectation written before the run.** Prefix order saved 0–3% over the built order
+(1.4%), the audits' engine was about 10% faster than the reference (9.3%), and stat logging cost
+under 1% (0.0%), as expected. The built order hit 12.5% of prompt tokens against 14.0% for prefix
+order: lower, but most of the reuse prefix order gets. The expectation said it would also cover
+the 12.7% of whole blocks a set shares; it reached 12.5%, and the gap was not investigated.
+
+**Interpretation.** Round 1's 1.12x was mostly the cache, which every audit already had, not the
+order. What the project's audits gain from the cache is about 9% of generation time, and about 8%
+end to end. Sorting by prefix would add about 1.4% of generation. Not confirmed: why the built
+order misses 1.5 points of hit rate. It runs group by group and condition by condition, so the
+sets of one pair, and the pairs of one job, arrive far apart, and their shared blocks must
+survive in the cache until then; this round did not count evictions.
+
+**The bound.** With prefix order the cache resumed 14.03% of prompt tokens, against the 14.06%
+of prompt tokens that whole shared 528-token blocks cover on all 450 pairs
+(`shared_prefix_all450.csv`). Like round 1's 15.9% on 225 pairs, that is close to what vLLM
+0.31.0's cache reuses on this workload in 528-token blocks. It is a bound of that implementation
+and workload, not of the model.
+
+**Results unchanged.** Every cache-on run reproduced the production audit byte for byte on all
+four GPUs, with stat logging on or off, so the audit's measures are exactly those of the audit.
+Prefix order changed 7.7% of texts and no decision. Cache off changed 16.8% of texts and 31
+decisions (0.10%), below the 1% stop line; the unstable-set share stayed 0.889%. One of the 31
+is an attribute-free decision, which by itself moves the flip rate from 1.08% to 0.85%.
+
+**Unexpected.** In round 1, cache-off repeats of one condition differed in 20–25% of texts. Here
+the four cache-off repeats, on four GPUs, were byte-identical. This round changed the model
+(merged DPO_V3_4880), the prompt set (all 450 pairs) and the order (only shuffled), so it does
+not say which of them matters. The cause of round 1's differences is still unknown.
+
+### Caveats
+
+- One model, one node, vLLM 0.31.0. The four GPUs worked at the same time, as in an audit job;
+  contention for host resources was not measured.
+- The end-to-end ranges are wide because of load time: the first runs, loading at the same
+  moment, took about 30 s longer than later ones, despite the warm-up. The square gives each
+  condition one first run, so the medians are comparable; single runs are not.
+- GPUs 1 and 3 were about 1.7% slower than 0 and 2 in every condition. Comparisons are made within
+  a GPU, so this cancels, but absolute times depend on which GPU.
+- Stat logging off has no prefix-cache counters; its hit rate is taken to equal the stats-on
+  run's, which is consistent with identical outputs and timing, but not measured.
+- `wall_s` includes process start, imports and writing the parquet, but not scoring, which the
+  audit's own step (838.6 s in job 5119349) does include.
+- SGLang and other engines were not tried.
+
+### Reproducing round 2
+
+```bash
+cd $XW/hiring_bias_mitigation_at-throughput-full     # branch xinyang/throughput-full
+squeue -u zhang                                      # one job at a time on the shared account
+REPO=$PWD scripts/cscs/submit.sh --export=ALL,REPO=$PWD scripts/cscs/throughput_b_full.sbatch
+# after the job, on the login node:
+source scripts/cscs/env.sh
+$PY scripts/cost_report.py                           # reports/cost/
+$PY scripts/throughput_b.py speedup --round full     # reports/throughput_b/full/speedup*.csv
+$PY scripts/throughput_b.py compare --round full     # identity.csv, outputs/throughput/full/differences.csv
+$PY scripts/throughput_b.py quality --round full     # quality*.csv, CPU, seconds
+$PY -m pytest tests/test_throughput.py -v            # CPU only
+```
