@@ -210,3 +210,94 @@ def test_prefix_cache_counters_reach_the_cost_record(tmp_path, monkeypatch):
     assert row["requests_per_s"] == 2.0
     step.update(prefix_cache_queries=None, prefix_cache_hits=None)
     assert CR.throughput_table([step])[0]["prefix_cache_hit_rate"] is None
+
+
+FULL_CONFIGS = sorted((REPO / "configs" / "throughput" / "full").glob("*.yaml"))
+
+
+def _throughput_script():
+    spec = importlib.util.spec_from_file_location("throughput_b",
+                                                  REPO / "scripts" / "throughput_b.py")
+    tb = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(tb)
+    return tb
+
+
+def test_full_timing_configs_are_the_audit_of_the_timed_checkpoint():
+    """Round 2 times the audit as it was run: the four conditions must be the DPO_V3_4880
+    audit config (merged checkpoint, all 450 pairs, decoding), differing only in the prefix
+    cache, stat logging, the order and the run name. One of them is the audits' own engine:
+    cache on, built order, stat logging off."""
+    assert len(FULL_CONFIGS) == 4
+    speed_only = {"enable_prefix_caching", "disable_log_stats", "submit_order", "run_suffix",
+                  "raw_dir"}
+
+    def flat(path):
+        cfg = yaml.safe_load(path.read_text())
+        engine = cfg.pop("engine_kwargs", {}) or {}
+        return {**cfg, **engine}
+
+    audit = flat(REPO / "configs" / "audit" / "qwen3.5-9b_en_dpo_v3_4880_step305_gh200.yaml")
+    configs = [flat(p) for p in FULL_CONFIGS]
+    for cfg in configs:
+        differing = {k for k in cfg.keys() | audit.keys() if cfg.get(k) != audit.get(k)}
+        assert differing <= speed_only, differing
+        assert cfg["raw_dir"] == "outputs/throughput/full/raw"
+        assert "limit_pairs" not in cfg
+    assert {(c["enable_prefix_caching"], c["submit_order"], c["disable_log_stats"])
+            for c in configs} == {(True, "as_built", True), (True, "as_built", False),
+                                  (True, "prefix", False), (False, "shuffle", False)}
+    tb = _throughput_script()
+    full = tb.ROUNDS["full"]
+    assert sorted(str(REPO / full.config.format(condition=c)) for c in full.conditions) == \
+        sorted(map(str, FULL_CONFIGS))
+    for c in full.conditions:
+        cfg = yaml.safe_load((REPO / full.config.format(condition=c)).read_text())
+        assert cfg["run_suffix"] == full.label_prefix + c   # cost label == run suffix
+
+
+@pytest.mark.parametrize("seed", [0, 1, 2027])
+def test_full_schedule_is_a_latin_square(seed):
+    """Every GPU runs every condition once and every condition runs once in every position, so
+    neither the GPU nor the warm/cold position of a run can favour one condition."""
+    tb = _throughput_script()
+    plan = tb.schedule("full", seed)
+    conditions = set(tb.ROUNDS["full"].conditions)
+    assert len(plan) == 16
+    for gpu in range(4):
+        assert {c for g, _, _, c, _ in plan if g == gpu} == conditions
+        assert {r for g, r, _, _, _ in plan if g == gpu} == {f"r{gpu + 1}"}
+    for position in range(4):
+        assert {c for _, _, p, c, _ in plan if p == position} == conditions
+    assert tb.schedule("full", seed) == plan
+
+
+def test_cost_labels_of_the_two_rounds_never_mix():
+    """Round 1's speedup must not pick up round 2's runs, nor round 2's the warm-up."""
+    tb = _throughput_script()
+    assert tb.round_of("throughput-cacheon-prefix") == "b"
+    assert tb.round_of("throughput-full-cacheon-prefix") == "full"
+    assert tb.round_of("throughput-full-warmup") == "full"
+    assert tb.round_of("audit") is None
+
+
+def test_a_warmup_run_keeps_nothing(monkeypatch, tmp_path):
+    """A warm-up generates a few pairs and leaves no raw file and no chunk behind: compare and
+    quality must only ever see timed runs."""
+    from hiring_bias_mitigation.eval import runner as R
+
+    tb = _throughput_script()
+    monkeypatch.setattr(R, "resolve_output_path", lambda p: str(tmp_path / str(p)))
+    backend = EchoBackend()
+    monkeypatch.setattr(R.BK, "build_backend", lambda cfg, activation_editor=None: backend)
+    config = tmp_path / "t.yaml"
+    cfg = yaml.safe_load(FULL_CONFIGS[0].read_text())
+    cfg.pop("mitigation")                                    # no adapter in a unit test
+    config.write_text(yaml.safe_dump(cfg))
+
+    tb.run(str(config), "r0", warmup=True)
+
+    written = sorted(str(p.relative_to(tmp_path)) for p in tmp_path.rglob("*") if p.is_file())
+    assert written == ["t.yaml"]
+    cfg["limit_pairs"] = tb.WARMUP_PAIRS
+    assert len(backend.sent) == len(R.build_frame(cfg))

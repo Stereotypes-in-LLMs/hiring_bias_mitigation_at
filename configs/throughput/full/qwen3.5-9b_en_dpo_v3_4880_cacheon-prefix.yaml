@@ -1,0 +1,41 @@
+# Hand-written -- NOT produced by generate_experiment_configs.py.
+# Part B, round 2 (docs/THROUGHPUT_B.md, scripts/cscs/throughput_b_full.sbatch): the full audit of
+# DPO_V3_4880 timed under four conditions. This one: prefix cache on, prompts sorted by text so
+# prompts sharing a prefix are adjacent.
+# The four configs/throughput/full/ files differ only in engine_kwargs.enable_prefix_caching,
+# engine_kwargs.disable_log_stats, submit_order and run_suffix (tests/test_throughput.py); model,
+# merged checkpoint, all 450 pairs and decoding are those of
+# configs/audit/qwen3.5-9b_en_dpo_v3_4880_step305_gh200.yaml.
+# Generation only: scripts/throughput_b.py run never scores, and writes to raw_dir below.
+backend: vllm
+max_model_len: 8192
+gpu_memory_utilization: 0.8
+seed: 42
+engine_kwargs:
+  gdn_prefill_backend: triton     # no CUDA toolkit on Daint for FlashInfer's JIT
+  enable_prefix_caching: true
+  disable_log_stats: false       # vLLM keeps its prefix-cache counters only with stats on
+submit_order: prefix
+raw_dir: outputs/throughput/full/raw
+conditions:
+- explicit
+- implicit
+- attr_free
+chat_template_kwargs:
+  enable_thinking: false
+max_intersection_cells: null
+generation:
+  max_new_tokens: 512
+  temperature: 0.0
+  top_p: 1.0
+  seed: 42
+model: Qwen/Qwen3.5-9B
+lang: en
+protected_groups:
+- military_status
+- gender
+- religion
+run_suffix: throughput-full-cacheon-prefix
+mitigation:
+  family: dpo
+  lora_path: outputs/dpo/qwen3.5-9b_en_only_dpo_v3_4880/checkpoint-305
