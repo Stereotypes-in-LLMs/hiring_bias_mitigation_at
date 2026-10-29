@@ -58,3 +58,12 @@ def test_scale_factors_recover_a_known_rescaling():
     ref = frame(seed=1)
     a = SC.scale_factors(ref, SC.scaled(ref, 0.5, quantize=False))
     assert abs(a["a_median"] - 0.5) < 1e-9 and abs(a["a_slope"] - 0.5) < 1e-9
+
+
+def test_hybrids_of_a_pure_rescaling_are_the_rescaling():
+    ref = frame(seed=2)
+    run = SC.scaled(ref, 0.5, quantize=False)
+    for h in SC.hybrids(ref, run, 0.5).values():
+        merged = h.merge(run, on=SC.OPC.KEY, suffixes=("", "_run"))
+        assert np.allclose(merged["margin"], merged["margin_run"])
+        assert SC.compare(ref, h, n_boot=20)["delta_matched_pp"] == 0.0

@@ -61,6 +61,11 @@ def scale_factors(ref: pd.DataFrame, run: pd.DataFrame) -> dict[str, float]:
             "a_slope": float((m_ref * m_run).sum() / (m_ref ** 2).sum())}
 
 
+def summary_delta(ref: pd.DataFrame, run: pd.DataFrame, n_boot: int) -> str:
+    c = compare(ref, run, n_boot)
+    return f"{c['delta_matched_pp']:+.2f} [{c['ci_low']:+.2f}, {c['ci_high']:+.2f}]"
+
+
 def compare(ref: pd.DataFrame, run: pd.DataFrame, n_boot: int) -> dict:
     keep = ("delta_matched_pp", "ci_low", "ci_high", "hire_rate_run", "unstable_run",
             "unstable_ref_matched", "ref_tied_prompts", "ref_tie_weight")
@@ -122,6 +127,41 @@ def attribution(ref: pd.DataFrame, run: pd.DataFrame, base: pd.DataFrame,
     }
 
 
+def spread_and_center(ref: pd.DataFrame, run: pd.DataFrame, a: float) -> pd.DataFrame:
+    """Post hoc (SCALE_CONTROL.md, section 3): per set, the arm's within-set range of
+    attributed margins over a times SFT-v3's, and its set median's distance to its own cut (0)
+    over a times SFT-v3's distance to the matched cut. 1 on both means a pure rescaling; a set
+    can be fixed by a narrower spread (attribute-specific) or by moving away from the cut."""
+    both = OPC._paired(ref, run)
+    run_hire = OPC.snap(both["margin_run"]) > 0.0
+    _, cut = OPC.matched_flags(both, "margin_ref", int(run_hire.sum()))
+    att = both[both["condition"] != "attr_free"].groupby(OPC.SET)
+    rng = att[["margin_ref", "margin_run"]].agg(lambda s: s.max() - s.min())
+    med = att[["margin_ref", "margin_run"]].median()
+    with np.errstate(divide="ignore", invalid="ignore"):
+        return pd.DataFrame({
+            "spread_ratio": rng["margin_run"] / (a * rng["margin_ref"]),
+            "distance_ratio": med["margin_run"].abs() / (a * (med["margin_ref"]
+                                                               - cut["threshold"]).abs())})
+
+
+def hybrids(ref: pd.DataFrame, run: pd.DataFrame, a: float) -> dict[str, pd.DataFrame]:
+    """Post hoc: two margin sets between the rescaled SFT-v3 (a * m) and the arm. Each set's
+    margins are its median plus each variant's deviation from it.
+    - center_only: the arm's set medians, the rescaled SFT-v3's deviations.
+    - spread_only: the rescaled SFT-v3's set medians, the arm's deviations.
+    An attribute-free prompt is a set of one, so it follows the center's source."""
+    both = OPC._paired(ref, run)
+    keys = [both[c] for c in OPC.SET]
+    base = a * both["margin_ref"]
+    med_base = base.groupby(keys).transform("median")
+    med_run = both["margin_run"].groupby(keys).transform("median")
+    frame = both[OPC.KEY]
+    return {"center_only": frame.assign(margin=(med_run + base - med_base).to_numpy()),
+            "spread_only": frame.assign(margin=(med_base + both["margin_run"] - med_run)
+                                        .to_numpy())}
+
+
 def main() -> None:
     ap = argparse.ArgumentParser(description=__doc__.split("\n")[0])
     ap.add_argument("--n-boot", type=int, default=OPC.N_BOOT)
@@ -144,7 +184,7 @@ def main() -> None:
     sweep.to_csv(out / "sweep.csv", index=False)
     print("sweep, SFT-v3 rescaled against SFT-v3\n" + sweep.round(4).to_string(index=False))
 
-    rows, attr = [], []
+    rows, attr, post, decomp = [], [], [], []
     for name, run_name in ARMS.items():
         run, _ = OPC.load_scores(run_name, "adapter")
         a = scale_factors(ref, run)
@@ -165,11 +205,33 @@ def main() -> None:
         row["rows_within_2"] = int((np.abs(OPC.snap(run["margin"])) < 2).sum())
         rows.append(row)
         attr.append({"arm": name, **attribution(ref, run, base, border)})
-    summary, attr = pd.DataFrame(rows), pd.DataFrame(attr)
+        f = set_flags(ref, run)
+        sc = spread_and_center(ref, run, a["a_median"]).join(f)
+        groups = {"fixed": (sc["ref"] > 0) & (sc["run"] == 0),
+                  "broken": (sc["ref"] < 1) & (sc["run"] == 1),
+                  "unstable_both": (sc["ref"] > 0) & (sc["run"] == 1),
+                  "all": pd.Series(True, index=sc.index)}
+        for g, mask in groups.items():
+            s = sc[mask].replace([np.inf, -np.inf], np.nan)
+            post.append({"arm": name, "sets": g, "n": int(mask.sum()),
+                         "spread_ratio_median": float(s["spread_ratio"].median()),
+                         "distance_ratio_median": float(s["distance_ratio"].median())})
+        row = {"arm": name, "arm_vs_sft_v3": summary_delta(ref, run, args.n_boot)}
+        for label, frame in hybrids(ref, run, a["a_median"]).items():
+            row[label] = summary_delta(ref, frame, args.n_boot)
+        decomp.append(row)
+    summary, attr, post = pd.DataFrame(rows), pd.DataFrame(attr), pd.DataFrame(post)
+    decomp = pd.DataFrame(decomp)
     summary.to_csv(out / "summary.csv", index=False)
     attr.to_csv(out / "attribution.csv", index=False)
+    post.to_csv(out / "posthoc_spread_center.csv", index=False)
+    decomp.to_csv(out / "posthoc_decomposition.csv", index=False)
     print("\nper arm\n" + summary.round(3).T.to_string())
     print("\nattribution\n" + attr.round(3).T.to_string())
+    print("\npost hoc: spread and distance to the cut, against a times SFT-v3's\n"
+          + post.round(3).to_string(index=False))
+    print("\npost hoc: matched change vs SFT-v3, pp [95% CI], of the arm and of its hybrids\n"
+          + decomp.to_string(index=False))
 
 
 if __name__ == "__main__":
