@@ -8,10 +8,16 @@ the prompts shuffled. Same model, same 15,525 prompts, same greedy decoding, one
 
 The short version: **with the prefix cache on and prompts in prefix order, generation took 10.5% less
 time than with the cache off and prompts shuffled.** That is the median of two repeats (range
-8.4–12.7%), or 1.12x the throughput. The cache resumed 15.9% of prompt tokens, which is
-every whole 528-token block the prompts share. About half the prompt tokens are shared token by
-token, but Qwen3.5's hybrid layers let vLLM 0.31 resume only at 528-token boundaries. Every audit
-in this project already ran with the cache on.
+8.4–12.7%), or 1.12x the throughput. The cache resumed 15.9% of prompt tokens, which equals the
+share in whole 528-token blocks the prompts share: on this workload, under vLLM 0.31.0's cache
+for this hybrid model with its 528-token block, the measured reuse is close to what that
+configuration can reuse. It is a bound of that implementation and workload, not of the model:
+about half the prompt tokens are shared token by token, and on all 450 pairs the same
+whole-block share is 14.1%. Every audit in this project already ran with the cache on.
+
+Round 1 measured against a naive reference on half the pairs, with the model load left out.
+Round 2 ([below](#round-2-the-whole-audit-against-the-audits-own-engine)) times the whole audit of
+DPO_V3_4880 on the engine the audits actually used, end to end as well.
 
 | Field | Value |
 |---|---|
@@ -172,9 +178,12 @@ median of two repeats, range 8.4–12.7%, on the same 15,525 prompts and decodin
 resumed 15.9% of prompt tokens, which equals the share of whole 528-token blocks the prompts
 share.
 
-**Interpretation.** The gain is limited by where the cache can resume, not by how much the
-prompts share. Half the prompt tokens are a shared prefix, but Qwen3.5's GDN layers make vLLM
-resume only at 528-token boundaries, and most sets share less than one block. The size is
+**Interpretation.** In this setup (vLLM 0.31.0, `mamba_cache_mode=align`, 528-token blocks)
+the gain is limited by where the cache can resume, not by how much the prompts share. Half the
+prompt tokens are a shared prefix, but Qwen3.5's GDN layers make this vLLM version resume only
+at 528-token boundaries, and most sets share less than one block. The 15.9% is therefore close
+to the reuse this configuration allows on these prompts, not a limit of the model or of prefix
+caching in general. The size is
 consistent with skipping about 16% of a prefill-heavy workload: 13.1% less time at the same
 order. Not confirmed: no run used a pure-attention model or a finer resume unit.
 
@@ -234,3 +243,72 @@ HF_HUB_OFFLINE=1 $PY scripts/throughput_b.py prefix \
   --config configs/throughput/qwen3.5-9b_en_cacheon-prefix.yaml   # shared_prefix.csv, CPU
 $PY -m pytest tests/test_throughput.py -v       # CPU only
 ```
+
+## Round 2: the whole audit against the audits' own engine
+
+Round 1 left three gaps: it timed the first 225 of 450 pairs, it timed `LLM.generate` only, and
+its 1.12x is against a setup the project never used (cache off, shuffled). The audits ran with
+the cache on and in the built order, which keeps a set's variants together, and that order was
+not timed. Round 2 times the whole audit of a trained checkpoint on that engine.
+
+### The round, as written before the run
+
+1. **Question.** On the whole audit of a trained model, how fast is the engine the audits used
+   (prefix cache on, built order, stat logging off)? How much does prefix order save on top of
+   it, and how far is it from round 1's naive reference? End to end, model load included, as
+   well as generation alone. Does any condition change the audit's measures?
+2. **Control.** DPO_V3_4880 (`outputs/dpo/qwen3.5-9b_en_only_dpo_v3_4880/checkpoint-305`),
+   served merged from `outputs/merged/qwen3.5-9b_en_only_dpo_v3_4880--checkpoint-305` as in its
+   audit, `configs/audit/qwen3.5-9b_en_dpo_v3_4880_step305_gh200.yaml`: all 450 pairs, 31,050
+   prompts (23,204,886 prompt tokens), greedy. The four configs in `configs/throughput/full/`
+   are that config with only `enable_prefix_caching`, `disable_log_stats`, `submit_order`,
+   `run_suffix` and `raw_dir` changed (`tests/test_throughput.py`):
+
+   | Condition | Prefix cache | Order | Stat logging | Role |
+   |---|---|---|---|---|
+   | `cacheon-asbuilt-nostats` | on | built | off | the audits' engine (vLLM defaults); the reference for "what the project runs" |
+   | `cacheon-asbuilt` | on | built | on | the same with the prefix-cache counters; with the first, the cost of stat logging |
+   | `cacheon-prefix` | on | prefix | on | the sort on top of the audits' engine |
+   | `cacheoff-shuffle` | off | shuffled | on | round 1's naive reference |
+
+   The production audit of this checkpoint, `Qwen3.5-9B--en--dpo--adapter--en_only_dpo_v3_4880_step305`
+   (job 5119349, cost record `cost/records/20261022T102607_eval_audit_5119349_34600.json`), is
+   one more data point for the first condition: 688.7 s generation, 116.4 s load, 838.6 s for
+   the step with scoring, run beside the margin passes on the other three GPUs.
+3. **Design.** One node, a seeded 4 x 4 Latin square (`scripts/throughput_b.py schedule --round
+   full --seed 2027`, printed in the job log): each GPU runs the four conditions one after
+   another, and each condition runs once in each position, so every comparison has four
+   same-GPU repeats (GPU g is repeat r<g+1>) and no condition always runs first or last. The
+   four GPUs work at the same time, as in an audit job. Before the timed runs, every GPU runs a
+   warm-up of 4 pairs with the condition it runs first, and keeps nothing: the merged weights
+   are then in the node's file cache and every engine configuration has been built once.
+   **Initial state of each timed run:** a new process and a new vLLM engine, so the prefix
+   cache starts empty and nothing carries over between runs; the run's chunk cache is cleared,
+   so every prompt is generated and timed; CUDA graphs are captured again inside `load_s`.
+   Generation goes through `runner._generate_resumable` in chunks of 4,000 prompts, as in every
+   audit.
+4. **Measured per run** (`cost eval throughput-full-<condition>`, `reports/cost/throughput.csv`
+   and `steps.csv`): `generate_s`; `wall_s`, the whole step from process start to the written
+   parquet; `load_s`; requests/s; prompt and output tokens; prefix-cache hits (cached prompt
+   tokens) and hit rate, stat-logging runs only; GPU-seconds per 1,000 decisions, end to end
+   and generation only; GPU energy. Quality: `scripts/throughput_b.py quality` scores every run
+   and the production audit with the audit's own measures (hire rate, agreement with GPT-4o,
+   TPR/FPR, attribute flips, unstable within-group sets), and `compare` counts identical
+   texts and decisions against the production audit.
+5. **Expected if it holds.** `cacheon-asbuilt` hits nearly as often as `cacheon-prefix`: the
+   built order already keeps each set's variants together, which alone covers 12.7% of prompt
+   tokens in whole 528-token blocks, against 14.1% with whole pairs and jobs together
+   (`shared_prefix_all450.csv`). So the sort saves little over the audits' engine, 0–3% of
+   generation time, and the engine the audits used is already close to round 1's best,
+   about 10% faster than the naive reference. Stat logging costs under 1%. It counts against
+   this if the built order hits clearly less than prefix order, or if the sort saves more than
+   the repeat-to-repeat range.
+6. **Stop condition.** One job, 1 h 45 min limit; a failed run stops the job. If greedy
+   decisions of a cache-on run differ from the production audit's on more than 1% of rows,
+   report that before calling any gain "speed only".
+7. **Split.** Nothing selects a model. The audit is not re-spent: the runs are re-generations of
+   an audit already judged, compared with it.
+
+### Result
+
+Pending: job not yet run.
