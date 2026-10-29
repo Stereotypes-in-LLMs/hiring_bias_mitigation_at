@@ -63,3 +63,22 @@ def test_noise_biases_the_raw_ratio_up_and_the_correction_removes_it():
                          noise=noise).iloc[0]
     assert out["rho_rms"] > 1.0
     assert abs(out["rho_noise_corrected"] - 1.0) < 0.03
+
+
+def test_component_summary_on_a_uniform_halving():
+    """Every component at half its reference contribution: hub, readout and bands keep 0.5,
+    the profile correlates perfectly, and L15.H11's rank comes from the spec's own AtP."""
+    rng = np.random.default_rng(0)
+    rows = [{"kind": k, "layer": layer, "cls": "suffix"}
+            for layer in range(32) for k in ("mixer", "mlp")]
+    comp = pd.DataFrame(rows)
+    ref = rng.uniform(0.05, 0.6, len(comp))
+    comp = comp.assign(contrast="x", removed_logits_per_pair_ref=ref,
+                       removed_logits_per_pair_spec=0.5 * ref, kept=0.5, total_kept=0.5)
+    atp = pd.DataFrame({"kind": "head_in", "cls": "suffix", "layer": [15, 17, 15],
+                        "head": [11, 0, 1], "removed_logits_per_pair": [0.2, 0.3, 0.1]})
+    out = DC.component_summary(comp, {"x": atp}).iloc[0]
+    assert abs(out["hub_kept"] - 0.5) < 1e-9 and abs(out["readout_kept"] - 0.5) < 1e-9
+    assert abs(out["profile_r"] - 1.0) < 1e-9
+    assert all(abs(out[f"kept_layers_{lo}_{hi}"] - 0.5) < 1e-9 for lo, hi in DC.BANDS)
+    assert out["l15h11_rank_spec"] == 2 and out["top3_heads_spec"] == "L17.H0 L15.H11 L15.H1"
