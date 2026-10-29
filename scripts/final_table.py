@@ -99,6 +99,18 @@ def curve(frame: pd.DataFrame, grid: np.ndarray = HIRE_GRID) -> list[float]:
             for h in grid]
 
 
+def fixed_broken(ref: pd.DataFrame, frame: pd.DataFrame) -> dict:
+    """Expected within-group sets the own-point comparison counts as fixed (unstable for SFT-v3
+    moved to the arm's hire count, stable for the arm) and as broken (the reverse), paired and
+    cut exactly as matched_comparison does; (broken - fixed) / sets is its delta."""
+    both = opc._paired(ref, frame)
+    run_hire = opc.snap(both["margin_run"]) > 0.0
+    run = opc._set_flags(both, run_hire).astype(float)
+    ref_flags, _ = opc.matched_flags(both, "margin_ref", int(run_hire.sum()))
+    return {"fixed_sets": float((ref_flags * (1 - run)).sum()),
+            "broken_sets": float((run * (1 - ref_flags)).sum())}
+
+
 def spread(frame: pd.DataFrame, hire: float) -> dict:
     """How far an arm's margins sit from its cut, on the snapped margins the matching cuts."""
     m = pd.Series(np.abs(np.asarray(opc.snap(frame["margin"]))))
@@ -215,7 +227,7 @@ def build(arms: pd.DataFrame) -> tuple[pd.DataFrame, pd.DataFrame]:
                 "hire_rate_own_pct": 100 * own["hire_rate_run"],
                 "unstable_own_pct": 100 * own["unstable_run"],
                 "delta_own_pp": own["delta_matched_pp"], "ci_own_low": own["ci_low"],
-                "ci_own_high": own["ci_high"],
+                "ci_own_high": own["ci_high"], **fixed_broken(ref, frame),
                 "hire_rate_common_pct": 100 * common["hire_rate_ref_matched"],
                 "unstable_common_pct": 100 * common["unstable_ref_matched"],
                 "delta_common_pp": -common["delta_matched_pp"],

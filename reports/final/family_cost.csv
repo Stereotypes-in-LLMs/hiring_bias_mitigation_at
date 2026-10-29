@@ -1,4 +1,4 @@
 family,gpu_h,gpu_h_not_ok,by_stage,jobs,steps,cost_arms,note
-DPO after SFT-v3,38.25,0.02,datagen 23.25; eval 2.02; train 12.98,24,69,dpo_v3 dpo_v3_5k dpo_v3_4880_seeds,"round 2 (DPO-v3, on-policy only) and round 3 (DPO_V3_4880 and its seeds), data included"
+DPO after SFT-v3,43.02,0.02,datagen 23.25; eval 2.73; train 17.04,27,76,dpo_v3 dpo_v3_5k dpo_v3_4880_seeds,"round 2 (DPO-v3, on-policy only) and round 3 (DPO_V3_4880 and its seeds), data included"
 GRPO/DAPO after SFT-v3,238.6,8.68,datagen 16.19; eval 28.38; train 194.03,60,132,grpo_v3 grpo_v3_new grpo_v3_all grpo_v3_all_monitor8_calibration grpo425-startup-factorial grpo425-startup-factorial-retry1 grpo-v3-all-lr3e6-from425 grpo-v3-all-lr3e6-from425-retry1 grpo_improve dapo_v3_all dapo_improve paired_probe_dapo_sft_v3,"GRPO-v3, GRPO-v3-new, GRPO-v3-all and its diagnostics, DAPO-v3-all, GRPO-improve and DAPO-improve (rounds 1-6), data included"
 Decision distillation,23.25,0.0,eval 2.02; train 21.23,10,22,decision_distill,three seeds and the layer-restricted run; the activation-patching passes under the same arm are analysis and left out

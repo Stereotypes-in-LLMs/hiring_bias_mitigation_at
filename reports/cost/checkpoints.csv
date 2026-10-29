@@ -269,3 +269,16 @@ output_dir,arm,checkpoint_step,saved_at,job_id,n_gpus,gpu_h_segment_to_checkpoin
 /ritom/scratch/cscs/zhang/xw/outputs/dpo/qwen3.5-9b_en_only_dpo_v3_4880_seed43,dpo_v3_4880_seeds,275,2026-10-29 11:48:09,5198797,4,3.6322,0.0,3.6322
 /ritom/scratch/cscs/zhang/xw/outputs/dpo/qwen3.5-9b_en_only_dpo_v3_4880_seed43,dpo_v3_4880_seeds,300,2026-10-29 11:52:32,5198797,4,3.9244,0.0,3.9244
 /ritom/scratch/cscs/zhang/xw/outputs/dpo/qwen3.5-9b_en_only_dpo_v3_4880_seed43,dpo_v3_4880_seeds,305,2026-10-29 11:54:06,5198797,4,4.0289,0.0,4.0289
+/ritom/scratch/cscs/zhang/xw/outputs/dpo/qwen3.5-9b_en_only_dpo_v3_4880_seed44,dpo_v3_4880_seeds,25,2026-10-29 12:42:18,5199738,4,0.6622,0.0,0.6622
+/ritom/scratch/cscs/zhang/xw/outputs/dpo/qwen3.5-9b_en_only_dpo_v3_4880_seed44,dpo_v3_4880_seeds,50,2026-10-29 12:46:51,5199738,4,0.9656,0.0,0.9656
+/ritom/scratch/cscs/zhang/xw/outputs/dpo/qwen3.5-9b_en_only_dpo_v3_4880_seed44,dpo_v3_4880_seeds,75,2026-10-29 12:51:32,5199738,4,1.2778,0.0,1.2778
+/ritom/scratch/cscs/zhang/xw/outputs/dpo/qwen3.5-9b_en_only_dpo_v3_4880_seed44,dpo_v3_4880_seeds,100,2026-10-29 12:55:55,5199738,4,1.57,0.0,1.57
+/ritom/scratch/cscs/zhang/xw/outputs/dpo/qwen3.5-9b_en_only_dpo_v3_4880_seed44,dpo_v3_4880_seeds,125,2026-10-29 13:00:28,5199738,4,1.8733,0.0,1.8733
+/ritom/scratch/cscs/zhang/xw/outputs/dpo/qwen3.5-9b_en_only_dpo_v3_4880_seed44,dpo_v3_4880_seeds,150,2026-10-29 13:04:55,5199738,4,2.17,0.0,2.17
+/ritom/scratch/cscs/zhang/xw/outputs/dpo/qwen3.5-9b_en_only_dpo_v3_4880_seed44,dpo_v3_4880_seeds,175,2026-10-29 13:09:14,5199738,4,2.4578,0.0,2.4578
+/ritom/scratch/cscs/zhang/xw/outputs/dpo/qwen3.5-9b_en_only_dpo_v3_4880_seed44,dpo_v3_4880_seeds,200,2026-10-29 13:13:44,5199738,4,2.7578,0.0,2.7578
+/ritom/scratch/cscs/zhang/xw/outputs/dpo/qwen3.5-9b_en_only_dpo_v3_4880_seed44,dpo_v3_4880_seeds,225,2026-10-29 13:18:15,5199738,4,3.0589,0.0,3.0589
+/ritom/scratch/cscs/zhang/xw/outputs/dpo/qwen3.5-9b_en_only_dpo_v3_4880_seed44,dpo_v3_4880_seeds,250,2026-10-29 13:22:35,5199738,4,3.3478,0.0,3.3478
+/ritom/scratch/cscs/zhang/xw/outputs/dpo/qwen3.5-9b_en_only_dpo_v3_4880_seed44,dpo_v3_4880_seeds,275,2026-10-29 13:27:06,5199738,4,3.6489,0.0,3.6489
+/ritom/scratch/cscs/zhang/xw/outputs/dpo/qwen3.5-9b_en_only_dpo_v3_4880_seed44,dpo_v3_4880_seeds,300,2026-10-29 13:31:39,5199738,4,3.9522,0.0,3.9522
+/ritom/scratch/cscs/zhang/xw/outputs/dpo/qwen3.5-9b_en_only_dpo_v3_4880_seed44,dpo_v3_4880_seeds,305,2026-10-29 13:33:14,5199738,4,4.0578,0.0,4.0578
