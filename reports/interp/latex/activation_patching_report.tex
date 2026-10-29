@@ -23,6 +23,7 @@
 \usepackage{tcolorbox}
 \usepackage{tikz}
 \usetikzlibrary{arrows.meta,positioning,fit,calc,decorations.pathreplacing}
+\PassOptionsToPackage{hyphens}{url}  % let \path break long names at hyphens
 \usepackage[colorlinks=true,linkcolor=blue!50!black,citecolor=blue!50!black,urlcolor=blue!50!black]{hyperref}
 
 \graphicspath{{../figures/}{../figures/patching/}}
@@ -64,17 +65,22 @@ pipeline, data, results and next steps}
 \noindent
 Fine-tuning Qwen3.5-9B on counterfactually invariant targets (SFT) removes most of the model's
 sensitivity to a candidate's protected attribute. This report asks \emph{where} in the network that
-sensitivity lives, and \emph{what} SFT changes there.
+sensitivity lives, and \emph{what} SFT changes there. The SFT model studied is SFT-v3, the parent
+of the project's DPO and GRPO arms. The first round's SFT v1 is kept as a comparison.
 We build a pipeline that renders the audit's own prompts, reads the hiring decision as a
 continuous fp32 margin, aligns the tokens of attribute variants, and patches activations between
 them, from the residual stream down to individual attention and Gated-DeltaNet heads.
-Nine runs (about 150{,}000 patched forward passes) cover three attribute contrasts. They identify a
+Twelve runs cover three attribute contrasts: three discovery runs on the base model, and nine
+benchmark runs on the base model, SFT v1 and SFT-v3. They identify a
 narrow pathway: the attribute reaches the decision tokens between layers 15 and 20, through a hub
 at full-attention layer 15. One head (\head{15}{11}) alone removes 43\% of the combat-vs-civilian
 effect, and the final MLP turns the signal into the decision.
 The circuit discovered on training-pool CVs replicates on the benchmark ($r=0.96$--$0.97$). On
-identical pairs, SFT reduces the attribute effect by 69--74\% through the same pathway, cutting
-most at the layer-11/15 attention movers. It turns the circuit down; it does not rewire it.
+identical pairs, SFT-v3 reduces the per-pair attribute effect by 61--77\% (v1: 69--74\%). What
+remains reaches the decision tokens at the same depth, and \head{15}{11} is still its largest
+carrier. The base component profile is less preserved than under v1 ($r=0.73$--$0.78$ against
+$0.83$--$0.92$). On the two implicit contrasts, most of SFT-v3's remaining effect points opposite
+to the base model's.
 \end{abstract}
 
 \tableofcontents
@@ -84,10 +90,13 @@ most at the layer-11/15 attention movers. It turns the circuit down; it does not
 \section{Questions and scope}
 %==================================================================================================
 
-The mitigation chapter established \emph{that} SFT works. On Qwen3.5-9B (English) the share of
-counterfactual sets whose decision flips across attribute variants falls from 17.3\% to 7.2\%. At
-equal hire rate the SFT model is 3.7$\times$ more consistent, so the gain is not a shift of the
-operating point. This chapter asks \emph{how}:
+The mitigation chapter established \emph{that} SFT works. The model studied here is SFT-v3, the
+SFT model every later arm (DPO, GRPO) starts from. On Qwen3.5-9B (English) the share of
+within-group counterfactual sets whose decision flips across attribute variants falls from 8.8\%
+(base) to 1.9\% (\texttt{reports/reference\_metrics.csv}). At equal hire rate the change is
+$-9.95$~pp against the base model (95\% CI $[-12.07, -7.83]$) and $-1.93$~pp against SFT v1
+($[-3.21, -0.65]$), so the gain is not a shift of the operating point
+(\texttt{docs/V3\_NEW\_DATA.md}). This chapter asks \emph{how}:
 
 \begin{enumerate}[label=\textbf{Q\arabic*}]
   \item \textbf{Bias pathway.} When only the protected attribute changes, which layers, token
@@ -100,9 +109,11 @@ operating point. This chapter asks \emph{how}:
         reroute the computation, or attenuate the same circuit?
 \end{enumerate}
 
-\paragraph{Scope.} English only, Qwen3.5-9B. Base model vs the published SFT LoRA adapter. The DPO
-adapter from the preference-optimisation team plugs into the same pipeline once delivered
-(\S\ref{sec:next}).
+\paragraph{Scope.} English only, Qwen3.5-9B. Base model vs SFT-v3
+(\path{Stereotypes-in-LLMs/qwen3.5-9b-hiring-debias-sft-v3-en}), whose LoRA update is recovered
+from the merged release (\S\ref{sec:audit}). A first round of this analysis ran on SFT v1; where
+SFT-v3 reads differently, the text says so, and v1's artifacts are kept as the spec
+\texttt{sft\_v1}. The DPO-v3 release plugs into the same pipeline the same way (\S\ref{sec:next}).
 
 %==================================================================================================
 \section{The model under study}
@@ -143,8 +154,9 @@ Qwen3.5-9B is a \emph{hybrid} decoder (Figure~\ref{fig:arch}):
   \node[font=\scriptsize,text=sft!80!black,anchor=west] at (0,3.45) {SFT LoRA: q, k, v, o of the 8 full-attention layers only (ticks); GDN mixers untouched};
   \node[font=\scriptsize,anchor=west] at (0,4.4) {\textcolor{attn}{$\blacksquare$} full attention \quad \textcolor{gdn}{$\blacksquare$} Gated DeltaNet \quad \textcolor{mlp}{$\blacksquare$} MLP};
 \end{tikzpicture}
-\caption{Layer layout of Qwen3.5-9B and where the SFT adapter acts. We read the adapter's tensor
-names directly: LoRA (rank 32) modifies the MLPs of all 32 layers and only the q/k/v/o projections
+\caption{Layer layout of Qwen3.5-9B and where the SFT adapter acts. We read SFT v1's adapter
+tensor names directly, and compared the merged SFT-v3 release with the base checkpoint tensor by
+tensor: in both, LoRA (rank 32) modifies the MLPs of all 32 layers and only the q/k/v/o projections
 of the 8 full-attention layers. The 24 GDN token mixers are frozen. A change in how information
 moves \emph{between token positions} can therefore only come from the 8 attention layers, or
 from MLP changes upstream of a GDN layer.}
@@ -283,9 +295,11 @@ where $h$ is the residual stream entering the final norm at the last position. $
 
 \paragraph{Why fp32, and why from the residual.} The repository's earlier margin scripts cast
 logits to fp32 \emph{after} the bf16 matmul. At these logit magnitudes (16--32), bf16 steps are
-0.125 logits apart. The mean resulting error is 0.04 logits (Figure~\ref{fig:bf16}), about a sixth
-of SFT's whole effect on per-set margin spread (0.26). Neither the final norm nor $W_U$ is
-adapted by SFT, so the readout direction is the \emph{same vector} for every model. That also makes
+0.125 logits apart. The mean resulting error is 0.04 logits (Figure~\ref{fig:bf16}), about a fifth
+of the per-set margin spread SFT-v3 leaves (0.22 logits, \texttt{margin\_set\_sd\_nats} in
+\texttt{reports/reference\_metrics.csv}). Neither the final norm nor $W_U$ is adapted by SFT
+(checked for SFT-v3 against the base checkpoint, tensor by tensor), so the readout direction is
+the \emph{same vector} for every model. That also makes
 direct logit attribution comparable across models.
 
 \begin{figure}[htbp]
@@ -296,6 +310,7 @@ direct logit attribution comparable across models.
 \end{figure}
 
 \subsection{Does our reading reproduce the audit?}
+\label{sec:audit}
 Patching results describe the audited model only if the analysis path (HF + PEFT, one forward
 pass) makes the same decisions as the audit (vLLM, greedy generation, parsed JSON).
 
@@ -308,15 +323,30 @@ pass) makes the same decisions as the audit (vLLM, greedy generation, parsed JSO
 Model & agreement & ours & audit & ours & audit \\
 \midrule
 Base & 99.2\% & 15.0 & 15.7 & 15.9 & 17.3 \\
-SFT  & 99.4\% & 27.6 & 28.0 & 7.3 & 7.2 \\
+SFT v1 (first round) & 99.4\% & 27.6 & 28.0 & 7.3 & 7.2 \\
+SFT-v3 & n/a & 22.6 & 22.8 & 1.7$^\dagger$ & 1.9$^\dagger$ \\
 \bottomrule
 \end{tabular}
+
+\smallskip
+{\footnotesize $^\dagger$ Within-group sets (pair $\times$ group $\times$ condition), as the
+release's \texttt{evaluation.json} reports them; the other rows count a set as pair $\times$
+condition over all 34 attributes.}
 \end{center}
 
-SFT reproduces the audit's instability to 0.1~pp. The base model is 1.4~pp \emph{more} stable
+SFT v1 reproduced the audit's instability to 0.1~pp. The base model is 1.4~pp \emph{more} stable
 under our reading. This is consistent with vLLM's batch-level nondeterminism, which adds spurious
-flips (the mitigation chapter measured a $\sim$0.5\% floor). The adapter loads exactly 128 LoRA
-modules ($32\times3$ MLP $+\,8\times4$ attention).
+flips (the mitigation chapter measured a $\sim$0.5\% floor).
+
+SFT-v3's audit responses are not public, so its row is checked against the aggregate rates of the
+release's \texttt{evaluation.json} rather than decision by decision: the hire rate is within
+0.15~pp, and the within-group unstable share within 0.15~pp. The release is published merged;
+its adapter is recovered as the rank-32 SVD of merged $-$ base on each adapted module
+(\path{scripts/interp/01b_extract_adapter.py}). It loads exactly 128 LoRA modules
+($32\times3$ MLP $+\,8\times4$ attention), as SFT v1's does. On 256 benchmark prompts it agrees
+with the merged release on every decision, with a mean margin difference of 0.105 logits; merging
+the same adapter into bf16 weights moves margins by 0.101, so the difference is at the level of
+the merge's own rounding (\texttt{docs/INTERP\_SFT\_V3.md}).
 
 %==================================================================================================
 \section{Step 4 --- Tokens: making two variants comparable position by position}
@@ -378,27 +408,29 @@ attribute effect on all 450 benchmark pairs for the main contrasts.
 \begin{table}[htbp]
 \centering
 \small
-\begin{tabular}{@{}lrrrr@{}}
+\begin{tabular}{@{}lrrrrr@{}}
 \toprule
-Contrast & \multicolumn{2}{c}{mean $|\dm|$ (logits)} & Reduction & Signed mean / mean size \\
-\cmidrule(lr){2-3}
- & Base & SFT & & (base) \\
+Contrast & \multicolumn{3}{c}{mean $|\dm|$ (logits)} & Reduction & Signed mean / mean size \\
+\cmidrule(lr){2-4}
+ & Base & SFT v1 & SFT-v3 & (SFT-v3) & (base) \\
 \midrule
-Combat vs no attribute $\cdot$ implicit & 1.47 & 0.56 & 62\% & \\
-Combat vs no attribute $\cdot$ explicit & 1.24 & 0.58 & 53\% & \\
-Combat vs War veteran $\cdot$ implicit  & 1.11 & 0.34 & 69\% & \\
-Atheist vs Christian $\cdot$ implicit   & 1.06 & 0.33 & 69\% & 0.57 \\
-\textbf{Combat vs Civilian $\cdot$ implicit} & \textbf{1.04} & \textbf{0.41} & \textbf{61\%} & \textbf{0.17} \\
-\textbf{Combat vs Civilian $\cdot$ explicit} & \textbf{1.01} & \textbf{0.43} & \textbf{57\%} & \textbf{0.94} \\
-Atheist vs Christian $\cdot$ explicit   & 0.44 & 0.19 & 57\% & \\
-Combat vs War veteran $\cdot$ explicit  & 0.41 & 0.28 & 33\% & \\
-Male vs Female $\cdot$ implicit         & 0.28 & 0.18 & 35\% & \\
-Male vs Female $\cdot$ explicit         & 0.22 & 0.16 & 24\% & \\
+Combat vs no attribute $\cdot$ implicit & 1.47 & 0.56 & 0.60 & 59\% & \\
+Combat vs no attribute $\cdot$ explicit & 1.24 & 0.58 & 0.54 & 57\% & \\
+Combat vs War veteran $\cdot$ implicit  & 1.11 & 0.34 & 0.39 & 65\% & \\
+\textbf{Atheist vs Christian $\cdot$ implicit} & \textbf{1.06} & \textbf{0.33} & \textbf{0.41} & \textbf{62\%} & \textbf{0.57} \\
+\textbf{Combat vs Civilian $\cdot$ implicit} & \textbf{1.04} & \textbf{0.41} & \textbf{0.49} & \textbf{52\%} & \textbf{0.17} \\
+\textbf{Combat vs Civilian $\cdot$ explicit} & \textbf{1.01} & \textbf{0.43} & \textbf{0.35} & \textbf{65\%} & \textbf{0.94} \\
+Atheist vs Christian $\cdot$ explicit   & 0.44 & 0.19 & 0.18 & 59\% & \\
+Combat vs War veteran $\cdot$ explicit  & 0.41 & 0.28 & 0.31 & 24\% & \\
+Male vs Female $\cdot$ implicit         & 0.28 & 0.18 & 0.22 & 22\% & \\
+Male vs Female $\cdot$ explicit         & 0.22 & 0.16 & 0.22 & $-2\%$ & \\
 \bottomrule
 \end{tabular}
-\caption{Attribute effect per pair on the full benchmark grid. SFT reduces every contrast, most
-where the base effect is largest. Bold rows are patched in this report, together with Atheist vs
-Christian $\cdot$ implicit.}
+\caption{Attribute effect per pair on the full benchmark grid. SFT-v3 reduces every contrast but
+Male vs Female $\cdot$ explicit, most where the base effect is largest. In logits its residual
+effects are about as large as SFT v1's, but its margins are 2.6$\times$ as wide as the base
+model's (SD 10.4 vs 4.0 logits; SFT v1: 6.0), so on its own scale they are the smallest. Bold
+rows are patched in this report.}
 \label{tab:effects}
 \end{table}
 
@@ -418,8 +450,10 @@ metric measures attribute \emph{sensitivity}, which is also what SFT was trained
 \begin{figure}[htbp]
 \centering
 \includegraphics[width=\textwidth]{effect_direction.png}
-\caption{Per-pair $\dm$ on the benchmark grid. Implicit effects point both ways; SFT narrows the
-distribution towards zero.}
+\caption{Per-pair $\dm$ on the benchmark grid. Implicit effects point both ways. SFT-v3 narrows
+each distribution, and on the two implicit contrasts moves its centre to the other side of zero:
+Combat ahead of Civilian in 73\% of pairs (base 40\%), Atheist ahead of Christian in 28\% (base
+72\%).}
 \label{fig:direction}
 \end{figure}
 
@@ -507,8 +541,9 @@ combat sentence raises the (negative) hire margin by 2.6 logits relative to the 
 sentence\footnote{Margins inside a patching batch ($-8.07$ / $-10.70$) differ by $\sim$0.1 logits
 from the single-pass values ($-8.15$ / $-10.59$). This is numerical batch-composition noise.
 Each patch is compared with the margins of its own batch.}. Both prompts are rejected, but the
-attribute alone moves the decision by 2.6 logits. Under SFT the same pair's effect is
-$-0.06$ logits.
+attribute alone moves the decision by 2.6 logits. In single-pass margins (the grid manifest) the
+pair's effect is $+2.44$ in the base model, $-0.01$ under SFT v1 and $+0.85$ under SFT-v3: v1
+removed it, while SFT-v3 keeps about a third of it, in the base direction.
 
 \begin{table}[htbp]
 \centering
@@ -719,96 +754,130 @@ next step.}
 \section{Results: what SFT changed}
 %==================================================================================================
 
-Base and SFT were patched on the \emph{same} 64 benchmark pairs per contrast. Because SFT's total
-effect is much smaller, comparisons are in \textbf{absolute logits per pair}:
+Base, SFT v1 and SFT-v3 were patched on the \emph{same} 64 benchmark pairs per contrast, selected
+on the base model's margins only. Both SFT models start from a much smaller total effect, so
+comparisons are in \textbf{absolute logits per pair}. All numbers in this section are outputs of
+\S6 of \texttt{reports/interp/patching\_results.ipynb}. The per-run CSVs are in
+\path{reports/interp/patching/<spec>-grid-<contrast>-n64-s42/}.
 
 \begin{center}
 \small
-\begin{tabular}{@{}lrrr@{}}
+\begin{tabular}{@{}lrrrrr@{}}
 \toprule
-Contrast (64 identical pairs) & Base $|\dm|$ & SFT $|\dm|$ & Change \\
+Contrast (64 identical pairs) & Base $|\dm|$ & SFT v1 $|\dm|$ & Change & SFT-v3 $|\dm|$ & Change \\
 \midrule
-Combat vs Civilian $\cdot$ implicit & 1.33 & 0.34 & $-74\%$ \\
-Combat vs Civilian $\cdot$ explicit & 1.50 & 0.46 & $-69\%$ \\
-Atheist vs Christian $\cdot$ implicit & 1.32 & 0.41 & $-69\%$ \\
+Combat vs Civilian $\cdot$ implicit & 1.33 & 0.34 & $-74\%$ & 0.45 & $-66\%$ \\
+Combat vs Civilian $\cdot$ explicit & 1.50 & 0.46 & $-69\%$ & 0.34 & $-77\%$ \\
+Atheist vs Christian $\cdot$ implicit & 1.32 & 0.41 & $-69\%$ & 0.52 & $-61\%$ \\
 \bottomrule
 \end{tabular}
 \end{center}
 
+$|\dm|$ is a size and ignores direction, and the metric orients each pair by its own sign
+(\S\ref{sec:method}). On the two implicit contrasts, most of SFT-v3's remaining effect points
+opposite to the base model's (Figure~\ref{fig:direction}). This section therefore shows where
+that remainder lives, but not its sign.
+
 \begin{figure}[htbp]
 \centering
 \includegraphics[width=\textwidth]{base_vs_sft_residual.png}
-\caption{Attribute effect removed (logits per pair) by residual patching at each depth, base vs SFT.
-SFT's curves are lower, but they rise at the same depths. The decision tokens still receive the
-attribute at layers 15--20.}
+\caption{Attribute effect removed (logits per pair) by residual patching at each depth: base, SFT v1
+and SFT-v3. Both SFT models' curves are lower but rise at the same depths: the decision tokens
+still receive the attribute at layers 15--20. On implicit combat it arrives later under SFT-v3:
+0.49 of the effect by layer 18, against 0.69 (v1) and 0.74 (base).}
 \label{fig:sftresid}
 \end{figure}
 
 \begin{figure}[htbp]
 \centering
 \includegraphics[width=\textwidth]{base_vs_sft_components.png}
-\caption{Each component's contribution to the attribute effect (logits per pair), base vs SFT.}
+\caption{Each component's contribution to the attribute effect (logits per pair): base, SFT v1 and
+SFT-v3.}
 \label{fig:sftcomp}
 \end{figure}
 
 \begin{figure}[htbp]
 \centering
 \includegraphics[width=\textwidth]{base_vs_sft_heads.png}
-\caption{Every head, base vs SFT (AtP, logits per pair). Points flattened towards the horizontal axis
-lost their contribution.}
+\caption{Every head, base vs SFT-v3 (AtP, logits per pair). Points flattened towards the horizontal
+axis lost their contribution.}
 \label{fig:sftheads}
 \end{figure}
 
 \begin{table}[htbp]
 \centering
-\small
-\begin{tabular}{@{}lrrr@{\hspace{1.5em}}lrrr@{}}
+\footnotesize
+\setlength{\tabcolsep}{4pt}
+\begin{tabular}{@{}lrrrr@{\hspace{1.2em}}lrrrr@{}}
 \toprule
-\multicolumn{4}{c}{Components (Combat vs Civilian $\cdot$ implicit)} & \multicolumn{4}{c}{Heads (same contrast)} \\
-\cmidrule(r){1-4}\cmidrule(l){5-8}
- & Base & SFT & Kept & & Base & SFT & Kept \\
+\multicolumn{5}{c}{Components (Combat vs Civilian $\cdot$ implicit)} & \multicolumn{5}{c}{Heads (same contrast)} \\
+\cmidrule(r){1-5}\cmidrule(l){6-10}
+ & Base & v1 & v3 & v3 kept & & Base & v1 & v3 & v3 kept \\
 \midrule
-\attnl{15} & 0.90 & 0.17 & 19\% & \head{15}{11} & 0.81 & 0.09 & 11\% \\
-\attnl{11} & 0.68 & 0.10 & 15\% & \head{15}{1} & 0.33 & 0.05 & 14\% \\
-\mlpl{31} & 0.54 & 0.15 & 28\% & \head{15}{8} & 0.24 & 0.01 & 6\% \\
-\attnl{19} & 0.52 & 0.11 & 22\% & \head{11}{6} & 0.24 & 0.03 & 11\% \\
-\gdnl{16} & 0.44 & 0.10 & 23\% & \head{19}{11} & 0.23 & 0.04 & 15\% \\
-\attnl{27} & 0.40 & 0.11 & 28\% & GDN \head{17}{0} & 0.21 & 0.07 & 33\% \\
+\attnl{15} & 0.90 & 0.17 & 0.19 & 21\% & \head{15}{11} & 0.81 & 0.09 & 0.13 & 16\% \\
+\attnl{11} & 0.68 & 0.10 & 0.15 & 22\% & \head{15}{1} & 0.33 & 0.05 & 0.06 & 17\% \\
+\mlpl{31} & 0.54 & 0.15 & 0.25 & 47\% & \head{11}{6} & 0.24 & 0.03 & 0.03 & 11\% \\
+\attnl{19} & 0.52 & 0.11 & 0.14 & 28\% & \head{15}{8} & 0.24 & 0.01 & 0.02 & 9\% \\
+\gdnl{16} & 0.44 & 0.10 & 0.15 & 34\% & \head{19}{11} & 0.23 & 0.04 & 0.06 & 26\% \\
+\attnl{27} & 0.40 & 0.11 & 0.13 & 32\% & GDN \head{17}{0} & 0.21 & 0.07 & 0.07 & 33\% \\
 \bottomrule
 \end{tabular}
-\caption{Contribution to the attribute effect in logits per pair, base vs SFT, on identical pairs.
-Components by real patching, heads by AtP.}
+\caption{Contribution to the attribute effect in logits per pair on identical pairs, for the base
+model's six largest components and heads. ``v1'' is SFT v1, ``v3'' SFT-v3, and ``v3 kept'' is
+SFT-v3 as a share of base. Components by real patching, heads by AtP.}
 \label{tab:sft}
 \end{table}
 
 \begin{center}
 \small
-\begin{tabular}{@{}lrrr@{}}
+\begin{tabular}{@{}lrrrrrr@{}}
 \toprule
-Share of contribution SFT keeps, by type & attention & GDN & MLP \\
+Share of contribution kept, by type & \multicolumn{2}{c}{attention} & \multicolumn{2}{c}{GDN} & \multicolumn{2}{c}{MLP} \\
+\cmidrule(lr){2-3}\cmidrule(lr){4-5}\cmidrule(l){6-7}
+ & v1 & v3 & v1 & v3 & v1 & v3 \\
 \midrule
-Combat vs Civilian $\cdot$ implicit & 22\% & 34\% & 18\% \\
-Combat vs Civilian $\cdot$ explicit & 28\% & 33\% & 29\% \\
-Atheist vs Christian $\cdot$ implicit & 41\% & 54\% & 55\% \\
+Combat vs Civilian $\cdot$ implicit & 22\% & 30\% & 34\% & 55\% & 18\% & 32\% \\
+Combat vs Civilian $\cdot$ explicit & 28\% & 28\% & 33\% & 25\% & 29\% & 26\% \\
+Atheist vs Christian $\cdot$ implicit & 41\% & 65\% & 54\% & 66\% & 55\% & 81\% \\
 \bottomrule
 \end{tabular}
 \end{center}
 
+\paragraph{Facts.}
 \begin{itemize}
-  \item \textbf{Same path, lower volume.} The relative profile of components is preserved
-        (base vs SFT $r=0.83$--$0.84$), and the decision tokens receive the attribute at the
-        same depth. On implicit combat, the share reaching them by layer 18 is 0.74 (base) vs 0.69
-        (SFT). SFT did not move the computation; it shrank what flows through it.
-  \item \textbf{The movers lose most.} On implicit combat, \head{15}{11} keeps 11\% of its
-        contribution and attention layers 11 and 15 keep 15\% and 19\%, against 28\% for the
-        late readout. The opposing head \head{15}{3} flips to a weak carrier.
-  \item \textbf{GDN mixers keep more than attention in every contrast.} SFT's LoRA does not modify
-        them, so their reduction can only come from smaller attribute signals arriving from
-        upstream.
-  \item \textbf{This matches the probe evidence} (Figure~\ref{fig:probe}). Under SFT the attribute
-        largely disappears from the decision token in the middle layers. Patching locates
-        where: at the attention movers of layers 11--19.
+  \item \textbf{Same depth.} Under both SFT models the decision tokens receive what remains of the
+        attribute at layers 15--20. By layer 20 they hold 0.87--0.88 of it under SFT-v3,
+        0.88--0.97 under v1 and 0.92--0.95 in base.
+  \item \textbf{Same main carrier, much weaker.} \head{15}{11} is the largest verified head under
+        both SFT models in every contrast. By real patching it carries 0.66 logits per pair on
+        implicit combat in base, 0.09 under v1 and 0.13 under SFT-v3. On religion the figures
+        are 0.35, 0.12 and 0.13. The base model's opposing head \head{15}{3} becomes a weak carrier
+        under both ($-0.30 \to +0.03$, AtP).
+  \item \textbf{The base profile is less preserved under SFT-v3.} Component profiles correlate with
+        base at $r = 0.78 / 0.73 / 0.75$ (implicit combat / explicit combat / religion), against
+        $0.84 / 0.92 / 0.83$ under v1. The 896-head AtP profiles correlate at $0.72 / 0.73 / 0.65$,
+        against $0.76 / 0.91 / 0.76$. Of the base model's top-20 heads, SFT-v3 keeps 10 / 11 / 13
+        in its own top 20 and v1 keeps 14 / 16 / 14.
+  \item \textbf{Which component type keeps the most depends on the model.} Under v1, GDN mixers keep
+        more than attention in every contrast. Under SFT-v3 that holds on implicit combat only.
+        On explicit combat GDN keeps the least, and on religion the MLPs keep the most.
+  \item \textbf{Correction to the first round.} This section gave the v1 component-profile
+        correlation as $r=0.83$--$0.84$. The explicit contrast is 0.92, so the range is $0.83$--$0.92$.
 \end{itemize}
+
+\paragraph{Interpretation, not confirmed.} SFT-v3 removes about as much of the per-pair attribute
+effect as v1, through the same pathway. Under both, the attention movers of layers 11--19 lose
+most of their contribution. SFT-v3 leaves the remainder spread less like the base model's, and on
+the implicit contrasts that remainder mostly points the other way. The first round's reading, that
+GDN mixers keep the most because the adapter does not modify them, fits v1 but not SFT-v3. GDN
+contributions also depend on what arrives from the MLPs and attention layers before them, which
+both adapters do modify.
+
+\paragraph{Unknowns.} The kept shares sum contributions of components that act in series, so
+they describe a profile, not a decomposition. Each model was patched once, on one selection of
+pairs. Whether the differences between v1 and SFT-v3 exceed run-to-run variation is not measured.
+Which components carry SFT-v3's reversed effect, with direction kept, needs pairs signed by the
+base direction (\S\ref{sec:next}).
 
 %==================================================================================================
 \section{Complementary evidence from the margins}
@@ -818,8 +887,10 @@ Atheist vs Christian $\cdot$ implicit & 41\% & 54\% & 55\% \\
 \centering
 \includegraphics[width=\textwidth]{probe_preview.png}
 \caption{Linear probe (standardise, PCA to 256, logistic regression) for the attribute at the
-decision token, fit on the pool and tested on the benchmark. Under SFT the attribute drops to
-near chance in layers 16--26, and returns after full-attention layer 27.}
+decision token, fit on the pool and tested on the benchmark. Under SFT-v3 the attribute drops to
+near chance in layers 16--26 (military explicit 0.27--0.35, chance 0.20; religion implicit
+0.18--0.23, chance 0.11). Under SFT v1 it returned after full-attention layer 27 (military explicit
+0.90 at layer 28); under SFT-v3 it mostly does not (0.45; religion 0.22).}
 \label{fig:probe}
 \end{figure}
 
@@ -829,7 +900,9 @@ near chance in layers 16--26, and returns after full-attention layer 27.}
 \caption{Mean margin shift caused by each attribute relative to the same CV with no attribute
 (benchmark). A labelled field raises the margin; the same fact as a sentence lowers it in 12 of
 14 attributes. Every religion sentence is penalised and Christian most of all, so ``Atheist vs
-Christian'' is mostly the Christian penalty.}
+Christian'' is mostly the Christian penalty. Under SFT-v3 every shift but one is small and negative
+($|$shift$|\le0.59$), and the order of the religion sentences reverses: Atheist is the most
+penalised ($-0.59$), Christian mid-range ($-0.30$).}
 \label{fig:shift}
 \end{figure}
 
@@ -857,10 +930,12 @@ A shared core serves military status and religion, with contrast-specific edges.
 discovered on training-pool CVs replicates on the benchmark ($r=0.96$--$0.97$; 15--17 of the
 top-20 heads identical). AtP agrees with real patching (Spearman 0.94--0.99).
 \end{finding}
-\begin{finding}[5. SFT attenuates, it does not rewire]
-On identical pairs SFT removes 69--74\% of the attribute effect through the same pathway, at the
-same depth. The largest cuts are at the layer-11/15 attention movers: \head{15}{11} keeps 11\% of
-its contribution. GDN mixers, which the adapter does not modify, keep the most.
+\begin{finding}[5. SFT attenuates the circuit; SFT-v3 also reshapes what remains]
+On identical pairs SFT-v3 removes 61--77\% of the per-pair attribute effect (v1: 69--74\%). The
+remainder reaches the decision tokens at the same depth, and \head{15}{11} is still its largest
+verified carrier (0.66 $\to$ 0.13 logits per pair on implicit combat; v1 0.09). The remainder
+resembles the base profile less than under v1 ($r=0.73$--$0.78$ against $0.83$--$0.92$), and on the
+implicit contrasts it mostly points opposite to the base model's bias.
 \end{finding}
 
 %==================================================================================================
@@ -875,8 +950,17 @@ its contribution. GDN mixers, which the adapter does not modify, keep the most.
   \item \textbf{Numerical noise.} Batch composition shifts margins by up to $\sim$0.1 logits. The
         aggregated effects (0.3--1.5 logits per pair) are well above this, but SFT's per-pair
         effects are not, so SFT is read in aggregate only.
-  \item \textbf{Coverage.} One model, English, three contrasts, 64 pairs per run, and SFT only. DPO
-        and gender are not patched.
+  \item \textbf{Coverage.} One model, English, three contrasts and 64 pairs per run, with each model
+        patched once. Two SFT models; DPO and gender are not patched.
+  \item \textbf{The SFT-v3 adapter is recovered, not published.} It is the rank-32 SVD of merged
+        minus base, run unmerged. Against the merged release it agrees on every decision of 256
+        rows, at a mean margin difference of 0.105 logits. That missed the 0.1 gate set in advance
+        by 0.005, which is about the bf16 merge rounding (\S\ref{sec:audit}).
+  \item \textbf{The SFT-v3 audit is checked in aggregate.} Its responses are not public, so the
+        reading is checked against the release's hire rate and unstable share, not row by row
+        (\S\ref{sec:audit}).
+  \item \textbf{Sensitivity has no sign.} Each pair is oriented by its own effect, so where SFT-v3
+        reversed the direction, patching locates the remainder but not the reversal.
   \item \textbf{The implicit templates confound identity with availability} (Step 1).
 \end{itemize}
 
@@ -894,15 +978,20 @@ its contribution. GDN mixers, which the adapter does not modify, keep the most.
         MLP 31 directly?
   \item \textbf{How SFT changed \head{15}{11}.} Decompose its effect into where it looks (QK
         pattern), what it writes (OV) and its output gate. Then transplant each from base into
-        SFT. Did SFT change \emph{where the head attends}, or \emph{what it writes}?
+        SFT-v3. Did SFT change \emph{where the head attends}, or \emph{what it writes}?
+  \item \textbf{Signed patching on SFT-v3.} Orient every pair by the base model's direction instead
+        of its own. This locates the components that carry SFT-v3's reversed effect on the
+        implicit contrasts.
   \item \textbf{Adapter masking.} Apply the SFT LoRA only on attention layers 11/15/19, or only on
         MLPs. \emph{Question:} is a few-layer update sufficient for most of the debiasing?
   \item \textbf{Identity vs availability.} Hand-written minimal pairs that change only the identity
         words or only the job clause. \emph{Question:} does \head{15}{11} read who the candidate
         is, or what they say about availability?
-  \item \textbf{DPO.} Run the same pipeline on the DPO adapter once delivered (configured as
-        \texttt{[sft, dpo]}). Add the per-token implicit-reward analysis, to test whether DPO
-        learned a rationale-strength shortcut rather than invariance.
+  \item \textbf{DPO.} Run the same pipeline on DPO-v3 (spec \texttt{[sft, dpo]}). The release is
+        merged too, so its update is recovered as the SVD of DPO-v3 minus SFT-v3. That needs a
+        \texttt{--base} option in \texttt{01b\_extract\_adapter.py} first. Add the per-token
+        implicit-reward analysis, to test whether DPO learned a rationale-strength shortcut rather
+        than invariance.
   \item \textbf{Noise floor and controls.} Measure $\sigma_{\text{num}}$ and paraphrase null
         swaps, so every effect is reported against an explicit floor.
 \end{enumerate}
@@ -917,7 +1006,8 @@ Run & Pairs & Purpose \\
 \midrule
 base / pool / three contrasts & 64 each & circuit discovery \\
 base / grid / three contrasts & 64 each & confirmation; SFT baseline \\
-SFT / grid / three contrasts & 64 each (same pairs) & what SFT changed \\
+SFT v1 / grid / three contrasts & 64 each (same pairs) & first round \\
+SFT-v3 / grid / three contrasts & 64 each (same pairs) & what SFT-v3 changed \\
 \bottomrule
 \end{tabular}
 \end{center}
@@ -926,13 +1016,18 @@ SFT / grid / three contrasts & 64 each (same pairs) & what SFT changed \\
 export HBM_OUTPUT_ROOT=/home/samoilenko/hbm-local          # with a .hbm-models-root marker
 uv pip install --no-deps flash-linear-attention fla-core   # GDN kernels
 uv run python scripts/interp/00_env_check.py
-uv run python scripts/interp/01_fetch_data.py
+uv run python scripts/interp/01_fetch_data.py               # SFT v1 adapter, SFT-v3 release
+uv run python scripts/interp/01b_extract_adapter.py --stage extract   # SFT-v3 LoRA from the release
+uv run python scripts/interp/01b_extract_adapter.py --stage check --device cuda:1
 uv run python scripts/interp/03_segments.py --dataset grid      # and --dataset pool
 uv run python scripts/interp/02_margins.py --spec base --dataset grid --device cuda:1 --resid
 uv run python scripts/interp/02_margins.py --spec sft  --dataset grid --device cuda:2 --resid
+uv run python scripts/interp/02_margins.py --spec sft_v1 --dataset grid --device cuda:3 --resid
 uv run python scripts/interp/04_manifest.py --dataset grid      # and --dataset pool
 uv run python scripts/interp/10_patch.py --spec base --dataset pool \
     --contrast mil_combat_civ_impl --n-pairs 64 --device cuda:1
+uv run python scripts/interp/10_patch.py --spec sft --dataset grid \
+    --contrast mil_combat_civ_impl --device cuda:1    # and sft_v1; each of the three contrasts
 # notebooks: reports/interp/pipeline_results.ipynb, reports/interp/patching_results.ipynb
 \end{Verbatim}
 
