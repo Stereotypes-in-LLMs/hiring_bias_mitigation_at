@@ -383,6 +383,18 @@ def test_labels_fill_arms_first_match_wins_and_several_configs_share_a_step():
     assert arms["sft"]["eval_gpu_h"] == 1.0
 
 
+def test_a_rule_widens_a_recorded_arm_into_a_shared_one_but_never_reassigns_it():
+    rules = [(CR.re.compile(p), arm, "", "") for p, arm in [
+        (r"\| 5115569 ", "dpo_v3_5k+grpo_v3_all"), (r"\| 5118984 ", "grpo_v3_all")]]
+    blank = CR._blank_step
+    steps = [{**blank(), "job_name": "xw-v3-additional", "job_id": "5115569",
+              "label": "teacher", "arm": "dpo_v3_5k", "stage": "datagen"},
+             {**blank(), "job_name": "xw-dpo", "job_id": "5118984", "label": "dpo",
+              "arm": "dpo_v3_5k", "stage": "train"}]
+    CR.apply_labels(steps, rules)
+    assert [s["arm"] for s in steps] == ["dpo_v3_5k+grpo_v3_all", "dpo_v3_5k"]
+
+
 def test_parameters_are_counted_from_the_safetensors_header(tmp_path):
     def write(path, tensors):
         header = json.dumps({"__metadata__": {}, **{
