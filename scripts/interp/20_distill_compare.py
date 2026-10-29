@@ -162,6 +162,42 @@ def components(spec, ref, contrasts, suffix) -> tuple[pd.DataFrame, pd.DataFrame
     return pd.concat(rows, ignore_index=True), pd.concat(heads, ignore_index=True)
 
 
+BANDS = ((0, 11), (12, 20), (21, 31))
+
+
+def component_summary(comp: pd.DataFrame, atp_spec: dict[str, pd.DataFrame]) -> pd.DataFrame:
+    """Per contrast: hub and readout kept, the profile correlation of every mixer/MLP
+    component's contribution (spec against reference), the share kept per layer band over the
+    components contributing >= 0.1 logits/pair under the reference, and where L15.H11 ranks
+    among the spec's own AtP heads."""
+    out = []
+    for c, g in comp.groupby("contrast", sort=False):
+        idx = g.set_index(["kind", "layer"])
+
+        def kept(keys, idx=idx):
+            return (sum(idx.loc[k, "removed_logits_per_pair_spec"] for k in keys)
+                    / sum(idx.loc[k, "removed_logits_per_pair_ref"] for k in keys))
+
+        row = {"contrast": c, "hub_kept": kept(HUB), "readout_kept": kept(READOUT)}
+        row["hub_minus_readout"] = row["hub_kept"] - row["readout_kept"]
+        row["total_kept"] = g["total_kept"].iat[0]
+        row["profile_r"] = float(np.corrcoef(g["removed_logits_per_pair_ref"],
+                                             g["removed_logits_per_pair_spec"])[0, 1])
+        big = g[g["removed_logits_per_pair_ref"] >= 0.1]
+        for lo, hi in BANDS:
+            b = big[big["layer"].between(lo, hi)]
+            row[f"kept_layers_{lo}_{hi}"] = (b["removed_logits_per_pair_spec"].sum()
+                                             / b["removed_logits_per_pair_ref"].sum())
+        a = atp_spec[c]
+        a = a[(a["kind"] == "head_in") & (a["cls"] == "suffix")].sort_values(
+            "removed_logits_per_pair", ascending=False).reset_index(drop=True)
+        hit = a.index[(a["layer"] == 15) & (a["head"] == 11)]
+        row["l15h11_rank_spec"] = int(hit[0]) + 1 if len(hit) else None
+        row["top3_heads_spec"] = " ".join(f"L{r.layer}.H{r.head}" for r in a.head(3).itertuples())
+        out.append(row)
+    return pd.DataFrame(out)
+
+
 def resid_rows(spec: str, name: str, uids: set[str]) -> dict[str, np.ndarray]:
     from safetensors.numpy import load_file
 
@@ -282,14 +318,11 @@ def main() -> None:
                 "removed_logits_per_pair_spec", "kept"]
         print("\n(b) top heads by AtP under the reference\n"
               + heads.groupby("contrast").head(5)[cols].round(3).to_string(index=False))
-        for c, g in comp.groupby("contrast"):
-            idx = g.set_index(["kind", "layer"])
-            hub = sum(idx.loc[k, "removed_logits_per_pair_spec"] for k in HUB) / sum(
-                idx.loc[k, "removed_logits_per_pair_ref"] for k in HUB)
-            ro = sum(idx.loc[k, "removed_logits_per_pair_spec"] for k in READOUT) / sum(
-                idx.loc[k, "removed_logits_per_pair_ref"] for k in READOUT)
-            print(f"{c}: hub kept {hub:.3f}, readout kept {ro:.3f}, difference {hub - ro:+.3f}, "
-                  f"total effect kept {g['total_kept'].iat[0]:.3f}")
+        atp = {c: pd.read_csv(report_dir("patching", f"{args.spec}-grid-{c}{args.patch_suffix}")
+                              / "atp.csv") for c in comp["contrast"].unique()}
+        summary = component_summary(comp, atp)
+        summary.to_csv(out / "component_summary.csv", index=False)
+        print("\n(b) summary per contrast\n" + summary.round(3).to_string(index=False))
     else:
         print("\n(b) no patching summaries for both specs yet")
 
