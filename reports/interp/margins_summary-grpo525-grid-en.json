@@ -1,0 +1,17 @@
+{
+  "spec": "grpo525",
+  "dataset": "grid-en",
+  "rows": 31050,
+  "hire_rate_pct": 18.91143317230274,
+  "audit": {
+    "audit_run": "Qwen3.5-9B--en--grpo--adapter--en_only_grpo_v3_all_step525",
+    "available": true,
+    "rows_matched": 31050,
+    "agreement_pct": 99.76811594202898,
+    "hire_rate_hf_pct": 18.91143317230274,
+    "hire_rate_audit_pct": 19.085346215780998,
+    "unstable_sets_hf_pct": 1.6666666666666667,
+    "unstable_sets_audit_pct": 1.8888888888888888,
+    "margin_bf16_minus_fp32_abs_mean": 0.06458535045385361
+  }
+}

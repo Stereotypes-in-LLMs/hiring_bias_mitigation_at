@@ -123,6 +123,11 @@ def sensitivity(manifest, m_ref, m_spec, spec, ref, contrasts, n_boot, seed,
                     f"mean_abs_dm_{ref}": float(per[("a_ref", "sum")].sum() / len(rows)),
                     f"mean_abs_dm_{spec}": float(per[("a_spec", "sum")].sum() / len(rows)),
                     "r_attr": r_attr, "r_scale": r_scale, "rho": value,
+                    # the typical pair and the tail, over all aligned pairs (no bootstrap)
+                    "r_attr_median": float(rows[f"dm_{spec}"].abs().median()
+                                           / rows[f"dm_{ref}"].abs().median()),
+                    "r_attr_p99": float(rows[f"dm_{spec}"].abs().quantile(0.99)
+                                        / rows[f"dm_{ref}"].abs().quantile(0.99)),
                     "rho_ci_low": float(np.quantile(boots, 0.025)),
                     "rho_ci_high": float(np.quantile(boots, 0.975)),
                     "rho_rms": rho_rms, "rho_noise_corrected": rho_corr,
