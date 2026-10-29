@@ -9,9 +9,12 @@ Quality, three ways, all from the op-margin-v2 margin files:
                 matching and candidate bootstrap (`matched_comparison` with the roles swapped),
                 so every arm is read at one operating point;
   curve         unstable within-group sets at each hire rate on a grid, each arm moved there
-                by the same matching.
+                by the same matching; curve_bands.csv averages (arm - SFT-v3) over hire-rate
+                bands, descriptively, since grid points are not independent.
 TPR where GPT-4o hires is given at the common point from the margins, beside the standard's
-greedy guardrails at the arm's own point (reports/reference_metrics.csv).
+greedy guardrails at the arm's own point (reports/reference_metrics.csv). How far the margins
+sit from the cut is given as the share within 1 nat of 0, the median |margin|, and the range of
+the unstable share within 0.5 pp of the arm's own hire rate.
 
 Cost, from reports/cost/ (scripts/cost_report.py), measured GPU-h, never summed across rows:
   data      the recipe steps of the jobs that built the arm's training data (`data_jobs` in
@@ -24,13 +27,14 @@ Cost, from reports/cost/ (scripts/cost_report.py), measured GPU-h, never summed 
             ones included, patching analysis left out.
 
     python scripts/final_table.py
-    # -> reports/final/{final_table,recipes,curves,family_cost,eval_cost}.csv, curves.svg,
-    #    cost_quality.svg
+    # -> reports/final/{final_table,recipes,curves,curve_bands,family_cost,eval_cost}.csv,
+    #    curves.svg, cost_quality.svg
 """
 from __future__ import annotations
 
 import argparse
 import html
+import re
 import sys
 from pathlib import Path
 
@@ -46,8 +50,11 @@ from hiring_bias_mitigation.utils.config import resolve_output_path  # noqa: E40
 FINAL = REPO / "reports" / "final"
 REFERENCE = "Qwen3.5-9B--en--sft--adapter--en_only_sft_v3_additional"
 HIRE_GRID = np.round(np.arange(0.10, 0.3501, 0.005), 3)
-# The series drawn in curves.svg, one per recipe, seed 42 where there are several; categorical
-# slots of the reference palette (dataviz skill), SFT-v3 in neutral ink.
+BANDS = [(10, 15), (15, 20), (20, 25), (25, 30), (30, 35)]   # pp; the last one is closed
+LOCAL = np.round(np.arange(-0.005, 0.00501, 0.001), 3)        # around the arm's own hire rate
+# The series drawn in curves.svg, one per recipe, seed 42 where there are several (its other
+# seeds are drawn thin, unlabelled); categorical slots of the reference palette (dataviz
+# skill), SFT-v3 in neutral ink.
 CURVE_SERIES = [
     ("SFT-v3", "#52514e"), ("DPO_V3_4880 s42", "#2a78d6"), ("GRPO-v3-all ckpt 525", "#eb6834"),
     ("GRPO+decay R3 s42", "#1baf7a"), ("DAPO+decay D1 s42", "#eda100"), ("Distill s42", "#6250d6"),
@@ -86,10 +93,35 @@ def reference_verdicts(run: str, frame: pd.DataFrame) -> pd.Series:
     return ref.astype(str).str.strip().str.lower()
 
 
-def curve(frame: pd.DataFrame) -> list[float]:
+def curve(frame: pd.DataFrame, grid: np.ndarray = HIRE_GRID) -> list[float]:
     n = len(frame)
     return [100 * opc.matched_flags(frame, "margin", round(h * n))[1]["unstable"]
-            for h in HIRE_GRID]
+            for h in grid]
+
+
+def spread(frame: pd.DataFrame, hire: float) -> dict:
+    """How far an arm's margins sit from its cut, on the snapped margins the matching cuts."""
+    m = pd.Series(np.abs(np.asarray(opc.snap(frame["margin"]))))
+    local = curve(frame, hire + LOCAL)
+    return {"near_cut_pct": 100 * float((m < 1).mean()), "median_abs_margin": float(m.median()),
+            "unstable_local_min_pct": min(local), "unstable_local_max_pct": max(local)}
+
+
+def curve_bands(curves: pd.DataFrame) -> pd.DataFrame:
+    """Mean of (arm - SFT-v3) over the grid points in each hire-rate band, and the share of all
+    grid points where the arm is below SFT-v3."""
+    curves = curves.assign(hire_rate_pct=curves["hire_rate_pct"].round(3))
+    ref = curves[curves["run"] == REFERENCE].set_index("hire_rate_pct")["unstable_pct"]
+    rows = []
+    for label, part in curves[curves["run"] != REFERENCE].groupby("label", sort=False):
+        diff = part.set_index("hire_rate_pct")["unstable_pct"] - ref
+        row = {"label": label, "run": part["run"].iloc[0]}
+        for lo, hi in BANDS:
+            inside = (diff.index >= lo) & ((diff.index < hi) | (hi == BANDS[-1][1]))
+            row[f"band_{lo}_{hi}_pp"] = float(diff[inside].mean())
+        row["points_below_pct"] = 100 * float((diff < 0).mean())
+        rows.append(row)
+    return pd.DataFrame(rows)
 
 
 def costs(arms: pd.DataFrame) -> pd.DataFrame:
@@ -173,7 +205,7 @@ def build(arms: pd.DataFrame) -> tuple[pd.DataFrame, pd.DataFrame]:
         if arm.run == REFERENCE:
             row.update({"hire_rate_own_pct": 100 * ref_hire, "unstable_own_pct": 100 * ref_unstable,
                         "delta_common_pp": 0.0, "tpr_common_pct": ref_tpr,
-                        "tpr_common_vs_ref_pp": 0.0})
+                        "tpr_common_vs_ref_pp": 0.0, **spread(frame, ref_hire)})
         else:
             own = opc.matched_comparison(ref, frame)            # SFT-v3 moved to the arm
             common = opc.matched_comparison(frame, ref)         # the arm moved to SFT-v3
@@ -197,6 +229,7 @@ def build(arms: pd.DataFrame) -> tuple[pd.DataFrame, pd.DataFrame]:
                                        ("guard_merge", "guard_tpr", "guard_agree",
                                         "guard_decided")),
                 "std_verdict": m.get("std_verdict"),
+                **spread(frame, own["hire_rate_run"]),
             })
         rows.append(row)
         curves += [{"label": arm.label, "run": arm.run, "hire_rate_pct": 100 * h,
@@ -215,10 +248,19 @@ def _svg(w: int, h: int, body: list[str]) -> str:
                       f'<rect width="{w}" height="{h}" fill="#fcfcfb"/>', *body, "</svg>"]) + "\n"
 
 
+def other_seeds(curves: pd.DataFrame, label: str) -> pd.DataFrame:
+    """The curves of a charted series' other seeds of the same recipe."""
+    recipe = label.removesuffix(" s42")
+    return curves[curves["label"].str.fullmatch(rf"{re.escape(recipe)} s\d+")
+                  & (curves["label"] != label)]
+
+
 def curves_svg(curves: pd.DataFrame, common: float) -> str:
-    w, h, left, right, top, bottom = 760, 420, 56, 170, 34, 44
+    w, h, left, right, top, bottom = 760, 440, 56, 170, 52, 44
     data = curves[curves["label"].isin([s for s, _ in CURVE_SERIES])]
-    y_hi = float(np.ceil(data["unstable_pct"].max()))
+    thin = [(other_seeds(curves, label), color) for label, color in CURVE_SERIES[1:]]
+    y_hi = float(np.ceil(max([data["unstable_pct"].max()]
+                             + [o["unstable_pct"].max() for o, _ in thin if not o.empty])))
 
     def X(v):
         span = 100 * (HIRE_GRID[-1] - HIRE_GRID[0])
@@ -228,7 +270,9 @@ def curves_svg(curves: pd.DataFrame, common: float) -> str:
         return top + (1 - v / y_hi) * (h - top - bottom)
 
     out = [f'<text x="{left}" y="18" font-weight="bold">Unstable within-group sets against hire '
-           'rate, each arm moved along its own margins (op-margin-v2)</text>']
+           'rate, each arm moved along its own margins (op-margin-v2)</text>',
+           f'<text x="{left}" y="34" fill="#52514e">labelled: one seed per recipe (s42); thin: '
+           'the same recipe\'s other training seeds</text>']
     for t in range(0, int(y_hi) + 1):
         out.append(f'<line x1="{left}" x2="{w - right}" y1="{Y(t):.1f}" y2="{Y(t):.1f}" '
                    'stroke="#e4e3df"/>')
@@ -243,6 +287,12 @@ def curves_svg(curves: pd.DataFrame, common: float) -> str:
                'stroke="#8a8984" stroke-dasharray="4 3"/>')
     out.append(f'<text x="{X(common) + 4:.1f}" y="{top + 10}" fill="#52514e">SFT-v3 '
                f'{common:.2f}%</text>')
+    for others, color in thin:
+        for _, part in others.groupby("label"):
+            pts = " ".join(f"{X(a):.1f},{Y(b):.1f}" for a, b in
+                           zip(part["hire_rate_pct"], part["unstable_pct"]))
+            out.append(f'<polyline points="{pts}" fill="none" stroke="{color}" '
+                       'stroke-width="1" stroke-opacity="0.45"/>')
     ends = []
     for label, color in CURVE_SERIES:
         part = data[data["label"] == label]
@@ -263,7 +313,8 @@ def curves_svg(curves: pd.DataFrame, common: float) -> str:
 
 
 def recipes(table: pd.DataFrame) -> pd.DataFrame:
-    """One row per headline recipe: seeds averaged, guardrails passed by every seed."""
+    """One row per headline recipe: seeds averaged (sd across seeds, ddof 1), guardrails passed
+    by every seed."""
     rows = table[(table["run"] != REFERENCE) & (table["headline"] == "yes")].copy()
     rows["name"] = rows["label"].str.replace(r" s\d+$", "", regex=True)
     rows["passes"] = rows["guardrails"].astype(str).str.split("/").map(
@@ -271,6 +322,8 @@ def recipes(table: pd.DataFrame) -> pd.DataFrame:
     return rows.groupby(["name", "family"], sort=False).agg(
         seeds=("seed", "size"), extra_gpu_h=("extra_gpu_h", "mean"),
         delta_common_pp=("delta_common_pp", "mean"), delta_own_pp=("delta_own_pp", "mean"),
+        delta_common_sd=("delta_common_pp", "std"), delta_own_sd=("delta_own_pp", "std"),
+        delta_own_max=("delta_own_pp", "max"),
         tpr_common_vs_ref_pp=("tpr_common_vs_ref_pp", "mean"),
         passes=("passes", "all")).reset_index()
 
@@ -350,6 +403,7 @@ def main() -> None:
     args.out.mkdir(parents=True, exist_ok=True)
     table.round(4).to_csv(args.out / "final_table.csv", index=False)
     curves.round(4).to_csv(args.out / "curves.csv", index=False)
+    curve_bands(curves).round(3).to_csv(args.out / "curve_bands.csv", index=False)
     family_cost(pd.read_csv(FINAL / "families.csv")).to_csv(args.out / "family_cost.csv",
                                                             index=False)
     eval_cost().to_csv(args.out / "eval_cost.csv", index=False)

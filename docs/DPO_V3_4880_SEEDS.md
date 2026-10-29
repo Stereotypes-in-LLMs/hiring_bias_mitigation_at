@@ -69,8 +69,8 @@ GPU-h are measured steps from `reports/cost/steps.csv`; allocated hours in brack
 |---|---|---|---|---|
 | 1 | seed 43: training | 5198797 (commit 1912a3d) | 4.04 [4.06] | done 2026-10-29, 1:00:54, step 305 saved |
 | 2 | seed 43: evaluation | 5199636 (commit 1912a3d) | 0.50 [1.21] | done 2026-10-29, 0:18:09, verdict below |
-| 3 | seed 44: training | 5199738 | | submitted 2026-10-29 |
-| 4 | seed 44: evaluation | | | |
+| 3 | seed 44: training | 5199738 (commit 1b981f6) | 4.07 [4.09] | done 2026-10-29, 1:01:18, step 305 saved |
+| 4 | seed 44: evaluation | 5200680 | | submitted 2026-10-29 |
 
 Spent so far: 5.27 GPU-h allocated of the 12 GPU-h cap.
 

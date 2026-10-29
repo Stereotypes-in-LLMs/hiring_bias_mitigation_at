@@ -1,8 +1,8 @@
-name,family,seeds,extra_gpu_h,delta_common_pp,delta_own_pp,tpr_common_vs_ref_pp,passes
-DPO_V3_4880,dpo,2,17.94,-0.556,-0.564,0.548,True
-GRPO-v3-all final,grpo,1,39.63,-0.135,-0.557,-0.937,False
-GRPO-v3-all ckpt 525,grpo,1,37.9,-0.18,-1.017,-0.117,True
-GRPO+decay R3,grpo,2,39.725,-0.078,-0.468,0.464,True
-GRPO+decay R4,grpo,3,27.02,-0.165,-0.445,0.109,True
-DAPO+decay D1,dapo,3,20.263,0.134,-0.255,1.271,True
-Distill,distill,3,21.367,-0.285,-0.57,-0.291,True
+name,family,seeds,extra_gpu_h,delta_common_pp,delta_own_pp,delta_common_sd,delta_own_sd,delta_own_max,tpr_common_vs_ref_pp,passes
+DPO_V3_4880,dpo,2,17.94,-0.556,-0.564,0.367,0.667,-0.092,0.548,True
+GRPO-v3-all final,grpo,1,39.63,-0.135,-0.557,,,-0.557,-0.937,False
+GRPO-v3-all ckpt 525,grpo,1,37.9,-0.18,-1.017,,,-1.017,-0.117,True
+GRPO+decay R3,grpo,2,39.725,-0.078,-0.468,0.256,0.337,-0.23,0.464,True
+GRPO+decay R4,grpo,3,27.02,-0.165,-0.445,0.262,0.286,-0.163,0.109,True
+DAPO+decay D1,dapo,3,20.263,0.134,-0.255,0.478,0.556,0.283,1.271,True
+Distill,distill,3,21.367,-0.285,-0.57,0.149,0.14,-0.419,-0.291,True
