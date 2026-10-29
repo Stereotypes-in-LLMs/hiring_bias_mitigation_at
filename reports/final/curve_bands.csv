@@ -1,0 +1,24 @@
+label,run,band_10_15_pp,band_15_20_pp,band_20_25_pp,band_25_30_pp,band_30_35_pp,points_below_pct
+DPO-v3,Qwen3.5-9B--en--dpo--adapter--en_only_dpo_v3_step240,0.072,-0.238,0.361,0.022,0.506,43.137
+DPO on-policy 1568,Qwen3.5-9B--en--dpo--adapter--en_only_dpo_v3_onpolicy_step98,0.188,0.135,-0.219,-0.067,1.553,41.176
+DPO_V3_4880 s42,Qwen3.5-9B--en--dpo--adapter--en_only_dpo_v3_4880_step305,0.542,0.208,-0.63,0.092,1.313,37.255
+DPO_V3_4880 s43,Qwen3.5-9B--en--dpo--adapter--en_only_dpo_v3_4880_seed43_step305,0.647,-0.169,-0.416,0.442,2.552,39.216
+DPO_V3_4880 s44,Qwen3.5-9B--en--dpo--adapter--en_only_dpo_v3_4880_seed44_step305,0.681,-0.244,-0.237,0.074,2.073,35.294
+GRPO-v3,Qwen3.5-9B--en--grpo--adapter--en_only_grpo_v3,-0.17,-0.18,0.148,-0.381,0.439,58.824
+GRPO-v3-all final,Qwen3.5-9B--en--grpo--adapter--en_only_grpo_v3_all,0.071,-0.368,-0.446,-0.22,0.315,62.745
+GRPO-v3-all ckpt 525,Qwen3.5-9B--en--grpo--adapter--en_only_grpo_v3_all_step525,0.079,-0.519,-0.486,-0.116,0.042,64.706
+DAPO-v3-all,Qwen3.5-9B--en--grpo--adapter--en_only_dapo_v3_all,-0.319,0.151,0.255,0.408,0.055,49.02
+GRPO+decay R3 s42,Qwen3.5-9B--en--grpo--adapter--en_only_grpo_improve_r3_wsd,0.043,-0.318,-0.245,-0.255,0.017,66.667
+GRPO+decay R3 s43,Qwen3.5-9B--en--grpo--adapter--en_only_grpo_improve_r3_wsd_seed43,0.203,0.008,-0.468,-0.034,0.468,54.902
+GRPO+decay R4 s42,Qwen3.5-9B--en--grpo--adapter--en_only_grpo_improve_r4_tipped_v2,0.003,-0.148,-0.483,0.489,0.048,50.98
+GRPO+decay R4 s43,Qwen3.5-9B--en--grpo--adapter--en_only_grpo_improve_r4_tipped_seed43,-0.038,-0.177,-0.447,0.098,0.271,62.745
+GRPO+decay R4 s44,Qwen3.5-9B--en--grpo--adapter--en_only_grpo_improve_r4_tipped_seed44,0.169,-0.296,-0.21,-0.203,0.364,60.784
+DAPO+decay D1 s42,Qwen3.5-9B--en--grpo--adapter--en_only_dapo_improve_d1_decay,-0.047,-0.488,-0.011,0.154,-0.362,56.863
+DAPO+decay D1 s43,Qwen3.5-9B--en--grpo--adapter--en_only_dapo_improve_d1_decay_seed43,0.126,-0.44,-0.188,-0.075,0.248,58.824
+DAPO+decay D1 s44,Qwen3.5-9B--en--grpo--adapter--en_only_dapo_improve_d1_decay_seed44,0.137,-0.139,-0.202,0.456,-0.229,50.98
+DAPO+decay+KL D2,Qwen3.5-9B--en--grpo--adapter--en_only_dapo_improve_d2_decay_kl,0.217,-0.397,-0.015,-0.195,0.254,45.098
+Distill s42,Qwen3.5-9B--en--sft--adapter--en_only_decision_distill_seed42,0.051,-0.301,-0.332,-0.137,-0.091,66.667
+Distill s43,Qwen3.5-9B--en--sft--adapter--en_only_decision_distill_seed43,-0.08,-0.145,-0.413,-0.107,-0.124,80.392
+Distill s44,Qwen3.5-9B--en--sft--adapter--en_only_decision_distill_seed44,0.032,-0.204,-0.422,-0.195,-0.031,68.627
+Distill layers 0-20 s43,Qwen3.5-9B--en--sft--adapter--en_only_decision_distill_l0_20_seed43,-0.053,-0.163,-0.476,-0.129,-0.213,74.51
+GRPO from distill s42,Qwen3.5-9B--en--grpo--adapter--en_only_grpo_improve_r6_distill_seed42,-0.2,-0.466,-0.417,-0.361,-0.251,78.431

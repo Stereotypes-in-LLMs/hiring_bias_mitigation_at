@@ -1,0 +1,56 @@
+# Hand-written -- NOT produced by generate_experiment_configs.py, so it survives a regeneration.
+#
+# DPO_V3_4880, training seed 43 (user, 2026-10-29: "补 43、44，共 3 个"). Identical to
+# qwen3.5-9b_en_only_dpo_v3_4880_gh200.yaml (seed 42) except `seed`, `output_dir` and
+# `wandb_run_name`: same 4,880 pairs and split, same SFT-v3 start, same schedule. The seed sets
+# the LoRA initialisation, the data order and the seeded 200-pair eval subsample. The final
+# checkpoint, step 305, is the one audited, declared before training (docs/DPO_V3_4880_SEEDS.md).
+#   HBM_COST_ARM=dpo_v3_4880_seeds REPO=$PWD \
+#   CONFIG=configs/mitigation/dpo/qwen3.5-9b_en_only_dpo_v3_4880_seed43_gh200.yaml \
+#     scripts/cscs/submit.sh -p normal -t 02:00:00 scripts/cscs/train_dpo.sbatch
+stage: dpo
+objective: dpo
+data_kind: dpo_v3_5k
+base_model: Qwen/Qwen3.5-9B
+sft_checkpoint: outputs/sft/qwen3.5-9b_en_only_sft_v3_additional
+data_config: configs/data/en_only_dpo_v3_5k.yaml
+output_dir: outputs/dpo/qwen3.5-9b_en_only_dpo_v3_4880_seed43
+use_lora: true
+lora_r: 32
+lora_alpha: 64
+lora_dropout: 0.05
+beta: 0.3                      # as r2em
+loss_type:
+- sigmoid
+- sft
+loss_weights:
+- 1.0
+- 0.2
+precompute_ref_log_probs: false
+max_seq_len: 3072
+max_prompt_len: 2944           # read only by a TRL that still has max_prompt_length
+num_train_epochs: 1
+max_steps: -1                  # one epoch
+warmup_steps: 10
+learning_rate: 5.0e-05
+per_device_train_batch_size: 1
+per_device_eval_batch_size: 1
+gradient_accumulation_steps: 4        # x 4 GPUs x batch 1 = 16
+gradient_checkpointing: true
+weight_decay: 0.01
+dtype: bfloat16
+seed: 43
+eval_steps: 25
+eval_limit_rows: 200
+early_stopping_patience: 0
+memory_floor_gb: 12
+wandb_project: hiring-bias-mitigation
+wandb_run_name: dpo-qwen3.5-9b_en_only_dpo_v3_4880_seed43
+decision_eval_rows: 64
+resume: true
+save_steps: 25
+save_total_limit: 20
+load_best_model_at_end: false
+ddp_find_unused_parameters: false
+gradient_checkpointing_kwargs:
+  use_reentrant: false

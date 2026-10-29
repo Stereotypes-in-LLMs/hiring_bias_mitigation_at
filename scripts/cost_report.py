@@ -381,13 +381,22 @@ def _text(step: dict) -> str:
     return step.get("_text") or step.get("label") or ""
 
 
+def _widens(current: str, new: str) -> bool:
+    """Whether arm `new` is `current` shared with more arms."""
+    return set(current.split("+")) < set(new.split("+"))
+
+
 def apply_labels(steps: list[dict], rules: list[tuple]) -> None:
     """Fills each step's empty arm, and sets its stage and recipe override, from the first
     matching rule.
 
     The key is "job name | job id | config | label | command", with a log step's whole
     marker as the label. A step that names several configs (one margin pass over four arms,
-    a merge check of several adapters) belongs to all their arms, joined with "+"."""
+    a merge check of several adapters) belongs to all their arms, joined with "+".
+
+    A rule never reassigns an arm a record carries, but it may widen it into a shared one
+    that contains it: a rule `a+b` on a step recorded under `a` makes it `a+b` (round 3's data,
+    recorded under the DPO arm, also built GRPO-v3-all's prompts)."""
     for step in steps:
         if not step["arm"]:
             named = CONFIG_IN_TEXT.findall(_text(step))
@@ -398,7 +407,7 @@ def apply_labels(steps: list[dict], rules: list[tuple]) -> None:
         key = f"{key} | {_text(step)} | {step.get('command') or ''}"
         for pattern, arm, stage, recipe in rules:
             if pattern.search(key):
-                if arm and not step["arm"]:
+                if arm and (not step["arm"] or _widens(step["arm"], arm)):
                     step["arm"] = arm
                 if stage:
                     step["stage"] = stage

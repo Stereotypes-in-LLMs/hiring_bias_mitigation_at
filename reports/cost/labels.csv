@@ -1,4 +1,5 @@
 pattern,arm,stage,recipe,note
+\| (5115569|5116018|5115774|5116328) \|,dpo_v3_5k+grpo_v3_all,,,"round 3's teacher votes (5115569, 5116018) and SFT-v3's k=8 samples (5115774, 5116328): DPO_V3_4880's pairs and GRPO-v3-all's prompts both come from them (docs/GRPO_V3.md); the judges and the score are DPO's alone (user, 2026-10-29: shared). Before the rules below, which would match first"
 dpo_v2neg_r2em,dpo_r2em,,,training and evaluation configs name their arm; r2em before r2
 dpo_v2neg_r2(_|\.yaml),dpo_r2,,,
 dpo_v2neg_r1(_|\.yaml),dpo_r1,,,

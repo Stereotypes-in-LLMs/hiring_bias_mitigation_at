@@ -1,0 +1,4 @@
+family,cost_arms,note
+DPO after SFT-v3,dpo_v3 dpo_v3_5k dpo_v3_4880_seeds,"round 2 (DPO-v3, on-policy only) and round 3 (DPO_V3_4880 and its seeds), data included"
+GRPO/DAPO after SFT-v3,grpo_v3 grpo_v3_new grpo_v3_all grpo_v3_all_monitor8_calibration grpo425-startup-factorial grpo425-startup-factorial-retry1 grpo-v3-all-lr3e6-from425 grpo-v3-all-lr3e6-from425-retry1 grpo_improve dapo_v3_all dapo_improve paired_probe_dapo_sft_v3,"GRPO-v3, GRPO-v3-new, GRPO-v3-all and its diagnostics, DAPO-v3-all, GRPO-improve and DAPO-improve (rounds 1-6), data included"
+Decision distillation,decision_distill,"three seeds and the layer-restricted run; the activation-patching passes under the same arm are analysis and left out"
