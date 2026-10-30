@@ -1,0 +1,38 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="640" height="450" viewBox="0 0 640 450" font-family="Liberation Sans, sans-serif">
+<rect x="125.0" y="62.0" width="14.6" height="278.0" fill="#efeee9"/>
+<rect x="183.2" y="62.0" width="14.6" height="278.0" fill="#efeee9"/>
+<rect x="241.5" y="62.0" width="14.6" height="278.0" fill="#efeee9"/>
+<rect x="299.7" y="62.0" width="14.6" height="278.0" fill="#efeee9"/>
+<rect x="358.0" y="62.0" width="14.6" height="278.0" fill="#efeee9"/>
+<rect x="416.2" y="62.0" width="14.6" height="278.0" fill="#efeee9"/>
+<rect x="474.5" y="62.0" width="14.6" height="278.0" fill="#efeee9"/>
+<rect x="532.7" y="62.0" width="7.3" height="278.0" fill="#efeee9"/>
+<text x="14.0" y="26.0" font-size="19" text-anchor="start" fill="#52514e">Attribute effect removed, logits per pair</text>
+<line x1="74.0" y1="340.0" x2="540.0" y2="340.0" stroke="#e4e3df" stroke-width="1.0"/>
+<text x="64.0" y="346.0" font-size="17" text-anchor="end" fill="#52514e">0.0</text>
+<line x1="74.0" y1="247.3" x2="540.0" y2="247.3" stroke="#e4e3df" stroke-width="1.0"/>
+<text x="64.0" y="253.3" font-size="17" text-anchor="end" fill="#52514e">0.5</text>
+<line x1="74.0" y1="154.7" x2="540.0" y2="154.7" stroke="#e4e3df" stroke-width="1.0"/>
+<text x="64.0" y="160.7" font-size="17" text-anchor="end" fill="#52514e">1.0</text>
+<line x1="74.0" y1="62.0" x2="540.0" y2="62.0" stroke="#e4e3df" stroke-width="1.0"/>
+<text x="64.0" y="68.0" font-size="17" text-anchor="end" fill="#52514e">1.5</text>
+<text x="74.0" y="368.0" font-size="17" text-anchor="middle" fill="#52514e">0</text>
+<text x="146.8" y="368.0" font-size="17" text-anchor="middle" fill="#52514e">5</text>
+<text x="219.6" y="368.0" font-size="17" text-anchor="middle" fill="#52514e">10</text>
+<text x="292.4" y="368.0" font-size="17" text-anchor="middle" fill="#52514e">15</text>
+<text x="365.2" y="368.0" font-size="17" text-anchor="middle" fill="#52514e">20</text>
+<text x="438.1" y="368.0" font-size="17" text-anchor="middle" fill="#52514e">25</text>
+<text x="510.9" y="368.0" font-size="17" text-anchor="middle" fill="#52514e">30</text>
+<text x="307.0" y="398.0" font-size="18" text-anchor="middle" fill="#52514e">residual stream patched at the input to layer L</text>
+<line x1="74.0" y1="340.0" x2="540.0" y2="340.0" stroke="#52514e" stroke-width="1.5"/>
+<path d="M74.0,340.0 L88.6,336.0 L103.1,335.7 L117.7,323.7 L132.2,325.0 L146.8,329.2 L161.4,322.5 L175.9,294.7 L190.5,253.9 L205.1,239.7 L219.6,210.3 L234.2,189.7 L248.8,149.1 L263.3,142.4 L277.9,130.5 L292.4,127.5 L307.0,108.8 L321.6,106.6 L336.1,96.8 L350.7,93.4 L365.2,92.2 L379.8,93.1 L394.4,92.1 L408.9,92.1 L423.5,92.1 L438.1,92.5 L452.6,92.7 L467.2,92.4 L481.8,92.5 L496.3,92.4 L510.9,92.4 L525.4,92.7 L540.0,92.9" fill="none" stroke="#888780" stroke-width="4" stroke-linejoin="round" stroke-linecap="round"/>
+<path d="M74.0,340.0 L88.6,339.2 L103.1,340.5 L117.7,339.4 L132.2,341.0 L146.8,340.4 L161.4,340.0 L175.9,335.9 L190.5,327.6 L205.1,330.1 L219.6,320.8 L234.2,318.9 L248.8,305.0 L263.3,302.2 L277.9,297.9 L292.4,286.1 L307.0,256.4 L321.6,226.0 L336.1,157.5 L350.7,136.4 L365.2,104.1 L379.8,101.6 L394.4,101.4 L408.9,102.3 L423.5,98.0 L438.1,98.6 L452.6,99.0 L467.2,98.4 L481.8,96.1 L496.3,94.9 L510.9,94.6 L525.4,94.7 L540.0,92.9" fill="none" stroke="#888780" stroke-width="4" stroke-linejoin="round" stroke-linecap="round" stroke-dasharray="10 7"/>
+<text x="552.0" y="98.9" font-size="18" text-anchor="start" fill="#2C2C2A" font-weight="bold">Base</text>
+<path d="M74.0,340.0 L88.6,342.8 L103.1,335.5 L117.7,333.5 L132.2,332.7 L146.8,334.7 L161.4,325.9 L175.9,318.1 L190.5,312.3 L205.1,310.6 L219.6,302.8 L234.2,306.5 L248.8,307.8 L263.3,286.6 L277.9,272.2 L292.4,260.2 L307.0,254.3 L321.6,256.2 L336.1,256.1 L350.7,255.3 L365.2,255.5 L379.8,252.7 L394.4,254.5 L408.9,254.5 L423.5,251.4 L438.1,252.6 L452.6,251.8 L467.2,252.5 L481.8,257.5 L496.3,257.6 L510.9,257.8 L525.4,256.6 L540.0,257.0" fill="none" stroke="#6250d6" stroke-width="4" stroke-linejoin="round" stroke-linecap="round"/>
+<path d="M74.0,340.0 L88.6,339.7 L103.1,338.9 L117.7,338.8 L132.2,338.0 L146.8,338.2 L161.4,339.3 L175.9,339.3 L190.5,342.4 L205.1,341.3 L219.6,342.5 L234.2,342.0 L248.8,340.0 L263.3,340.9 L277.9,337.7 L292.4,333.4 L307.0,328.3 L321.6,317.4 L336.1,299.0 L350.7,288.5 L365.2,267.5 L379.8,263.7 L394.4,263.8 L408.9,263.3 L423.5,258.4 L438.1,259.1 L452.6,257.2 L467.2,259.7 L481.8,258.5 L496.3,258.7 L510.9,258.4 L525.4,258.3 L540.0,257.0" fill="none" stroke="#6250d6" stroke-width="4" stroke-linejoin="round" stroke-linecap="round" stroke-dasharray="10 7"/>
+<text x="552.0" y="263.0" font-size="18" text-anchor="start" fill="#2C2C2A" font-weight="bold">SFT-v3</text>
+<line x1="14.0" y1="434.0" x2="50.0" y2="434.0" stroke="#52514e" stroke-width="4"/>
+<text x="60.0" y="440.0" font-size="17" text-anchor="start" fill="#52514e">all tokens after the attribute</text>
+<line x1="336.0" y1="434.0" x2="372.0" y2="434.0" stroke="#52514e" stroke-width="4" stroke-dasharray="10 7"/>
+<text x="382.0" y="440.0" font-size="17" text-anchor="start" fill="#52514e">last tokens only</text>
+</svg>
