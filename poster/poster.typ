@@ -1,256 +1,254 @@
-// GTC 2027 poster, first draft. 44 x 35 in, landscape.
-// Every number comes from numbers.json, and cropped figures from figures/, both written by
-// build_poster.py from the repository's result tables and figures. Dashed boxes are figures still to be drawn. Text in [square brackets] is
-// still to be agreed.
+// GTC 2027 poster. 44 x 35 in, landscape. Six sections; the poster keeps the core and the
+// QR code leads to DETAILS.md. Every number comes from numbers.json, written by
+// build_poster.py from the repository's result tables. Text in [square brackets] is still to
+// be agreed.
 
 #let N = json("numbers.json")
+#let ex = N.example
 
 #let ink = rgb("#2C2C2A")
 #let muted = rgb("#5F5E5A")
 #let mine = (fg: rgb("#0C447C"), bg: rgb("#E6F1FB"), line: rgb("#185FA5"))
 #let marta = (fg: rgb("#3C3489"), bg: rgb("#EEEDFE"), line: rgb("#534AB7"))
 #let shared = (fg: rgb("#444441"), bg: rgb("#F1EFE8"), line: rgb("#B4B2A9"))
+#let reject-fill = rgb("#FBEAE3")
+#let reject-line = rgb("#eb6834")
 
 #set page(width: 44in, height: 35in, margin: 0.9in, fill: white)
-#set text(font: "Liberation Sans", size: 25pt, fill: ink)
-#set par(leading: 0.5em, spacing: 0.75em)
-#set list(spacing: 0.7em, indent: 0.2em, marker: text(fill: muted, sym.bullet))
+#set text(font: "Liberation Sans", size: 26pt, fill: ink)
+#set par(leading: 0.5em, spacing: 0.8em)
+#set list(spacing: 0.6em, indent: 0.2em, marker: text(fill: muted, sym.bullet))
 
-#let panel(title, owner: mine, fill-height: true, body) = block(
-  width: 100%, height: if fill-height { 100% } else { auto }, stroke: 2pt + owner.line, radius: 16pt, clip: true, {
-    block(width: 100%, fill: owner.bg, inset: (x: 26pt, y: 18pt),
-      text(size: 38pt, weight: "bold", fill: owner.fg, title))
-    block(width: 100%, inset: (x: 26pt, top: 20pt, bottom: 20pt), body)
+// A numbered section.
+#let section(num, title, owner: mine, body) = block(
+  width: 100%, height: 100%, stroke: 2pt + owner.line, radius: 16pt, clip: true, {
+    block(width: 100%, fill: owner.bg, inset: (x: 26pt, y: 16pt), {
+      box(width: 46pt, height: 46pt, radius: 23pt, fill: owner.line,
+        align(center + horizon, text(size: 28pt, weight: "bold", fill: white, num)))
+      h(14pt)
+      text(size: 40pt, weight: "bold", fill: owner.fg, title)
+    })
+    block(width: 100%, inset: (x: 26pt, top: 18pt, bottom: 18pt), body)
   })
 
-#let sub(body) = block(above: 1.1em, below: 0.6em,
-  text(size: 29pt, weight: "bold", fill: mine.fg, body))
-
-#let todo(height, body) = block(
-  width: 100%, height: height, radius: 12pt, inset: 22pt,
-  stroke: (paint: shared.line, thickness: 3pt, dash: "dashed"),
-  align(center + horizon, text(size: 22pt, fill: muted, body)))
-
+#let note(body) = text(size: 21pt, fill: muted, body)
 #let callout(owner: shared, body) = block(
-  width: 100%, fill: owner.bg, radius: 12pt, inset: 20pt, above: 1em, body)
+  width: 100%, fill: owner.bg, radius: 12pt, inset: 18pt, above: 0.9em, body)
 
-#let cap(body) = block(above: 0.5em, below: 1em, text(size: 19pt, fill: muted, body))
-
-// The audit, drawn: one CV, its variants in one group, one decision each.
-#let decision(body, odd: false) = box(
-  width: 100%, fill: if odd { rgb("#FBEAE3") } else { white }, radius: 8pt, inset: (y: 8pt),
-  stroke: 1.5pt + if odd { rgb("#eb6834") } else { shared.line },
-  align(center, text(size: 22pt, weight: "bold", body)))
-#let variant(body) = block(
-  width: 100%, fill: mine.bg, radius: 8pt, inset: (x: 10pt, y: 10pt), below: 6pt,
-  align(center, text(size: 21pt, fill: mine.fg, body)))
-#let audit-schematic = {
-  set par(leading: 0.4em)
-  align(center, block(fill: shared.bg, radius: 10pt, inset: (x: 18pt, y: 12pt),
-    text(size: 23pt)[*One job ad + one CV*, from #N.audit_pairs pairs]))
-  align(center, block(above: 6pt, below: 6pt, text(size: 20pt, fill: muted)[#sym.arrow.b insert one value of the attribute #sym.arrow.b]))
-  grid(
-    columns: (1fr, 1fr, 1fr),
-    gutter: 10pt,
-    { variant["combat", implicit]; decision[hire] },
-    { variant["civilian", implicit]; decision[hire] },
-    { variant[other values, implicit]; decision(odd: true)[reject] },
-  )
-  block(above: 12pt, text(size: 21pt, fill: muted)[One *set* = the variants of one CV in one group and condition. Decisions differ, so this set is *unstable* (illustration). An attribute-free copy of each CV gives the hire rate.])
-}
-
-// The route the attribute takes in the base model (Marta's patching).
-#let hop(title, detail) = block(
-  width: 100%, height: 100%, fill: marta.bg, radius: 10pt, inset: (x: 8pt, y: 8pt),
+// ---------------------------------------------------------------- methodology diagram
+#let node(title, detail, owner: mine) = block(
+  width: 100%, height: 100%, fill: owner.bg, stroke: 1.5pt + owner.line, radius: 10pt,
+  inset: (x: 12pt, y: 10pt),
   align(center + horizon, {
-    text(size: 18pt, weight: "bold", fill: marta.fg, title)
+    text(size: 25pt, weight: "bold", fill: owner.fg, title)
     linebreak()
-    text(size: 16pt, fill: marta.line, detail)
+    text(size: 21pt, fill: owner.fg, detail)
   }))
-#let pathway = grid(
-  columns: (1fr, auto, 1fr, auto, 1fr, auto, 1fr),
-  rows: 1.45in,
-  column-gutter: 4pt,
+#let arrow(owner: mine) = align(center + horizon, text(size: 34pt, fill: owner.line, sym.arrow.r))
+#let down(owner: marta) = align(center + horizon, text(size: 34pt, fill: owner.line, sym.arrow.b))
+#let stack(..items) = grid(rows: (1fr,) * items.pos().len(), gutter: 8pt, ..items)
+
+#let pipeline = grid(
+  columns: (1fr, 0.45in, 1fr, 0.45in, 1fr, 0.45in, 1.1fr, 0.45in, 1fr, 0.45in, 1fr, 0.45in, 1.1fr),
+  rows: (4.3in, 0.6in, 1.9in, auto),
   align: horizon,
-  hop[Attribute][words in the CV],
-  text(size: 24pt, fill: marta.line, sym.arrow.r),
-  hop[Hub][layer-15 attention, head L15.H11],
-  text(size: 24pt, fill: marta.line, sym.arrow.r),
-  hop[L#N.pathway_layers][effect reaches the decision position],
-  text(size: 24pt, fill: marta.line, sym.arrow.r),
-  hop[Readout][MLP 31 → hire or reject],
+
+  node[Training pool][job–CV pairs; no benchmark candidate],
+  arrow(),
+  node[Teacher votes][#N.teacher, #N.vote_draws draws per prompt],
+  arrow(),
+  node[SFT-v3][LoRA #N.lora on the voted decisions],
+  arrow(),
+  stack(node[DPO][on-policy pairs], node[GRPO / DAPO][verifiable reward],
+        node[Distillation][own attribute-free decision]),
+  arrow(),
+  node[Merge][at least #N.min_merge_kept_pct% of the update kept],
+  arrow(),
+  node[Batch audit][vLLM on GH200, prefix cache, #N.audit_prompts prompts],
+  arrow(),
+  stack(node[Matched comparison][same hire rate, 95% CI, guardrails],
+        node[Cost ledger][GPU-hours of every step]),
+
+  [], [], [], [], [], [], down(), [], [], [], [], [], [],
+
+  grid.cell(colspan: 5, block(width: 100%, height: 100%, inset: (x: 6pt),
+    align(left + horizon, text(size: 22pt, fill: marta.fg)[*Activation patching* (Marta Samoilenko): where does the attribute reach the decision?]))),
+  [],
+  node(owner: marta)[Models][base, SFT-v3, best arms],
+  arrow(owner: marta),
+  node(owner: marta)[Exact margins][HF, at least #N.patch_gate agreement with the audit],
+  arrow(owner: marta),
+  node(owner: marta)[Contrast pairs][same CV, two attribute values],
+  arrow(owner: marta),
+  node(owner: marta)[Patching → pathway][residual, components, heads],
+
+  grid.cell(colspan: 13, block(above: 14pt, note[All on CSCS Alps, NVIDIA GH200 nodes: TRL and PEFT for training, vLLM #N.vllm_version for audits; every GPU step is metered.])),
 )
 
-#let stage(title, detail) = block(
-  width: 100%, fill: mine.bg, radius: 10pt, inset: (x: 18pt, y: 12pt), below: 0pt, {
-    text(weight: "bold", fill: mine.fg, title)
-    linebreak()
-    text(size: 20pt, fill: mine.line, detail)
-  })
-#let down = align(center, block(above: 4pt, below: 4pt, text(size: 24pt, fill: shared.line, sym.arrow.b)))
+// ---------------------------------------------------------------- dataset example
+#let chip(body, odd: false) = box(
+  width: 100%, fill: if odd { reject-fill } else { white }, radius: 8pt, inset: (y: 7pt),
+  stroke: 1.5pt + if odd { reject-line } else { shared.line },
+  align(center, text(size: 22pt, weight: "bold", body)))
 
-#let hero(number, label) = block(
-  width: 100%, height: 100%, fill: shared.bg, radius: 16pt, inset: (x: 28pt, y: 20pt), {
-    text(size: 72pt, weight: "bold", fill: ink, number)
-    v(0.2em)
-    text(size: 24pt, fill: muted, label)
-  })
-
-#grid(
-  rows: (auto, 3.2in, 1fr, auto),
-  gutter: 0.45in,
-
-  // Title band.
+#let example-card = block(width: 100%, fill: shared.bg, radius: 12pt, inset: 20pt, {
+  set par(leading: 0.45em)
+  text(size: 27pt, weight: "bold")[Example: #ex.job_position]
+  v(0.3em)
+  text(size: 22pt)[*Job:* #ex.job_musts.map(m => ["#m"]).join([ · ])]
+  v(0.2em)
+  text(size: 22pt)[*CV:* #ex.cv_role. #ex.cv_lines.map(l => ["#l"]).join([ ])]
+  v(0.4em)
+  text(size: 22pt)[*One sentence added* (implicit wording), and SFT-v3's decision:]
+  v(0.2em)
   grid(
-    columns: (1fr, 7in),
+    columns: (1fr, 2.3in),
+    gutter: 8pt,
+    align: horizon,
+    ..ex.variants.map(v => (
+      text(size: 21pt)["#v.sentence"],
+      chip(odd: v.decision != "hire")[#v.decision])).flatten(),
+  )
+  v(0.4em)
+  let vet = ex.variants.find(v => v.value == "War veteran")
+  let civ = ex.variants.find(v => v.value == "Civilian")
+  text(size: 21pt)[*Reason, war veteran:* "#vet.feedback"]
+  v(0.15em)
+  text(size: 21pt)[*Reason, civilian:* "#civ.feedback"]
+  v(0.3em)
+  note[GPT-4o and SFT-v3 on the attribute-free copy: #ex.attr_free_decision. Quoted as written.]
+})
+
+// ---------------------------------------------------------------- results table
+#let results-table = table(
+  columns: (2.3fr, 1fr, 1.2fr, 1.4fr, 1.8fr, 1.1fr),
+  stroke: none,
+  inset: (x: 10pt, y: 13pt),
+  fill: (_, y) => if y == 0 { shared.bg } else if y == 2 { mine.bg },
+  align: (x, _) => if x == 0 { left } else { right },
+  table.header([*Model*], [*Hire rate*], [*Unstable sets*], [*vs base, pp*],
+               [*95% CI or seed range*], [*GPU-h*]),
+  ..N.vs_base.map(r => (
+    if r.seeds != "" and r.seeds != "1" [#r.model #text(size: 20pt, fill: muted)[(#r.seeds seeds)]] else [#r.model],
+    r.hire, r.unstable, if r.delta == "" [—] else [*#r.delta*],
+    text(size: 22pt, r.range), r.gpu_h)).flatten(),
+)
+
+// ---------------------------------------------------------------- findings
+#let finding(number, body) = block(
+  width: 100%, height: 100%, fill: white, radius: 14pt, inset: (x: 22pt, y: 16pt), {
+    text(size: 58pt, weight: "bold", number)
+    v(0.1em)
+    text(size: 22pt, fill: muted, body)
+  })
+
+// ================================================================ page
+#grid(
+  rows: (auto, 9.3in, 1fr, 4.7in),
+  gutter: 0.42in,
+
+  grid(
+    columns: (1fr, 6.5in),
     gutter: 0.6in,
     {
-      text(size: 82pt, weight: "bold")[What training after SFT buys for stable LLM hiring decisions, and what it costs]
-      v(0.15em)
-      text(size: 34pt, fill: muted)[Qwen3.5-9B on an English counterfactual hiring audit, trained and evaluated on NVIDIA GH200 (CSCS Alps)]
+      text(size: 80pt, weight: "bold")[What training after SFT buys for stable LLM hiring decisions, and what it costs]
       v(0.1em)
+      text(size: 32pt, fill: muted)[Qwen3.5-9B on an English counterfactual hiring audit, trained and evaluated on NVIDIA GH200 (CSCS Alps)]
+      v(0.05em)
       text(size: 30pt)[\[Authors and affiliations, order to be agreed\]]
     },
-    grid(columns: 2, gutter: 0.3in,
-      todo(2.6in, [logos]),
-      todo(2.6in, [QR code \ repository])),
+    block(width: 100%, height: 2.6in, radius: 12pt, inset: 22pt,
+      stroke: (paint: shared.line, thickness: 3pt, dash: "dashed"),
+      align(center + horizon, text(size: 22pt, fill: muted)[logos])),
   ),
 
-  // Headline numbers.
   grid(
-    columns: (1fr, 1fr, 1fr, 1fr),
-    gutter: 0.45in,
-    hero[#N.distill_mean pp][best mean change in unstable sets over three training seeds (decision distillation, sd #N.distill_sd), at its own hire rate],
-    hero[#N.dpo_held][DPO training seeds whose 95% interval stays below 0. Seed 42's #N.dpo_seeds.at(0).own pp did not replicate],
-    hero[#N.explore_ratio][GPU-hours spent exploring GRPO and DAPO (#N.explore_rl) against DPO (#N.explore_dpo)],
-    hero[#N.b_speedup][audit generation speed from vLLM prefix caching on one GH200, against cache off and shuffled order],
+    columns: (26fr, 74fr),
+    gutter: 0.42in,
+    section("1", [Problem formulation])[
+      A model that screens CVs should give the same decision when only a protected attribute changes. After supervised fine-tuning (SFT), does further training (DPO, RL with GRPO or DAPO, or decision distillation) make the decisions more stable, and at what GPU cost?
+
+      #v(0.2em)
+      #set text(size: 27pt)
+      $ U(f) = 1 / abs(cal(S)) sum_(S in cal(S)) bb(1) [exists a, b in S : f(x_a) != f(x_b)] $
+      $ Delta = U(f_"method" | h) - U(f_"reference" | h) $
+      #note[$S$: the attribute variants of one CV. $h$: one shared hire rate. Better means $Delta < 0$ with its 95% CI below 0.]
+
+      #callout[#set text(size: 23pt)
+        *Why one shared hire rate.* A model that rejects more looks more stable. Our GRPO pilot looked better, #N.grpo_pilot_delta pp, only because its hire rate fell #N.grpo_pilot_hire.]
+    ],
+    section("2", [Methodology: one pipeline for training, audit and mechanism])[
+      #pipeline
+    ],
   ),
 
-  // Main row.
   grid(
-    columns: (22fr, 34fr, 24fr, 20fr),
-    gutter: 0.45in,
+    columns: (30fr, 21fr, 49fr),
+    gutter: 0.42in,
+    section("3", [Dataset and an example])[
+      *#N.audit_pairs* job–CV pairs (#N.audit_candidates candidates). One protected attribute is added: military status (#ex.values_per_group.military_status values), religion (#ex.values_per_group.religion) or gender (#ex.values_per_group.gender), written explicitly or implicitly, plus an attribute-free copy. *#N.audit_prompts* prompts, *#N.audit_sets* sets. Reference decision: GPT-4o.
 
-    panel[The test][
-      #audit-schematic
+      #example-card
+    ],
+    section("4", [Experiment setup])[
+      #set par(spacing: 0.7em)
+      *Model:* Qwen3.5-9B, English; LoRA #N.lora, merged before serving.
+
+      *Reference:* SFT-v3, SFT on #N.vote_draws\-vote teacher decisions.
+
+      *After SFT-v3:* DPO (4,880 on-policy pairs, #N.dpo_steps steps); GRPO and DAPO with learning-rate decay; decision distillation. Three training seeds each; checkpoint declared before the audit.
+
+      *Metric:* unstable sets at a shared hire rate, 95% CI over candidates.
+
+      *Guardrails:* recall of GPT-4o's hires falls by at most #N.max_tpr_drop_pp pp, agreement by at most #N.max_agree_drop_pp pp; at most #N.max_undecided_pct% undecided; merge keeps at least #N.min_merge_kept_pct%.
+
+      *Patching:* #N.patch_pairs pairs per contrast, #N.patch_contrasts contrasts.
+
+      *Hardware:* CSCS Alps, nodes of 4 NVIDIA GH200; GPU-hours metered per step.
+    ],
+    section("5", [Results: every method against the base model])[
+      #results-table
+      #note[*vs base:* the base model moved to the same hire rate (at SFT-v3's #N.common_hire it has #N.base_at_common unstable sets). GPU-h: data and training, SFT-v3's over the base and the others on top of SFT-v3. Every row passes every guardrail.]
+
       #v(0.3em)
-      *#N.audit_pairs* job–CV pairs, *#N.audit_prompts* prompts, *#N.audit_sets* within-group sets.
+      - *SFT does almost all of it.* The best recipe after SFT-v3 adds #N.distill_mean pp (decision distillation, mean of three seeds); at SFT-v3's own hire rate no recipe is clearly better than SFT-v3.
+      - *Seeds matter.* DPO's #N.dpo_seeds.at(0).own pp on seed 42 held on #N.dpo_held seeds.
 
-      *Unstable set:* the attribute variants of one CV do not all get the same decision. We report the share of unstable sets.
+      #callout(owner: marta)[*Inside the model.* In the base model the attribute reaches the decision at layers #N.pathway_layers, through head L15.H11, and is read out by MLP 31. SFT-v3 removes #N.sft_v3_effect_removed of the effect but keeps the route; DPO and GRPO widen all margins (#N.dpo_scale, #N.grpo_scale) rather than cut it.]
 
-      #sub[How two models are compared]
-      - At an equal hire rate: SFT-v3's #N.common_hire, where it has #N.ref_unstable unstable sets
-      - 95% CI over candidates
-      - Guardrails: recall of GPT-4o's hires, agreement with GPT-4o, undecided, merge kept
-      - Repeated over training seeds; checkpoint declared before the audit
-
-      #callout[*Why the hire rate must match.* Our GRPO pilot looked more stable, #N.grpo_pilot_delta pp, only because it hired less: #N.grpo_pilot_hire. Every decision it changed went from hire to reject.]
-
-      #callout(owner: mine)[*Starting point.* SFT-v3, trained on 8-vote anchors: #N.sft_v3_vs_v1 pp against the first SFT and #N.sft_v3_vs_base pp against the base model (one seed). Every recipe here starts from it.]
-    ],
-
-    panel[A. What training after SFT buys, and what it costs][
-      #image("figures/cost_quality.svg", width: 100%)
-      #cap[Every arm moved to SFT-v3's hire rate. Below 0 is more stable than SFT-v3. From `reports/final/final_table.csv` and `recipes.csv`.]
-
-      #table(
-        columns: (2.6fr, 0.8fr, 1.6fr, 1.6fr, 1.1fr),
-        stroke: none,
-        inset: (x: 10pt, y: 9pt),
-        fill: (_, y) => if y == 0 { shared.bg } else if calc.even(y) { rgb("#FAFAF8") },
-        align: (x, _) => if x == 0 { left } else { right },
-        table.header(
-          [*Recipe after SFT-v3*], [*Seeds*], [*Δ own hire rate, pp (sd)*], [*Δ at #N.common_hire, pp (sd)*], [*GPU-h*]),
-        ..N.recipes.map(r => (
-          if r.note != "" [#r.label #text(size: 19pt, fill: muted)[(#r.note)]] else [#r.label],
-          r.seeds, r.own, r.common, r.gpu_h)).flatten(),
-      )
-      #cap[Means over training seeds, `reports/final/recipes.csv`. Every recipe passes every guardrail. GPU-h: data and training for one model.]
-
-      #grid(
-        columns: (1.75fr, 1fr),
-        gutter: 0.35in,
-        image("figures/curves.svg", width: 100%),
-        {
-          cap[The same comparison at every hire rate from 10% to 35%. The seed mean is below SFT-v3 at #N.curve_below.dpo hire rates for DPO, #N.curve_below.distill for distillation and #N.curve_below.grpo for GRPO + decay. From `reports/final/curves.csv`.]
-          callout(owner: mine)[*One seed is not a result.* DPO seed 42: #N.dpo_seeds.at(0).own pp #N.dpo_seeds.at(0).ci. Seeds 43 and 44, same data and settings: #N.dpo_seeds.at(1).own and #N.dpo_seeds.at(2).own pp.]
-        },
-      )
-    ],
-
-    grid(
-      rows: (auto, 1fr),
-      gutter: 0.45in,
-      panel(owner: marta, fill-height: false)[D. Where the attribute reaches the decision][
-        #image("figures/residual.svg", width: 100%)
-        #cap[Patching the residual stream at layer L with the other variant's removes this much of the attribute effect. The dashed rise is the effect reaching the last tokens, where the decision is read. Grey bands: just after a full-attention layer. Combat vs civilian, implicit; the same 64 pairs for both models. From `reports/interp/patching/{base,sft}-grid-mil_combat_civ_impl-n64-s42/real.csv`.]
-
-        In the base model the attribute reaches the decision at layers *#N.pathway_layers*, through a hub in layer-15 attention (head *L15.H11*), and is read out by *MLP 31*.
-
-        SFT-v3 removes *#N.sft_v3_effect_removed* of the per-pair effect. What is left takes the same route, and L15.H11 is still its largest head.
-
-        #pathway
-      ],
-      panel[D. What later training does to that pathway][
-        - *Distillation* keeps the pathway and shrinks it: #N.distill_kept of SFT-v3's attribute effect is left (seed 43), and L15.H11 is still the top head.
-        - *DPO and GRPO* widen every margin, #N.dpo_scale and #N.grpo_scale. GRPO keeps SFT-v3's pathway; DPO's shifts toward later layers.
-
-        #callout[*Control.* Rescaling SFT-v3's margins by any factor changes the matched metric by #N.scale_change. The gains sit on borderline pairs instead: #N.borderline_fixed_share of the sets distillation fixes are on pairs near the cut (post hoc).]
-      ],
-    ),
-
-    panel[B + C. The system on GH200][
-      #stage[Fixed data split][#N.holdout_candidates held-out candidates, leakage check]
-      #down
-      #stage[Sampling and teaching][vLLM per GH200; 122B teacher, tensor parallel 4]
-      #down
-      #stage[Post-training][TRL and PEFT, LoRA r32, 4 GH200 (DDP)]
-      #down
-      #stage[Merge adapters][SFT, then the later stage; at least 80% of the update kept]
-      #down
-      #stage[Batch audit][vLLM on 1 GH200, greedy, #N.audit_prompts prompts]
-      #down
-      #stage[HF check and patching][decisions agree on #N.hf_vllm_agreement]
-      #down
-      #stage[Metrics and cost ledger][every GPU step metered]
-
-      #sub[B. The audit as an inference load]
-      Against cache off and shuffled order:
-      - as the audits run: *#N.b_saved* less generation time (#N.b_speedup), cache hit rate #N.b_hit_built
-      - sorted by prefix: a further #N.b_order less, hit rate #N.b_hit_prefix
-
-      #N.b_token_shared of prompt tokens are shared token for token, but vLLM 0.31 reuses only whole blocks of #N.b_block tokens on this hybrid model: a bound of #N.b_block_bound.
-
-      #sub[C. Serving is part of the measurement]
-      A null result over #N.lora_null_adapters came from vLLM's LoRA path, which does not reproduce Qwen3.5 adapters. We serve merged weights and check them against HF (DPO's merge kept #N.dpo_merge_kept).
-
-      #text(fill: muted)[Every GPU step is metered: #N.gpu_h_total GPU-h allocated for the whole project since October; one evaluation uses #N.eval_gpu_h GPU-h.]
+      #callout(owner: mine)[*The audit as a workload.* vLLM's prefix cache makes the audit of #N.audit_prompts prompts #N.b_speedup faster on one GH200.]
     ],
   ),
 
-  // Footer.
-  block(width: 100%, fill: shared.bg, radius: 16pt, inset: (x: 28pt, y: 22pt),
+  block(width: 100%, height: 100%, fill: shared.bg, radius: 16pt, inset: 22pt,
     grid(
-      columns: (2.1fr, 1.3fr, 1.2fr),
-      gutter: 0.6in,
-      {
-        block(below: 0.5em, text(size: 30pt, weight: "bold")[Conclusions])
-        set text(size: 23pt)
-        enum(
-          [At an equal hire rate and over three seeds, no recipe after SFT is clearly more stable than SFT-v3; single-seed wins shrank or did not replicate.],
-          [The cheap recipes match the expensive ones: exploring GRPO and DAPO cost #N.explore_ratio the GPU-hours of DPO.],
-          [None removes the attribute pathway. They rescale margins, and rescaling alone does not change the metric.],
-        )
-      },
-      {
-        block(below: 0.5em, text(size: 30pt, weight: "bold")[Limitations])
-        set text(size: 23pt)
-        [English only; one 9B model; #N.audit_candidates benchmark candidates. Patching on 64 pairs per contrast, one selection. GRPO checkpoint 525 was picked with audit numbers in view.]
-      },
-      {
-        block(below: 0.5em, text(size: 30pt, weight: "bold")[\[Contributions, to be agreed\]])
-        set text(size: 23pt)
-        [Post-training, evaluation standard, system and cost; activation-patching pipeline (M. Samoilenko); benchmark and audit pipeline (N. Drushchak et al.). Compute: CSCS Alps. Every number is in `poster/numbers.json` with its source file.]
-      },
+      columns: (1fr, 4.4in),
+      column-gutter: 0.4in,
+      grid(
+        rows: (auto, 1fr),
+        row-gutter: 16pt,
+        {
+          box(width: 46pt, height: 46pt, radius: 23pt, fill: shared.fg,
+            align(center + horizon, text(size: 28pt, weight: "bold", fill: white)[6]))
+          h(14pt)
+          text(size: 36pt, weight: "bold")[Conclusion and findings]
+          h(24pt)
+          text(size: 26pt)[After a strong SFT, DPO, RL and distillation add at most about half a point of stability, and none removes the attribute's pathway.]
+        },
+        grid(
+          columns: (1fr,) * 5,
+          column-gutter: 0.3in,
+          finding(N.vs_base.at(1).delta + " pp")[SFT-v3 against the base model: almost the whole gain],
+          finding(N.distill_mean + " pp")[the most later training adds on top (distillation, three seeds)],
+          finding(N.dpo_held)[DPO seeds that keep the single-seed gain],
+          finding(N.explore_ratio)[GPU-hours to explore GRPO and DAPO against DPO],
+          finding(N.b_speedup)[faster audits from vLLM prefix caching on GH200],
+        ),
+      ),
+      align(center + horizon, {
+        image("figures/qr.svg", width: 3.3in)
+        v(0.1em)
+        text(size: 20pt)[*Details*, every arm and sources]
+      }),
     )),
 )

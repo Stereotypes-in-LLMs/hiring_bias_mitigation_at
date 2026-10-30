@@ -19,6 +19,7 @@ from __future__ import annotations
 import argparse
 import csv
 import json
+import re
 from decimal import ROUND_HALF_EVEN, Decimal
 from pathlib import Path
 
@@ -41,7 +42,17 @@ DOC_NUMBERS = {
     "lora_null_adapters": ("seven adapters, four objectives",
                            "reports/MITIGATION_FINDINGS.md, lesson 4"),
     "hf_vllm_agreement": ("99.77–99.79%", "docs/RL_PATCHING.md, Result, Gate"),
+    "lora": ("r32, α64", "docs/SYSTEM_OVERVIEW.md, Post-training"),
+    "vllm_version": ("0.31", "docs/SYSTEM_OVERVIEW.md, Audit"),
+    "teacher": ("Qwen3.5-122B-A10B", "docs/SYSTEM_OVERVIEW.md, Teacher"),
+    "vote_draws": ("8", "docs/SYSTEM_OVERVIEW.md, Teacher"),
+    "patch_gate": ("97%", "docs/SYSTEM_OVERVIEW.md, HF consistency and mechanism"),
+    "patch_pairs": ("64", "docs/INTERP_SFT_V3.md, Patching"),
+    "patch_contrasts": ("3", "docs/INTERP_SFT_V3.md, Patching"),
 }
+
+DETAILS_URL = ("https://github.com/Stereotypes-in-LLMs/hiring_bias_mitigation_at/blob/main/"
+               "poster/DETAILS.md")
 
 
 def rows(rel: str) -> list[dict]:
@@ -194,9 +205,56 @@ def numbers() -> dict:
                          "S_exact_a_slope_delta", "S_q_a_slope_delta"))
     put("scale_change", "exactly 0" if zero else "not 0", "reports/scale_control/summary.csv")
 
+    std = "src/hiring_bias_mitigation/analysis/eval_standard.py"
+    code = (ROOT / std).read_text()
+    for key in ("min_merge_kept_pct", "max_tpr_drop_pp", "max_agree_drop_pp", "max_undecided_pct"):
+        m = re.search(rf"{key}: float = ([0-9.]+)", code)
+        if not m:
+            raise SystemExit(f"{std}: no default for {key}")
+        put(key, f"{float(m.group(1)):g}", std)
+    m = re.search(r"_step(\d+)$", dpo[0]["run"])
+    put("dpo_steps", m.group(1) if m else "?", ft)
+
+    # Results: the base model, SFT-v3 and the best recipe of each method (poster/base_compare.py).
+    bc = json.loads((HERE / "base_compare.json").read_text())
+    vs_base = [
+        {"model": "Qwen3.5-9B (base)", "hire": f"{rnd(bc['base']['hire_pct'], 1)}%",
+         "unstable": f"{rnd(bc['base']['unstable_pct'], 1)}%", "delta": "", "range": "",
+         "gpu_h": "", "seeds": ""},
+        {"model": "SFT-v3", "hire": f"{rnd(bc['sft_v3']['hire_pct'], 1)}%",
+         "unstable": f"{rnd(bc['sft_v3']['unstable_pct'], 1)}%",
+         "delta": pp(bc["sft_v3"]["delta_pp"]), "range": ci(*bc["sft_v3"]["ci"]),
+         "gpu_h": f"{rnd(ref['extra_gpu_h'], 1)}", "seeds": "1"},
+    ]
+    for r in bc["rows"]:
+        ds = [s["delta_pp"] for s in r["seeds"]]
+        vs_base.append({
+            "model": r["label"],
+            "hire": f"{rnd(r['hire_pct_mean'], 1)}%",
+            "unstable": f"{rnd(r['unstable_pct_mean'], 1)}%",
+            "delta": pp(r["delta_pp_mean"]),
+            "range": (f"{pp(min(ds))} to {pp(max(ds))}" if len(ds) > 1
+                      else ci(*r["seeds"][0]["ci"])),
+            "gpu_h": f"+{rnd(r['extra_gpu_h'], 1)}", "seeds": str(len(ds))})
+    put("vs_base", vs_base, "poster/base_compare.json; reports/final/final_table.csv (GPU-h)")
+    put("base_at_common", f"{rnd(bc['sft_v3']['base_unstable_pct'], 1)}%",
+        "poster/base_compare.json")
+
+    ex = json.loads((HERE / "example.json").read_text())
+    put("example", ex, "poster/example.json (poster/pick_example.py, " + ex["source"] + ")")
+
     for key, (value, source) in DOC_NUMBERS.items():
         put(key, value, source + " (typed from the card)")
+    put("details_url", DETAILS_URL, "poster/build_poster.py")
     return n
+
+
+def qr_svg(url: str, path: Path) -> None:
+    import qrcode
+    import qrcode.image.svg
+
+    img = qrcode.make(url, image_factory=qrcode.image.svg.SvgPathImage, box_size=10, border=1)
+    img.save(str(path))
 
 
 def main() -> None:
@@ -209,9 +267,13 @@ def main() -> None:
     out.write_text(json.dumps(numbers(), indent=2, ensure_ascii=False) + "\n")
     print(f"wrote {out.relative_to(ROOT)}")
     import charts
+    import details
 
     charts.build(ROOT, HERE / "figures")
+    qr_svg(DETAILS_URL, HERE / "figures" / "qr.svg")
     print("wrote poster/figures/")
+    details.write(json.loads(out.read_text()), HERE / "DETAILS.md")
+    print("wrote poster/DETAILS.md")
 
     import typst
 

@@ -1,30 +1,32 @@
-# GTC 2027 poster, first draft
+# GTC 2027 poster
 
-A 44 x 35 in landscape poster in Typst. `build_poster.py` reads the result tables, writes every
-number into `numbers.json` with the file it comes from, has `charts.py` draw the charts into
-`figures/` from the same tables, and compiles `poster.typ` to `poster.pdf`. The layout never
-contains a typed number.
+A 44 x 35 in landscape poster in Typst, in six sections: problem formulation, methodology (one
+diagram of the post-training and audit pipeline and Marta Samoilenko's activation-patching
+pipeline), dataset with one example, experiment setup, results against the base model, and
+conclusion and findings. The poster keeps the core; the QR code leads to `DETAILS.md`, which
+has every recipe, the seeds, the charts, the mechanism and system results, the limitations and
+the source of every number.
 
 ```bash
+# needs pandas and the raw audits: the shared venv
+HBM_OUTPUT_ROOT=$XW ../venv/bin/python poster/pick_example.py    # -> example.json
+HBM_OUTPUT_ROOT=$XW ../venv/bin/python poster/base_compare.py    # -> base_compare.json
+# needs typst, qrcode and pillow: $XW/.typst-venv
 $XW/.typst-venv/bin/python poster/build_poster.py --preview /path/to/preview.png
 ```
 
-`$XW/.typst-venv` holds `typst`, `pypdfium2` and `pillow` (the login node has no LaTeX). The
-font is Liberation Sans. Charts are sized at their printed width, so their text prints at
-17 to 21 pt. Colours: the dataviz reference palette's blue, orange and aqua for DPO, GRPO/DAPO
-and distillation; violet for SFT-v3 in Marta's panel.
-
-Panels: blue for training, evaluation, system and cost; violet for Marta Samoilenko's
-activation-patching result on the base model and SFT-v3, redrawn from her patching CSVs
-(`reports/interp/patching/{base,sft}-grid-mil_combat_civ_impl-n64-s42/real.csv`). The second D
-panel applies her pipeline to the later arms.
+`build_poster.py` reads the result tables and the two JSON files, writes every number into
+`numbers.json` with the file it comes from, draws the charts (`charts.py`, used on the details
+page) and the QR code into `figures/`, writes `DETAILS.md` (`details.py`) and compiles
+`poster.typ` to `poster.pdf`. The layout never contains a typed number. The font is Liberation
+Sans. Blue is the post-training, audit and cost work; violet is Marta's.
 
 ## Still to do
 
-- Logos and the QR code (dashed boxes). The QR code needs the public URL to point at.
-- Agree on the title, the authors and their order, and the contributions line (in square
-  brackets on the poster).
-- Marta to check her panel and the pathway sketch.
+- Push main: the QR code points to `poster/DETAILS.md` on the org repository's main branch.
+- Logos (dashed box).
+- Agree on the title, the authors and their order (in square brackets).
+- Marta to check the patching lane of the diagram and the "Inside the model" box.
 - Check the numbers in `DOC_NUMBERS` against the cards they name. Those are typed from
-  hand-written docs; every other number is read from a CSV.
+  hand-written docs; every other number is read from a CSV or JSON.
 - Confirm the GTC 2027 poster size. 44 x 35 in at 300 dpi comes from GTC Europe's poster spec.

@@ -1,0 +1,193 @@
+{
+  "source": "poster/base_compare.py, operating_point_control.matched_comparison",
+  "base": {
+    "run": "Qwen3.5-9B--en--sft--adapter--en_only_cscs --base",
+    "hire_pct": 14.43478260869565,
+    "unstable_pct": 8.037037037037036
+  },
+  "sft_v3": {
+    "run": "Qwen3.5-9B--en--sft--adapter--en_only_sft_v3_additional",
+    "hire_pct": 22.51207729468599,
+    "unstable_pct": 1.8148148148148149,
+    "base_unstable_pct": 11.762079960755457,
+    "delta_pp": -9.947265145940642,
+    "ci": [
+      -12.0746893140381,
+      -7.828088463739677
+    ]
+  },
+  "rows": [
+    {
+      "name": "DPO_V3_4880",
+      "label": "+ DPO",
+      "arms": [
+        "DPO_V3_4880 s42",
+        "DPO_V3_4880 s43",
+        "DPO_V3_4880 s44"
+      ],
+      "seeds": [
+        {
+          "run": "Qwen3.5-9B--en--dpo--adapter--en_only_dpo_v3_4880_step305",
+          "hire_pct": 22.789049919484704,
+          "unstable_pct": 0.9259259259259258,
+          "base_unstable_pct": 11.78645456736563,
+          "delta_pp": -10.860528641439704,
+          "ci": [
+            -12.94625612597413,
+            -8.656150076323614
+          ]
+        },
+        {
+          "run": "Qwen3.5-9B--en--dpo--adapter--en_only_dpo_v3_4880_seed43_step305",
+          "hire_pct": 21.594202898550723,
+          "unstable_pct": 1.7037037037037037,
+          "base_unstable_pct": 11.622271277900417,
+          "delta_pp": -9.918567574196713,
+          "ci": [
+            -11.981720627912683,
+            -7.699562586869431
+          ]
+        },
+        {
+          "run": "Qwen3.5-9B--en--dpo--adapter--en_only_dpo_v3_4880_seed44_step305",
+          "hire_pct": 21.384863123993558,
+          "unstable_pct": 2.111111111111111,
+          "base_unstable_pct": 11.59038508707383,
+          "delta_pp": -9.47927397596272,
+          "ci": [
+            -11.77606082904096,
+            -7.297506336358434
+          ]
+        }
+      ],
+      "delta_pp_mean": -10.086123397199712,
+      "unstable_pct_mean": 1.5802469135802468,
+      "hire_pct_mean": 21.92270531400966,
+      "delta_vs_sft_v3_pp_mean": -0.30776666666666663,
+      "extra_gpu_h": 17.95
+    },
+    {
+      "name": "GRPO+decay R4",
+      "label": "+ GRPO",
+      "arms": [
+        "GRPO+decay R4 s42",
+        "GRPO+decay R4 s43",
+        "GRPO+decay R4 s44"
+      ],
+      "seeds": [
+        {
+          "run": "Qwen3.5-9B--en--grpo--adapter--en_only_grpo_improve_r4_tipped_v2",
+          "hire_pct": 20.879227053140095,
+          "unstable_pct": 1.4074074074074074,
+          "base_unstable_pct": 11.464148475186002,
+          "delta_pp": -10.056741067778594,
+          "ci": [
+            -12.170259995094431,
+            -7.943444935001227
+          ]
+        },
+        {
+          "run": "Qwen3.5-9B--en--grpo--adapter--en_only_grpo_improve_r4_tipped_seed43",
+          "hire_pct": 23.066022544283413,
+          "unstable_pct": 1.6666666666666667,
+          "base_unstable_pct": 11.80027315819073,
+          "delta_pp": -10.133606491524064,
+          "ci": [
+            -11.998784847754479,
+            -8.133359444042743
+          ]
+        },
+        {
+          "run": "Qwen3.5-9B--en--grpo--adapter--en_only_grpo_improve_r4_tipped_seed44",
+          "hire_pct": 23.162640901771336,
+          "unstable_pct": 1.8888888888888888,
+          "base_unstable_pct": 11.805093596850647,
+          "delta_pp": -9.916204707961757,
+          "ci": [
+            -11.94565557965775,
+            -7.933512091266972
+          ]
+        }
+      ],
+      "delta_pp_mean": -10.035517422421472,
+      "unstable_pct_mean": 1.654320987654321,
+      "hire_pct_mean": 22.369296833064947,
+      "delta_vs_sft_v3_pp_mean": -0.44470000000000004,
+      "extra_gpu_h": 27.02
+    },
+    {
+      "name": "Distill",
+      "label": "+ decision distillation",
+      "arms": [
+        "Distill s42",
+        "Distill s43",
+        "Distill s44"
+      ],
+      "seeds": [
+        {
+          "run": "Qwen3.5-9B--en--sft--adapter--en_only_decision_distill_seed42",
+          "hire_pct": 23.027375201288244,
+          "unstable_pct": 1.7037037037037037,
+          "base_unstable_pct": 11.79834498272676,
+          "delta_pp": -10.094641279023056,
+          "ci": [
+            -12.146316381457376,
+            -8.050954045151443
+          ]
+        },
+        {
+          "run": "Qwen3.5-9B--en--sft--adapter--en_only_decision_distill_seed43",
+          "hire_pct": 22.830917874396135,
+          "unstable_pct": 1.4074074074074074,
+          "base_unstable_pct": 11.78854342411826,
+          "delta_pp": -10.381136016710853,
+          "ci": [
+            -12.371519241584318,
+            -8.342863742267213
+          ]
+        },
+        {
+          "run": "Qwen3.5-9B--en--sft--adapter--en_only_decision_distill_seed44",
+          "hire_pct": 22.99194847020934,
+          "unstable_pct": 1.4444444444444444,
+          "base_unstable_pct": 11.796577488551458,
+          "delta_pp": -10.352133044107015,
+          "ci": [
+            -12.435022495380416,
+            -8.297499397445169
+          ]
+        }
+      ],
+      "delta_pp_mean": -10.275970113280309,
+      "unstable_pct_mean": 1.5185185185185184,
+      "hire_pct_mean": 22.95008051529791,
+      "delta_vs_sft_v3_pp_mean": -0.5703,
+      "extra_gpu_h": 21.366666666666664
+    },
+    {
+      "name": "GRPO from distill s42",
+      "label": "+ distillation, then GRPO",
+      "arms": [
+        "GRPO from distill s42"
+      ],
+      "seeds": [
+        {
+          "run": "Qwen3.5-9B--en--grpo--adapter--en_only_grpo_improve_r6_distill_seed42",
+          "hire_pct": 21.236714975845413,
+          "unstable_pct": 1.7777777777777777,
+          "base_unstable_pct": 11.567819475104244,
+          "delta_pp": -9.790041697326465,
+          "ci": [
+            -11.867375930013898,
+            -7.5820251819148075
+          ]
+        }
+      ],
+      "delta_pp_mean": -9.790041697326465,
+      "unstable_pct_mean": 1.7777777777777777,
+      "hire_pct_mean": 21.236714975845413,
+      "delta_vs_sft_v3_pp_mean": -0.174,
+      "extra_gpu_h": 37.32
+    }
+  ]
+}
