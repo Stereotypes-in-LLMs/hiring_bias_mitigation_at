@@ -1,5 +1,10 @@
 # Activation patching: Qwen3.5-9B, English, base vs SFT vs DPO
 
+The spec `sft` is **SFT-v3**, the parent of every DPO and GRPO arm. Its adapter is recovered
+from the merged release, and the first round's SFT v1 is the spec `sft_v1`. Setup, gates and
+results are in [`docs/INTERP_SFT_V3.md`](../../docs/INTERP_SFT_V3.md). The pilot table further
+down is from the first round (SFT v1).
+
 The plan, the hypotheses and their pass/fail criteria are in [`PLAN.md`](PLAN.md). This page
 is the run guide for the data pipeline (plan sections D0–D4), which is implemented. The
 patching experiments (H1–H11) build on its artifacts.
@@ -22,7 +27,9 @@ export HBM_OUTPUT_ROOT=/home/samoilenko/hbm-local   # holds the .hbm-models-root
 uv pip install --no-deps flash-linear-attention fla-core
 
 uv run python scripts/interp/00_env_check.py         # refuses unmounted paths, records kernels
-uv run python scripts/interp/01_fetch_data.py        # model, SFT adapter, pool, audit runs
+uv run python scripts/interp/01_fetch_data.py        # model, SFT-v1 adapter, SFT-v3 release, pool, audit runs
+uv run python scripts/interp/01b_extract_adapter.py --stage extract            # SFT-v3 adapter from the release
+uv run python scripts/interp/01b_extract_adapter.py --stage check --device cuda:1   # against the release
 uv run python scripts/interp/03_segments.py --dataset grid    # CPU, ~1 min
 uv run python scripts/interp/03_segments.py --dataset pool
 
@@ -71,6 +78,11 @@ A full grid pass is about 1.4 GPU-h per spec, and the pool about 0.9. The bf16 r
 which is why every margin here is read in fp32.
 
 ## Inputs still owed by the DPO team
+
+The DPO-v3 release (`Stereotypes-in-LLMs/qwen3.5-9b-hiring-debias-dpo-v3-4880-en`) is merged too.
+Its own update could be recovered the same way, as the SVD of DPO-v3 merged minus SFT-v3 merged.
+That would fit the spec `[sft, dpo]`. `01b_extract_adapter.py` takes its base from
+`models.yaml`, so it needs a `--base` option first. Not done yet.
 
 - The adapter directory.
 - Whether it was trained on top of the merged SFT weights (spec `[sft, dpo]`, the default in

@@ -1,5 +1,5 @@
 {
-  "spec": "sft",
+  "spec": "sft_v1",
   "dataset": "grid-en-limit512",
   "rows": 512,
   "hire_rate_pct": 22.265625,

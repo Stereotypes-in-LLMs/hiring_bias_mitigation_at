@@ -28,6 +28,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[2] / "src"))
 import numpy as np  # noqa: E402
 import pandas as pd  # noqa: E402
 
+from hiring_bias_mitigation.interp import extract as EX  # noqa: E402
 from hiring_bias_mitigation.interp import margins as M  # noqa: E402
 from hiring_bias_mitigation.interp import render  # noqa: E402
 from hiring_bias_mitigation.interp import spec as SP  # noqa: E402
@@ -39,7 +40,9 @@ log = get_logger("interp.margins")
 
 KEY = ["pair_id", "protected_group", "protected_attr", "condition"]
 SET = ["pair_id", "condition"]  # 34 variants per set: the unit MITIGATION_FINDINGS reports
-AUDIT_RUN = {"base": "Qwen3.5-9B--en--baseline", "sft": "Qwen3.5-9B--en--sft--adapter--en_only",
+AUDIT_RUN = {"base": "Qwen3.5-9B--en--baseline",
+             "sft": "Qwen3.5-9B--en--sft--adapter--en_only_sft_v3_additional",
+             "sft_v1": "Qwen3.5-9B--en--sft--adapter--en_only",
              "sft_v3": "Qwen3.5-9B--en--sft--adapter--en_only_sft_v3_additional",
              "distill42": "Qwen3.5-9B--en--sft--adapter--en_only_decision_distill_seed42",
              "distill43": "Qwen3.5-9B--en--sft--adapter--en_only_decision_distill_seed43",
@@ -49,6 +52,10 @@ AUDIT_RUN = {"base": "Qwen3.5-9B--en--baseline", "sft": "Qwen3.5-9B--en--sft--ad
              "grpo525": "Qwen3.5-9B--en--grpo--adapter--en_only_grpo_v3_all_step525"}
 #: The same base audit under the name it has on the CSCS output drive.
 AUDIT_FALLBACK = {"base": "Qwen3.5-9B--en--baseline--cscs"}
+# SFT-v3's audit responses are not in the public responses dataset. Its release carries the
+# audit's summary, so until the parquet is copied into outputs/raw/ the pass is checked
+# against that summary's hire rate and within-group unstable share instead of row by row.
+AUDIT_SUMMARY = {"sft": (EX.SFT_V3, EX.SFT_V3_REVISION, "evaluation.json")}
 META_COLUMNS = ["dataset", *KEY, "candidate_id", "job_id", "group_id", "prompt_uid"]
 
 
@@ -101,7 +108,10 @@ def audit_check(margins: pd.DataFrame, spec: str) -> dict:
         run = AUDIT_FALLBACK[spec]
     path = raw / f"{run}.parquet" if run else None
     if path is None or not path.exists():
-        return {"audit_run": run, "available": False}
+        out = {"audit_run": run, "available": False}
+        if spec in AUDIT_SUMMARY:
+            out.update(summary_check(margins, *AUDIT_SUMMARY[spec]))
+        return out
     audit = pd.read_parquet(path, columns=[*KEY, "decision"])
     both = margins.merge(audit, on=KEY, how="inner")
     decided = both[both["decision"].isin(["hire", "reject"])]
@@ -117,6 +127,29 @@ def audit_check(margins: pd.DataFrame, spec: str) -> dict:
         "hire_rate_audit_pct": float(100 * (decided["decision"] == "hire").mean()),
         "unstable_sets_hf_pct": unstable("decision_hf"),
         "unstable_sets_audit_pct": unstable("decision"),
+        "margin_bf16_minus_fp32_abs_mean": float(
+            (margins["margin_bf16"] - margins["margin_fp32"]).abs().mean()),
+    }
+
+
+def summary_check(margins: pd.DataFrame, repo: str, revision: str, filename: str) -> dict:
+    """The pass against an audit known only by its summary: aggregate rates, not agreement.
+
+    Within-group sets are (pair, group, condition) over attributed rows, as
+    `analysis/reference_metrics.unstable_within_group` counts them for `evaluation.json`.
+    """
+    from huggingface_hub import hf_hub_download
+
+    reported = json.loads(Path(hf_hub_download(repo, filename, revision=revision)).read_text())
+    attr = margins[margins["condition"] != "attr_free"]
+    unstable = attr.groupby(["pair_id", "protected_group", "condition"])["decision_hf"].nunique()
+    return {
+        "summary_source": f"{repo}@{revision[:7]}/{filename}",
+        "summary_run": reported.get("run"),
+        "hire_rate_hf_pct": float(100 * (margins["decision_hf"] == "hire").mean()),
+        "hire_rate_audit_pct": reported.get("hire_pct"),
+        "unstable_within_group_hf_pct": float(100 * (unstable > 1).mean()),
+        "unstable_within_group_audit_pct": reported.get("unstable_within_group_pct"),
         "margin_bf16_minus_fp32_abs_mean": float(
             (margins["margin_bf16"] - margins["margin_fp32"]).abs().mean()),
     }
