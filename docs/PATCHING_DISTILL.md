@@ -209,6 +209,7 @@ the same 9B model.
 | 13 | 5229370 | C seed 42 audit against SFT-v3: +0.13 pp, every guardrail passes, conforms; merge kept 94.3% | 1.23 | 40.03 |
 | 14 | 5229488 | DPO student audit against SFT-v3: −1.50 pp, every guardrail passes, conforms; merge kept 96.5% | 1.23 | 41.26 |
 | 15 | 5229489 | GRPO student audit: failed after the merge, node nid006377 reported "No CUDA GPUs are available" (`logs/xw-eval-arm-5229489.out`); resubmitted, excluding that node | 0.57 | 41.83 |
+| 16 | 5229674 | GRPO student audit against SFT-v3 (resubmitted, nid005800): −0.16 pp, every guardrail passes, conforms; merge kept 95.6% (the merged weights the failed job had written were reused) | 1.00 | 42.83 |
 
 ## 3. Result
 
@@ -268,7 +269,28 @@ Every guardrail passes against SFT-v3 and both comparisons conform (commit a8be7
   that arm's own hire rate.
 - **Unknown.** A second seed of the student; whether the parent's other seeds would gain more.
 
-**GRPO student**: the audit failed on a node fault and is resubmitted (ledger row 15).
+**GRPO student** (`decision_distill_grpo_r4_seed42`, parent GRPO + lr decay R4 s42). The first
+audit failed on a node fault (ledger row 15); the resubmitted one passes every guardrail against
+SFT-v3, and both comparisons conform (commit ddc8b39).
+
+| comparison | pp [95% CI] | hire rate |
+|---|---|---|
+| against the parent (`compare-arms`, the registered question) | +0.02 [−0.77, +0.82] | 21.78% |
+| against SFT-v3 (the standard, context) | −0.16 [−1.15, +0.79] | 21.91% |
+| the parent against SFT-v3, for reference | −0.73 [−1.64, +0.19] | 20.93% |
+
+- **Fact.** Against its parent the change is +0.02 pp, ≥ 0: by the registered rule, **against**,
+  read "not distinguishable from regression to the method mean". The parent is the best of GRPO
+  R4's three seeds (−0.73, −0.44, −0.16; mean −0.44).
+- **Fact.** Against SFT-v3 the student's TPR change is −1.67 pp against the parent's −4.70, and its
+  hire rate moves from 20.93% to 21.91%, toward SFT-v3's 22.75% (`reports/reference_metrics.csv`).
+- **Fact (decisions).** The student differs from its parent on 439 of 31,050 decisions, from SFT-v3
+  on 521; the parent differs from SFT-v3 on 588.
+- **Interpretation, not confirmed.** Distillation pulls the GRPO model back toward SFT-v3 (hire rate,
+  TPR, decisions) without changing its stability at a matched rate.
+
+**Reading for B.** Neither student improves on its parent at a matched hire rate (DPO −0.07, GRPO
++0.02; one seed each). G2 is not met. As registered, no windowed student is trained.
 
 ### C. The whole pathway window, GDN mixers included (pilot: the gate fails, seeds 43 and 44 not run)
 

@@ -1,0 +1,142 @@
+{
+  "standard": "op-margin-v2",
+  "run": "Qwen3.5-9B--en--sft--adapter--en_only_decision_distill_grpo_r4_seed42",
+  "against": "Qwen3.5-9B--en--grpo--adapter--en_only_grpo_improve_r4_tipped_v2",
+  "conforms": true,
+  "issues": [],
+  "prompts": 31050,
+  "sets": 2700,
+  "grid": 0.0009765625,
+  "hire_rate_ref": 0.20879227053140095,
+  "unstable_ref": 0.014074074074074074,
+  "hire_rate_run": 0.21784219001610305,
+  "unstable_run": 0.015185185185185185,
+  "ref_threshold_matched": -3.375,
+  "ref_tie_weight": 0.375,
+  "ref_tied_prompts": 8,
+  "hire_rate_ref_matched": 0.21784219001610305,
+  "unstable_ref_matched": 0.014953703703703703,
+  "unstable_ref_bin_excluded": 0.014814814814814815,
+  "unstable_ref_bin_included": 0.015185185185185185,
+  "delta_matched_pp": 0.02314814814814818,
+  "ci_low": -0.7687499999999999,
+  "ci_high": 0.8153935185185179,
+  "method": {
+    "grid": 0.0009765625,
+    "run_threshold": 0.0,
+    "matching": "the reference arm hires exactly the compared arm's count; the bin tied at the cut is weighted, whole counterfactual sets at a time",
+    "bootstrap": {
+      "draws": 1000,
+      "seed": 42,
+      "unit": "candidate"
+    }
+  },
+  "code": {
+    "commit": "ddc8b39bc1caa3d8f6d29de6ea77b8f8908241ce",
+    "uncommitted": []
+  },
+  "inputs": {
+    "run": {
+      "run": "Qwen3.5-9B--en--sft--adapter--en_only_decision_distill_grpo_r4_seed42",
+      "which": "adapter",
+      "config": "configs/audit/qwen3.5-9b_en_decision_distill_grpo_r4_seed42_gh200.yaml",
+      "prompts": {
+        "n": 31050,
+        "sha1": "6ecf987f91e4a15f2992d185b415a4ae4eeb0d51"
+      },
+      "decision": {
+        "prefix": "{\"decision\": \"",
+        "words": [
+          "hire",
+          "reject"
+        ],
+        "token_ids": [
+          33304,
+          45427
+        ],
+        "chat_template_kwargs": {
+          "enable_thinking": false
+        },
+        "sampled_decision_token_share": 1.0
+      },
+      "model": {
+        "served": "/ritom/scratch/cscs/zhang/xw/outputs/merged/decision_distill_grpo_r4_seed42",
+        "base": "Qwen/Qwen3.5-9B",
+        "base_revision": "c202236235762e1c871ad0ccb60c8ee5ba337b9a",
+        "adapters": [
+          {
+            "path": "/ritom/scratch/cscs/zhang/xw/outputs/sft/qwen3.5-9b_en_only_sft_v3_additional",
+            "sha256": "d8d63526a43dab37a1fb41a7d7a3541f6a023c4fa2a19e9409e04da331e419ee"
+          },
+          {
+            "path": "/ritom/scratch/cscs/zhang/xw/outputs/grpo/grpo_improve_r4_tipped_v2",
+            "sha256": "f63bffdae55ad5cc5a7af717188050540a37265bbf4cf1c223287a2f63ec8f1e"
+          },
+          {
+            "path": "/ritom/scratch/cscs/zhang/xw/outputs/distill/decision_distill_grpo_r4_seed42",
+            "sha256": "4501c59ba5e0fafc76c402204d022733ab31aaee0bd43cd48813a017ad0060b9"
+          }
+        ]
+      },
+      "software": {
+        "vllm": "0.31.0",
+        "torch": "2.13.0",
+        "transformers": "5.17.0"
+      },
+      "code": {
+        "commit": "ddc8b39bc1caa3d8f6d29de6ea77b8f8908241ce",
+        "uncommitted": []
+      },
+      "written": "2026-11-01T13:36:19+00:00"
+    },
+    "against": {
+      "run": "Qwen3.5-9B--en--grpo--adapter--en_only_grpo_improve_r4_tipped_v2",
+      "which": "adapter",
+      "config": "configs/audit/qwen3.5-9b_en_grpo_improve_r4_tipped_gh200.yaml",
+      "prompts": {
+        "n": 31050,
+        "sha1": "6ecf987f91e4a15f2992d185b415a4ae4eeb0d51"
+      },
+      "decision": {
+        "prefix": "{\"decision\": \"",
+        "words": [
+          "hire",
+          "reject"
+        ],
+        "token_ids": [
+          33304,
+          45427
+        ],
+        "chat_template_kwargs": {
+          "enable_thinking": false
+        },
+        "sampled_decision_token_share": 1.0
+      },
+      "model": {
+        "served": "/ritom/scratch/cscs/zhang/xw/outputs/merged/grpo_improve_r4_tipped_v2",
+        "base": "Qwen/Qwen3.5-9B",
+        "base_revision": "c202236235762e1c871ad0ccb60c8ee5ba337b9a",
+        "adapters": [
+          {
+            "path": "/ritom/scratch/cscs/zhang/xw/outputs/sft/qwen3.5-9b_en_only_sft_v3_additional",
+            "sha256": "d8d63526a43dab37a1fb41a7d7a3541f6a023c4fa2a19e9409e04da331e419ee"
+          },
+          {
+            "path": "/ritom/scratch/cscs/zhang/xw/outputs/grpo/grpo_improve_r4_tipped_v2",
+            "sha256": "f63bffdae55ad5cc5a7af717188050540a37265bbf4cf1c223287a2f63ec8f1e"
+          }
+        ]
+      },
+      "software": {
+        "vllm": "0.31.0",
+        "torch": "2.13.0",
+        "transformers": "5.17.0"
+      },
+      "code": {
+        "commit": "208a9ad2f9fb7aa398e7156d0a1f1a0835b05e7d",
+        "uncommitted": []
+      },
+      "written": "2026-10-26T14:51:33+00:00"
+    }
+  }
+}
