@@ -30,11 +30,7 @@ import pandas as pd
 
 HERE = Path(__file__).resolve().parent
 ROOT = HERE.parents[1]
-OUTPUTS = Path(os.environ.get("HBM_OUTPUT_ROOT", "/ritom/scratch/cscs/zhang/xw")) / "outputs"
-RAW = OUTPUTS / "raw"
-#: The patching pipeline's per-pair effects on all 450 pairs (scripts/interp/04_manifest.py).
-MANIFEST = OUTPUTS / "interp/manifest/contrasts-grid-en.parquet"
-CONTRASTS = ("mil_combat_civ_impl", "mil_combat_civ_expl", "rel_atheist_christian_impl")
+RAW = Path(os.environ.get("HBM_OUTPUT_ROOT", "/ritom/scratch/cscs/zhang/xw")) / "outputs/raw"
 SET = ["pair_id", "protected_group", "condition"]
 N_BOOT, SEED = 1000, 42
 BASE_RUN = "Qwen3.5-9B--en--baseline--cscs"
@@ -90,15 +86,6 @@ def counts(run: str) -> pd.DataFrame:
     return per
 
 
-def data_gpu_h(*labels: str) -> float:
-    """GPU-h of the recipe data jobs behind these arms, each job counted once: a student and its
-    parent share round-3 jobs, and final_table.py counts each arm's own jobs in full."""
-    meta = {r["label"]: r for r in rows("reports/final/arms.csv")}
-    jobs = set().union(*(set(meta[lab]["data_jobs"].split()) for lab in labels))
-    return sum(float(s["gpu_h"]) for s in rows("reports/cost/steps.csv")
-               if s["job_id"] in jobs and s["stage"] == "datagen" and s["recipe"] == "True")
-
-
 def boot_weights(index: pd.Index) -> np.ndarray:
     rng = np.random.default_rng(SEED)
     return rng.multinomial(len(index), np.full(len(index), 1 / len(index)), size=N_BOOT)
@@ -145,6 +132,15 @@ def main() -> None:
     sft = table[SFT_V3]
     sft_data, sft_train = float(sft["data_gpu_h"]), float(sft["train_gpu_h"])
 
+    def parent_counts(label: str) -> pd.DataFrame:
+        run = arms[label]
+        f, r = counts(run), refm[run]
+        u, a = 100 * f.unstable.sum() / f.sets.sum(), 100 * f.agree.sum() / f.decided.sum()
+        if abs(u - float(r["unstable_within_group_pct"])) > 0.01 or \
+           abs(a - float(r["agree_gpt4o_pct"])) > 0.01:
+            raise SystemExit(f"{run}: {u:.3f}/{a:.3f} differ from reference_metrics")
+        return f.reindex(index, fill_value=0.0)
+
     def mean_of(name: str, col: str) -> float:
         labs = labels_of(name)
         return sum(float(table[lab][col]) for lab in labs) / len(labs)
@@ -156,7 +152,7 @@ def main() -> None:
             model_rows.append(dict(model=slot, params="--", colour=colour, filled=filled,
                                    pending=1, instability=0, ilo=0, ihi=0, quality=0, qlo=0,
                                    qhi=0, data=0, patch=0, train=0, distill=0, eval=0,
-                                   short=short, seeds=0))
+                                   short=short, seeds=0, hasparent=0, pu=0, pq=0))
             continue
         u = ratio(per[slot], "unstable", "sets", w)
         q = ratio(per[slot], "agree", "decided", w)
@@ -168,9 +164,10 @@ def main() -> None:
             if name == SFT_V3:
                 data, train, dist = sft_data, sft_train, 0.0
             elif name in STUDENT_PARENT:
-                # final_table's train adds the parent's training: split it back out.
+                # final_table's train adds the parent's training: split it back out. The
+                # student's data_jobs list its parent's too (reports/final/arms.csv).
                 parent = table[STUDENT_PARENT[name]]
-                data = sft_data + data_gpu_h(STUDENT_PARENT[name], f"{name} s42")
+                data = sft_data + mean_of(name, "data_gpu_h")
                 train = sft_train + float(parent["train_gpu_h"])
                 dist = mean_of(name, "train_gpu_h") - float(parent["train_gpu_h"])
             elif recipes[name]["family"] == "distill":
@@ -179,12 +176,20 @@ def main() -> None:
             else:
                 data = sft_data + mean_of(name, "data_gpu_h")
                 train, dist = sft_train + mean_of(name, "train_gpu_h"), 0.0
+        # A student's own parent (one seed, the best of three), drawn open on the student's row:
+        # the Best DPO / Best GRPO rows are three-seed means, not what the student started from.
+        pu = pq = 0.0
+        if name in STUDENT_PARENT:
+            parent_per = parent_counts(STUDENT_PARENT[name])
+            pu = ratio(parent_per, "unstable", "sets", w)[0]
+            pq = ratio(parent_per, "agree", "decided", w)[0]
         model_rows.append(dict(
             model=slot, params=p, colour=colour, filled=filled, pending=0,
             instability=round(u[0], 2), ilo=round(u[1], 2), ihi=round(u[2], 2),
             quality=round(q[0], 2), qlo=round(q[1], 2), qhi=round(q[2], 2),
             data=round(data, 2), patch=0, train=round(train, 2), distill=round(dist, 2),
-            eval=round(eval_gpu_h, 2), short=short, seeds=len(runs)))
+            eval=round(eval_gpu_h, 2), short=short, seeds=len(runs),
+            hasparent=int(name in STUDENT_PARENT), pu=round(pu, 2), pq=round(pq, 2)))
 
     # Paired change in agreement, distilled minus parent: SFT-v3 for the distilled SFT, and each
     # student's own seed-42 parent, not its method's three-seed mean.
@@ -194,7 +199,7 @@ def main() -> None:
             ("DPO", "amber", "Distilled DPO (n=1)", STUDENT_PARENT["Distill on DPO"]),
             ("GRPO", "purple", "Distilled GRPO (n=1)", STUDENT_PARENT["Distill on GRPO R4"])):
         a = per[student]
-        b = per[parent] if parent in per else counts(arms[parent]).reindex(index, fill_value=0.0)
+        b = per[parent] if parent in per else parent_counts(parent)
         point = 100 * (a.agree.sum() / a.decided.sum() - b.agree.sum() / b.decided.sum())
         draws = 100 * ((w @ a.agree.to_numpy()) / (w @ a.decided.to_numpy())
                        - (w @ b.agree.to_numpy()) / (w @ b.decided.to_numpy()))
@@ -221,11 +226,6 @@ def main() -> None:
     full = lambda s: arms[f"Distill s{s}"]  # noqa: E731
     window_only = per_seed(lambda s: arms[f"Distill layers 15-20 s{s}"], full)
     window_removed = per_seed(lambda s: f"{full(s)}_xw15_20", full)   # docs/PATCHING_DISTILL.md, F
-    # Share of the base model's per-pair effect SFT-v3 removes, on all 450 pairs per contrast.
-    man = pd.read_parquet(MANIFEST, columns=["contrast_id", "aligned", "dm_base", "dm_sft_v3"])
-    removed = [100 * (1 - g["dm_sft_v3"].abs().sum() / g["dm_base"].abs().sum())
-               for _, g in man[man["aligned"] & man["contrast_id"].isin(CONTRASTS)]
-               .groupby("contrast_id")]
     widen = pd.read_csv(ROOT / "reports/margin_readout/readout.csv")
     widen = widen[widen["label"].str.match(r"(DPO_V3_4880|GRPO\+decay R4) s4[234]$")]
     assert len(widen) == 6, widen["label"].tolist()
@@ -277,7 +277,6 @@ def main() -> None:
         "WindowOnlySeeds": " / ".join(tm(v) for v in window_only),
         "WindowRemoved": tm(sum(window_removed) / 3),
         "WindowRemovedSeeds": " / ".join(tm(v) for v in window_removed),
-        "AllPairsRemoved": f"{min(removed):.0f}--{max(removed):.0f}",
         "WidenRange": f"{widen['a_median'].min():.1f}--{widen['a_median'].max():.1f}",
         "StudentDPO": interval(arms["Distill on DPO s42"], arms["DPO_V3_4880 s42"]),
         "StudentGRPO": interval(arms["Distill on GRPO R4 s42"], arms["GRPO+decay R4 s42"]),

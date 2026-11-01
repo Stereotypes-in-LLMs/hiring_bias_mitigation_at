@@ -204,6 +204,8 @@ def numbers() -> dict:
                for k in ("S_exact_a_median_delta", "S_q_a_median_delta",
                          "S_exact_a_slope_delta", "S_q_a_slope_delta"))
     put("scale_change", "exactly 0" if zero else "not 0", "reports/scale_control/summary.csv")
+    es = json.loads((HERE / "effect_share.json").read_text())
+    put("sft_v3_effect_removed_all", es["range"], "poster/effect_share.json (" + es["source"] + ")")
     mr = "reports/margin_readout/readout.csv"
     widen = [float(r["a_median"]) for r in rows(mr)
              if re.fullmatch(r"(DPO_V3_4880|GRPO\+decay R4) s4[234]", r["label"])]

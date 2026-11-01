@@ -129,7 +129,7 @@
   table.header([*Model*], [*Hire rate*], [*Unstable sets*], [*vs base, pp*],
                [*95% CI or seed range*], [*GPU-h*]),
   ..N.vs_base.map(r => (
-    if r.seeds != "" and r.seeds != "1" [#r.model #text(size: 20pt, fill: muted)[(#r.seeds seeds)]] else [#r.model],
+    if r.seeds != "" and r.model != "SFT-v3" [#r.model #text(size: 20pt, fill: muted)[(#r.seeds #if r.seeds == "1" [seed] else [seeds])]] else [#r.model],
     r.hire, r.unstable, if r.delta == "" [—] else [*#r.delta*],
     text(size: 22pt, r.range), r.gpu_h)).flatten(),
 )
@@ -196,7 +196,7 @@
 
       *Reference:* SFT-v3, SFT on #N.vote_draws\-vote teacher decisions.
 
-      *After SFT-v3:* DPO (4,880 on-policy pairs, #N.dpo_steps steps); GRPO and DAPO with learning-rate decay; decision distillation. Three training seeds each; checkpoint declared before the audit.
+      *After SFT-v3:* DPO (4,880 on-policy pairs, #N.dpo_steps steps); GRPO and DAPO with learning-rate decay; decision distillation. Three training seeds each (one for distillation on DPO and on GRPO, and for GRPO on distillation); checkpoint declared before the audit.
 
       *Metric:* unstable sets at a shared hire rate, 95% CI over candidates.
 
@@ -233,7 +233,7 @@
           h(14pt)
           text(size: 36pt, weight: "bold")[Conclusion and findings]
           h(24pt)
-          text(size: 26pt)[After a strong SFT, DPO, RL and distillation add at most about half a point of stability, and none removes the attribute's pathway.]
+          text(size: 26pt)[After a strong SFT, DPO, RL and distillation add at most about half a point of stability over three seeds, and none removes the attribute's pathway.]
         },
         grid(
           columns: (1fr,) * 5,

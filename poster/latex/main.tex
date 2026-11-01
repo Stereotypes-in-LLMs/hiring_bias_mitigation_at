@@ -105,9 +105,10 @@ GRPO,purple,0,1.03,0.29,1.96
 \newcommand{\PosterSubtitle}{Activation patching locates the attribute pathway; SFT, DPO, GRPO and self-distillation compared at a matched hire rate}
 \newcommand{\PosterAuthors}{Authors and affiliations [to finalise]}
 % docs/INTERP_SFT_V3.md, Patching (Marta Samoilenko): 64 pairs per contrast, 3 contrasts,
-% pairs picked for |dm_base| >= 0.5; per-pair |dm| falls 61-77% on them, and by
-% \AllPairsRemoved% on all 450 pairs (latex_data.py, from the patching manifest).
-\newcommand{\MechanisticFinding}{SFT-v3 removes \AllPairsRemoved\% of the per-pair effect (all 450 pairs);\\
+% pairs picked for |dm_base| >= 0.5; per-pair |dm| falls 61-77% on them. On all 450 pairs it
+% falls 52-66% (poster/effect_share.json), given on the QR page: the route clause below was
+% measured on the patched pairs only, so both clauses stay on that population.
+\newcommand{\MechanisticFinding}{SFT-v3 removes 61--77\% of the per-pair effect (patched pairs);\\
   the rest still reaches the decision tokens at layers 15--20 (head L15.H11).}
 
 % The decision-distillation design as trained (docs/DECISION_DISTILL.md).
@@ -124,7 +125,7 @@ GRPO,purple,0,1.03,0.29,1.96
 \newcommand{\BehaviourFinding}{dSFT: \DistillMatched{} pp vs SFT-v3, matched rate (\DistillSeeds)\\
   dDPO / dGRPO vs their parent: \StudentDPOPoint{} / \StudentGRPOPoint{} pp (one seed)\\
   Agreement, dSFT $-$ SFT-v3: \DistillAgreeDelta{} pp \DistillAgreeCI}
-\newcommand{\ComputeFinding}{+\DistillTrainGPUh{} GPU-h of training over SFT-v3 (+\DistillExtraGPUh{} with its data)}
+\newcommand{\ComputeFinding}{SFT student: +\DistillTrainGPUh{} GPU-h of training over SFT-v3 (+\DistillExtraGPUh{} with its data)}
 
 
 % ------------------------------- DESIGN -------------------------------------
@@ -257,8 +258,8 @@ GRPO,purple,0,1.03,0.29,1.96
 
 \Rect{48}{815}{420}{33}{setupColour}
 \Txt[text=ink]{64}{822}{388}{22}{\bfseries Experiment setup}
-\Txt{64}{860}{388}{15}{Qwen3.5-9B / rank-32 LoRA / English\\
-  3 seeds per method (students 1); checkpoint declared\\
+\Txt{64}{860}{388}{15}{Qwen3.5-9B, LoRA r32, English; declared checkpoint\\
+  3 seeds per post-SFT method; DPO/GRPO students 1\\
   Primary: unstable-set change at matched hire rate\\
   Quality: agreement with GPT-4o + its hires' recall\\
   95\% CI: candidate-clustered bootstrap [4]}
@@ -329,7 +330,7 @@ GRPO,purple,0,1.03,0.29,1.96
 
 % The window from Marta's patching (docs/PATCHING_DISTILL.md, sections A and F), three seeds each:
 % trained alone it loses the gain; removed from the trained all-layer adapter, it leaves the gain.
-\Txt[text=muted]{512}{922}{620}{12.3}{Placed by patching, 3 seeds each: LoRA on layers 15--20 only (\WindowParams M) loses the gain, \WindowOnly{} pp vs all layers; the trained adapter with 15--20 removed keeps it, \WindowRemoved{} pp.}
+\Txt[text=muted]{512}{922}{620}{12.3}{Placed by patching, 3 seeds each: LoRA on layers 15--20 only (\WindowParams M), at the same learning rate, loses the gain, \WindowOnly{} pp vs all layers; the trained adapter with 15--20 removed keeps it, \WindowRemoved{} pp.}
 \Rect{512}{953}{620}{29}{ink}
 \Txt[text=white,align=center]{524}{960}{596}{15.5}{\bfseries Shared evaluation: Base + parents + distilled models}
 \foreach \yy in {773,831,889}{\draw[teal,line width=1.2bp] (1132,\yy) -- (1142,\yy);}
@@ -372,14 +373,24 @@ GRPO,purple,0,1.03,0.29,1.96
   \else
     \CI{1495}{215}{0}{12}{\yy}{\U}{\UL}{\UH}{\RowColour}
     \CI{1764}{222}{70}{90}{\yy}{\Q}{\QL}{\QH}{\RowColour}
+    % A student's own seed-42 parent, open, just above its bar (latex_data.py: pu, pq).
+    \ModelValue{\r}{hasparent}{\HasParent}
+    \ifnum\HasParent=1
+      \ModelValue{\r}{pu}{\PU}
+      \ModelValue{\r}{pq}{\PQ}
+      \pgfmathsetmacro{\xpu}{1495+\PU/12*215}
+      \pgfmathsetmacro{\xpq}{1764+(\PQ-70)/20*222}
+      \path[draw=\RowColour,fill=white,line width=1.8bp] (\xpu,\yy-9) circle[radius=3.2];
+      \path[draw=\RowColour,fill=white,line width=1.8bp] (\xpq,\yy-9) circle[radius=3.2];
+    \fi
   \fi
 }
 \Txt[text=muted]{1192}{666}{290}{12.5}{Base: no adaptation}
 \Txt[text=muted,align=center]{1495}{699}{215}{12.5}{lower is better}
 \Txt[text=muted,align=center]{1764}{699}{222}{12.5}{higher is better}
 \Txt[text=muted]{1192}{691}{290}{12.5}{Matched hire rate vs SFT-v3, 3-seed means:\\dSFT \DistillMatched, DPO \DPOMatched, GRPO \GRPOMatched{} pp [4]}
-\Txt[text=muted]{1192}{728}{808}{12.5}{Open: before distillation / Filled: after / Dashed: Base / Bars: 95\% CI / Best: lowest 3-seed mean vs SFT-v3, after the audits}
-\Txt[text=muted]{1192}{751}{808}{12.5}{*LoRA r32, \StandardParams M per stage (\StandardPct\% of the \BackboneB B backbone); each post-SFT row adds one stage to SFT-v3.}
+\Txt[text=muted]{1192}{728}{808}{12.5}{Open: before distillation (dDPO, dGRPO: their seed-42 parent, the open point above the bar) / Filled: after / Dashed: Base / Bars: 95\% CI / Best: lowest 3-seed mean vs SFT-v3, after the audits}
+\Txt[text=muted]{1192}{757}{808}{12.5}{*LoRA r32, \StandardParams M per stage (\StandardPct\% of the \BackboneB B backbone); one stage on SFT-v3, a second for dDPO and dGRPO.}
 \draw[rule,line width=1bp] (1192,777) -- (2000,777);
 
 % RIGHT / B: paired agreement change, distilled minus parent.
@@ -403,7 +414,7 @@ GRPO,purple,0,1.03,0.29,1.96
     \CI{1270}{290}{-4}{4}{\yy}{\D}{\DL}{\DH}{\RowColour}
   \fi
 }
-\Txt[text=muted]{1192}{975}{378}{11.5}{Distilled $-$ parent (SFT-v3; DPO, GRPO seed 42) / paired 95\% CI over candidates}
+\Txt[text=muted]{1192}{975}{378}{11.5}{Distilled $-$ parent (DPO, GRPO: seed-42 parent, n=1) / paired 95\% CI}
 
 % RIGHT / C: cost stack, inclusive of SFT-v3, to the audited checkpoint.
 \Txt[text=blue]{1604}{794}{396}{19}{\bfseries C\quad GPU time}
@@ -439,7 +450,7 @@ GRPO,purple,0,1.03,0.29,1.96
 \Txt[text=ink]{64}{1028}{388}{26}{\bfseries 5. Conclusion\\and Findings}
 \draw[greenDark,line width=1.2bp] (492,1007) -- (2016,1007);
 \Txt[text=blue]{512}{1021}{410}{18}{\bfseries Mechanism}
-\Txt{512}{1050}{410}{14.5}{The attribute pathway survives SFT-v3 (L15.H11);\\distillation keeps its gain with layers 15--20 removed.}
+\Txt{512}{1050}{410}{14.5}{The pathway survives SFT-v3 (L15.H11); distillation's trained adapter keeps its gain with layers 15--20 removed.}
 \Txt[text=blue]{952}{1021}{423}{18}{\bfseries Behaviour + quality}
 \Txt[text=muted]{952}{1050}{423}{12}{\BehaviourFinding}
 \Txt[text=blue]{1415}{1021}{460}{18}{\bfseries Distilled parameters + compute}

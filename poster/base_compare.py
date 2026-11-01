@@ -50,22 +50,13 @@ def main() -> None:
     base, _ = opc.load_scores(BASE_RUN, "base")
     arm_rows = rows("reports/final/arms.csv")
     arms = {r["label"]: r["run"] for r in arm_rows}
-    parent = {r["label"]: r["parent"] for r in arm_rows}
-    by_run = {r["run"]: r["label"] for r in arm_rows}
     table = {r["label"]: r for r in rows("reports/final/final_table.csv")}
 
-    steps = rows("reports/cost/steps.csv")
-    jobs_of = {r["label"]: set(r["data_jobs"].split()) for r in arm_rows}
-
     def gpu_h(label: str) -> float:
-        """Extra GPU-h over SFT-v3: the data jobs behind the arm and the arm it was trained on,
-        each job counted once (they share round-3 jobs), plus the training to the audited
-        checkpoint, which final_table.py already sums with the parent arm's training."""
-        up = by_run.get(parent[label])
-        jobs = jobs_of[label] | (jobs_of[up] if up and up != "SFT-v3" else set())
-        data = sum(float(s["gpu_h"]) for s in steps
-                   if s["job_id"] in jobs and s["stage"] == "datagen" and s["recipe"] == "True")
-        return data + float(table[label]["train_gpu_h"])
+        """Extra GPU-h over SFT-v3, as final_table.py counts it: the arm's data jobs (an arm
+        trained on another arm lists that arm's jobs too, reports/final/arms.csv) plus the
+        training to the audited checkpoint, the parent arm's training included."""
+        return float(table[label]["extra_gpu_h"])
 
     def against_base(run: str) -> dict:
         frame, _ = opc.load_scores(run, "adapter")
