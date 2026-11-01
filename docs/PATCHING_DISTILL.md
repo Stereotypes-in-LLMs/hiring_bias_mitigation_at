@@ -171,6 +171,49 @@ A and C. If C and D both pass their pilots, running both to three seeds would pa
 of the trainable parameters (rank 8, all layers) is not worse than rank 32. The served model is
 the same 9B model.
 
+**Added 2026-11-01 15:20, after D's training started and before its audit.** Three secondary
+readouts are reported for D beside the gate and decide nothing: the decisions changed against
+SFT-v3 (raw parquets; A 171, C 144, all layers 472 at seed 42), the median attribute-free |m|
+ratio against SFT-v3 (from the op-margin-v2 margins), and the overlap of fixed sets with the
+all-layer arm of seed 42. Their reading thresholds would be post hoc, so none is set.
+
+### F. The window removed from the trained all-layer adapter (registered 2026-11-01, after A, B and C)
+
+**Why.** Arm A tested whether layers 15-20 are enough: trained alone, at the same learning rate,
+they lose the gain (H0, section 3A). It did not test whether the trained all-layer adapter needs
+them. In the masked check of seed 43 (`reports/interp/distill/distill43/mask_shares.csv`) the
+attribute-specific shrink came more from layers 0-20 than from 21-31. In its residual analysis
+(`reports/interp/distill/distill43/residual.csv`; depth d is the residual entering layer d) the
+attribute difference against SFT-v3 falls mostly before the window for the two combat contrasts
+(ratio 0.98-0.99 at depth 7, 0.88 at depth 15), at the window's first layer for the atheist
+contrast (0.94 at depth 15, 0.89 at depth 16), and again at the final depth (0.67-0.71). This
+ablation reads the window's part with the standard instead of a margin proxy.
+
+**An ablation, not an arm.** For each seed of `decision_distill_seed{42,43,44}`, `lora_B` of the
+26 modules in layers 15-20 (the six MLPs and full-attention layers 15 and 19; 11,403,264 of the
+58,195,968 trainable parameters) is set to zero by `scripts/ablate_adapter_layers.py`, and every
+other tensor is copied unchanged. No training. Adapters
+`outputs/distill/decision_distill_seed{42,43,44}_xw15_20/`, audit configs
+`configs/audit/qwen3.5-9b_en_decision_distill_seed{42,43,44}_xw15_20_gh200.yaml`, each audited
+with `evaluate_arm.sbatch` against SFT-v3 and then compared with `compare-arms` against the
+all-layer arm of the same seed.
+
+**Call, fixed now.** Δ_k is the matched change of the ablated adapter against the full adapter of
+seed k; Δ is the mean over the three seeds.
+- **Not needed:** Δ ≤ +0.20 pp, and every seed below SFT-v3 with every guardrail passing.
+- **Needed:** Δ > +0.30 pp.
+- Otherwise undecided.
+
+The remaining 102 modules were trained with the window present, so a loss under "needed" can be
+co-adaptation as well as the window's own part, and "not needed" says the rest of the adapter
+suffices as trained, not that a model trained without the window would. Wording under "not
+needed": "removing layers 15-20 from the trained all-layer adapter keeps the gain"; never
+"the window plays no part". Each seed also gets the decisions it changes against the full
+adapter (raw parquets).
+
+**Cost.** Three audits, about 1.25 GPU-h each (ledger rows 2, 8, 9, 13, 14). Seeds 42 and 43 first,
+seed 44 when a slot frees.
+
 ### Evaluation, splits and stop conditions
 
 - The final adapter of each arm, declared now. `evaluate_arm.sbatch` against SFT-v3, then
