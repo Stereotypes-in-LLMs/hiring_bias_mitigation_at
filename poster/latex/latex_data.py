@@ -37,15 +37,17 @@ BASE_RUN = "Qwen3.5-9B--en--baseline--cscs"
 HF_V3_REVISION = "3b8b1c47189d00ca9cf4eb88195c0b84ff81d889"   # hf_v3_manifest.json was taken here
 SFT_V3 = "SFT-v3"
 
-# slot, recipe or arm label (None: not trained), colour, filled, short name
+# slot, recipe or arm label (None: not trained), colour, filled, short name. The poster has
+# one neutral family and one accent (main.tex, DESIGN): Base gray, the parents ink and every
+# distilled model green; names, weight and open / filled points tell the rows apart.
 SLOTS = [
     ("Base", None, "gray", 0, "Base"),
-    ("Best SFT (SFT-v3)", SFT_V3, "blue", 0, "SFT"),
-    ("Best DPO", "DPO_V3_4880", "amber", 0, "DPO"),
-    ("Best GRPO", "GRPO+decay R4", "purple", 0, "GRPO"),
-    ("Distilled SFT", "Distill", "blue", 1, "dSFT"),
-    ("Distilled DPO (n=1)", "Distill on DPO", "amber", 1, "dDPO"),
-    ("Distilled GRPO (n=1)", "Distill on GRPO R4", "purple", 1, "dGRPO"),
+    ("Best SFT (SFT-v3)", SFT_V3, "ink", 0, "SFT"),
+    ("Best DPO", "DPO_V3_4880", "ink", 0, "DPO"),
+    ("Best GRPO", "GRPO+decay R4", "ink", 0, "GRPO"),
+    ("Distilled SFT", "Distill", "greenDark", 1, "dSFT"),
+    ("Distilled DPO (n=1)", "Distill on DPO", "greenDark", 1, "dDPO"),
+    ("Distilled GRPO (n=1)", "Distill on GRPO R4", "greenDark", 1, "dGRPO"),
 ]
 # The students (docs/PATCHING_DISTILL.md, B): one seed each, distilled from this parent arm.
 STUDENT_PARENT = {"Distill on DPO": "DPO_V3_4880 s42", "Distill on GRPO R4": "GRPO+decay R4 s42"}
@@ -194,17 +196,17 @@ def main() -> None:
     # Paired change in agreement, distilled minus parent: SFT-v3 for the distilled SFT, and each
     # student's own seed-42 parent, not its method's three-seed mean.
     delta_rows = []
-    for method, colour, student, parent in (
-            ("SFT", "blue", "Distilled SFT", "Best SFT (SFT-v3)"),
-            ("DPO", "amber", "Distilled DPO (n=1)", STUDENT_PARENT["Distill on DPO"]),
-            ("GRPO", "purple", "Distilled GRPO (n=1)", STUDENT_PARENT["Distill on GRPO R4"])):
+    for method, student, parent in (
+            ("SFT", "Distilled SFT", "Best SFT (SFT-v3)"),
+            ("DPO", "Distilled DPO (n=1)", STUDENT_PARENT["Distill on DPO"]),
+            ("GRPO", "Distilled GRPO (n=1)", STUDENT_PARENT["Distill on GRPO R4"])):
         a = per[student]
         b = per[parent] if parent in per else parent_counts(parent)
         point = 100 * (a.agree.sum() / a.decided.sum() - b.agree.sum() / b.decided.sum())
         draws = 100 * ((w @ a.agree.to_numpy()) / (w @ a.decided.to_numpy())
                        - (w @ b.agree.to_numpy()) / (w @ b.decided.to_numpy()))
         lo, hi = np.percentile(draws, [2.5, 97.5])
-        delta_rows.append(dict(method=method, colour=colour, pending=0, delta=round(point, 2),
+        delta_rows.append(dict(method=method, colour="greenDark", pending=0, delta=round(point, 2),
                                lo=round(lo, 2), hi=round(hi, 2)))
 
     # Matched-hire-rate effects against SFT-v3 (the standard), per seed and as seed means.

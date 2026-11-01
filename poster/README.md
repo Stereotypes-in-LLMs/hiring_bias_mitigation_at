@@ -4,7 +4,9 @@ Two versions. `latex/main.tex` is the approved v4 layout (43 x 24 in, the offici
 format), one self-contained file: `latex/latex_data.py` (shared venv) writes the measured values
 into its GENERATED DATA block and checks every run against `reports/reference_metrics.csv`.
 Upload `main.tex` alone to Overleaf, or run `pdflatex` twice. It has not been compiled on Daint
-(no TeX there). The Typst version below (44 x 35 in) came first.
+(no TeX there). Two colours only: a blue-grey neutral family and one green accent; a model
+is told apart by its name, weight and open / filled points (the DESIGN block in `main.tex`).
+The Typst version below (44 x 35 in) came first.
 
 ## Typst version
 
