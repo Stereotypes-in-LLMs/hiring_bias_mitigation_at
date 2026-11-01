@@ -135,6 +135,7 @@ effect, and the layer-17 step at the decision tokens is mostly its GDN mixer
 carrier at the decision tokens, attention 19, was trainable in arm A, and GDN 17 reads a residual
 that the trainable layers write; the training logs show no underfitting. This arm is designed
 after seeing A seed 42, so it is exploratory.
+*(Corrected 2026-11-01 after review: the logs do not support "no underfitting"; section 3A.)*
 
 **Change against arm A (one variable).** The LoRA targets in layers 15-20 add the three large GDN
 projections, `linear_attn.in_proj_qkv`, `in_proj_z` and `out_proj`: 38 modules, 15,073,280
@@ -171,25 +172,27 @@ A and C. If C and D both pass their pilots, running both to three seeds would pa
 of the trainable parameters (rank 8, all layers) is not worse than rank 32. The served model is
 the same 9B model.
 
-**Added 2026-11-01 15:20, after D's training started and before its audit.** Three secondary
+**Added 2026-11-01 15:15 (commit 59c4e49), after D's training started and before its audit.** Three secondary
 readouts are reported for D beside the gate and decide nothing: the decisions changed against
 SFT-v3 (raw parquets; A 171, C 144, all layers 472 at seed 42), the median attribute-free |m|
 ratio against SFT-v3 (from the op-margin-v2 margins), and the overlap of fixed sets with the
 all-layer arm of seed 42. Their reading thresholds would be post hoc, so none is set.
 
-### E. The teacher's margin floored at 4 logits (registered 2026-11-01 15:25, after A, B and C)
+### E. The teacher's margin floored at 4 logits (registered 2026-11-01 15:21, commit 59be81a, after A, B and C)
 
 **Why.** What patching and its controls say distillation does, and what it leaves:
-- It keeps SFT-v3's pathway and turns the whole readout down, margin scale ×0.45-0.52 with the
-  attribute effect shrinking about as much (`DISTILL_PATCHING.md`). A pure rescaling leaves the
+- It keeps SFT-v3's pathway and turns the whole readout down, margin scale ×0.45-0.46 with the
+  attribute effect shrinking about as much (`DISTILL_PATCHING.md`; first written ×0.45-0.52,
+  corrected after review). A pure rescaling leaves the
   matched statistic at exactly 0, and 83-87% of the sets distillation fixes lie on the 35 pairs
   SFT-v3 decides by less than 2 logits (`SCALE_CONTROL.md`).
 - On those pairs its target is soft. 5,894 of the 9,140 attributed training rows (64.5%) are on
   pairs whose SFT-v3 samples split on the attribute-free CV (`distill_train.parquet`,
   `free_hire_rate` strictly between 0 and 1). Near q = 0.5 the two-token KL is flat, so the loss
   does not push a borderline pair's variants to one side of the cut.
-- Arms A and C show that moving the update to the pathway window does not help; this arm changes
-  what the update is asked to do instead.
+- Arm A's call (H0) and C's pilot failing its gate give no sign that moving the update to the
+  pathway window helps (first written "show that ... does not help", corrected after review);
+  this arm changes what the update is asked to do instead.
 
 The idea is older than this round: a sharpened target or a hinge on the greedy sign is open
 question 1 of [`DECISION_DISTILL.md`](DECISION_DISTILL.md). The value F = 4 was picked after a
@@ -221,7 +224,10 @@ is below 0.2. `memory_floor_gb` as for every arm.
 the loss is 0.248 and 0.326 and the floor lifts 91% and 89% of the attributed rows' targets
 (`distill/attr_floored` 0.914, 0.889; anchors 0.80, 0.75), so the job continues. The floor
 therefore changes nearly every target, not only the borderline pairs': most training rows sit
-within 4 logits for SFT-v3. Gradient norms are 13-20 (plain distillation 0.5-1.5), clipped at 1.
+within 4 logits for SFT-v3. Corrected after review: the logged share counts exact ties (m = 0),
+which keep q = 0.5, so 91% and 89% are upper bounds; and the gradient norms at steps 5 and 10,
+13.1 and 20.1, compare with 7.9-12.8 for plain distillation at the same steps (median 1.1-1.4
+over its runs), not with its late values; clipped at 1.
 
 **Secondary readouts, deciding nothing.** Decisions changed against SFT-v3 and against
 `decision_distill_seed42`; the median attribute-free |m| ratio against SFT-v3 (op-margin-v2
@@ -311,7 +317,8 @@ seed 44 when a slot frees.
 | 18 | 5230014 | F seed 42 audit (window removed) against SFT-v3: −0.19 pp, every guardrail passes, conforms; merge kept 92.3% | 1.20 | 49.50 |
 | 19 | 5230015 | F seed 43 audit (window removed) against SFT-v3: −0.46 pp, every guardrail passes, conforms; merge kept 92.0% | 1.22 | 50.72 |
 | 20 | 5230147 | D seed 42 audit against SFT-v3: +0.04 pp, every guardrail passes (merge kept 80.4%, the guardrail is 80%), conforms | 1.21 | 51.93 |
-| 21 | 5230148 | F seed 44 audit (window removed) against SFT-v3: −0.26 pp, every guardrail passes, conforms; merge kept 92.1% | 1.22 | 53.15 |
+| 21 | 5230148 | F seed 44 audit (window removed) against SFT-v3: −0.26 pp, every guardrail passes, conforms; merge kept 92.0% | 1.22 | 53.15 |
+| 22 | 5230126 | E seed 42 training (margin floor 4, from worktree `-pfloor` at fa0b9f2, clean): 341 steps, 1:17:37; all layers, 128 modules, 58,195,968 parameters; the floor lifted 80-100% of the attributed targets at the last logging points; 5.157 GPU-h measured | 5.17 | 58.32 |
 
 ## 3. Result
 
@@ -332,14 +339,20 @@ guardrail and every comparison conforms.
   is +0.13.
 - **Fact (patching, seed 42; `reports/interp/distill/pd42/`).** The confined adapter barely moves
   SFT-v3: the attribute effect is 0.88-0.90 of SFT-v3's and the margin scale 0.84, against
-  0.39-0.47 and 0.45-0.46 for all-layer distillation. The component profile correlates with
+  0.39-0.46 and 0.45-0.46 for all-layer distillation. The component profile correlates with
   SFT-v3's at r = 0.997-0.998, and the attribute difference at the decision tokens over depths
   15-20 is unchanged (ratio 1.000).
 - **Interpretation, not confirmed.** What all-layer distillation changes, it changes mostly
   outside the window where the attribute reaches the decision. Read with the scale-only control
   (`SCALE_CONTROL.md`), the window is where the attribute arrives, not where the gain is made.
-- **Unknown.** Whether training the window's GDN mixers as well (arm C) or a larger learning
-  rate changes this; the logs show no underfitting (§0, review).
+- **Unknown.** Whether a larger learning rate changes this. Arm C's pilot (section 3C) did not
+  pass its gate.
+- **Correction (review, 2026-11-01).** This bullet first said "the logs show no underfitting";
+  they do not. Over steps 201-300 every arm's loss is 0.028-0.030, but over steps 301-341, as the
+  learning rate decays, the all-layer arms reach 0.014-0.019 and the window arms stay at
+  0.025-0.027 (A) and 0.025 (C) (`outputs/distill/*/checkpoint-341/trainer_state.json`). So the
+  alternative registered in section 1A, an adapter five times smaller underfitting at the same
+  learning rate, stays open beside "the window is not enough".
 - **Wording, as registered:** "distillation confined to layers 15-20 at the same learning rate
   loses the gain (mean +0.53 pp against all layers, three seeds)".
 
@@ -349,14 +362,17 @@ guardrail and every comparison conforms.
 **DPO student** (`decision_distill_dpo4880_seed42`, parent DPO_V3_4880 s42 checkpoint-305).
 Every guardrail passes against SFT-v3 and both comparisons conform (commit a8be782).
 
-| comparison | pp [95% CI] | hire rate |
+| comparison | pp [95% CI] | matched hire rate (op-margin-v2) |
 |---|---|---|
 | against the parent (`compare-arms`, the registered question) | −0.07 [−0.44, +0.33] | 23.16% |
-| against SFT-v3 (the standard, context) | −1.50 [−2.42, −0.64] | 23.17% |
-| the parent against SFT-v3, for reference | −1.03 [−1.81, −0.28] | 22.80% |
+| against SFT-v3 (the standard, context) | −1.50 [−2.42, −0.64] | 23.16% |
+| the parent against SFT-v3, for reference | −1.03 [−1.81, −0.28] | 22.79% |
 
-- **Fact.** Against its parent the change is −0.07 pp and its interval holds 0: by the registered
-  wording, not distinguishable from the parent. At the matched rate the parent has 0.63% unstable
+- **Fact.** Against its parent the change is −0.07 pp with every guardrail passing against SFT-v3:
+  by the rule of section 1B the expected pattern, but its interval [−0.44, +0.33] holds 0, so by
+  the standard it is not better than its parent (one seed). No wording was registered for this
+  case (first written "by the registered wording, not distinguishable", corrected after review).
+  At the matched rate the parent has 0.63% unstable
   sets and the student 0.56% (`reports/operating_point/v2/…dpo4880_seed42--vs--…dpo_v3_4880_step305.json`).
 - **Fact.** Against SFT-v3 the student reads −1.50 pp, the lowest of any arm, with 0.59% unstable
   sets (`reports/reference_metrics.csv`). Most of it is the parent's own seed-42 draw, the best of
@@ -364,28 +380,33 @@ Every guardrail passes against SFT-v3 and both comparisons conform (commit a8be7
   "distilled DPO beats SFT-v3".
 - **Fact (decisions).** The student differs from its parent on 276 of 31,050 decisions, from
   SFT-v3 on 475; the parent differs from SFT-v3 on 309.
-- **Interpretation, not confirmed.** Distillation moves the DPO model about as much as it moves
-  SFT-v3, but the parent is already at 0.6-0.9% unstable sets, so there is little left for the
-  attribute-free teacher to remove. The two head-to-head numbers (−0.07 against the parent and
-  −0.47 more than the parent against SFT-v3) differ because each SFT-v3 comparison is matched at
-  that arm's own hire rate.
+- **Fact (margins).** Distillation changes fewer of the DPO model's decisions (276 against its
+  parent; 403-472 for distillation on SFT-v3) but compresses its margins much more: ×0.16 of the
+  parent's scale (×0.47-0.51 for distillation on SFT-v3), ending near plain distillation's
+  absolute scale, ×0.44 of SFT-v3's (`reports/margin_readout/readout.csv`).
+- **Interpretation, not confirmed.** The parent is already at 0.6-0.9% unstable sets, so there is
+  little left for the attribute-free teacher to remove. The head-to-head −0.07 against the parent
+  and the −0.46 gap between the two own-point comparisons against SFT-v3 (−1.50 at 23.16%,
+  −1.03 at 22.79%; op-margin-v2 JSONs) differ because each SFT-v3 comparison is matched at its
+  own arm's hire rate (first written "−0.47 ... head-to-head", corrected after review).
 - **Unknown.** A second seed of the student; whether the parent's other seeds would gain more.
 
 **GRPO student** (`decision_distill_grpo_r4_seed42`, parent GRPO + lr decay R4 s42). The first
 audit failed on a node fault (ledger row 15); the resubmitted one passes every guardrail against
 SFT-v3, and both comparisons conform (commit ddc8b39).
 
-| comparison | pp [95% CI] | hire rate |
+| comparison | pp [95% CI] | matched hire rate (op-margin-v2) |
 |---|---|---|
 | against the parent (`compare-arms`, the registered question) | +0.02 [−0.77, +0.82] | 21.78% |
-| against SFT-v3 (the standard, context) | −0.16 [−1.15, +0.79] | 21.91% |
-| the parent against SFT-v3, for reference | −0.73 [−1.64, +0.19] | 20.93% |
+| against SFT-v3 (the standard, context) | −0.16 [−1.15, +0.79] | 21.78% |
+| the parent against SFT-v3, for reference | −0.73 [−1.64, +0.19] | 20.88% |
 
 - **Fact.** Against its parent the change is +0.02 pp, ≥ 0: by the registered rule, **against**,
   read "not distinguishable from regression to the method mean". The parent is the best of GRPO
   R4's three seeds (−0.73, −0.44, −0.16; mean −0.44).
 - **Fact.** Against SFT-v3 the student's TPR change is −1.67 pp against the parent's −4.70, and its
-  hire rate moves from 20.93% to 21.91%, toward SFT-v3's 22.75% (`reports/reference_metrics.csv`).
+  greedy hire rate moves from 20.93% to 21.91%, toward SFT-v3's 22.75%
+  (`reports/reference_metrics.csv`).
 - **Fact (decisions).** The student differs from its parent on 439 of 31,050 decisions, from SFT-v3
   on 521; the parent differs from SFT-v3 on 588.
 - **Interpretation, not confirmed.** Distillation pulls the GRPO model back toward SFT-v3 (hire rate,
@@ -433,17 +454,21 @@ guardrail passes against SFT-v3 and both comparisons conform (commit e352d6a).
 - **Fact.** The merge kept 80.4% of D's update, against 92-96% for the rank-32 arms: the guardrail
   is 80%, so it passes by 0.4 pp, and the served model carries less of the trained update than any
   other arm today (`reports/reference_metrics.csv`).
-- **Secondary readouts (registered 15:20, deciding nothing).** D changes 239 of 31,050 SFT-v3
+- **Secondary readouts (registered 15:15, deciding nothing).** D changes 239 of 31,050 SFT-v3
   decisions (rank 32: 472; A: 171; C: 144). Its margin scale is ×0.78 of SFT-v3's (rank 32
-  ×0.47-0.52), and the sets it fixes overlap the rank-32 arm's by 0.24 (weighted Jaccard; the
-  rank-32 seeds overlap each other by 0.60-0.70) (`reports/margin_readout/readout.csv`).
-- **Interpretation, not confirmed.** At this learning rate and α/r, a quarter of the trainable
-  parameters kept the gain in neither placement, the window (C) nor every layer at low rank (D).
-  Rank, update size and the merge's rounding are not separated: a rank-8 update is smaller per
-  weight, and more of it is lost in the bf16 merge.
-- **Wording:** "a quarter of the trainable parameters, on the pathway window (C) or over every
-  layer at rank 8 (D), did not keep distillation's gain at the same learning rate (one seed
-  each)". The served model is the same 9B model in every arm.
+  ×0.47-0.51), and the sets it fixes overlap the rank-32 s42 arm's by 0.24 (weighted Jaccard;
+  full seeds 43 and 44 overlap s42 by 0.60 and 0.70) (`reports/margin_readout/readout.csv`).
+- **Fact (training).** D fits its target almost as well as rank 32: loss 0.020 over steps 301-341,
+  against 0.014-0.019 (`trainer_state.json`).
+- **Interpretation, not confirmed.** At this learning rate and α/r, neither placement of a quarter
+  of the trainable parameters passed its pilot gate, the window (C) nor every layer at low rank
+  (D). Rank, update size and the merge's rounding are not separated: a rank-8 update is smaller
+  per weight, and more of it is lost in the bf16 merge (80.4% kept).
+- **Wording:** "one-seed pilots at a quarter of the trainable parameters, on the window with its
+  GDN mixers (C) or at rank 8 on every layer (D), failed their gates (+0.26 [−0.37, +0.89] and
+  +0.22 [−0.35, +0.84] pp against all layers; +0.13 and +0.04 against SFT-v3) and were not
+  continued" (first written "did not keep distillation's gain", corrected after review: a failed
+  pilot only stops the arm). The served model is the same 9B model in every arm.
 
 ### F. The window removed from the trained all-layer adapter (registered call: not needed)
 
@@ -461,17 +486,24 @@ standard). Every seed passes every guardrail and every comparison conforms (comm
   layers 15-20 from the trained all-layer adapter keeps the gain.
 - **Fact.** Every seed's point is above 0 (+0.07, +0.11, +0.16), each interval holds 0. Against
   SFT-v3 the ablated adapters read −0.30 on average against the full adapters' −0.57; that
-  comparison matches SFT-v3 at each arm's own hire rate (ablated 23.06-23.14%, full 23.30-23.41%),
-  so the head-to-head comparison is the registered one.
+  comparison matches SFT-v3 at each arm's own hire rate (op-margin-v2: ablated 22.67-22.80%, full
+  22.83-23.03%), so the head-to-head comparison is the registered one.
 - **Fact (decisions, margins).** Removing the window changes 78-118 of 31,050 decisions, where the
   full adapters change 403-472 of SFT-v3's. The ablated adapters keep most of the compression
-  (margin scale ×0.62-0.66 of SFT-v3's, full ×0.47-0.52), and the sets they fix overlap the
-  all-layer s42 arm's by 0.37-0.57, as the full seeds overlap each other (0.60-0.70)
-  (`reports/margin_readout/readout.csv`).
-- **Reading with A.** Trained alone, at the same learning rate, layers 15-20 lose the gain (A, +0.53);
-  removed from the trained adapter, they leave it (F, +0.11). Patching finds where the attribute
-  reaches the decision; distillation's change that matters is made mostly outside that window,
-  consistent with the residual analysis (section 1F).
+  (margin scale ×0.62-0.66 of SFT-v3's, full ×0.47-0.51). The sets they fix overlap those of the
+  all-layer s42 arm by 0.37-0.57 (weighted Jaccard), below the 0.60 and 0.70 of full seeds 43 and
+  44 against s42; F s42, the s42 adapter itself with the window removed, overlaps it by 0.54.
+  These overlaps also move with each arm's matched point (`reports/margin_readout/readout.csv`;
+  post hoc).
+- **Interpretation with A, not confirmed.** Trained alone, at the same learning rate, layers 15-20
+  lose the gain (A, +0.53); removed from the trained adapter, they leave it (F, +0.11). The
+  registered reading is only that the rest of the adapter suffices as trained. An untested
+  alternative: the window's part of the trained adapter duplicates what the rest does (keeping
+  only the window's part was not run). Patching finds where the attribute reaches the decision;
+  the readouts point to distillation's useful change lying mostly outside that window (head to
+  head +0.11, about 70% of the compression kept), consistent with the residual analysis
+  (section 1F), but the fixed sets change too (F s42 overlaps its own source by 0.54). First
+  written as a reading of fact, relabelled after review.
 - **Caveat.** The remaining 102 modules were trained with the window present: this shows the rest
   of the adapter suffices as trained, not that a model trained without the window would do as
   well, and not that the window plays no part.
@@ -480,7 +512,60 @@ standard). Every seed passes every guardrail and every comparison conforms (comm
 
 ## 4. Reading
 
+**The day's goals (section 0).**
+- G1, the pathway window not worse than all layers: not met. A is H0 at the same learning rate
+  (3A), and C's pilot failed its gate (3C).
+- G2, the students better than their parents: not met (3B; one seed each).
+- G3, a variant clearly better than SFT-v3 over three seeds: E's pilot decides whether it is worth
+  seeds (3E).
+
+**Patching of the poster's GRPO (GRPO + decay R4 s42; jobs 5228155, 5228380, 5228526;
+`reports/interp/distill/grpo_r4/`).** Against SFT-v3, on all 450 pairs per contrast:
+- Margin scale ×2.16 (r_scale), attribute effect ×1.22, ×1.38 and ×1.75 (r_attr: combat implicit,
+  combat explicit, atheist), so ρ is 0.56, 0.64 and 0.81 (noise-corrected 0.85, 0.95, 1.26)
+  (`sensitivity.csv`).
+- It keeps SFT-v3's route. L15.H11 is the top head on all three contrasts, followed by L17.H0 and
+  L19.H11 (atheist: L19.H11 and L7.H8), and the component profile correlates with SFT-v3's at
+  r = 0.90-0.97 (`component_summary.csv`). The attribute difference over depths 15-20 is
+  unchanged (ratio 0.97-1.01, `residual.csv`).
+
+**Margin readout** (`scripts/margin_readout.py` on the standard's op-margin-v2 margins,
+`reports/margin_readout/readout.csv`; post hoc, deciding nothing).
+- DPO_V3_4880 and GRPO + decay R4 widen the median attribute-free margin in all six of their
+  seeds, ×2.04-2.69 of SFT-v3's.
+- The students compress their parent's scale ×0.16 (DPO) and ×0.24 (GRPO), to ×0.44 and ×0.51
+  of SFT-v3's, about plain distillation's ×0.47-0.51. Their parent's borderline pairs move about
+  as much as everything else (×0.86 and ×1.16 of the global factor).
+- The window arms barely compress (×0.83-0.85), D reaches ×0.78, the ablated adapters ×0.62-0.66.
+- The within-set spread ratio (`rho` there) is coarse: near the cut the margins sit on a
+  1/8-logit grid, which inflates the spread of a compressed model. It is not used.
+
+**What the round supports.**
+- Patching locates where the attribute reaches the decision, layers 15-20. Confining distillation
+  there at the same learning rate loses its gain (A, three seeds); removing the window from the
+  trained adapter keeps it (F, three seeds). Distillation's useful change lies mostly outside the
+  window, with the caveats of 3F.
+- Distilling the DPO or GRPO model onto its own attribute-free decision compresses it as it does
+  SFT-v3 and leaves its stability at a matched rate where it was (one seed each). It does pull the
+  GRPO model's hire rate and TPR back toward SFT-v3's.
+
+**What it does not support.** That placing the update by patching improves distillation; that
+any student is better than its parent, or than SFT-v3; that a quarter-size adapter keeps the gain
+(two pilots failed their gates, nothing more); that any arm makes the served model smaller.
+
 ## 5. Caveats
+
+- Every arm used the same learning rate and α/r. A, C and D cannot tell "the placement is not
+  enough" from "a smaller adapter underfits at this learning rate": the window arms end training
+  at a higher loss (3A).
+- F ablates adapters that were trained with the window present. It does not show what a model
+  trained without the window would do.
+- The students, C, D and E have one seed. The students' parents are the best of their method's
+  three seeds; C, D and E are compared with distillation's seed 42, the weakest of its three.
+- The 450-pair benchmark has been read many times during development, so every verdict here is
+  exploratory. E's floor value was picked after a post hoc reading of the benchmark's margins.
+- The 60 GPU-h cap for the day was set in this card (section 0). The user asked to keep exploring
+  and allowed three jobs at a time, without a GPU-h figure.
 
 ## 6. Reproducing
 
