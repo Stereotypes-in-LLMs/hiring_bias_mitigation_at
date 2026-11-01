@@ -145,7 +145,7 @@ def main() -> None:
         if name is None:
             p, data, train, dist = "--", 0.0, 0.0, 0.0
         else:
-            p = f"{int(params[PARAMS_ROW[name]]['params_trainable']) / 1e6:.1f}"
+            p = f"{int(params[PARAMS_ROW[name]]['params_trainable']) / 1e6:.1f}*"   # footnoted
             if name == SFT_V3:
                 data, train, dist = sft_data, sft_train, 0.0
             elif recipes[name]["family"] == "distill":
@@ -188,7 +188,22 @@ def main() -> None:
     lp = params["decision_distill_l0_20_seed43"]
     d = recipes["Distill"]
     dseeds = [table[lab] for lab in labels_of("Distill")]
-    findings = {
+    raw = pd.read_parquet(RAW / f"{arms[SFT_V3]}.parquet",
+                          columns=[*SET, "protected_attr", "candidate_id", "job_id"])
+    att = raw[raw["condition"] != "attr_free"]
+    values = att.groupby("protected_group")["protected_attr"].nunique()
+    findings_data = {
+        "NPairs": f"{raw['pair_id'].nunique():,}",
+        "NCandidates": f"{raw['candidate_id'].nunique():,}",
+        "NPrompts": f"{len(raw):,}",
+        "NSets": f"{att.groupby(SET).ngroups:,}",
+        "NGroups": str(len(values)),
+        "NMilitary": str(values["military_status"]),
+        "NReligion": str(values["religion"]),
+        "NGender": str(values["gender"]),
+        "BackboneB": f"{int(params['decision_distill_seed42']['params_base_text']) / 1e9:.2f}",
+    }
+    findings = {**findings_data,
         "DistillMatched": tm(d["delta_own_pp"]),
         "DistillSeeds": " / ".join(tm(s["delta_own_pp"]) for s in dseeds),
         "DistillSeedsBelowZero": str(sum(float(s["delta_own_pp"]) < 0 for s in dseeds)),
