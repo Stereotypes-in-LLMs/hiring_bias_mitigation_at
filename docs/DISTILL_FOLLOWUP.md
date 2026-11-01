@@ -125,6 +125,7 @@ own point, on the margin files already written. It is descriptive and decides no
 | 4 | 5232894 | H seed 43 audit (nid006478): −0.20 pp against SFT-v3, every guardrail passes, conforms; merge kept 91.6%. Head to head against the full adapter s43: +0.33 [−0.18, +0.86] | 1.21 | 3.34 |
 | 5 | 5233216 | H seed 44 audit (nid005651): −0.02 pp against SFT-v3, every guardrail passes, conforms; merge kept 91.8%. Head to head against the full adapter s44: +0.67 [−0.11, +1.47] | 1.18 | 4.52 |
 | 6 | 5232810 | G DPO student s43 training (nid006002): 341 steps, 1:19:15; trained on DPO_V3_4880 s43 checkpoint-305 merged (`run_config.json`); 5.262 GPU-h measured | 5.28 | 9.80 |
+| 7 | 5233351 | G DPO student s43 audit (nid005942): +0.04 [−1.00, +1.08] pp against SFT-v3, greedy TPR −4.49, agreement −0.90, every guardrail passes, conforms; merge kept 96.6%. Head to head against its parent DPO_V3_4880 s43 at 20.69%: +0.58 [−0.22, +1.37] | 1.22 | 11.02 |
 
 ## 3. Result
 
