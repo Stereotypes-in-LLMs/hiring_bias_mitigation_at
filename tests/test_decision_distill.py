@@ -131,6 +131,20 @@ def test_trainer_with_a_floor_logs_the_lifted_target_and_its_share():
     assert float(loss) > 0 and model.adapter.grad < 0  # descent makes the hire more confident
 
 
+def test_an_exact_tie_is_not_counted_as_lifted():
+    cls = trainer_class((HIRE, REJECT), 4.0)
+    trainer = cls.__new__(cls)
+    trainer.accelerator = SimpleNamespace(unwrap_model=lambda m: m)
+    trainer._distill_log = {}
+    model = Toy()
+    model.table[:, REJECT] = model.table[:, HIRE]  # every token a tie under the teacher
+    inputs = {"input_ids": torch.tensor([[0, 5]]), "teacher_ids": torch.tensor([[0, 5]]),
+              "is_free": torch.tensor([True])}
+    trainer.compute_loss(model, inputs)
+    _kl, _p, q = trainer._distill_log["free"][0]
+    assert abs(q - 0.5) < 1e-7 and trainer._floor_log["free"] == [0.0]
+
+
 def test_one_prompt_per_device():
     row = {"input_ids": [1, 2], "teacher_ids": [1, 3], "is_free": False}
     assert collate([row])["input_ids"].shape == (1, 2)

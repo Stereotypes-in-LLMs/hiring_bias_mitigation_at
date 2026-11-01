@@ -31,7 +31,8 @@ only, although GRPO-v3-all trained on the same pairs.
 - **TPR at the common point**: the hire rate on prompts GPT-4o hires, attribute-free prompts
   included as in the guardrail, for the arm moved to 22.51% (margins). The standard's greedy
   guardrails at the arm's own point are carried as they are (`reports/reference_metrics.csv`).
-- **Cost** (`reports/cost/`, regenerated 2026-10-29 14:08 from 179 jobs, 292 recorded steps).
+- **Cost** (`reports/cost/`, regenerated 2026-11-01 after the patching-informed round, from 202
+  jobs and 573 recorded steps; first regenerated 2026-10-29 from 179 jobs).
   All of it is measured GPU-h, and rows are never summed:
   - **data**: the recipe steps of the jobs that built the arm's training data. A job shared by
     several arms counts in full in each of them.
@@ -110,14 +111,14 @@ between 0.52% and 1.11%, seed 43's between 1.43% and 1.81%, and seed 44's betwee
 |---|---|---|---|
 | one model (extra GPU-h) | 17.95 (DPO_V3_4880, mean of 3 seeds) | 37.90 (ckpt 525), 27.0 (R4), 20.3 (D1) | 21.4 |
 | of which training | 4.03–4.06 | 21.71 / 10.8 / 4.1 | 5.2 |
-| exploration, every step of the family | 43.02 (27 jobs; 9.31 of it this seed round) | 238.60 (60 jobs; 8.68 failed or cut) | 23.25 (10 jobs) |
+| exploration, every step of the family | 43.02 (27 jobs; 9.31 of it this seed round) | 238.60 (60 jobs; 8.68 failed or cut) | 69.26 (30 jobs, the 2026-11-01 round included; 23.25 before it) |
 
-- The fixed evaluation costs 0.50 GPU-h measured per `evaluate_arm` job, median of 13 recorded
+- The fixed evaluation costs 0.50 GPU-h measured per `evaluate_arm` job, median of 25 recorded
   jobs. That is 1.21 GPU-h allocated, since the job holds a 4-GPU node.
 - SFT-v3 itself costs 15.40 (data) + 21.64 (training) = 37.04 GPU-h over the base model. Every
   row above sits on top of that.
-- The account's total from 2026-10-01 is 428.5 GPU-h allocated, of which 30.0 GPU-h is idle
-  time in recorded jobs.
+- The account's total from 2026-10-01 is 488.0 GPU-h allocated (2026-11-01; 428.5 on
+  2026-10-29), of which 40.5 GPU-h is idle time in recorded jobs.
 
 ## Reading
 
@@ -159,14 +160,20 @@ between 0.52% and 1.11%, seed 43's between 1.43% and 1.81%, and seed 44's betwee
 
 ## Added 2026-11-01: the patching-informed round
 
-[`PATCHING_DISTILL.md`](PATCHING_DISTILL.md) adds seven arms to `arms.csv`: layers 15-20 for
-seeds 42-44, the window with its GDN mixers (s42) and rank 8 on all layers (s42), all
-`headline = no` like the layer-restricted run before them, and decision distillation on each
-of DPO_V3_4880 s42 and GRPO+decay R4 s42, `headline = yes` with one seed each. The cost tables
-were regenerated on 2026-11-01 (201 jobs, 351 records, 569 steps), and the Decision
-distillation family's exploration now includes the round's cost arm, `patching_distill`
-(`families.csv`). The window-removed ablation (section F there) is not a trained arm and is
-not listed.
+[`PATCHING_DISTILL.md`](PATCHING_DISTILL.md) adds eight arms to `arms.csv`: layers 15-20 for
+seeds 42-44, the window with its GDN mixers (s42), rank 8 on all layers (s42) and the margin
+floor (s42), all `headline = no` like the layer-restricted run before them, and decision
+distillation on each of DPO_V3_4880 s42 and GRPO+decay R4 s42, `headline = yes` with one seed
+each. A student's `data_jobs` list its parent's jobs and the distillation rows' jobs, each once:
+for the DPO student that adds DPO's own judge and score jobs (1.28 GPU-h, extra 26.93), for the
+GRPO student nothing (the same round-3 jobs). The cost tables were regenerated on 2026-11-01
+with no job running (202 jobs, 355 records, 573 steps), and the Decision distillation family's
+exploration now includes the round's cost arm, `patching_distill` (`families.csv`). The
+window-removed ablation (section F there) is not a trained arm and is not listed.
+
+The DPO student's standard verdict is "better" (own point, −1.50 [−2.42, −0.64], one seed, a
+gain above 1 pp, so the standard asks for no second seed). As that card registers, it is not
+reported as distilled DPO beating SFT-v3: most of it is its parent's seed-42 draw.
 
 For the two students the own point and the common point disagree in direction: the DPO student
 reads −1.50 against its parent's −1.03 at its own point but −0.72 against −0.81 at 22.51%, the

@@ -41,6 +41,8 @@ def test_a_pure_rescaling_reads_as_rho_one():
     for key in ("a_median", "spread_ratio", "border_growth"):
         assert abs(out[key] - 0.5) < 1e-9, key
     assert abs(out["rho"] - 1) < 1e-9 and abs(out["border_over_global"] - 1) < 1e-9
+    # A rescaling keeps every set's flags, so the matched reference counts what the arm counts.
+    assert out["unstable_border_arm"] == out["unstable_border_ref"]
 
 
 def test_shrinking_only_the_attribute_deviations_reads_as_rho_below_one():

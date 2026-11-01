@@ -197,6 +197,7 @@ job_id,job_name,partition,state,start,end,elapsed_h,nodes,gpus,node_h,gpu_h_allo
 5229674,xw-eval-arm,normal,COMPLETED,2026-11-01 14:23:13,2026-11-01 14:38:13,0.25,1,4,0.25,1.0,0.333,/ritom/scratch/cscs/zhang/xw/hiring_bias_mitigation_at-pdistill,records,0.4361,0.5639
 5230014,xw-eval-arm,normal,COMPLETED,2026-11-01 15:15:05,2026-11-01 15:33:01,0.2989,1,4,0.2989,1.1956,0.372,/ritom/scratch/cscs/zhang/xw/hiring_bias_mitigation_at-pdistill,records,0.4939,0.7017
 5230015,xw-eval-arm,normal,COMPLETED,2026-11-01 15:15:05,2026-11-01 15:33:24,0.3053,1,4,0.3053,1.2211,,/ritom/scratch/cscs/zhang/xw/hiring_bias_mitigation_at-pdistill,records,0.5078,0.7133
-5230126,xw-distill,normal,RUNNING,2026-11-01 15:29:32,,0.4381,1,4,0.4381,1.7522,,/ritom/scratch/cscs/zhang/xw/hiring_bias_mitigation_at-pfloor,records,1.6827,0.0695
+5230126,xw-distill,normal,COMPLETED,2026-11-01 15:29:32,2026-11-01 16:47:09,1.2936,1,4,1.2936,5.1744,1.459,/ritom/scratch/cscs/zhang/xw/hiring_bias_mitigation_at-pfloor,records,5.1565,0.0179
 5230147,xw-eval-arm,normal,COMPLETED,2026-11-01 15:34:22,2026-11-01 15:52:29,0.3019,1,4,0.3019,1.2078,,/ritom/scratch/cscs/zhang/xw/hiring_bias_mitigation_at-pdistill,records,0.4988,0.709
 5230148,xw-eval-arm,normal,COMPLETED,2026-11-01 15:34:22,2026-11-01 15:52:44,0.3061,1,4,0.3061,1.2244,0.382,/ritom/scratch/cscs/zhang/xw/hiring_bias_mitigation_at-pdistill,records,0.5034,0.721
+5230734,xw-eval-arm,normal,COMPLETED,2026-11-01 16:48:40,2026-11-01 17:06:48,0.3022,1,4,0.3022,1.2089,,/ritom/scratch/cscs/zhang/xw/hiring_bias_mitigation_at-pdistill,records,0.4978,0.7111
