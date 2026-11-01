@@ -1,0 +1,332 @@
+{
+  "dataset": "V3 English final training views",
+  "variant": "full",
+  "repository_commit": "4f9f9708b57540dcd70c84bf5f833b44350e3b95",
+  "source_artifacts": {
+    "sft": {
+      "train": {
+        "path": "additional/sft_train.parquet",
+        "sha256": "6c270d76c1293bbbb0bf74bd4c69280c59389d2f2045b469d0d36913278cd147",
+        "english_rows": 62761
+      },
+      "validation": {
+        "path": "additional/sft_validation.parquet",
+        "sha256": "0cd72cfb1b6b9776da56a6c08e08cbbab89a50ff17906988aaa6aa61e4939f12",
+        "english_rows": 3527
+      }
+    },
+    "dpo": {
+      "train": {
+        "path": "new-pairs-2/dpo_v3_5k_train.parquet",
+        "sha256": "7ebd59a4bdb40b160e3f84929f095654d2700759f7352e5750a610624eb1cff8",
+        "english_rows": 4880
+      },
+      "validation": {
+        "path": "new-pairs-2/dpo_v3_5k_validation.parquet",
+        "sha256": "f1185f4b11b7c368f23601fc208fdb81512a5e5bd43366e73484095627bda261",
+        "english_rows": 350
+      }
+    },
+    "rl": {
+      "train": {
+        "path": "grpo-v3-all/grpo_train.parquet",
+        "sha256": "a2204df3c0ba784b5205b3bc27757a1396c4da125cf509949594ec5f89a69e5c",
+        "english_rows": 9140
+      },
+      "validation": {
+        "path": "grpo-v3-all/grpo_validation.parquet",
+        "sha256": "873cc509527544d17211e8c6928a4fde6041a4ae2cc9f070df00c69bbeb48a8c",
+        "english_rows": 256
+      }
+    }
+  },
+  "rl_provenance_maps": [
+    {
+      "path": "onpolicy-new/rows.parquet",
+      "sha256": "80e4d90d48bd3e740a0010613a23c3f2522e6bfe513a5c247206c19db08281aa"
+    },
+    {
+      "path": "onpolicy-new2/rows.parquet",
+      "sha256": "8ad06ef808333e8c1bf44a27e0f2d7a86d8b41533733fa6e0da7ad358a36ee9f"
+    }
+  ],
+  "transformations": [
+    "Filter lang=en without changing existing row order or text",
+    "Restore RL source and pool_source through unambiguous CV-job pair provenance",
+    "Add nullable p_wrong to DPO validation to align split schemas",
+    "Write Parquet with identical schema per configuration; remove pandas metadata"
+  ],
+  "files": {
+    "data/sft/train.parquet": {
+      "rows": 62761,
+      "bytes": 65705757,
+      "sha256": "a2c679c3abeb6f664a2c84023d74b5c7e72bf7925d62853ba1dd20c7a76d9b1c",
+      "unique_candidates": 8736,
+      "unique_cv_job_pairs": 10266,
+      "source_counts": {
+        "djinni": 30124,
+        "rjdb": 27620,
+        "kaggle_linkedin": 5017
+      },
+      "reference_decision_counts": {
+        "hire": 32182,
+        "reject": 30579
+      },
+      "schema": {
+        "prompt": "large_string",
+        "completion": "large_string",
+        "decision": "large_string",
+        "lang": "large_string",
+        "protected_group": "large_string",
+        "protected_attr": "large_string",
+        "condition": "large_string",
+        "candidate_id": "large_string",
+        "job_id": "large_string",
+        "pair_id": "large_string",
+        "reference_decision": "large_string",
+        "pool_source": "large_string",
+        "source": "large_string",
+        "anchor_hire_votes": "double",
+        "anchor_decided": "double",
+        "anchor_unstable": "bool",
+        "anchor_changed": "bool",
+        "anchor_source": "large_string"
+      },
+      "source_registry_flagged_rows": {
+        "rjdb": 27620,
+        "kaggle_linkedin": 5017
+      }
+    },
+    "data/sft/validation.parquet": {
+      "rows": 3527,
+      "bytes": 2136807,
+      "sha256": "0e9a4d69401e5f479718f14541cf39193faf49cf03bb3d417d3868fae9071887",
+      "unique_candidates": 476,
+      "unique_cv_job_pairs": 557,
+      "source_counts": {
+        "djinni": 1738,
+        "rjdb": 1478,
+        "kaggle_linkedin": 311
+      },
+      "reference_decision_counts": {
+        "hire": 1874,
+        "reject": 1653
+      },
+      "schema": {
+        "prompt": "large_string",
+        "completion": "large_string",
+        "decision": "large_string",
+        "lang": "large_string",
+        "protected_group": "large_string",
+        "protected_attr": "large_string",
+        "condition": "large_string",
+        "candidate_id": "large_string",
+        "job_id": "large_string",
+        "pair_id": "large_string",
+        "reference_decision": "large_string",
+        "pool_source": "large_string",
+        "source": "large_string",
+        "anchor_hire_votes": "double",
+        "anchor_decided": "double",
+        "anchor_unstable": "bool",
+        "anchor_changed": "bool",
+        "anchor_source": "large_string"
+      },
+      "source_registry_flagged_rows": {
+        "rjdb": 1478,
+        "kaggle_linkedin": 311
+      }
+    },
+    "data/dpo/train.parquet": {
+      "rows": 4880,
+      "bytes": 6099496,
+      "sha256": "0e7866213a9fda2784303bf78147910f1243af99ef83d9d58ad0aee912dbda9e",
+      "unique_candidates": 1374,
+      "unique_cv_job_pairs": 1383,
+      "source_counts": {
+        "djinni": 3790,
+        "rjdb": 756,
+        "kaggle_linkedin": 334
+      },
+      "reference_decision_counts": {
+        "hire": 2440,
+        "reject": 2440
+      },
+      "schema": {
+        "prompt": "large_string",
+        "chosen": "large_string",
+        "rejected": "large_string",
+        "decision": "large_string",
+        "rejected_decision": "large_string",
+        "lang": "large_string",
+        "protected_group": "large_string",
+        "protected_attr": "large_string",
+        "condition": "large_string",
+        "candidate_id": "large_string",
+        "job_id": "large_string",
+        "pair_id": "large_string",
+        "r2em_pool": "large_string",
+        "split": "large_string",
+        "pool_source": "large_string",
+        "prompt_sha1": "large_string",
+        "pair_sha1": "large_string",
+        "student_margin": "double",
+        "p_wrong": "double",
+        "reference_decision": "large_string",
+        "anchor_hire_votes": "int64",
+        "anchor_decided": "int64",
+        "anchor_unstable": "bool",
+        "anchor_changed": "bool",
+        "anchor_source": "large_string",
+        "source": "large_string",
+        "dpo_v3_part": "large_string"
+      },
+      "source_registry_flagged_rows": {
+        "rjdb": 756,
+        "kaggle_linkedin": 334
+      }
+    },
+    "data/dpo/validation.parquet": {
+      "rows": 350,
+      "bytes": 211079,
+      "sha256": "0d0c98df2c2a8308e8e0478ede683cf5f505a490fa2524f4a3db98a484bd93c5",
+      "unique_candidates": 108,
+      "unique_cv_job_pairs": 109,
+      "source_counts": {
+        "djinni": 210,
+        "rjdb": 116,
+        "kaggle_linkedin": 24
+      },
+      "reference_decision_counts": {
+        "hire": 175,
+        "reject": 175
+      },
+      "schema": {
+        "prompt": "large_string",
+        "chosen": "large_string",
+        "rejected": "large_string",
+        "decision": "large_string",
+        "rejected_decision": "large_string",
+        "lang": "large_string",
+        "protected_group": "large_string",
+        "protected_attr": "large_string",
+        "condition": "large_string",
+        "candidate_id": "large_string",
+        "job_id": "large_string",
+        "pair_id": "large_string",
+        "r2em_pool": "large_string",
+        "split": "large_string",
+        "pool_source": "large_string",
+        "prompt_sha1": "large_string",
+        "pair_sha1": "large_string",
+        "student_margin": "double",
+        "p_wrong": "double",
+        "reference_decision": "large_string",
+        "anchor_hire_votes": "int64",
+        "anchor_decided": "int64",
+        "anchor_unstable": "bool",
+        "anchor_changed": "bool",
+        "anchor_source": "large_string",
+        "source": "large_string",
+        "dpo_v3_part": "large_string"
+      },
+      "source_registry_flagged_rows": {
+        "rjdb": 116,
+        "kaggle_linkedin": 24
+      }
+    },
+    "data/rl/train.parquet": {
+      "rows": 9140,
+      "bytes": 8939113,
+      "sha256": "6a003117457362df5fb7758bb52c038f044a13db8c1d7ef754a3ae7fb1ecb7a1",
+      "unique_candidates": 1767,
+      "unique_cv_job_pairs": 1767,
+      "source_counts": {
+        "djinni": 7090,
+        "rjdb": 2050
+      },
+      "reference_decision_counts": {
+        "reject": 4570,
+        "hire": 4570
+      },
+      "schema": {
+        "prompt": "large_string",
+        "reference_decision": "large_string",
+        "pair_id": "large_string",
+        "candidate_id": "large_string",
+        "job_id": "large_string",
+        "lang": "large_string",
+        "protected_group": "large_string",
+        "protected_attr": "large_string",
+        "condition": "large_string",
+        "tipped": "bool",
+        "sft_hire_rate": "double",
+        "sft_samples": "int64",
+        "pull": "double",
+        "source": "large_string",
+        "pool_source": "large_string"
+      },
+      "source_registry_flagged_rows": {
+        "rjdb": 2050
+      }
+    },
+    "data/rl/validation.parquet": {
+      "rows": 256,
+      "bytes": 223666,
+      "sha256": "ff5a08fe82191262356c466a85f6359817c5e45b34b1cf5e7983442aa2670a12",
+      "unique_candidates": 186,
+      "unique_cv_job_pairs": 186,
+      "source_counts": {
+        "djinni": 192,
+        "rjdb": 64
+      },
+      "reference_decision_counts": {
+        "hire": 128,
+        "reject": 128
+      },
+      "schema": {
+        "prompt": "large_string",
+        "reference_decision": "large_string",
+        "pair_id": "large_string",
+        "candidate_id": "large_string",
+        "job_id": "large_string",
+        "lang": "large_string",
+        "protected_group": "large_string",
+        "protected_attr": "large_string",
+        "condition": "large_string",
+        "tipped": "bool",
+        "sft_hire_rate": "double",
+        "sft_samples": "int64",
+        "pull": "double",
+        "source": "large_string",
+        "pool_source": "large_string"
+      },
+      "source_registry_flagged_rows": {
+        "rjdb": 64
+      }
+    }
+  },
+  "release": {
+    "date": "2026-10-25",
+    "repository": "Stereotypes-in-LLMs/hiring-bias-mitigation-v3",
+    "visibility": "private",
+    "scope": "All six final English SFT, DPO and RL train/validation files",
+    "source_review_date": "2026-10-25",
+    "source_terms_notice": "LICENSE.md",
+    "source_registry_gate": {
+      "flagged_sources": [
+        "rjdb",
+        "kaggle_linkedin"
+      ],
+      "project_registry_modified": false,
+      "override": "Explicit --allow-unpublishable-sources for this private upload only",
+      "count_field": "source_registry_flagged_rows records the existing code gate, not a categorical upstream prohibition"
+    },
+    "source_review": {
+      "djinni": "Exact upstream English dataset cards declare MIT; attribution retained",
+      "rjdb": "Upstream CC BY-SA 4.0 and README permit derived data with source links and conditions; notices retained",
+      "kaggle_linkedin": "Uploader-declared CC0 for resume data and CC BY-SA 4.0 for job postings; original text rights and platform permissions remain unverified"
+    },
+    "public_redistribution_clearance": "Not established for the combined full-text release"
+  }
+}

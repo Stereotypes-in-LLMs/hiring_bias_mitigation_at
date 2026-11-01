@@ -19,6 +19,7 @@ from final_table.csv and recipes.csv.
 from __future__ import annotations
 
 import csv
+import json
 import os
 import re
 from decimal import ROUND_HALF_EVEN, Decimal
@@ -33,6 +34,7 @@ RAW = Path(os.environ.get("HBM_OUTPUT_ROOT", "/ritom/scratch/cscs/zhang/xw")) / 
 SET = ["pair_id", "protected_group", "condition"]
 N_BOOT, SEED = 1000, 42
 BASE_RUN = "Qwen3.5-9B--en--baseline--cscs"
+HF_V3_REVISION = "3b8b1c47189d00ca9cf4eb88195c0b84ff81d889"   # hf_v3_manifest.json was taken here
 SFT_V3 = "SFT-v3"
 
 # slot, recipe or arm label (None: not trained), colour, filled, short name
@@ -203,6 +205,14 @@ def main() -> None:
         "NGender": str(values["gender"]),
         "BackboneB": f"{int(params['decision_distill_seed42']['params_base_text']) / 1e9:.2f}",
     }
+    # The released training data (Stereotypes-in-LLMs/hiring-bias-mitigation-v3): its manifest,
+    # pinned at the Hub revision in HF_V3_REVISION, copied to hf_v3_manifest.json.
+    rel = json.loads((HERE / "hf_v3_manifest.json").read_text())["files"]
+    findings_data.update({
+        "RelSFT": f"{rel['data/sft/train.parquet']['rows']:,}",
+        "RelDPO": f"{rel['data/dpo/train.parquet']['rows']:,}",
+        "RelRL": f"{rel['data/rl/train.parquet']['rows']:,}",
+    })
     findings = {**findings_data,
         "DistillMatched": tm(d["delta_own_pp"]),
         "DistillSeeds": " / ".join(tm(s["delta_own_pp"]) for s in dseeds),

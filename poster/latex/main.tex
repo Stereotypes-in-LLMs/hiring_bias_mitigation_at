@@ -63,6 +63,9 @@ GRPO,purple,1,0,0,0
 \newcommand{\NReligion}{9}
 \newcommand{\NGender}{20}
 \newcommand{\BackboneB}{8.95}
+\newcommand{\RelSFT}{62,761}
+\newcommand{\RelDPO}{4,880}
+\newcommand{\RelRL}{9,140}
 \newcommand{\DistillMatched}{\textminus{}0.57}
 \newcommand{\DistillSeeds}{\textminus{}0.42 / \textminus{}0.59 / \textminus{}0.70}
 \newcommand{\DistillSeedsBelowZero}{3}
@@ -285,12 +288,12 @@ GRPO,purple,1,0,0,0
 \Txt[text=ink,align=center]{1008}{718}{124}{15}{\bfseries Students}
 
 \foreach \yy/\col/\ttl/\desc/\fam in {
-  748/blue/{SFT: teacher targets}/{8-vote teacher decisions}/{SFT\\(3 seeds)},
-  806/amber/{DPO: answer pairs}/{Invariant \textgreater{} own error}/{DPO\\to run},
-  864/purple/{GRPO: sampled answers}/{Reward reference agreement}/{GRPO\\to run}}{%
+  748/blue/{SFT: teacher targets}/{\RelSFT{} rows, 8-vote teacher [5]}/{SFT\\(3 seeds)},
+  806/amber/{DPO: answer pairs}/{\RelDPO{} on-policy pairs [5]}/{DPO\\to run},
+  864/purple/{GRPO: sampled answers}/{\RelRL{} prompts, anchor reward [5]}/{GRPO\\to run}}{%
   \Rect[draw=rule,line width=0.9bp]{512}{\yy}{225}{50}{white}
   \Txt[text=\col]{523}{\yy+8}{203}{15}{\bfseries\ttl}
-  \Txt{523}{\yy+31}{203}{12.7}{\desc}
+  \Txt{523}{\yy+31}{203}{12}{\desc}
   \NodeBox{1008}{\yy}{124}{50}{\col}{white}{14}{\fam}
   \draw[teal,line width=1.4bp] (737,\yy+25) -- (748,\yy+25);
   \Arrow[teal]{997}{\yy+25}{1008}{\yy+25}
@@ -436,7 +439,8 @@ GRPO,purple,1,0,0,0
   \href{https://arxiv.org/abs/2106.09685}{[1] Hu et al. LoRA (2021)}\quad
   \href{https://arxiv.org/abs/2305.18290}{[2] Rafailov et al. DPO (2023)}\quad
   \href{https://arxiv.org/abs/2402.03300}{[3] Shao et al. GRPO (2024)}\quad
-  \href{https://github.com/Stereotypes-in-LLMs/hiring_bias_mitigation_at}{[4] Project methods + evaluation (github.com/Stereotypes-in-LLMs/hiring\_bias\_mitigation\_at)}}
+  \href{https://github.com/Stereotypes-in-LLMs/hiring_bias_mitigation_at}{[4] Code: github.com/Stereotypes-in-LLMs/hiring\_bias\_mitigation\_at}\quad
+  \href{https://huggingface.co/datasets/Stereotypes-in-LLMs/hiring-bias-mitigation-v3}{[5] Training data: huggingface.co/datasets/Stereotypes-in-LLMs/hiring-bias-mitigation-v3}}
 
 \end{scope}
 \end{tikzpicture}
