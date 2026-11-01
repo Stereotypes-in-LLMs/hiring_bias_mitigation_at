@@ -68,6 +68,8 @@ PAIRS = [
     *[(f"F window removed s{s}", RUN.format("sft", f"decision_distill_seed{s}_xw15_20"), SFT_V3)
       for s in (42, 43, 44)],
     ("E floor 4 s42", RUN.format("sft", "decision_distill_floor4_seed42"), SFT_V3),
+    ("E floor 4 s42 / plain s42", RUN.format("sft", "decision_distill_floor4_seed42"),
+     RUN.format("sft", "decision_distill_seed42")),
 ]
 
 
