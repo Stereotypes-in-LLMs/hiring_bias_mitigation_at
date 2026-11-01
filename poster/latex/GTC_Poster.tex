@@ -1,0 +1,416 @@
+% !TeX program = pdflatex
+% ============================================================================
+% GTC 2027 poster / editable LaTeX version of the approved v4 layout.
+% Compile: pdflatex GTC_Poster.tex (run twice), or upload this file together
+% with poster_data.tex to Overleaf. Needs the CTAN packages listed below only.
+%
+% Official format: 43 x 24 inches, with a 1-inch WHITE border on every side.
+% Design coordinates: 2064 x 1152, 1 unit = 1.5 bp; content bounds:
+% x = 48 ... 2016, y = 48 ... 1104. This is NOT A0.
+%
+% NUMBERS: every measured value comes from poster_data.tex, written by
+% poster/latex/latex_data.py from the repository's result tables
+% (reports/final/*.csv, reports/reference_metrics.csv, reports/cost/params.csv,
+% reports/comparisons.csv and the audits' raw decisions). Do not type numbers
+% here; rerun the script. Values quoted from a hand-written card name the card.
+% Slots marked "to run" have no trained model yet and are never filled in.
+% ============================================================================
+\documentclass{article}
+\usepackage[paperwidth=43in,paperheight=24in,margin=1in]{geometry}
+\usepackage[T1]{fontenc}
+\usepackage[utf8]{inputenc}
+\usepackage{helvet}
+\renewcommand{\familydefault}{\sfdefault}
+\usepackage{amsmath,amssymb,textcomp}
+\usepackage{tikz}
+\usetikzlibrary{arrows.meta,calc}
+\usepackage{pgfplotstable}
+\pgfplotsset{compat=1.18}
+\usepackage{qrcode}
+\usepackage[hidelinks,pdfborder={0 0 0}]{hyperref}
+\hypersetup{pdftitle={Reducing Attribute Sensitivity in Hiring LLMs},
+  pdfsubject={GTC 2027 research poster, editable LaTeX}}
+\pagestyle{empty}
+\setlength{\parindent}{0pt}
+
+% Measured values: \ModelData, \DeltaData and the finding macros.
+\input{poster_data.tex}
+
+% -------------------------- EDIT CONTENT HERE -------------------------------
+\newcommand{\PosterTitle}{Reducing Attribute Sensitivity in Hiring LLMs}
+% Honest framing: the distillation objective came from the self-distillation
+% family (docs/DECISION_DISTILL.md, 2026-10-27), before the patching of the
+% distilled model. Patching locates the pathway and explains what distillation
+% changes; the one patching-guided variant run so far (layers 0-20) was worse.
+% Change this line to "Mechanistic findings inform distillation" only once a
+% distillation designed from the patching result has been trained and audited.
+\newcommand{\PosterSubtitle}{Activation patching locates the attribute pathway; SFT, DPO, GRPO and self-distillation compared at a matched hire rate}
+\newcommand{\PosterAuthors}{Authors and affiliations [to finalise]}
+% docs/INTERP_SFT_V3.md, Patching (Marta Samoilenko; 64 pairs per contrast).
+\newcommand{\MechanisticFinding}{SFT-v3 removes 61--77\% of the attribute effect;\\
+  the rest still reaches the decision tokens at layers 15--20 (head L15.H11).}
+
+% The decision-distillation design as trained (docs/DECISION_DISTILL.md).
+\newcommand{\TeacherSignal}{Frozen SFT-v3 on the attribute-free CV}
+\newcommand{\StudentObjective}{KL on the decision token, attributed $\to$ attribute-free}
+\newcommand{\UpdatedParameters}{Fresh LoRA r32, all layers: \StandardParams M (\StandardPct\%)}
+
+\newcommand{\StandardTrainable}{\StandardParams*}
+\newcommand{\DistilledSFTTrainable}{\StandardParams}
+\newcommand{\DistilledDPOTrainable}{to run}
+\newcommand{\DistilledGRPOTrainable}{to run}
+\newcommand{\DistilledFractions}{SFT student: \StandardPct\% of the 8.95B text backbone}
+\newcommand{\BehaviourFinding}{Distilled SFT: \DistillMatched{} pp vs SFT-v3 at matched rate\\
+  (seeds \DistillSeeds);\\agreement \DistillAgreeDelta{} pp \DistillAgreeCI.}
+\newcommand{\ComputeFinding}{+\DistillTrainGPUh{} GPU-h of training over SFT-v3 (+\DistillExtraGPUh{} with its data)}
+
+
+% ------------------------------- DESIGN -------------------------------------
+\definecolor{ink}{HTML}{18384A}
+\definecolor{body}{HTML}{2D4654}
+\definecolor{muted}{HTML}{647580}
+\definecolor{rule}{HTML}{D5DEDF}
+\definecolor{panel}{HTML}{F3F5F4}
+\definecolor{green}{HTML}{A6D75A}
+\definecolor{greenDark}{HTML}{426F20}
+\definecolor{teal}{HTML}{137F7C}
+\definecolor{tealPale}{HTML}{E6F3EF}
+\definecolor{blue}{HTML}{3478B7}
+\definecolor{bluePale}{HTML}{EAF0F7}
+\definecolor{purple}{HTML}{7958A1}
+\definecolor{purplePale}{HTML}{EFE9F5}
+\definecolor{amber}{HTML}{B5812F}
+\definecolor{coral}{HTML}{AB6358}
+\definecolor{gray}{HTML}{83929B}
+\definecolor{draft}{HTML}{9A6824}
+\definecolor{dataColour}{HTML}{B8CAD4}
+\definecolor{trainColour}{HTML}{497CB2}
+\definecolor{evalColour}{HTML}{D8C48A}
+\definecolor{setupColour}{HTML}{DFE8EB}
+
+% Text: optional TikZ style, x, y, width, font size in design units, content.
+% At full print size the body size 16 becomes 24 pt.
+\newcommand{\Txt}[6][]{%
+  \pgfmathsetmacro{\TextSize}{1.5*#5}%
+  \pgfmathsetmacro{\TextLead}{1.5*#5*1.15}%
+  \pgfmathsetlengthmacro{\TextWidth}{1.5*(#4)*1bp}%
+  \node[anchor=north west,inner sep=0pt,outer sep=0pt,
+    text width=\TextWidth,align=left,text=body,
+    font=\sffamily\fontsize{\TextSize}{\TextLead}\selectfont,#1]
+    at (#2,#3) {#6};%
+}
+\newcommand{\Rect}[6][draw=none]{%
+  \path[fill=#6,#1] (#2,#3) rectangle ++(#4,#5);%
+}
+\newcommand{\Section}[5]{%
+  \Rect{#1}{#2}{#3}{38}{green}%
+  \Txt[text=ink]{#1+16}{#2+8}{#3-32}{#4}{\bfseries #5}%
+}
+% Node box with center-aligned text: x,y,w,h,text colour,fill,size,label.
+\newcommand{\NodeBox}[8]{%
+  \Rect[draw=rule,line width=0.9bp]{#1}{#2}{#3}{#4}{#6}%
+  \pgfmathsetmacro{\BoxSize}{1.5*#7}%
+  \pgfmathsetmacro{\BoxLead}{1.5*#7*1.1}%
+  \pgfmathsetlengthmacro{\BoxWidth}{1.5*(#3-12)*1bp}%
+  \node[anchor=center,inner sep=0pt,outer sep=0pt,text=#5,
+    text width=\BoxWidth,align=center,
+    font=\sffamily\bfseries\fontsize{\BoxSize}{\BoxLead}\selectfont]
+    at (#1+#3/2,#2+#4/2) {#8};%
+}
+\newcommand{\Arrow}[5][gray]{%
+  \draw[draw=#1,line width=1.6bp,-{Latex[length=8bp,width=5.5bp]}]
+    (#2,#3) -- (#4,#5);%
+}
+\newcommand{\ModelValue}[3]{%
+  \pgfplotstablegetelem{#1}{#2}\of\ModelData\let#3\pgfplotsretval%
+}
+\newcommand{\DeltaValue}[3]{%
+  \pgfplotstablegetelem{#1}{#2}\of\DeltaData\let#3\pgfplotsretval%
+}
+% Editable plot axes: left, baseline, width, min, max, tick list, grid top.
+\newcommand{\Axis}[7]{%
+  \foreach \tick in {#6}{%
+    \pgfmathsetmacro{\xx}{#1+(\tick-#4)/(#5-#4)*#3}%
+    \draw[rule,line width=0.6bp] (\xx,#7) -- (\xx,#2);%
+    \Txt[align=center,text=muted]{\xx-18}{#2+9}{36}{12.5}{\tick}%
+  }%
+  \draw[rule,line width=1bp] (#1,#2) -- ++(#3,0);%
+}
+% Editable CI: left,width,min,max,row-y,mean,lower,upper,colour.
+% PointFill is set by the caller: white for parents / colour for students.
+\newcommand{\CI}[9]{%
+  \pgfmathsetmacro{\xm}{#1+(#6-#3)/(#4-#3)*#2}%
+  \pgfmathsetmacro{\xl}{#1+(#7-#3)/(#4-#3)*#2}%
+  \pgfmathsetmacro{\xh}{#1+(#8-#3)/(#4-#3)*#2}%
+  \draw[#9,line width=2.2bp] (\xl,#5) -- (\xh,#5);%
+  \draw[#9,line width=1.6bp] (\xl,#5-3) -- (\xl,#5+3);%
+  \draw[#9,line width=1.6bp] (\xh,#5-3) -- (\xh,#5+3);%
+  \path[draw=#9,fill=\PointFill,line width=1.8bp] (\xm,#5) circle[radius=3.2];%
+}
+
+\begin{document}
+\null
+\begin{tikzpicture}[remember picture,overlay,x=1.5bp,y=-1.5bp]
+\begin{scope}[shift={(current page.north west)}]
+
+% HEADER: all elements stay within the 1-inch white border.
+\Txt[text=greenDark]{48}{50}{780}{13}{\bfseries GTC 2027 / RESEARCH POSTER}
+\node[anchor=north east,inner sep=0pt,outer sep=0pt,text=draft,
+  font=\sffamily\bfseries\fontsize{19.5}{22.4}\selectfont]
+  at (2016,50) {DRAFT / MEASURED RESULTS / TWO SLOTS TO RUN};
+\Txt[align=center,text=ink]{48}{88}{1968}{49}{\bfseries\PosterTitle}
+\Txt[align=center,text=teal]{48}{151}{1968}{25}{\bfseries\PosterSubtitle}
+\Txt[align=center,text=muted]{48}{192}{1968}{15}{\PosterAuthors}
+
+% THREE-COLUMN GRID, retaining the v4 visual hierarchy.
+\Rect{48}{226}{420}{762}{panel}
+\Rect{492}{226}{660}{762}{panel}
+\Rect{1176}{226}{840}{762}{panel}
+\Section{48}{226}{420}{24}{1. Problem Formulation}
+\Section{492}{226}{660}{25}{2. Methodology}
+\Section{1176}{226}{840}{25}{4. Results}
+
+% LEFT: problem, example, then experimental setup.
+\Txt[text=ink]{64}{284}{388}{20}{\bfseries Can identity cues change a decision\\when qualifications stay the same?}
+\Txt[text=blue]{64}{350}{388}{18}{\bfseries Goal: reduce decision instability\\while preserving task quality.}
+\Txt[text=muted]{64}{398}{388}{14.5}{Toward reliable, qualification-based screening.}
+
+\Section{48}{433}{420}{25}{3. Dataset}
+% Benchmark size: README.md, docs/EVAL_STANDARD.md. Groups: poster/example.json.
+\Txt[text=muted]{64}{486}{388}{16}{450 CV-job pairs / 3 attribute groups [4]}
+% A real SFT-v3 audit row, quoted as written (poster/example.json, picked by hand).
+\Rect[draw=rule,line width=0.8bp]{64}{520}{388}{72}{white}
+\Txt[text=ink]{80}{530}{356}{18}{\bfseries Job: Automation QA Engineer}
+\Txt{80}{557}{356}{14}{CV: Automation QA since 03/2018, tests in\\TypeScript and C\#/JavaScript. Same CV, same job.}
+\NodeBox{64}{610}{184}{40}{blue}{bluePale}{14.5}{``I am a war veteran \ldots''}
+\NodeBox{268}{610}{184}{40}{blue}{bluePale}{14.5}{``I am civilian \ldots''}
+\draw[gray,line width=1.3bp] (156,650) -- (156,665) -- (258,665);
+\draw[gray,line width=1.3bp] (360,650) -- (360,665) -- (258,665);
+\Arrow{258}{665}{258}{679}
+\NodeBox{64}{679}{388}{34}{ink}{white}{16}{SFT-v3, greedy decoding}
+\Txt[text=muted]{64}{728}{388}{13}{Real SFT-v3 output. Reason given to the veteran: ``Missing mandatory Selenium WebDriver experience.''}
+\Txt[text=coral,align=center]{64}{764}{184}{21}{\bfseries Reject}
+\Txt[text=greenDark,align=center]{268}{764}{184}{21}{\bfseries Hire}
+\Txt[text=muted,align=center]{64}{792}{388}{13.5}{one unstable set}
+
+\Rect{48}{815}{420}{33}{setupColour}
+\Txt[text=ink]{64}{822}{388}{22}{\bfseries Experiment setup}
+\Txt{64}{860}{388}{15}{Qwen3.5-9B / rank-32 LoRA / English\\
+  Three training seeds; checkpoint declared before audit\\
+  Primary: unstable-set change at matched hire rate\\
+  Quality: agreement with GPT-4o + its hires' recall\\
+  95\% CI: candidate-clustered bootstrap [4]}
+\Txt[text=teal]{64}{950}{388}{13.8}{\bfseries NVIDIA GPU roles: 4 \texttimes{} GH200 nodes for training,\\
+  vLLM audits and patching; RTX 6000 Ada for Base / SFT patching.}
+
+% MIDDLE: donor intervention -> observed finding -> distillation -> audit.
+\Txt[text=purple]{512}{284}{620}{16}{\bfseries A\quad HOW ACTIVATION PATCHING WORKS}
+\Txt{512}{315}{620}{15.5}{Same CV and job; swap an activation between attribute variants.}
+\Txt[text=ink,align=center]{522}{350}{180}{16}{\bfseries Donor run}
+\Txt[text=ink,align=center]{932}{350}{180}{16}{\bfseries Patched run}
+\NodeBox{522}{377}{180}{28}{body}{white}{14.5}{CV + job + cue A}
+\NodeBox{932}{377}{180}{28}{body}{white}{14.5}{CV + job + cue B}
+\NodeBox{522}{418}{180}{25}{body}{white}{13.5}{Earlier layers}
+\NodeBox{932}{418}{180}{25}{body}{white}{13.5}{Earlier layers}
+\NodeBox{522}{457}{180}{28}{purple}{purplePale}{13.5}{Selected activation}
+\NodeBox{932}{457}{180}{28}{purple}{purplePale}{13.5}{Patched activation}
+\NodeBox{522}{498}{180}{25}{body}{white}{13.5}{Later layers}
+\NodeBox{932}{498}{180}{25}{body}{white}{13.5}{Later layers}
+\foreach \xx in {612,1022}{%
+  \Arrow{\xx}{405}{\xx}{418}
+  \Arrow{\xx}{443}{\xx}{457}
+  \Arrow{\xx}{485}{\xx}{498}}
+\Arrow[purple]{702}{471}{932}{471}
+\Txt[text=purple,align=center]{710}{438}{214}{14.5}{\bfseries Swap one activation}
+\Txt[text=muted,align=center]{710}{497}{214}{14}{Measure cue-B margin\\before / after patching}
+\Arrow[purple]{932}{510}{916}{510}
+\Txt[text=muted]{512}{535}{330}{13.5}{Compare Base / SFT-v3 across layers and heads.}
+\Arrow[purple]{817}{533}{825}{568}
+
+\Rect{512}{569}{620}{73}{purplePale}
+\Txt[text=purple]{526}{579}{592}{14}{\bfseries B\quad MECHANISTIC FINDING FROM PATCHING [4]}
+\Txt[text=ink]{526}{606}{592}{16.5}{\bfseries\MechanisticFinding}
+\draw[teal,dashed,line width=2bp,-{Latex[length=8bp,width=5.5bp]}]
+  (822,645) -- (822,673);
+\Txt[text=teal]{846}{649}{286}{13}{Shows what distillation changes}
+
+\Txt[text=teal]{512}{684}{620}{16}{\bfseries C\quad DECISION DISTILLATION, READ THROUGH PATCHING}
+\Txt[text=ink]{512}{718}{225}{15}{\bfseries Current training signals}
+\Txt[text=teal,align=center]{760}{712}{205}{14}{\bfseries Distillation design\\Shared fields per family}
+\Txt[text=ink,align=center]{1008}{718}{124}{15}{\bfseries Students}
+
+\foreach \yy/\col/\ttl/\desc/\fam in {
+  748/blue/{SFT: teacher targets}/{8-vote teacher decisions}/{SFT\\(3 seeds)},
+  806/amber/{DPO: answer pairs}/{Invariant \textgreater{} own error}/{DPO\\to run},
+  864/purple/{GRPO: sampled answers}/{Reward reference agreement}/{GRPO\\to run}}{%
+  \Rect[draw=rule,line width=0.9bp]{512}{\yy}{225}{50}{white}
+  \Txt[text=\col]{523}{\yy+8}{203}{15}{\bfseries\ttl}
+  \Txt{523}{\yy+31}{203}{12.7}{\desc}
+  \NodeBox{1008}{\yy}{124}{50}{\col}{white}{14}{\fam}
+  \draw[teal,line width=1.4bp] (737,\yy+25) -- (748,\yy+25);
+  \Arrow[teal]{997}{\yy+25}{1008}{\yy+25}
+}
+% Every family enters the SAME design block: do not map one field to one method.
+\draw[teal,line width=1.4bp] (748,773) -- (748,889);
+\Arrow[teal]{748}{831}{760}{831}
+\draw[teal,line width=1.4bp] (965,831) -- (997,831);
+\draw[teal,line width=1.4bp] (997,773) -- (997,889);
+\Rect[draw=teal,line width=1bp]{760}{748}{205}{166}{tealPale}
+\Txt[text=teal]{771}{756}{183}{14.5}{\bfseries Teacher signal}
+\Txt[text=body]{771}{776}{183}{11.5}{\TeacherSignal}
+\draw[teal!30,line width=0.8bp] (771,805) -- (954,805);
+\Txt[text=teal]{771}{811}{183}{14.5}{\bfseries Student objective}
+\Txt[text=body]{771}{831}{183}{11.5}{\StudentObjective}
+\draw[teal!30,line width=0.8bp] (771,861) -- (954,861);
+\Txt[text=teal]{771}{866}{183}{14.5}{\bfseries Updated parameters}
+\Txt[text=body]{771}{886}{183}{11.5}{\UpdatedParameters}
+
+% The one patching-guided variant so far (docs/DISTILL_LAYERS.md), seed 43.
+\Txt[text=muted]{512}{922}{620}{12.3}{Patching-guided control: LoRA on layers 0--20 only (\LayersParams M), chosen from a masked patching check, \LayersControl{} pp vs all layers, same seed and steps.}
+\Rect{512}{953}{620}{29}{ink}
+\Txt[text=white,align=center]{524}{960}{596}{15.5}{\bfseries Shared evaluation: Base + parents + distilled models}
+\foreach \yy in {773,831,889}{\draw[teal,line width=1.2bp] (1132,\yy) -- (1142,\yy);}
+\draw[teal,line width=1.2bp] (1142,773) -- (1142,942) -- (1050,942);
+\Arrow[teal]{1050}{942}{1050}{953}
+
+% RIGHT / A: seven model slots, co-aligned names, parameters and CIs.
+\Txt[text=blue]{1192}{284}{808}{22}{\bfseries A\quad Quality and stability across seven models}
+\Txt[text=muted]{1192}{322}{808}{13.5}{Audits' greedy decisions; seed means where a model has three seeds; 95\% CI over candidates}
+\Txt[text=ink]{1192}{373}{194}{14.5}{\bfseries Model}
+\Txt[text=ink,align=center]{1390}{363}{88}{14}{\bfseries Trainable\\(M)}
+\Txt[text=ink,align=center]{1488}{373}{232}{13.5}{\bfseries Unstable sets (\%)}
+\Txt[text=ink,align=center]{1750}{373}{250}{13.5}{\bfseries Agreement with GPT-4o (\%)}
+\Axis{1495}{665}{215}{0}{12}{0,4,8,12}{402}
+\Axis{1764}{665}{222}{70}{90}{70,75,80,85,90}{402}
+% Dashed lines: the Base model's values.
+\ModelValue{0}{instability}{\BaseU}
+\ModelValue{0}{quality}{\BaseQ}
+\draw[gray,dashed,line width=1bp] (1495+\BaseU/12*215,402) -- (1495+\BaseU/12*215,665);
+\draw[gray,dashed,line width=1bp] (1764+\BaseQ/20*222-70/20*222,402) -- (1764+\BaseQ/20*222-70/20*222,665);
+\foreach \r in {0,...,6}{%
+  \ModelValue{\r}{model}{\ModelName}
+  \ModelValue{\r}{params}{\ParamCount}
+  \ModelValue{\r}{colour}{\RowColour}
+  \ModelValue{\r}{filled}{\IsFilled}
+  \ModelValue{\r}{pending}{\IsPending}
+  \ModelValue{\r}{instability}{\U}
+  \ModelValue{\r}{ilo}{\UL}
+  \ModelValue{\r}{ihi}{\UH}
+  \ModelValue{\r}{quality}{\Q}
+  \ModelValue{\r}{qlo}{\QL}
+  \ModelValue{\r}{qhi}{\QH}
+  \pgfmathsetmacro{\yy}{421+36*\r}
+  \ifnum\IsFilled=1\def\PointFill{\RowColour}\def\RowWeight{\bfseries}\else
+    \def\PointFill{white}\def\RowWeight{}\fi
+  \Txt[text=\RowColour]{1192}{\yy-8}{194}{14.8}{\RowWeight\ModelName}
+  \Txt[text=body,align=center]{1390}{\yy-8}{88}{14.8}{\RowWeight\ParamCount}
+  \ifnum\IsPending=1
+    \Txt[text=muted,align=center]{1495}{\yy-8}{491}{13.5}{to run: no trained model yet}
+  \else
+    \CI{1495}{215}{0}{12}{\yy}{\U}{\UL}{\UH}{\RowColour}
+    \CI{1764}{222}{70}{90}{\yy}{\Q}{\QL}{\QH}{\RowColour}
+  \fi
+}
+\Txt[text=muted]{1192}{666}{290}{12.5}{Base: no adaptation}
+\Txt[text=muted,align=center]{1495}{699}{215}{12.5}{lower is better}
+\Txt[text=muted,align=center]{1764}{699}{222}{12.5}{higher is better}
+\Txt[text=muted]{1192}{691}{290}{12.5}{Matched hire rate vs SFT-v3: dSFT \DistillMatched,\\DPO \DPOMatched, GRPO \GRPOMatched{} pp [4]}
+\Txt[text=muted]{1192}{728}{808}{13}{Open: before distillation / Filled: after / Dashed: Base / Bars: 95\% CI / Best: lowest seed mean, chosen after the audits}
+\Txt[text=muted]{1192}{751}{808}{12.5}{*Standard LoRA r32: \StandardParams M per stage = \StandardPct\% of the 8.95B text backbone; distilled SFT adds one of the same size.}
+\draw[rule,line width=1bp] (1192,777) -- (2000,777);
+
+% RIGHT / B: paired agreement change, distilled minus parent.
+\Txt[text=blue]{1192}{794}{378}{19}{\bfseries B\quad Distillation quality}
+\Txt[text=muted]{1192}{825}{378}{13.5}{Change in agreement with GPT-4o (pp)}
+\Axis{1270}{950}{290}{-4}{4}{-4,-2,0,2,4}{850}
+\draw[gray,dashed,line width=1bp] (1415,850) -- (1415,950);
+\foreach \r in {0,1,2}{%
+  \DeltaValue{\r}{method}{\MethodName}
+  \DeltaValue{\r}{colour}{\RowColour}
+  \DeltaValue{\r}{pending}{\IsPending}
+  \DeltaValue{\r}{delta}{\D}
+  \DeltaValue{\r}{lo}{\DL}
+  \DeltaValue{\r}{hi}{\DH}
+  \pgfmathsetmacro{\yy}{867+30*\r}
+  \def\PointFill{\RowColour}
+  \Txt[text=\RowColour]{1192}{\yy-7}{74}{13.5}{\bfseries\MethodName}
+  \ifnum\IsPending=1
+    \Txt[text=muted,align=center]{1270}{\yy-7}{290}{12}{to run}
+  \else
+    \CI{1270}{290}{-4}{4}{\yy}{\D}{\DL}{\DH}{\RowColour}
+  \fi
+}
+\Txt[text=muted]{1192}{975}{378}{11.5}{Distilled $-$ parent / paired 95\% CI over candidates}
+
+% RIGHT / C: cost stack, inclusive of SFT-v3, to the audited checkpoint.
+\Txt[text=blue]{1604}{794}{396}{19}{\bfseries C\quad GPU time}
+\Txt[text=muted]{1604}{825}{396}{13.2}{GPU-hours to the audited checkpoint, incl.\ SFT-v3}
+\foreach \x/\co/\lab in {1614/dataColour/Data,1700/trainColour/Train,
+  1786/teal/Distill,1880/evalColour/Eval}{%
+  \Rect{\x}{849}{7}{7}{\co}
+  \Txt[text=muted]{\x+11}{848}{66}{10.5}{\lab}}
+\foreach \tick in {0,20,40,60}{%
+  \pgfmathsetmacro{\yy}{950-\tick/70*80}
+  \draw[rule,line width=0.6bp] (1640,\yy) -- (1990,\yy);
+  \Txt[text=muted,align=right]{1604}{\yy-6}{28}{10.5}{\tick}}
+\foreach \r in {0,...,6}{%
+  \pgfmathsetmacro{\xx}{1646+50*\r}
+  \ModelValue{\r}{pending}{\IsPending}
+  \ifnum\IsPending=1
+    \Txt[text=muted,align=center]{\xx-10}{930}{51}{9.5}{to run}
+  \else
+    \pgfmathsetmacro{\Cum}{0}
+    \foreach \field/\co in {data/dataColour,train/trainColour,distill/teal,eval/evalColour}{%
+      \ModelValue{\r}{\field}{\V}
+      \pgfmathsetmacro{\yy}{950-(\Cum+\V)/70*80}
+      \pgfmathsetmacro{\hh}{\V/70*80}
+      \Rect{\xx}{\yy}{31}{\hh}{\co}
+      \pgfmathparse{\Cum+\V}\xdef\Cum{\pgfmathresult}}
+  \fi
+  \ModelValue{\r}{short}{\ShortName}
+  \Txt[text=muted,align=center]{\xx-10}{955}{51}{10.5}{\ShortName}}
+\Txt[text=muted]{1604}{975}{396}{11.5}{d = distilled / measured where recorded / reports/final}
+
+% BOTTOM FINDINGS.
+\Rect{48}{1007}{420}{97}{green}
+\Txt[text=ink]{64}{1028}{388}{26}{\bfseries 5. Conclusion\\and Findings}
+\draw[greenDark,line width=1.2bp] (492,1007) -- (2016,1007);
+\Txt[text=blue]{512}{1021}{410}{18}{\bfseries Mechanism}
+\Txt{512}{1050}{410}{14.5}{The attribute pathway survives SFT-v3 (L15.H11),\\weakened; distillation shrinks margins along it.}
+\Txt[text=blue]{952}{1021}{423}{18}{\bfseries Behaviour + quality}
+\Txt[text=muted]{952}{1050}{423}{12}{\BehaviourFinding}
+\Txt[text=blue]{1415}{1021}{460}{18}{\bfseries Distilled parameters + compute}
+\Txt[text=muted]{1415}{1048}{460}{12.8}{Trainable SFT / DPO / GRPO: \DistilledSFTTrainable{} M / \DistilledDPOTrainable{} / \DistilledGRPOTrainable\\
+  \DistilledFractions\\\ComputeFinding}
+\node[anchor=north west,inner sep=0pt] at (1940,1018)
+  {\qrcode[height=1.33in]{https://github.com/Stereotypes-in-LLMs/hiring\_bias\_mitigation\_at/blob/main/poster/DETAILS.md}};
+\Txt[text=teal,align=right]{1880}{1088}{124}{10}{Full results + code}
+
+% Small on-poster references; full URLs and reporting details are in source and README.
+\Txt[text=muted]{512}{1092}{1348}{10.5}{%
+  \href{https://arxiv.org/abs/2106.09685}{[1] Hu et al. LoRA (2021)}\quad
+  \href{https://arxiv.org/abs/2305.18290}{[2] Rafailov et al. DPO (2023)}\quad
+  \href{https://arxiv.org/abs/2402.03300}{[3] Shao et al. GRPO (2024)}\quad
+  \href{https://github.com/Stereotypes-in-LLMs/hiring_bias_mitigation_at}{[4] Project methods + evaluation (github.com/Stereotypes-in-LLMs/hiring\_bias\_mitigation\_at)}}
+
+\end{scope}
+\end{tikzpicture}
+\end{document}
+
+% ------------------------- EVIDENCE / FINALISATION ---------------------------
+% Repository evidence (Stereotypes-in-LLMs/hiring_bias_mitigation_at, main):
+% docs/INTERP_SFT_V3.md        -- patching procedure and observed mechanism (Marta)
+% docs/DECISION_DISTILL.md     -- the distillation design, why it was chosen
+% docs/DISTILL_PATCHING.md     -- patching of the distilled model
+% docs/DISTILL_LAYERS.md       -- the patching-guided layer-restricted control
+% docs/EVAL_STANDARD.md        -- matched-rate comparison; candidate bootstrap
+% docs/FINAL_TABLE.md          -- every arm, seeds, cost
+% reports/cost/params.csv      -- trainable parameter counts
+%
+% Still open before submission:
+% (1) Authors, affiliations and final title.
+% (2) Distilled DPO and distilled GRPO: not trained.
+% (3) A distillation designed from Marta's pathway (layers 15-20, L15.H11,
+%     MLP 31): not trained; only then may the subtitle say patching informs it.
+% (4) "Best" was chosen after the audits (lowest seed mean); say so or fix a
+%     rule before any new audit.

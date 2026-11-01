@@ -1,5 +1,13 @@
 # GTC 2027 poster
 
+Two versions. `latex/GTC_Poster.tex` is the approved v4 layout (43 x 24 in, the official GTC
+2027 format), filled with measured values from `latex/poster_data.tex`, which
+`latex/latex_data.py` writes (shared venv; it checks every run against
+`reports/reference_metrics.csv`). Compile on Overleaf with both files, or `pdflatex` twice. It
+has not been compiled on Daint (no TeX there). The Typst version below (44 x 35 in) came first.
+
+## Typst version
+
 A 44 x 35 in landscape poster in Typst, in six sections: problem formulation, methodology (one
 diagram of the post-training and audit pipeline and Marta Samoilenko's activation-patching
 pipeline), dataset with one example, experiment setup, results against the base model, and
