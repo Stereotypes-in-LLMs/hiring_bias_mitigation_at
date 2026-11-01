@@ -115,6 +115,42 @@ and even an interval below 0 reads "better than its parent, pending a second see
 SFT-v3 (−0.57 pp, three seeds), and every guardrail passes against SFT-v3.
 **Against.** A change against the parent ≥ 0, or a failed guardrail against SFT-v3.
 
+**Added 2026-11-01, before either student job.** Both parents are the best of their method's
+three seeds: DPO s42 −1.03 against −0.09 and +0.20; GRPO R4 s42 −0.73 against −0.44 and −0.16
+(`reports/reference_metrics.csv`). A change ≥ 0 against such a parent therefore reads "not
+distinguishable from regression to the method mean". Each student is also reported against
+SFT-v3 next to its method's three-seed mean (DPO −0.31, GRPO R4 −0.44). A windowed student (its
+LoRA confined to a window read from that parent's patching) is trained only if the all-layer
+student is better than its parent, upper bound below 0.
+
+### C. The whole pathway window, GDN mixers included (registered 2026-11-01, after A seed 42)
+
+**Why.** A seed 42 came out +0.13 pp against SFT-v3 and +0.26 [−0.32, +0.82] against all
+layers, so H1 can no longer be reached (it needs every seed below SFT-v3). Arm A adapted only the
+MLPs and the two full-attention layers of the window: the default LoRA targets have no
+linear-attention module, so the GDN mixers of layers 16, 17, 18 and 20 stayed frozen. In SFT-v3
+they carry part of the arrival: at the post-attribute tokens GDN 16-18 take 0.13-0.41 of the
+effect, and the layer-17 step at the decision tokens is mostly its GDN mixer
+(`reports/interp/patching/sft_v3-grid-*-sel_sft_v3/real.csv`). Against this reading, the largest
+carrier at the decision tokens, attention 19, was trainable in arm A, and GDN 17 reads a residual
+that the trainable layers write; the training logs show no underfitting. This arm is designed
+after seeing A seed 42, so it is exploratory.
+
+**Change against arm A (one variable).** The LoRA targets in layers 15-20 add the three large GDN
+projections, `linear_attn.in_proj_qkv`, `in_proj_z` and `out_proj`: 38 modules, 15,073,280
+trainable parameters (0.168% of the text backbone, a quarter of all layers' 58,195,968). Counted
+by building the model with empty weights and applying `peft_config` (layers 15-20 only, the same
+26 modules as arm A plus 12 GDN projections). Configs
+`configs/mitigation/distill/decision_distill_w15_20_seed{42,43,44}.yaml`.
+
+**Pilot rule, fixed now.** Seed 42 first. Seeds 43 and 44 run only if seed 42's change against
+the all-layer arm of seed 42 is ≤ +0.20 pp and its change against SFT-v3 is below 0. The
+three-seed call then uses arm A's bands: "the window is enough" if the mean change against the
+all-layer arm is ≤ +0.20 pp and every seed is below SFT-v3 with every guardrail passing;
+"loses the gain" above +0.30; undecided in between. Under the first outcome the poster may say:
+distillation confined to the pathway layers, with a quarter of the trainable parameters, is not
+worse than distillation on all layers. The served model stays the same 9B model.
+
 ### Evaluation, splits and stop conditions
 
 - The final adapter of each arm, declared now. `evaluate_arm.sbatch` against SFT-v3, then
