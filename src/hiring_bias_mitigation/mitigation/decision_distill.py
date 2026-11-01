@@ -25,6 +25,11 @@ rows teaches a different hiring standard.
 One prompt per device and micro-step: no padding, so the last position is the decision
 position, and Qwen3.5's linear-attention layers never see a padded batch. The teacher's
 forward runs under no_grad on the unwrapped model, outside DDP's graph.
+
+With `teacher_margin_floor: F` the target is the teacher's decision made confident: its margin
+m = z_hire - z_reject is replaced by sign(m) * max(|m|, F) before the softmax, on every row
+(docs/PATCHING_DISTILL.md, section 1E). A margin of at least F, and an exact tie, keep the
+teacher's own target; without the key nothing changes.
 """
 
 from __future__ import annotations
@@ -39,13 +44,28 @@ from . import training_common as C
 log = get_logger(__name__)
 
 
-def decision_kl(student_logits, teacher_logits, token_ids):
+def teacher_target(teacher_logits, token_ids, margin_floor=None):
+    """log q over the two decision tokens, per row: the teacher's, or with its margin lifted to
+    at least `margin_floor` in size, its sign kept (see the module docstring)."""
+    import torch
+    import torch.nn.functional as F
+
+    idx = torch.tensor(token_ids, device=teacher_logits.device)
+    two = teacher_logits.index_select(-1, idx).float()
+    if margin_floor is None:
+        return torch.log_softmax(two, dim=-1)
+    margin = two[..., 0] - two[..., 1]
+    margin = torch.sign(margin) * margin.abs().clamp(min=float(margin_floor))
+    return torch.stack([F.logsigmoid(margin), F.logsigmoid(-margin)], dim=-1)
+
+
+def decision_kl(student_logits, teacher_logits, token_ids, margin_floor=None):
     """KL(q || p) over the two decision tokens, per row; logits are [rows, vocab] (float)."""
     import torch
 
     idx = torch.tensor(token_ids, device=student_logits.device)
     log_p = torch.log_softmax(student_logits.index_select(-1, idx).float(), dim=-1)
-    log_q = torch.log_softmax(teacher_logits.index_select(-1, idx).float(), dim=-1)
+    log_q = teacher_target(teacher_logits, token_ids, margin_floor)
     return (log_q.exp() * (log_q - log_p)).sum(-1)
 
 
@@ -79,7 +99,7 @@ def collate(rows):
             "is_free": torch.tensor([row["is_free"]])}
 
 
-def trainer_class(token_ids):
+def trainer_class(token_ids, margin_floor=None):
     from transformers import Trainer
 
     class DecisionDistillTrainer(Trainer):
@@ -90,15 +110,20 @@ def trainer_class(token_ids):
             module = self.accelerator.unwrap_model(model)
             with torch.no_grad(), module.disable_adapter():
                 teacher = module(input_ids=inputs["teacher_ids"], logits_to_keep=1).logits[:, -1]
-            kl = decision_kl(student, teacher, token_ids)
+            kl = decision_kl(student, teacher, token_ids, margin_floor)
             loss = kl.mean()
             if model.training:
                 idx = torch.tensor(token_ids, device=student.device)
                 p = torch.softmax(student.detach().index_select(-1, idx).float(), -1)[:, 0]
-                q = torch.softmax(teacher.index_select(-1, idx).float(), -1)[:, 0]
+                q = teacher_target(teacher, token_ids, margin_floor).exp()[:, 0]
                 key = "free" if bool(inputs["is_free"][0]) else "attr"
                 self._distill_log.setdefault(key, []).append(
                     (float(kl.detach().mean()), float(p.mean()), float(q.mean())))
+                if margin_floor is not None:
+                    two = teacher.index_select(-1, idx).float()
+                    lifted = (two[:, 0] - two[:, 1]).abs() < float(margin_floor)
+                    self._floor_log = getattr(self, "_floor_log", {})
+                    self._floor_log.setdefault(key, []).append(float(lifted.float().mean()))
             return (loss, {"logits": student}) if return_outputs else loss
 
         def log(self, logs, start_time=None):
@@ -108,7 +133,11 @@ def trainer_class(token_ids):
                     logs[f"distill/{key}_kl"] = sum(v[0] for v in values) / n
                     logs[f"distill/{key}_p_hire"] = sum(v[1] for v in values) / n
                     logs[f"distill/{key}_q_hire"] = sum(v[2] for v in values) / n
+            for key, values in getattr(self, "_floor_log", {}).items():
+                if values:  # the share of rows whose target the floor lifted
+                    logs[f"distill/{key}_floored"] = sum(values) / len(values)
             self._distill_log = {}
+            self._floor_log = {}
             super().log(logs, start_time)
 
     return DecisionDistillTrainer
@@ -138,7 +167,8 @@ def train(cfg: dict) -> C.TrainArtifacts:
     args.remove_unused_columns = False
     args.save_strategy = "steps"
     args.save_steps = int(cfg.get("save_steps", 50))
-    trainer = trainer_class(token_ids)(
+    margin_floor = cfg.get("teacher_margin_floor")
+    trainer = trainer_class(token_ids, margin_floor)(
         model=model, args=args, train_dataset=train_ds, data_collator=collate,
         callbacks=C.memory_guard_callbacks(cfg) + C.cost_callbacks())
     trainer._distill_log = {}
@@ -147,6 +177,7 @@ def train(cfg: dict) -> C.TrainArtifacts:
                 "decision_token_ids": list(token_ids),
                 "sft_checkpoint": cfg.get("sft_checkpoint"),
                 "lora_layer_range": cfg.get("lora_layer_range"),
+                "teacher_margin_floor": margin_floor,
                 "lora_modules": sum(1 for _, m in model.named_modules() if hasattr(m, "lora_A"))}
     if C.is_main_process():
         C.write_run_manifest(cfg, output_dir, {**manifest, "status": "training"})
