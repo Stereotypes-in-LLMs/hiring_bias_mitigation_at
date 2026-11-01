@@ -128,8 +128,30 @@ own point, on the margin files already written. It is descriptive and decides no
 | 7 | 5233351 | G DPO student s43 audit (nid005942): +0.04 [−1.00, +1.08] pp against SFT-v3, greedy TPR −4.49, agreement −0.90, every guardrail passes, conforms; merge kept 96.6%. Head to head against its parent DPO_V3_4880 s43 at 20.69%: +0.58 [−0.22, +1.37] | 1.22 | 11.02 |
 | 8 | 5233279 | G GRPO student s43 training (nid005933): 341 steps, 1:19:48; trained on GRPO + decay R4 s43 merged; 5.301 GPU-h measured | 5.32 | 16.34 |
 | 9 | 5232838 | I seed 42 training (retry 1, nid005944): 682 steps, 2:31:33; 10.085 GPU-h measured; train_loss 0.028 over the run, attributed KL at the end 0.0063 | 10.10 | 26.44 |
+| 10 | 5233609 | G GRPO student s43 audit (nid005906): −0.91 [−1.72, −0.13] pp against SFT-v3 ("better, pending a second seed"), greedy TPR +0.78, agreement +0.04, every guardrail passes, conforms; merge kept 95.1%. Head to head against its parent GRPO + decay R4 s43 at 23.09%: −0.49 [−1.19, +0.21] | 1.24 | 27.68 |
 
 ## 3. Result
+
+### G. The students on the parents' seed-43 models (DPO: against; GRPO: not better, no seed added)
+
+Head to head against the parent at the student's hire rate (`compare-arms`); seed 42 from
+`PATCHING_DISTILL.md`, section 3B. Every audit conforms and passes every guardrail.
+
+| student | seed 42 vs parent | seed 43 vs parent | mean | seed 43 vs SFT-v3 (seed 42) |
+|---|---|---|---|---|
+| on DPO_V3_4880 | −0.07 [−0.44, +0.33] | +0.58 [−0.22, +1.37] | +0.26 | +0.04 [−1.00, +1.08] (−1.50) |
+| on GRPO + decay R4 | +0.02 [−0.77, +0.82] | −0.49 [−1.19, +0.21] | −0.24 | −0.91 [−1.72, −0.13] (−0.16) |
+
+- **Calls (section 1G).**
+  - DPO student: **against**, the two-seed mean is ≥ 0.
+  - GRPO student: **not better**. Not both seeds are below 0, so no seed 44 is trained without the
+    user.
+- **Fact.** Against SFT-v3, each student follows its parent's draw:
+  - the DPO student was −1.50 on the best DPO seed and +0.04 on seed 43 (parent −0.09);
+  - the GRPO student was −0.16 on seed 42 (parent −0.73) and −0.91 on seed 43 (parent −0.44).
+- The GRPO student s43's "better, pending a second seed" against SFT-v3 is one of two draws, and
+  its seed-42 counterpart was not better. As registered, no student is reported as "distilled
+  DPO / GRPO beats SFT-v3".
 
 ### H. The window kept alone (registered call: does not carry the gain on its own)
 
