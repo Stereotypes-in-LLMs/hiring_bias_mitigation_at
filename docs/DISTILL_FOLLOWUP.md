@@ -123,8 +123,33 @@ own point, on the margin files already written. It is descriptive and decides no
 | 2 | 5232811 | H seed 42 audit: failed on nid006377, "No CUDA GPUs are available" (the node of PATCHING_DISTILL ledger row 15, `logs/xw-eval-arm-5232811.out`); resubmitted with the same exclusion | 0.57 | 1.13 |
 | 3 | 5232839 | H seed 42 audit (retry 1, nid005561): −0.17 pp against SFT-v3, every guardrail passes, conforms; merge kept 91.6%. Head to head against the full adapter s42 (`compare-arms`, CPU): +0.22 [−0.50, +0.97] | 1.00 | 2.13 |
 | 4 | 5232894 | H seed 43 audit (nid006478): −0.20 pp against SFT-v3, every guardrail passes, conforms; merge kept 91.6%. Head to head against the full adapter s43: +0.33 [−0.18, +0.86] | 1.21 | 3.34 |
+| 5 | 5233216 | H seed 44 audit (nid005651): −0.02 pp against SFT-v3, every guardrail passes, conforms; merge kept 91.8%. Head to head against the full adapter s44: +0.67 [−0.11, +1.47] | 1.18 | 4.52 |
 
 ## 3. Result
+
+### H. The window kept alone (registered call: does not carry the gain on its own)
+
+`decision_distill_seed{42,43,44}_xk15_20`: the trained all-layer adapters with `lora_B` zeroed
+outside layers 15-20 (26 of 128 modules kept). Every audit conforms and passes every guardrail;
+the merge kept 91.6-91.8%.
+
+| seed | against the full adapter (`compare-arms`), pp [95% CI] | against SFT-v3, pp | the full adapter against SFT-v3, pp |
+|---|---|---|---|
+| 42 | +0.22 [−0.50, +0.97] | −0.17 | −0.42 |
+| 43 | +0.33 [−0.18, +0.86] | −0.20 | −0.59 |
+| 44 | +0.67 [−0.11, +1.47] | −0.02 | −0.70 |
+| mean | **+0.41** | −0.13 | −0.57 |
+
+- **Call.** The mean is above +0.30, so by the rule registered in section 1H the window's part of
+  the trained adapters does not carry the gain on its own. Every interval holds 0; the call rests
+  on the three-seed mean, as registered.
+- **Fact, with section F of `PATCHING_DISTILL.md`.** On the same three adapters, removing layers
+  15-20 kept the gain (+0.11 against the full adapter) and keeping only layers 15-20 loses most of
+  it (+0.41). Trained alone at the same learning rate, the window lost it too (A, +0.53).
+- **Interpretation, not confirmed.** Distillation's useful change lies mostly outside the window
+  that patching locates. The window's part does not duplicate the rest. This is an ablation of
+  adapters trained with every layer present, so it does not show what a model trained without
+  those layers would do.
 
 ### J. Overlap of the unstable sets across training seeds (CPU, descriptive)
 
