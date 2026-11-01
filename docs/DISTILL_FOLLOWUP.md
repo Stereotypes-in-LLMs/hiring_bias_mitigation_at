@@ -122,6 +122,28 @@ own point, on the margin files already written. It is descriptive and decides no
 
 ## 3. Result
 
+### J. Overlap of the unstable sets across training seeds (CPU, descriptive)
+
+`scripts/seed_overlap.py`, `reports/seed_overlap/overlap.csv`: unstable within-group sets at each
+seed's own greedy cut (of 2,700), op-margin-v2 margins. "SFT-v3" is SFT-v3 moved to the same two
+hire rates (weighted where its cut ties), the overlap the operating points alone would give.
+
+| recipe | unstable sets, s42 / s43 / s44 | Jaccard of seed pairs 42-43 / 42-44 / 43-44 | SFT-v3 at the same rates | on the 35 borderline pairs |
+|---|---|---|---|---|
+| DPO_V3_4880 | 25 / 46 / 57 | 0.15 / 0.14 / 0.26 | 0.22 / 0.19 / 0.83 | 80 / 74 / 81% |
+| GRPO + decay R4 | 38 / 45 / 51 | 0.14 / 0.09 / 0.28 | 0.10 / 0.09 / 0.92 | 68 / 91 / 80% |
+| Decision distillation | 46 / 38 / 39 | 0.53 / 0.60 / 0.45 | 0.83 / 0.97 / 0.86 | 96 / 97 / 95% |
+
+- **Fact.** DPO's and GRPO's seeds leave mostly different sets unstable: at most about a quarter
+  of the union is shared. Where two seeds sit at nearly the same hire rate (43 and 44 of either
+  method), SFT-v3 at those rates shares 83-92% and the seeds 26-28%.
+- **Fact.** Distillation's seeds share about half of their unstable sets, and 95-97% of those
+  sets lie on SFT-v3's 35 borderline pairs (DPO 74-81%, GRPO 68-91%).
+- **Interpretation, not confirmed.** DPO's seed spread (sd 0.65 pp) fits a training draw that
+  decides which sets end up straddling the widened cut, not one fixed group of hard sets; DPO
+  s42's low count would then be a favourable draw. Distillation's remaining instability is
+  largely the same borderline sets on every seed.
+
 ## 4. Reading
 
 ## 5. Caveats
