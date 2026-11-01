@@ -30,8 +30,9 @@ def write(n: dict, path: Path) -> None:
         f"| {r['model']} | {r['seeds'] or '—'} | {r['hire']} | {r['unstable']} | "
         f"{r['delta'] or '—'} | {r['range'] or '—'} | {r['gpu_h'] or '—'} |" for r in n["vs_base"])
     sources = "\n".join(f"| `{k}` | {v} |" for k, v in sorted(n["sources"].items()))
-    floor = (" With the teacher's margin floored at 4 logits (one seed, exploratory): "
-             f"{n['floor_pilot']} pp." if n["floor_pilot"] else "")
+    floor = (" A different change, the teacher's margin floored at 4 logits (one seed, "
+             f"exploratory): {n['floor_pilot']} pp; undecided, no seed added."
+             if n["floor_pilot"] else "")
 
     text = f"""# Poster details
 
@@ -88,8 +89,8 @@ GPT-4o's reference decision: {ex['reference_decision']}. SFT-v3 on the attribute
   (one seed).
 - After SFT-v3: DPO on 4,880 on-policy pairs ({n['dpo_steps']} steps), GRPO and DAPO with
   learning-rate decay, decision distillation. Three training seeds each, one for decision
-  distillation on top of DPO and of GRPO; checkpoints declared before the audit, except GRPO
-  checkpoint 525.
+  distillation on top of DPO and of GRPO and for GRPO on distillation; checkpoints declared
+  before the audit, except GRPO checkpoint 525.
 - Guardrails: merge keeps at least {n['min_merge_kept_pct']}% of the update; hire rate on
   GPT-4o's hires falls by at most {n['max_tpr_drop_pp']} pp; agreement with GPT-4o falls by at
   most {n['max_agree_drop_pp']} pp; at most {n['max_undecided_pct']}% undecided.
@@ -179,9 +180,9 @@ of {n['b_block_bound']} ({_doc("docs/THROUGHPUT_B.md")}). A null result over
 
 English only; one 9B model; {n['audit_candidates']} benchmark candidates. Patching on 64 pairs
 per contrast and one pair selection. GRPO checkpoint 525 was picked with audit numbers in view.
-The students and the quarter-size pilots have one seed each. The students' parents are the
-best of their method's three seeds; the pilots are compared with distillation's seed 42, the
-weakest of its three.
+The students, the quarter-size pilots and the margin floor have one seed each. The students'
+parents are the best of their method's three seeds; the pilots and the margin floor are
+compared with distillation's seed 42, the weakest of its three.
 
 ## Sources
 

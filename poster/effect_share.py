@@ -4,7 +4,7 @@ Marta Samoilenko's patching measured it on 64 pairs per contrast, picked for a l
 (docs/INTERP_SFT_V3.md: 61-77%). Here it is read on every aligned pair of the same three
 contrasts, from the patching pipeline's manifest (scripts/interp/04_manifest.py): one minus
 sum |dm_SFT-v3| over sum |dm_base|. Writes ``poster/effect_share.json``, which
-``latex/latex_data.py`` and ``build_poster.py`` read.
+``build_poster.py`` reads for DETAILS.md (the LaTeX poster quotes the patched-pairs share).
 
     HBM_OUTPUT_ROOT=$XW ../venv/bin/python poster/effect_share.py
 """

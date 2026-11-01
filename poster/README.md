@@ -19,11 +19,13 @@ the source of every number.
 # needs pandas and the raw audits: the shared venv
 HBM_OUTPUT_ROOT=$XW ../venv/bin/python poster/pick_example.py    # -> example.json
 HBM_OUTPUT_ROOT=$XW ../venv/bin/python poster/base_compare.py    # -> base_compare.json
+HBM_OUTPUT_ROOT=$XW ../venv/bin/python poster/effect_share.py    # -> effect_share.json
 # needs typst, qrcode and pillow: $XW/.typst-venv
 $XW/.typst-venv/bin/python poster/build_poster.py --preview /path/to/preview.png
 ```
 
-`build_poster.py` reads the result tables and the two JSON files, writes every number into
+`build_poster.py` reads the result tables and the three JSON files (example, base_compare,
+effect_share), writes every number into
 `numbers.json` with the file it comes from, draws the charts (`charts.py`, used on the details
 page) and the QR code into `figures/`, writes `DETAILS.md` (`details.py`) and compiles
 `poster.typ` to `poster.pdf`. The layout never contains a typed number. The font is Liberation

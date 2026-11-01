@@ -129,7 +129,7 @@
   table.header([*Model*], [*Hire rate*], [*Unstable sets*], [*vs base, pp*],
                [*95% CI or seed range*], [*GPU-h*]),
   ..N.vs_base.map(r => (
-    if r.seeds != "" and r.model != "SFT-v3" [#r.model #text(size: 20pt, fill: muted)[(#r.seeds #if r.seeds == "1" [seed] else [seeds])]] else [#r.model],
+    if r.seeds != "" and r.model != "SFT-v3" [#r.model #text(size: 20pt, fill: muted)[(#r.seeds~#if r.seeds == "1" [seed] else [seeds])]] else [#r.model],
     r.hire, r.unstable, if r.delta == "" [—] else [*#r.delta*],
     text(size: 22pt, r.range), r.gpu_h)).flatten(),
 )

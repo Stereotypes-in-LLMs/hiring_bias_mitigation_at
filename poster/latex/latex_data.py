@@ -230,7 +230,6 @@ def main() -> None:
     widen = widen[widen["label"].str.match(r"(DPO_V3_4880|GRPO\+decay R4) s4[234]$")]
     assert len(widen) == 6, widen["label"].tolist()
     window_params = int(params["decision_distill_l15_20_seed42"]["params_trainable"])
-    student = {k: comp[(arms[f"{k} s42"], arms[STUDENT_PARENT[k]])] for k in STUDENT_PARENT}
     lp = params["decision_distill_l0_20_seed43"]
     d = recipes["Distill"]
     dseeds = [table[lab] for lab in labels_of("Distill")]
@@ -280,8 +279,6 @@ def main() -> None:
         "WidenRange": f"{widen['a_median'].min():.1f}--{widen['a_median'].max():.1f}",
         "StudentDPO": interval(arms["Distill on DPO s42"], arms["DPO_V3_4880 s42"]),
         "StudentGRPO": interval(arms["Distill on GRPO R4 s42"], arms["GRPO+decay R4 s42"]),
-        "StudentDPOPoint": tm(student["Distill on DPO"]["delta_pp"]),
-        "StudentGRPOPoint": tm(student["Distill on GRPO R4"]["delta_pp"]),
         "DistillAgreeDelta": tm(delta_rows[0]["delta"]),
         "DistillAgreeCI": f"[{tm(delta_rows[0]['lo'])}, {tm(delta_rows[0]['hi'])}]",
     }

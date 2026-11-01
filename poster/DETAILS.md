@@ -57,8 +57,8 @@ hire.
   (one seed).
 - After SFT-v3: DPO on 4,880 on-policy pairs (305 steps), GRPO and DAPO with
   learning-rate decay, decision distillation. Three training seeds each, one for decision
-  distillation on top of DPO and of GRPO; checkpoints declared before the audit, except GRPO
-  checkpoint 525.
+  distillation on top of DPO and of GRPO and for GRPO on distillation; checkpoints declared
+  before the audit, except GRPO checkpoint 525.
 - Guardrails: merge keeps at least 80% of the update; hire rate on
   GPT-4o's hires falls by at most 10 pp; agreement with GPT-4o falls by at
   most 5 pp; at most 1% undecided.
@@ -144,7 +144,7 @@ those layers, which does not show what a model trained without them would do. On
 at a quarter of the trainable parameters, on the window with its GDN mixers
 (15.1M, +0.26 [−0.37, +0.89] pp) or at rank 8 over every layer
 (14.5M, +0.22 [−0.35, +0.84] pp), failed their gates at the same learning
-rate and were not continued. With the teacher's margin floored at 4 logits (one seed, exploratory): +0.09 [−0.97, +1.08] pp.
+rate and were not continued. A different change, the teacher's margin floored at 4 logits (one seed, exploratory): +0.09 [−0.97, +1.08] pp; undecided, no seed added.
 Decision distillation on top of DPO and of GRPO, each against its own seed-42 parent:
 −0.07 [−0.44, +0.33] and +0.02 [−0.77, +0.82] pp (one seed each). Every arm serves the same 9B
 model; LoRA sizes count trainable parameters.
@@ -161,9 +161,9 @@ seven adapters, four objectives came from vLLM's LoRA path, which is why adapter
 
 English only; one 9B model; 150 benchmark candidates. Patching on 64 pairs
 per contrast and one pair selection. GRPO checkpoint 525 was picked with audit numbers in view.
-The students and the quarter-size pilots have one seed each. The students' parents are the
-best of their method's three seeds; the pilots are compared with distillation's seed 42, the
-weakest of its three.
+The students, the quarter-size pilots and the margin floor have one seed each. The students'
+parents are the best of their method's three seeds; the pilots and the margin floor are
+compared with distillation's seed 42, the weakest of its three.
 
 ## Sources
 
