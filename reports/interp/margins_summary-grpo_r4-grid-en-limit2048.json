@@ -1,0 +1,17 @@
+{
+  "spec": "grpo_r4",
+  "dataset": "grid-en-limit2048",
+  "rows": 2048,
+  "hire_rate_pct": 21.044921875,
+  "audit": {
+    "audit_run": "Qwen3.5-9B--en--grpo--adapter--en_only_grpo_improve_r4_tipped_v2",
+    "available": true,
+    "rows_matched": 2048,
+    "agreement_pct": 99.462890625,
+    "hire_rate_hf_pct": 21.044921875,
+    "hire_rate_audit_pct": 21.484375,
+    "unstable_sets_hf_pct": 0.24390243902439024,
+    "unstable_sets_audit_pct": 1.2195121951219512,
+    "margin_bf16_minus_fp32_abs_mean": 0.0658242329955101
+  }
+}

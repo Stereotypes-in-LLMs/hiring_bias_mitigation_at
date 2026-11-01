@@ -176,6 +176,10 @@ worse than distillation on all layers. The served model stays the same 9B model.
 |---|---|---|---|---|
 | 1 | 5227361 | A seed 42 training: 341 steps, 1:13:29; adapter on layers 15-20 only, 26 modules, 11,403,264 parameters (read from `adapter_model.safetensors`); 4.880 GPU-h measured | 4.90 | 4.90 |
 | 2 | 5228013 | A seed 42 audit against SFT-v3: +0.13 pp, every guardrail passes, conforms; merge kept 95.7% | 1.21 | 6.11 |
+| 3 | 5228130 | A seed 43 training: 341 steps, 1:12:48; 26 modules, 11,403,264 parameters; 4.836 GPU-h measured | 4.85 | 10.96 |
+| 4 | 5228131 | A seed 44 training: 341 steps, 1:12:20; 26 modules, 11,403,264 parameters; 4.803 GPU-h measured | 4.82 | 15.78 |
+| 5 | 5228155 | Full-grid margins, GRPO R4 s42 and A s42 (two GPUs of four); gate 99.65% / 99.57% | 2.17 | 17.95 |
+| 6 | 5228380 | Patching, sel_sft_v3: GRPO R4 s42 on 3 contrasts, A s42 on implicit combat | 1.53 | 19.48 |
 
 ## 3. Result
 

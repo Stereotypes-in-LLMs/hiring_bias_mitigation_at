@@ -1,0 +1,17 @@
+{
+  "spec": "pd42",
+  "dataset": "grid-en-limit2048",
+  "rows": 2048,
+  "hire_rate_pct": 23.046875,
+  "audit": {
+    "audit_run": "Qwen3.5-9B--en--sft--adapter--en_only_decision_distill_l15_20_seed42",
+    "available": true,
+    "rows_matched": 2048,
+    "agreement_pct": 99.8046875,
+    "hire_rate_hf_pct": 23.046875,
+    "hire_rate_audit_pct": 23.14453125,
+    "unstable_sets_hf_pct": 1.707317073170732,
+    "unstable_sets_audit_pct": 1.4634146341463417,
+    "margin_bf16_minus_fp32_abs_mean": 0.06108623743057251
+  }
+}
