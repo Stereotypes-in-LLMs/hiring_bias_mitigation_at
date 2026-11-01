@@ -8,10 +8,12 @@ and on the poster is generated from the repository's result tables by
 
 A set is the attribute variants of one CV within one protected group and one wording. It is
 unstable when its variants do not all get the same decision. Instability depends on how many
-people a model hires, so methods are compared at a matched hire rate: the standard moves SFT-v3
-to each method's own hire rate (the numbers on the poster), and the final table also moves
-every method to SFT-v3's rate (22.51%). The full standard, its guardrails and
-protocol:
+people a model hires, so two models are compared at a matched hire rate: one is moved to the
+other's rate before sets are counted. Against SFT-v3, the standard moves SFT-v3 to each method's
+own rate; head to head (a variant against the adapter it changes, a student against its
+parent), that adapter or parent is moved; against the base model (the results table below),
+the base model is moved; and the final table also moves every method to SFT-v3's own rate
+(22.51%). The full standard, its guardrails and protocol:
 [`docs/EVAL_STANDARD.md`](https://github.com/Stereotypes-in-LLMs/hiring_bias_mitigation_at/blob/main/docs/EVAL_STANDARD.md).
 
 Why it matters: our GRPO pilot looked more stable (−0.95 [−1.90, −0.05] pp) only because it
@@ -73,7 +75,7 @@ distillation was not trained.
 |---|---|---|---|---|---|---|
 | Qwen3.5-9B (base) | — | 14.4% | 8.0% | — | — | — |
 | SFT-v3 | 1 | 22.5% | 1.8% | −9.95 | [−12.07, −7.83] | 37.0 |
-| + DPO | 3 | 21.9% | 1.6% | −10.09 | −10.86 to −9.48 | +17.9 |
+| + DPO | 3 | 21.9% | 1.6% | −10.09 | −10.86 to −9.48 | +18.0 |
 | + GRPO | 3 | 22.4% | 1.7% | −10.04 | −10.13 to −9.92 | +27.0 |
 | + decision distillation | 3 | 23.0% | 1.5% | −10.28 | −10.38 to −10.09 | +21.4 |
 | + distillation, then GRPO | 1 | 21.2% | 1.8% | −9.79 | [−11.87, −7.58] | +32.2 |
@@ -109,18 +111,22 @@ decay ([`reports/final/curves.csv`](https://github.com/Stereotypes-in-LLMs/hirin
 ![Across hire rates](figures/curves.svg)
 
 **Cost.** Exploring GRPO and DAPO took 239 GPU-h, DPO 43 and
-distillation 65 (5.5×). One evaluation uses
-0.50 GPU-h; the project allocated 483 GPU-h in total
-([`docs/FINAL_TABLE.md`](https://github.com/Stereotypes-in-LLMs/hiring_bias_mitigation_at/blob/main/docs/FINAL_TABLE.md), [`docs/COST.md`](https://github.com/Stereotypes-in-LLMs/hiring_bias_mitigation_at/blob/main/docs/COST.md)).
+distillation 69 (5.5×;
+[`reports/final/family_cost.csv`](https://github.com/Stereotypes-in-LLMs/hiring_bias_mitigation_at/blob/main/reports/final/family_cost.csv)). One evaluation uses 0.50 GPU-h; the
+project allocated 488 GPU-h in total ([`reports/cost/by_stage.csv`](https://github.com/Stereotypes-in-LLMs/hiring_bias_mitigation_at/blob/main/reports/cost/by_stage.csv);
+[`docs/FINAL_TABLE.md`](https://github.com/Stereotypes-in-LLMs/hiring_bias_mitigation_at/blob/main/docs/FINAL_TABLE.md), [`docs/COST.md`](https://github.com/Stereotypes-in-LLMs/hiring_bias_mitigation_at/blob/main/docs/COST.md)).
 
 **Inside the model** (Marta Samoilenko's activation patching). In the base model the attribute
 reaches the decision at layers 15–20 through a hub in layer-15 attention (head
 L15.H11), read out by MLP 31. SFT-v3 removes 61–77% of the per-pair
-effect on the patched pairs and keeps the route ([`docs/INTERP_SFT_V3.md`](https://github.com/Stereotypes-in-LLMs/hiring_bias_mitigation_at/blob/main/docs/INTERP_SFT_V3.md)). Distillation
-keeps 35–41% of SFT-v3's effect on the same route; DPO_V3_4880 and GRPO + decay R4
-widen every margin 2.7× and 2.2× at seed 42
-([`docs/DISTILL_PATCHING.md`](https://github.com/Stereotypes-in-LLMs/hiring_bias_mitigation_at/blob/main/docs/DISTILL_PATCHING.md), [`docs/RL_PATCHING.md`](https://github.com/Stereotypes-in-LLMs/hiring_bias_mitigation_at/blob/main/docs/RL_PATCHING.md)), and ×2.0–2.7
-over all six of their seeds ([`reports/margin_readout/readout.csv`](https://github.com/Stereotypes-in-LLMs/hiring_bias_mitigation_at/blob/main/reports/margin_readout/readout.csv)). Rescaling SFT-v3's
+effect on the patched pairs, and keeps the route there ([`docs/INTERP_SFT_V3.md`](https://github.com/Stereotypes-in-LLMs/hiring_bias_mitigation_at/blob/main/docs/INTERP_SFT_V3.md)); on all
+450 pairs it removes 52–66%
+([`poster/effect_share.py`](https://github.com/Stereotypes-in-LLMs/hiring_bias_mitigation_at/blob/main/poster/effect_share.py)). Distillation keeps 35–41% of SFT-v3's effect
+on the same route ([`docs/DISTILL_PATCHING.md`](https://github.com/Stereotypes-in-LLMs/hiring_bias_mitigation_at/blob/main/docs/DISTILL_PATCHING.md)). DPO_V3_4880 and GRPO + decay R4 widen the
+median attribute-free margin 2.7× and 2.2× at seed 42
+([`docs/RL_PATCHING.md`](https://github.com/Stereotypes-in-LLMs/hiring_bias_mitigation_at/blob/main/docs/RL_PATCHING.md); [`docs/PATCHING_DISTILL.md`](https://github.com/Stereotypes-in-LLMs/hiring_bias_mitigation_at/blob/main/docs/PATCHING_DISTILL.md), section 4), and
+×2.0–2.7 over all six of their seeds, on the standard's margins
+([`reports/margin_readout/readout.csv`](https://github.com/Stereotypes-in-LLMs/hiring_bias_mitigation_at/blob/main/reports/margin_readout/readout.csv)). Rescaling SFT-v3's
 margins changes the matched metric by exactly 0; 83–87% of the
 sets distillation fixes are on pairs near the cut, a post-hoc reading
 ([`docs/SCALE_CONTROL.md`](https://github.com/Stereotypes-in-LLMs/hiring_bias_mitigation_at/blob/main/docs/SCALE_CONTROL.md)).
@@ -129,13 +135,16 @@ sets distillation fixes are on pairs near the cut, a post-hoc reading
 
 **Placing distillation by patching** ([`docs/PATCHING_DISTILL.md`](https://github.com/Stereotypes-in-LLMs/hiring_bias_mitigation_at/blob/main/docs/PATCHING_DISTILL.md); each arm against
 the all-layer adapter of the same seed at a matched hire rate). Trained only on layers 15–20
-(11.4M trainable parameters), distillation loses its gain:
-+0.53 pp over three seeds (+0.26 / +0.74 / +0.58). The trained all-layer adapter
-with layers 15–20 removed keeps it: +0.11 pp (+0.07 / +0.11 / +0.16), an
-ablation of an adapter trained with those layers. A quarter of the trainable parameters did not
-keep the gain in one-seed pilots, on the window with its GDN mixers (15.1M,
-+0.26 [−0.37, +0.89] pp) or at rank 8 over every layer (14.5M,
-+0.22 [−0.35, +0.84] pp).
+(11.4M trainable parameters) at the same learning rate, distillation loses its
+gain: +0.53 pp over three seeds (+0.26 / +0.74 / +0.58); the window arms also end
+training at a higher loss, so a smaller adapter underfitting at that learning rate is not ruled
+out. The trained all-layer adapter with layers 15–20 removed keeps the gain:
++0.11 pp (+0.07 / +0.11 / +0.16), an ablation of an adapter trained with
+those layers, which does not show what a model trained without them would do. One-seed pilots
+at a quarter of the trainable parameters, on the window with its GDN mixers
+(15.1M, +0.26 [−0.37, +0.89] pp) or at rank 8 over every layer
+(14.5M, +0.22 [−0.35, +0.84] pp), failed their gates at the same learning
+rate and were not continued. With the teacher's margin floored at 4 logits (one seed, exploratory): +0.09 [−0.97, +1.08] pp.
 Decision distillation on top of DPO and of GRPO, each against its own seed-42 parent:
 −0.07 [−0.44, +0.33] and +0.02 [−0.77, +0.82] pp (one seed each). Every arm serves the same 9B
 model; LoRA sizes count trainable parameters.
@@ -152,8 +161,9 @@ seven adapters, four objectives came from vLLM's LoRA path, which is why adapter
 
 English only; one 9B model; 150 benchmark candidates. Patching on 64 pairs
 per contrast and one pair selection. GRPO checkpoint 525 was picked with audit numbers in view.
-The students and the quarter-size pilots have one seed each; their parents are the best of
-their method's three seeds.
+The students and the quarter-size pilots have one seed each. The students' parents are the
+best of their method's three seeds; the pilots are compared with distillation's seed 42, the
+weakest of its three.
 
 ## Sources
 
@@ -216,6 +226,7 @@ their method's three seeds.
 | `ref_unstable` | reports/final/final_table.csv |
 | `scale_change` | reports/scale_control/summary.csv |
 | `sft_v3_effect_removed` | docs/INTERP_SFT_V3.md, Patching (patching_results.ipynb §6) (typed from the card) |
+| `sft_v3_effect_removed_all` | poster/effect_share.json (poster/effect_share.py, contrasts-grid-en.parquet (scripts/interp/04_manifest.py)) |
 | `sft_v3_vs_base` | reports/comparisons.csv |
 | `sft_v3_vs_v1` | reports/comparisons.csv |
 | `student_dpo` | reports/comparisons.csv |

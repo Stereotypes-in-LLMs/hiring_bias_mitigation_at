@@ -64,7 +64,7 @@
       "unstable_pct_mean": 1.5802469135802468,
       "hire_pct_mean": 21.92270531400966,
       "delta_vs_sft_v3_pp_mean": -0.30776666666666663,
-      "extra_gpu_h": 17.9461
+      "extra_gpu_h": 17.95
     },
     {
       "name": "GRPO+decay R4",
@@ -113,7 +113,7 @@
       "unstable_pct_mean": 1.654320987654321,
       "hire_pct_mean": 22.369296833064947,
       "delta_vs_sft_v3_pp_mean": -0.44470000000000004,
-      "extra_gpu_h": 27.0181
+      "extra_gpu_h": 27.02
     },
     {
       "name": "Distill",
@@ -162,7 +162,7 @@
       "unstable_pct_mean": 1.5185185185185184,
       "hire_pct_mean": 22.95008051529791,
       "delta_vs_sft_v3_pp_mean": -0.5703,
-      "extra_gpu_h": 21.364766666666664
+      "extra_gpu_h": 21.366666666666664
     },
     {
       "name": "GRPO from distill s42",
@@ -187,7 +187,7 @@
       "unstable_pct_mean": 1.7777777777777777,
       "hire_pct_mean": 21.236714975845413,
       "delta_vs_sft_v3_pp_mean": -0.174,
-      "extra_gpu_h": 32.1881
+      "extra_gpu_h": 32.19
     },
     {
       "name": "Distill on DPO",
@@ -212,7 +212,7 @@
       "unstable_pct_mean": 0.5555555555555556,
       "hire_pct_mean": 23.159420289855074,
       "delta_vs_sft_v3_pp_mean": -1.4983,
-      "extra_gpu_h": 26.934400000000004
+      "extra_gpu_h": 26.93
     },
     {
       "name": "Distill on GRPO R4",
@@ -237,7 +237,7 @@
       "unstable_pct_mean": 1.5185185185185186,
       "hire_pct_mean": 21.784219001610307,
       "delta_vs_sft_v3_pp_mean": -0.1601,
-      "extra_gpu_h": 32.0781
+      "extra_gpu_h": 32.08
     }
   ]
 }
