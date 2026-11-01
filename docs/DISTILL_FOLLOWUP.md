@@ -1,0 +1,145 @@
+# Follow-ups to decision distillation: second seeds of the students, the window kept alone, two epochs
+
+Started 2026-11-01 at the user's request, after the patching-informed round
+([`PATCHING_DISTILL.md`](PATCHING_DISTILL.md)): "B2 run now … budget 100 GPU-h … start the
+candidates, three at a time". Branch `xinyang/distill-followup` (from main ddebd82). The
+comparison is [`EVAL_STANDARD.md`](EVAL_STANDARD.md), unchanged; the reference arm is SFT-v3.
+
+## 0. Decisions recorded on 2026-11-01 (the user)
+
+- **Decision distillation stays recorded as better than SFT-v3** (the 2026-10-27 reading of rule
+  4, [`DECISION_DISTILL.md`](DECISION_DISTILL.md)). The generated verdicts are unchanged.
+- **GRPO + decay R3 stays recorded as better** (its standard verdict stays "not better: the
+  interval reaches 0", −0.71 [−1.89, +0.39]).
+- **The poster quotes the common point**, every arm moved to SFT-v3's own hire rate of 22.51%
+  ([`FINAL_TABLE.md`](FINAL_TABLE.md)), instead of each arm's own point.
+- **Budget for this round: 100 GPU-h allocated**, under the cost arm `distill_followup`. Up to
+  three jobs at a time.
+
+## 1. Registration (2026-11-01, before any job)
+
+Every arm is audited with `evaluate_arm.sbatch` against SFT-v3, then compared head to head with
+`operating_point_control.py compare-arms` (CPU) against its control, at the arm's matched hire
+rate. The final adapter of each trained arm is declared now; no checkpoint is chosen. The
+450-pair benchmark has been read many times, so every verdict here is exploratory.
+
+### G. The students on the parents' seed-43 models
+
+**Question.** Does decision distillation improve a DPO or GRPO model on a second draw of the
+parent? The seed-42 students were not better than their parents (DPO −0.07 [−0.44, +0.33], GRPO
++0.02 [−0.77, +0.82]), and both parents were the best of their method's three seeds, so part of
+any change there could be regression to the method mean.
+
+**Arms.** `decision_distill_dpo4880_seed43` (parent DPO_V3_4880 s43, its audited
+checkpoint-305) and `decision_distill_grpo_r4_seed43` (parent GRPO + decay R4 s43, its audited
+final adapter), training seed 43; everything else as the seed-42 students.
+
+**Control.** The parent at the student's hire rate: runs
+`Qwen3.5-9B--en--dpo--adapter--en_only_dpo_v3_4880_seed43_step305` and
+`Qwen3.5-9B--en--grpo--adapter--en_only_grpo_improve_r4_tipped_seed43`.
+
+**Rule, per method, on its two seeds (42 and 43).**
+- Better than its parent: both changes below 0 and at least one interval below 0. A seed-44
+  student is then trained (registered now, same rule on three seeds).
+- Against: the mean of the two changes ≥ 0.
+- Otherwise not better, and no seed is added without the user.
+- Against SFT-v3 the students are context only and never reported as "distilled DPO / GRPO beats
+  SFT-v3".
+
+### H. The window kept alone (the complement of section F)
+
+**Question.** F showed that the trained all-layer adapters keep their gain with layers 15-20
+removed (+0.11 pp head to head). Does the window's part of the same adapters carry the gain on
+its own, i.e. does it duplicate the rest?
+
+**Arms.** `decision_distill_seed{42,43,44}_xk15_20`: the trained all-layer adapters with
+`lora_B` zeroed in every layer outside 15-20 (`scripts/ablate_adapter_layers.py --keep`). Not
+trained; three audits.
+
+**Control.** The full adapter of the same seed, `decision_distill_seed{42,43,44}`.
+
+**Rule, on the three seeds' head-to-head changes.**
+- The window part carries the gain on its own: mean ≤ +0.20 pp and every seed ≤ +0.30.
+- It does not: mean > +0.30.
+- Otherwise undecided.
+- **Expected** from A (window trained alone, +0.53) and F: it does not.
+
+Like F, this ablates adapters trained with every layer present. It does not show what a model
+trained on the window would do.
+
+### I. Two epochs
+
+**Question.** Is distillation's gain at its ceiling after one epoch
+([`DECISION_DISTILL.md`](DECISION_DISTILL.md), open question 2: the attributed KL is still
+falling at the decay, 0.013-0.023 at the end)?
+
+**Arms.** `decision_distill_e2_seed{42,43,44}`: `decision_distill_seed{S}` with
+`num_train_epochs: 2` (682 optimizer steps) and the linear decay over the last 178 steps, the
+same 26% share as one epoch's 89 of 341. Nothing else changes.
+
+**Control.** One epoch of the same seed, `decision_distill_seed{42,43,44}`.
+
+**Rule, on the three seeds' head-to-head changes.**
+- Helps: every seed below 0 and mean ≤ −0.15 pp.
+- Does not help: mean ≥ 0.
+- Otherwise undecided.
+- Against SFT-v3 the day's goal G3 carries over: every seed below 0 and at least two intervals
+  below 0 is "clearly better than SFT-v3" (exploratory).
+- A failed guardrail against SFT-v3 counts against the arm whatever the change.
+
+### J. CPU check: the overlap of DPO_V3_4880's unstable sets across seeds
+
+The cheapest check named in [`DPO_V3_4880_SEEDS.md`](DPO_V3_4880_SEEDS.md) and
+[`FINAL_TABLE.md`](FINAL_TABLE.md): the overlap of the sets each seed leaves unstable at its
+own point, on the margin files already written. It is descriptive and decides nothing.
+
+### Order, cost, stop conditions
+
+- **Order.** Three slots:
+  - I s42 training and G DPO s43 training start first;
+  - the third slot runs H's three audits, then G GRPO s43 training;
+  - the students' audits, I s43, I s44 and I's audits follow as slots free.
+- **Estimate (allocated GPU-h).**
+
+  | arm | per job | total |
+  |---|---|---|
+  | G | training about 5.6, audit 1.2 | about 13.6 for both |
+  | H | audit about 1.2 | about 3.7 |
+  | I | training about 11 (two epochs), audit 1.2 | about 36.6 |
+  | **round** | | **about 54** |
+
+  A seed-44 student pair, if G triggers it, adds about 13.6.
+- **Stop.** Stop and ask before the round would pass 100 GPU-h. A failed job is resubmitted at
+  most twice. Training stops itself under `memory_floor_gb`. No change to the evaluation, the
+  data, the split or `reports/eval_scope.yaml`.
+- **Conformance.** No tracked file under `scripts/`, `src/` or `configs/` of this checkout is
+  edited while an audit runs from it.
+
+## 2. Ledger
+
+| # | job | what | GPU-h allocated | running total |
+|---|---|---|---|---|
+
+## 3. Result
+
+## 4. Reading
+
+## 5. Caveats
+
+## 6. Reproducing
+
+```bash
+HBM_COST_ARM=distill_followup REPO=$PWD CONFIG=configs/mitigation/distill/decision_distill_e2_seed42.yaml \
+  scripts/cscs/submit.sh -p normal -t 04:00:00 scripts/cscs/train_distill.sbatch
+HBM_OUTPUT_ROOT=/ritom/scratch/cscs/zhang/xw ../venv/bin/python scripts/ablate_adapter_layers.py \
+  --adapter outputs/distill/decision_distill_seed42 --layers 15 20 --keep \
+  --out outputs/distill/decision_distill_seed42_xk15_20
+HBM_COST_ARM=distill_followup REPO=$PWD \
+  AUDIT=configs/audit/qwen3.5-9b_en_decision_distill_seed42_xk15_20_gh200.yaml \
+  AGAINST=configs/audit/qwen3.5-9b_en_sft_v3_additional_gh200.yaml \
+  scripts/cscs/submit.sh -t 00:30:00 scripts/cscs/evaluate_arm.sbatch
+HBM_OUTPUT_ROOT=/ritom/scratch/cscs/zhang/xw OPENBLAS_NUM_THREADS=1 \
+  ../venv/bin/python scripts/operating_point_control.py compare-arms \
+  --config configs/audit/qwen3.5-9b_en_decision_distill_seed42_xk15_20_gh200.yaml \
+  --against configs/audit/qwen3.5-9b_en_decision_distill_seed42_gh200.yaml
+```

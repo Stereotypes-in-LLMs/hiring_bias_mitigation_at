@@ -64,3 +64,21 @@ def test_refuses_an_empty_window_and_an_existing_output(tmp_path):
     out.mkdir()
     with pytest.raises(FileExistsError):
         AB.ablate(adapter, out, 15, 20)
+
+
+def test_keep_zeroes_lora_B_everywhere_outside_the_window(tmp_path):
+    adapter = _adapter(tmp_path)
+    out = tmp_path / "decision_distill_seed42_xk15_20"
+    record = AB.ablate(adapter, out, 15, 20, keep=True)
+    before = load_file(str(adapter / "adapter_model.safetensors"))
+    after = load_file(str(out / "adapter_model.safetensors"))
+    for name, value in after.items():
+        if ".layers.15." not in name and ".lora_B." in name:
+            assert not value.any()
+        else:
+            np.testing.assert_array_equal(value, before[name])
+    assert record["layers_found"] == [14, 21]
+    assert record["modules_zeroed"] == 4
+    assert record["layers_kept"] == [15, 20] and record["layers_zeroed"] is None
+    with pytest.raises(ValueError, match="no LoRA module outside"):
+        AB.ablate(adapter, tmp_path / "all", 0, 30, keep=True)
