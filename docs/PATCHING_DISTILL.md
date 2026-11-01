@@ -177,6 +177,54 @@ SFT-v3 (raw parquets; A 171, C 144, all layers 472 at seed 42), the median attri
 ratio against SFT-v3 (from the op-margin-v2 margins), and the overlap of fixed sets with the
 all-layer arm of seed 42. Their reading thresholds would be post hoc, so none is set.
 
+### E. The teacher's margin floored at 4 logits (registered 2026-11-01 15:25, after A, B and C)
+
+**Why.** What patching and its controls say distillation does, and what it leaves:
+- It keeps SFT-v3's pathway and turns the whole readout down, margin scale ×0.45-0.52 with the
+  attribute effect shrinking about as much (`DISTILL_PATCHING.md`). A pure rescaling leaves the
+  matched statistic at exactly 0, and 83-87% of the sets distillation fixes lie on the 35 pairs
+  SFT-v3 decides by less than 2 logits (`SCALE_CONTROL.md`).
+- On those pairs its target is soft. 5,894 of the 9,140 attributed training rows (64.5%) are on
+  pairs whose SFT-v3 samples split on the attribute-free CV (`distill_train.parquet`,
+  `free_hire_rate` strictly between 0 and 1). Near q = 0.5 the two-token KL is flat, so the loss
+  does not push a borderline pair's variants to one side of the cut.
+- Arms A and C show that moving the update to the pathway window does not help; this arm changes
+  what the update is asked to do instead.
+
+The idea is older than this round: a sharpened target or a hinge on the greedy sign is open
+question 1 of [`DECISION_DISTILL.md`](DECISION_DISTILL.md). The value F = 4 was picked after a
+post hoc reading of the benchmark's margins in the planning review (not committed), so the arm
+is exploratory.
+
+**Change against `decision_distill_seed42` (one variable).** `teacher_margin_floor: 4.0`. The
+teacher's two-token margin m = z_hire − z_reject on the pair's attribute-free CV becomes
+sign(m)·max(|m|, 4) before the softmax, on every row, the attribute-free anchors included: a
+target of p(hire) = 0.982 or 0.018 on SFT-v3's own attribute-free side. A margin of at least 4,
+and an exact tie, keep today's target. Everything else is unchanged: SFT-v3 merged plus a fresh
+LoRA r32 α64 on all 128 modules, the same 10,907 rows, lr 3e-5 WSD, 341 steps, the final adapter.
+Code on branch `xinyang/patching-distill-floor` (commit fa0b9f2, worktree `-pfloor`, tests in
+`tests/test_decision_distill.py`), merged into this branch before the audit. Configs
+`configs/mitigation/distill/decision_distill_floor4_seed{42,43,44}.yaml`.
+
+**Pilot rule, fixed now.** Seed 42. Δ is its matched change against `decision_distill_seed42`
+(`compare-arms`), beside the standard's verdict against SFT-v3.
+- **Promising:** below 0 against SFT-v3 with every guardrail passing, and Δ ≤ 0. Seeds 43 and 44
+  then need the user's budget.
+- **Worse:** Δ > +0.20, or a guardrail fails. Stopped and reported as tried.
+- Otherwise undecided: reported, and no seed is added without the user.
+
+**Stop conditions.** The job is cancelled if, at its first two logging points (steps 5 and 10),
+the loss is not finite or the share of attributed rows the floor lifts (`distill/attr_floored`)
+is below 0.2. `memory_floor_gb` as for every arm.
+
+**Secondary readouts, deciding nothing.** Decisions changed against SFT-v3 and against
+`decision_distill_seed42`; the median attribute-free |m| ratio against SFT-v3 (op-margin-v2
+margins); the unstable sets on the 35 borderline pairs against plain distillation.
+
+**Cost and cap.** About 5.5 GPU-h of training and 1.25 of audit. With D's audit and the three
+ablation audits the day would end near 60 GPU-h; if the measured total would pass 60 with this
+arm's audit, the audit waits for the user's decision.
+
 ### F. The window removed from the trained all-layer adapter (registered 2026-11-01, after A, B and C)
 
 **Why.** Arm A tested whether layers 15-20 are enough: trained alone, at the same learning rate,
