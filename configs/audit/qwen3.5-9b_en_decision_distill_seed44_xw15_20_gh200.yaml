@@ -1,0 +1,34 @@
+# Hand-written -- NOT produced by generate_experiment_configs.py.
+# Window-removed ablation (docs/PATCHING_DISTILL.md, section 1F): the trained all-layer decision
+# distillation adapter of seed 44 with lora_B zeroed in layers 15-20 by scripts/ablate_adapter_layers.py;
+# not trained. Served merged, SFT-v3 first. Judged against SFT-v3, then compare-arms against
+# the full adapter of seed 44.
+backend: vllm
+max_model_len: 8192
+gpu_memory_utilization: 0.8
+seed: 42
+engine_kwargs:
+  gdn_prefill_backend: triton     # no CUDA toolkit on Daint for FlashInfer's JIT
+raw_dir: outputs/raw
+conditions:
+- explicit
+- implicit
+- attr_free
+chat_template_kwargs:
+  enable_thinking: false
+max_intersection_cells: null
+generation:
+  max_new_tokens: 512
+  temperature: 0.0
+  top_p: 1.0
+  seed: 42
+model: Qwen/Qwen3.5-9B
+lang: en
+protected_groups:
+- military_status
+- gender
+- religion
+run_suffix: en_only_decision_distill_seed44_xw15_20
+mitigation:
+  family: sft
+  lora_path: outputs/distill/decision_distill_seed44_xw15_20
