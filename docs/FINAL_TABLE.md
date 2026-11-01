@@ -182,6 +182,16 @@ GRPO student −0.16 against −0.73 and −0.51 against −0.31. Their head-to-
 the parent at the student's hire rate, −0.07 [−0.44, +0.33] and +0.02 [−0.77, +0.82], are the
 readings that card registered.
 
+## Decided 2026-11-01 (the user)
+
+- Decision distillation stays recorded as better than SFT-v3 (the 2026-10-27 reading of rule 4,
+  `DECISION_DISTILL.md`), and GRPO + decay R3 stays recorded as better. Both sit beside the
+  Reading above; no generated verdict changes.
+- The poster quotes the common point, 22.51%, instead of each arm's own point: decision
+  distillation −0.28 pp (seeds −0.12 / −0.41 / −0.33), DPO_V3_4880 −0.22, GRPO + decay R4 −0.16
+  (three-seed means, `recipes.csv`). The follow-up runs are registered in
+  `DISTILL_FOLLOWUP.md` (branch `xinyang/distill-followup`).
+
 ## Caveats
 
 - Three seeds per recipe at most; a seed sd from three draws is rough. GRPO-525 is exploratory

@@ -258,13 +258,16 @@ def main() -> None:
         "RelDPO": f"{rel['data/dpo/train.parquet']['rows']:,}",
         "RelRL": f"{rel['data/rl/train.parquet']['rows']:,}",
     })
+    # The poster quotes the common point: every arm moved to SFT-v3's own hire rate (the user,
+    # 2026-11-01; docs/DISTILL_FOLLOWUP.md, section 0), not each arm's own point.
     findings = {**findings_data,
-        "DistillMatched": tm(d["delta_own_pp"]),
-        "DistillSeeds": " / ".join(tm(s["delta_own_pp"]) for s in dseeds),
-        "DistillSeedsBelowZero": str(sum(float(s["delta_own_pp"]) < 0 for s in dseeds)),
-        "DistillCIBelowZero": str(sum(float(s["ci_own_high"]) < 0 for s in dseeds)),
-        "DPOMatched": tm(recipes["DPO_V3_4880"]["delta_own_pp"]),
-        "GRPOMatched": tm(recipes["GRPO+decay R4"]["delta_own_pp"]),
+        "CommonHire": f"{float(dseeds[0]['common_hire_rate_pct']):.2f}",
+        "DistillMatched": tm(d["delta_common_pp"]),
+        "DistillSeeds": " / ".join(tm(s["delta_common_pp"]) for s in dseeds),
+        "DistillSeedsBelowZero": str(sum(float(s["delta_common_pp"]) < 0 for s in dseeds)),
+        "DistillCIBelowZero": str(sum(float(s["ci_common_high"]) < 0 for s in dseeds)),
+        "DPOMatched": tm(recipes["DPO_V3_4880"]["delta_common_pp"]),
+        "GRPOMatched": tm(recipes["GRPO+decay R4"]["delta_common_pp"]),
         "DistillExtraGPUh": f"{float(d['extra_gpu_h']):.1f}",
         "DistillTrainGPUh": f"{mean_of('Distill', 'train_gpu_h'):.1f}",
         "LayersControl": (f"{tm(layers['delta_pp'])} "

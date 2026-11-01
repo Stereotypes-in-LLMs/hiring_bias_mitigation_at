@@ -127,9 +127,9 @@ median attribute-free margin 2.7× and 2.2× at seed 42
 ([`docs/RL_PATCHING.md`](https://github.com/Stereotypes-in-LLMs/hiring_bias_mitigation_at/blob/main/docs/RL_PATCHING.md); [`docs/PATCHING_DISTILL.md`](https://github.com/Stereotypes-in-LLMs/hiring_bias_mitigation_at/blob/main/docs/PATCHING_DISTILL.md), section 4), and
 ×2.0–2.7 over all six of their seeds, on the standard's margins
 ([`reports/margin_readout/readout.csv`](https://github.com/Stereotypes-in-LLMs/hiring_bias_mitigation_at/blob/main/reports/margin_readout/readout.csv)). Rescaling SFT-v3's
-margins changes the matched metric by exactly 0; 83–87% of the
-sets distillation fixes are on pairs near the cut, a post-hoc reading
-([`docs/SCALE_CONTROL.md`](https://github.com/Stereotypes-in-LLMs/hiring_bias_mitigation_at/blob/main/docs/SCALE_CONTROL.md)).
+margins changes the matched metric by exactly 0. As registered (prediction P4),
+83–87% of the sets distillation fixes, and every set it breaks, are on the
+35 pairs near SFT-v3's cut ([`docs/SCALE_CONTROL.md`](https://github.com/Stereotypes-in-LLMs/hiring_bias_mitigation_at/blob/main/docs/SCALE_CONTROL.md)).
 
 ![Where the attribute reaches the decision: base model and SFT-v3](figures/residual.svg)
 

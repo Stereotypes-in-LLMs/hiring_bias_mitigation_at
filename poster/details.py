@@ -146,9 +146,9 @@ median attribute-free margin {n['dpo_scale']} and {n['grpo_scale']} at seed 42
 ({_doc("docs/RL_PATCHING.md")}; {_doc("docs/PATCHING_DISTILL.md")}, section 4), and
 {n['widen_range']} over all six of their seeds, on the standard's margins
 ({_doc("reports/margin_readout/readout.csv")}). Rescaling SFT-v3's
-margins changes the matched metric by {n['scale_change']}; {n['borderline_fixed_share']} of the
-sets distillation fixes are on pairs near the cut, a post-hoc reading
-({_doc("docs/SCALE_CONTROL.md")}).
+margins changes the matched metric by {n['scale_change']}. As registered (prediction P4),
+{n['borderline_fixed_share']} of the sets distillation fixes, and every set it breaks, are on the
+35 pairs near SFT-v3's cut ({_doc("docs/SCALE_CONTROL.md")}).
 
 ![Where the attribute reaches the decision: base model and SFT-v3](figures/residual.svg)
 

@@ -66,12 +66,13 @@ GRPO,greenDark,0,1.03,0.29,1.96
 \newcommand{\RelSFT}{62,761}
 \newcommand{\RelDPO}{4,880}
 \newcommand{\RelRL}{9,140}
-\newcommand{\DistillMatched}{\textminus{}0.57}
-\newcommand{\DistillSeeds}{\textminus{}0.42 / \textminus{}0.59 / \textminus{}0.70}
+\newcommand{\CommonHire}{22.51}
+\newcommand{\DistillMatched}{\textminus{}0.28}
+\newcommand{\DistillSeeds}{\textminus{}0.12 / \textminus{}0.41 / \textminus{}0.33}
 \newcommand{\DistillSeedsBelowZero}{3}
-\newcommand{\DistillCIBelowZero}{1}
-\newcommand{\DPOMatched}{\textminus{}0.31}
-\newcommand{\GRPOMatched}{\textminus{}0.44}
+\newcommand{\DistillCIBelowZero}{0}
+\newcommand{\DPOMatched}{\textminus{}0.22}
+\newcommand{\GRPOMatched}{\textminus{}0.16}
 \newcommand{\DistillExtraGPUh}{21.4}
 \newcommand{\DistillTrainGPUh}{5.2}
 \newcommand{\LayersControl}{+0.30 [+0.03, +0.62]}
@@ -119,7 +120,8 @@ GRPO,greenDark,0,1.03,0.29,1.96
 \newcommand{\DistilledGRPOTrainable}{\StandardParams}
 \newcommand{\DistilledFractions}{each \StandardPct\% of the \BackboneB B backbone; the served model stays 9B}
 % docs/PATCHING_DISTILL.md, B: each student against its own seed-42 parent (compare-arms).
-\newcommand{\BehaviourFinding}{dSFT: \DistillMatched{} pp vs SFT-v3, matched rate (\DistillSeeds)\\
+% dSFT at the common point, every arm moved to SFT-v3's own hire rate (the user, 2026-11-01).
+\newcommand{\BehaviourFinding}{dSFT: \DistillMatched{} pp vs SFT-v3 at \CommonHire\% (\DistillSeeds)\\
   dDPO / dGRPO vs parent (n=1): \StudentDPO{} / \StudentGRPO{}\\
   Agreement, dSFT $-$ SFT-v3: \DistillAgreeDelta{} pp \DistillAgreeCI}
 \newcommand{\ComputeFinding}{SFT student: +\DistillTrainGPUh{} GPU-h of training over SFT-v3 (+\DistillExtraGPUh{} with its data)}
@@ -379,7 +381,7 @@ GRPO,greenDark,0,1.03,0.29,1.96
 \Txt[text=muted]{1192}{666}{290}{12.5}{Base: no adaptation}
 \Txt[text=muted,align=center]{1495}{699}{215}{12.5}{lower is better}
 \Txt[text=muted,align=center]{1764}{699}{222}{12.5}{higher is better}
-\Txt[text=muted]{1192}{691}{290}{12.5}{Matched hire rate vs SFT-v3, 3-seed means:\\dSFT \DistillMatched, DPO \DPOMatched, GRPO \GRPOMatched{} pp [4]}
+\Txt[text=muted]{1192}{691}{290}{12.5}{At SFT-v3's \CommonHire\% hire rate, 3-seed means:\\dSFT \DistillMatched, DPO \DPOMatched, GRPO \GRPOMatched{} pp [4]}
 \Txt[text=muted]{1192}{728}{808}{12.5}{Open: before distillation (dDPO, dGRPO: their seed-42 parent, best of three seeds, the open point above the bar) / Filled, green: after / Dashed: Base / Bars: 95\% CI / Best: lowest 3-seed mean vs SFT-v3, after the audits}
 \Txt[text=muted]{1192}{757}{808}{12.5}{*LoRA r32, \StandardParams M per stage (\StandardPct\% of the \BackboneB B backbone); one stage on SFT-v3, a second for dDPO and dGRPO.}
 \draw[rule,line width=1bp] (1192,777) -- (2000,777);
