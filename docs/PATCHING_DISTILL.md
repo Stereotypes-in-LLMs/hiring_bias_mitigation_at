@@ -217,6 +217,12 @@ Code on branch `xinyang/patching-distill-floor` (commit fa0b9f2, worktree `-pflo
 the loss is not finite or the share of attributed rows the floor lifts (`distill/attr_floored`)
 is below 0.2. `memory_floor_gb` as for every arm.
 
+**Stop check, 2026-11-01 15:45 (job 5230126, `logs/xw-distill-5230126.out`).** At steps 5 and 10
+the loss is 0.248 and 0.326 and the floor lifts 91% and 89% of the attributed rows' targets
+(`distill/attr_floored` 0.914, 0.889; anchors 0.80, 0.75), so the job continues. The floor
+therefore changes nearly every target, not only the borderline pairs': most training rows sit
+within 4 logits for SFT-v3. Gradient norms are 13-20 (plain distillation 0.5-1.5), clipped at 1.
+
 **Secondary readouts, deciding nothing.** Decisions changed against SFT-v3 and against
 `decision_distill_seed42`; the median attribute-free |m| ratio against SFT-v3 (op-margin-v2
 margins); the unstable sets on the 35 borderline pairs against plain distillation.
@@ -301,6 +307,11 @@ seed 44 when a slot frees.
 | 14 | 5229488 | DPO student audit against SFT-v3: −1.50 pp, every guardrail passes, conforms; merge kept 96.5% | 1.23 | 41.26 |
 | 15 | 5229489 | GRPO student audit: failed after the merge, node nid006377 reported "No CUDA GPUs are available" (`logs/xw-eval-arm-5229489.out`); resubmitted, excluding that node | 0.57 | 41.83 |
 | 16 | 5229674 | GRPO student audit against SFT-v3 (resubmitted, nid005800): −0.16 pp, every guardrail passes, conforms; merge kept 95.6% (the merged weights the failed job had written were reused) | 1.00 | 42.83 |
+| 17 | 5229552 | D seed 42 training: 341 steps, 1:22:04; rank 8, α 16, all layers, 128 modules, 14,548,992 parameters (read from `adapter_model.safetensors`); 5.452 GPU-h measured | 5.47 | 48.30 |
+| 18 | 5230014 | F seed 42 audit (window removed) against SFT-v3: −0.19 pp, every guardrail passes, conforms; merge kept 92.3% | 1.20 | 49.50 |
+| 19 | 5230015 | F seed 43 audit (window removed) against SFT-v3: −0.46 pp, every guardrail passes, conforms; merge kept 92.0% | 1.22 | 50.72 |
+| 20 | 5230147 | D seed 42 audit against SFT-v3: +0.04 pp, every guardrail passes (merge kept 80.4%, the guardrail is 80%), conforms | 1.21 | 51.93 |
+| 21 | 5230148 | F seed 44 audit (window removed) against SFT-v3: −0.26 pp, every guardrail passes, conforms; merge kept 92.1% | 1.22 | 53.15 |
 
 ## 3. Result
 
@@ -407,6 +418,65 @@ comparisons conform (commit a8be782).
   follow from both staying close to SFT-v3, not from identical models.
 - **Wording:** "distillation confined to layers 15-20, GDN mixers included (a quarter of the
   trainable parameters), seed 42: +0.26 pp against all layers; not continued".
+
+### D. The same parameter budget spread over every layer (pilot: the gate fails, seeds 43 and 44 not run)
+
+Seed 42, rank 8 α 16 on all 128 modules, 14,548,992 trainable parameters (commit a8be782). Every
+guardrail passes against SFT-v3 and both comparisons conform (commit e352d6a).
+
+| seed | against rank 32, all layers, pp [95% CI] | against SFT-v3, pp [95% CI] |
+|---|---|---|
+| 42 | +0.22 [−0.35, +0.84] | +0.04 [−0.46, +0.53] |
+
+- **Fact.** The pilot rule needs ≤ +0.20 against the rank-32 arm of seed 42 and a change below 0
+  against SFT-v3. Both fail, so seeds 43 and 44 are not run (section 1D).
+- **Fact.** The merge kept 80.4% of D's update, against 92-96% for the rank-32 arms: the guardrail
+  is 80%, so it passes by 0.4 pp, and the served model carries less of the trained update than any
+  other arm today (`reports/reference_metrics.csv`).
+- **Secondary readouts (registered 15:20, deciding nothing).** D changes 239 of 31,050 SFT-v3
+  decisions (rank 32: 472; A: 171; C: 144). Its margin scale is ×0.78 of SFT-v3's (rank 32
+  ×0.47-0.52), and the sets it fixes overlap the rank-32 arm's by 0.24 (weighted Jaccard; the
+  rank-32 seeds overlap each other by 0.60-0.70) (`reports/margin_readout/readout.csv`).
+- **Interpretation, not confirmed.** At this learning rate and α/r, a quarter of the trainable
+  parameters kept the gain in neither placement, the window (C) nor every layer at low rank (D).
+  Rank, update size and the merge's rounding are not separated: a rank-8 update is smaller per
+  weight, and more of it is lost in the bf16 merge.
+- **Wording:** "a quarter of the trainable parameters, on the pathway window (C) or over every
+  layer at rank 8 (D), did not keep distillation's gain at the same learning rate (one seed
+  each)". The served model is the same 9B model in every arm.
+
+### F. The window removed from the trained all-layer adapter (registered call: not needed)
+
+Each seed against the full adapter of the same seed (`compare-arms`) and against SFT-v3 (the
+standard). Every seed passes every guardrail and every comparison conforms (commit e352d6a).
+
+| seed | against the full adapter, pp [95% CI] | against SFT-v3, pp [95% CI] | full adapter against SFT-v3 | decisions changed against the full adapter |
+|---|---|---|---|---|
+| 42 | +0.07 [−0.21, +0.38] | −0.19 [−0.95, +0.50] | −0.42 | 96 |
+| 43 | +0.11 [−0.10, +0.33] | −0.46 [−1.08, +0.13] | −0.59 | 78 |
+| 44 | +0.16 [−0.07, +0.42] | −0.26 [−0.88, +0.33] | −0.70 | 118 |
+
+- **Fact.** The mean change against the full adapters is +0.11 pp, at most +0.20, and every seed
+  is below SFT-v3 with every guardrail passing: by the registered rule, **not needed**. Removing
+  layers 15-20 from the trained all-layer adapter keeps the gain.
+- **Fact.** Every seed's point is above 0 (+0.07, +0.11, +0.16), each interval holds 0. Against
+  SFT-v3 the ablated adapters read −0.30 on average against the full adapters' −0.57; that
+  comparison matches SFT-v3 at each arm's own hire rate (ablated 23.06-23.14%, full 23.30-23.41%),
+  so the head-to-head comparison is the registered one.
+- **Fact (decisions, margins).** Removing the window changes 78-118 of 31,050 decisions, where the
+  full adapters change 403-472 of SFT-v3's. The ablated adapters keep most of the compression
+  (margin scale ×0.62-0.66 of SFT-v3's, full ×0.47-0.52), and the sets they fix overlap the
+  all-layer s42 arm's by 0.37-0.57, as the full seeds overlap each other (0.60-0.70)
+  (`reports/margin_readout/readout.csv`).
+- **Reading with A.** Trained alone, at the same learning rate, layers 15-20 lose the gain (A, +0.53);
+  removed from the trained adapter, they leave it (F, +0.11). Patching finds where the attribute
+  reaches the decision; distillation's change that matters is made mostly outside that window,
+  consistent with the residual analysis (section 1F).
+- **Caveat.** The remaining 102 modules were trained with the window present: this shows the rest
+  of the adapter suffices as trained, not that a model trained without the window would do as
+  well, and not that the window plays no part.
+- **Wording, as registered:** "removing layers 15-20 from the trained all-layer adapter keeps the
+  gain (+0.11 pp against the full adapter, three seeds)".
 
 ## 4. Reading
 

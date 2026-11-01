@@ -14,7 +14,10 @@ $HBM_OUTPUT_ROOT/outputs/operating_point/v2/):
   border_growth     median attribute-free |m| on SFT-v3's 35 borderline pairs (attribute-free
                     |m| < 2, scale_only_control.borderline_pairs), arm over reference, and
   border_over_global  border_growth / a_median: how much further the arm moves those pairs from
-                    the cut than everything else.
+                    the cut than everything else;
+  fixed_overlap_d42 for an arm read against SFT-v3, the weighted Jaccard of the sets it fixes
+                    with those all-layer distillation s42 fixes (scale_only_control.set_flags:
+                    a fixed set weighs SFT-v3's matched flag times one minus the arm's).
 Margins near the cut sit on a 1/8-logit grid (scale_only_control.RAW_GRID), so ratios of small
 medians are coarse. Writes reports/margin_readout/readout.csv. CPU only.
 """
@@ -28,6 +31,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "src"))
 
+import numpy as np  # noqa: E402
 import pandas as pd  # noqa: E402
 
 _spec = importlib.util.spec_from_file_location(
@@ -69,6 +73,17 @@ def set_spread(both: pd.DataFrame, column: str) -> pd.Series:
     return attributed.groupby(OPC.SET)[column].std(ddof=0)
 
 
+def fixed(ref: pd.DataFrame, run: pd.DataFrame) -> pd.Series:
+    flags = SC.set_flags(ref, run)
+    return flags["ref"] * (1 - flags["run"])
+
+
+def overlap(a: pd.Series, b: pd.Series) -> float:
+    a, b = a.align(b, fill_value=0.0)
+    high = float(np.maximum(a, b).sum())
+    return float(np.minimum(a, b).sum()) / high if high else float("nan")
+
+
 def readout(ref: pd.DataFrame, run: pd.DataFrame, border: set[str]) -> dict:
     scale = SC.scale_factors(ref, run)
     both = OPC._paired(ref, run)
@@ -95,13 +110,16 @@ def main() -> None:
                 cache[run] = None
         return cache[run]
 
+    d42 = fixed(scores(SFT_V3), scores(PAIRS[0][1]))
     rows = []
     for label, run, ref in PAIRS:
         a, b = scores(run), scores(ref)
         if a is None or b is None:
             print(f"skipped {label}: no op-margin-v2 file yet")
             continue
-        rows.append({"label": label, "run": run, "reference": ref, **readout(b, a, border)})
+        extra = {"fixed_overlap_d42": overlap(fixed(b, a), d42)} if ref == SFT_V3 else {}
+        rows.append({"label": label, "run": run, "reference": ref, **readout(b, a, border),
+                     **extra})
     table = pd.DataFrame(rows)
     table.to_csv(out / "readout.csv", index=False)
     pd.set_option("display.width", 200)

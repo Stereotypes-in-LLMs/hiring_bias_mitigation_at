@@ -51,3 +51,10 @@ def test_shrinking_only_the_attribute_deviations_reads_as_rho_below_one():
     out = MR.readout(ref, run, MR.SC.borderline_pairs(ref))
     assert abs(out["a_median"] - 1) < 1e-9
     assert out["rho"] < 0.5
+
+
+def test_fixed_set_overlap_is_one_with_itself_and_zero_when_disjoint():
+    a = pd.Series([1.0, 0.5, 0.0], index=["s1", "s2", "s3"])
+    assert MR.overlap(a, a) == 1.0
+    assert MR.overlap(a, pd.Series([0.0, 0.0, 1.0], index=["s1", "s2", "s3"])) == 0.0
+    assert abs(MR.overlap(a, pd.Series([1.0], index=["s1"])) - 1 / 1.5) < 1e-12
