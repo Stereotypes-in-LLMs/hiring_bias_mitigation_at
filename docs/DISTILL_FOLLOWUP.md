@@ -127,6 +127,7 @@ own point, on the margin files already written. It is descriptive and decides no
 | 6 | 5232810 | G DPO student s43 training (nid006002): 341 steps, 1:19:15; trained on DPO_V3_4880 s43 checkpoint-305 merged (`run_config.json`); 5.262 GPU-h measured | 5.28 | 9.80 |
 | 7 | 5233351 | G DPO student s43 audit (nid005942): +0.04 [−1.00, +1.08] pp against SFT-v3, greedy TPR −4.49, agreement −0.90, every guardrail passes, conforms; merge kept 96.6%. Head to head against its parent DPO_V3_4880 s43 at 20.69%: +0.58 [−0.22, +1.37] | 1.22 | 11.02 |
 | 8 | 5233279 | G GRPO student s43 training (nid005933): 341 steps, 1:19:48; trained on GRPO + decay R4 s43 merged; 5.301 GPU-h measured | 5.32 | 16.34 |
+| 9 | 5232838 | I seed 42 training (retry 1, nid005944): 682 steps, 2:31:33; 10.085 GPU-h measured; train_loss 0.028 over the run, attributed KL at the end 0.0063 | 10.10 | 26.44 |
 
 ## 3. Result
 
