@@ -151,6 +151,26 @@ all-layer arm is ≤ +0.20 pp and every seed is below SFT-v3 with every guardrai
 distillation confined to the pathway layers, with a quarter of the trainable parameters, is not
 worse than distillation on all layers. The served model stays the same 9B model.
 
+### D. The same parameter budget spread over every layer (registered 2026-11-01, after A's call)
+
+**Why.** Arm A reached H0, and its patching shows the confined adapter barely moves SFT-v3
+(section 3A). Arm C confines a quarter-size adapter to the pathway window. Arm D is its control
+at the same size: LoRA rank 8 instead of 32 on every layer and module of the all-layer arm (alpha
+16, so alpha/r stays 2), 128 modules and 14,548,992 trainable parameters (0.162% of the text
+backbone; arm C 15,073,280), counted the same way. Configs
+`configs/mitigation/distill/decision_distill_r8_seed{42,43,44}.yaml`; everything else matches
+`decision_distill_seed{42,43,44}`.
+
+**Question.** At a quarter of the trainable parameters, does placing them on the pathway window
+(C) or spreading them over all layers at low rank (D) keep distillation's gain?
+
+**Pilot rule, fixed now (the same as C).** Seed 42 first; seeds 43 and 44 only if seed 42 is
+≤ +0.20 pp against the all-layer rank-32 arm of seed 42 and below SFT-v3. Three-seed bands as for
+A and C. If C and D both pass their pilots, running both to three seeds would pass the day's
+60 GPU-h cap: ask the user first. Under "enough" the poster may say: distillation with a quarter
+of the trainable parameters (rank 8, all layers) is not worse than rank 32. The served model is
+the same 9B model.
+
 ### Evaluation, splits and stop conditions
 
 - The final adapter of each arm, declared now. `evaluate_arm.sbatch` against SFT-v3, then
