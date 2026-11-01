@@ -119,6 +119,8 @@ own point, on the margin files already written. It is descriptive and decides no
 
 | # | job | what | GPU-h allocated | running total |
 |---|---|---|---|---|
+| 1 | 5232809 | I seed 42 training: failed at start on nid005679, no GPU visible to the job ("0 x NVIDIA GH200", the trainer: "doesn't support bf16/gpu", `logs/xw-distill-5232809.out`); resubmitted excluding nid005679 and nid006377 | 0.56 | 0.56 |
+| 2 | 5232811 | H seed 42 audit: failed on nid006377, "No CUDA GPUs are available" (the node of PATCHING_DISTILL ledger row 15, `logs/xw-eval-arm-5232811.out`); resubmitted with the same exclusion | 0.57 | 1.13 |
 
 ## 3. Result
 
