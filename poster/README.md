@@ -1,10 +1,10 @@
 # GTC 2027 poster
 
-Two versions. `latex/GTC_Poster.tex` is the approved v4 layout (43 x 24 in, the official GTC
-2027 format), filled with measured values from `latex/poster_data.tex`, which
-`latex/latex_data.py` writes (shared venv; it checks every run against
-`reports/reference_metrics.csv`). Compile on Overleaf with both files, or `pdflatex` twice. It
-has not been compiled on Daint (no TeX there). The Typst version below (44 x 35 in) came first.
+Two versions. `latex/main.tex` is the approved v4 layout (43 x 24 in, the official GTC 2027
+format), one self-contained file: `latex/latex_data.py` (shared venv) writes the measured values
+into its GENERATED DATA block and checks every run against `reports/reference_metrics.csv`.
+Upload `main.tex` alone to Overleaf, or run `pdflatex` twice. It has not been compiled on Daint
+(no TeX there). The Typst version below (44 x 35 in) came first.
 
 ## Typst version
 

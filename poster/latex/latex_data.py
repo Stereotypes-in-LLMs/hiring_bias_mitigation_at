@@ -1,4 +1,4 @@
-"""Numbers for the LaTeX poster (GTC_Poster.tex), written to ``poster_data.tex``.
+"""Numbers for the LaTeX poster, written into ``main.tex`` between its GENERATED DATA markers.
 
 The poster's seven model slots: the base model, the best SFT, DPO and GRPO, and the distilled
 version of each. "Best" is the recipe with the lowest seed-mean change against SFT-v3 among
@@ -216,8 +216,14 @@ def main() -> None:
            tex_table("ModelData", model_rows), tex_table("DeltaData", delta_rows)]
     for k, v in findings.items():
         out.append(f"\\newcommand{{\\{k}}}{{{v}}}")
-    (HERE / "poster_data.tex").write_text("\n".join(out) + "\n")
-    print((HERE / "poster_data.tex").read_text())
+    # Written into main.tex between its markers, so the poster is one self-contained file.
+    main_tex = HERE / "main.tex"
+    tex = main_tex.read_text()
+    begin, end = "% BEGIN GENERATED DATA\n", "% END GENERATED DATA\n"
+    head, rest = tex.split(begin, 1)
+    _, tail = rest.split(end, 1)
+    main_tex.write_text(head + begin + "\n".join(out) + "\n" + end + tail)
+    print("\n".join(out))
 
 
 if __name__ == "__main__":
