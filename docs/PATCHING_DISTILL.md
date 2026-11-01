@@ -203,6 +203,9 @@ the same 9B model.
 | 7 | 5228526 | Patching of A s42 (explicit combat, atheist) and noise passes (2,048 rows) for GRPO R4 s42 and A s42 | 1.27 | 20.75 |
 | 8 | 5228565 | A seed 43 audit against SFT-v3: +0.27 pp, every guardrail passes, conforms | 1.24 | 21.99 |
 | 9 | 5228566 | A seed 44 audit against SFT-v3: −0.00 pp, every guardrail passes, conforms | 1.34 | 23.33 |
+| 10 | 5228626 | C seed 42 training: 341 steps, 1:13:38; layers 15-20 only, 38 modules (the 26 of arm A plus `in_proj_qkv`, `in_proj_z`, `out_proj` of GDN 16, 17, 18, 20), 15,073,280 parameters (read from `adapter_model.safetensors`); 4.890 GPU-h measured | 4.91 | 28.24 |
+| 11 | 5228681 | DPO student training: 341 steps, 1:22:05; all layers, 128 modules, 58,195,968 parameters, trained on DPO_V3_4880 s42 checkpoint-305 merged (read from `adapter_model.safetensors`, `run_config.json`); 5.453 GPU-h measured | 5.47 | 33.71 |
+| 12 | 5228682 | GRPO student training: 341 steps, 1:16:19; all layers, 128 modules, 58,195,968 parameters, trained on GRPO + decay R4 s42 merged; 5.068 GPU-h measured | 5.09 | 38.80 |
 
 ## 3. Result
 
