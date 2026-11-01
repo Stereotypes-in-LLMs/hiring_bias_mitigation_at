@@ -64,7 +64,7 @@
       "unstable_pct_mean": 1.5802469135802468,
       "hire_pct_mean": 21.92270531400966,
       "delta_vs_sft_v3_pp_mean": -0.30776666666666663,
-      "extra_gpu_h": 17.95
+      "extra_gpu_h": 17.9461
     },
     {
       "name": "GRPO+decay R4",
@@ -113,7 +113,7 @@
       "unstable_pct_mean": 1.654320987654321,
       "hire_pct_mean": 22.369296833064947,
       "delta_vs_sft_v3_pp_mean": -0.44470000000000004,
-      "extra_gpu_h": 27.02
+      "extra_gpu_h": 27.0181
     },
     {
       "name": "Distill",
@@ -162,7 +162,7 @@
       "unstable_pct_mean": 1.5185185185185184,
       "hire_pct_mean": 22.95008051529791,
       "delta_vs_sft_v3_pp_mean": -0.5703,
-      "extra_gpu_h": 21.366666666666664
+      "extra_gpu_h": 21.364766666666664
     },
     {
       "name": "GRPO from distill s42",
@@ -187,7 +187,57 @@
       "unstable_pct_mean": 1.7777777777777777,
       "hire_pct_mean": 21.236714975845413,
       "delta_vs_sft_v3_pp_mean": -0.174,
-      "extra_gpu_h": 37.32
+      "extra_gpu_h": 32.1881
+    },
+    {
+      "name": "Distill on DPO",
+      "label": "+ DPO, then distillation",
+      "arms": [
+        "Distill on DPO s42"
+      ],
+      "seeds": [
+        {
+          "run": "Qwen3.5-9B--en--sft--adapter--en_only_decision_distill_dpo4880_seed42",
+          "hire_pct": 23.159420289855074,
+          "unstable_pct": 0.5555555555555556,
+          "base_unstable_pct": 11.804932915561983,
+          "delta_pp": -11.249377360006427,
+          "ci": [
+            -13.219826062505021,
+            -9.261378243753514
+          ]
+        }
+      ],
+      "delta_pp_mean": -11.249377360006427,
+      "unstable_pct_mean": 0.5555555555555556,
+      "hire_pct_mean": 23.159420289855074,
+      "delta_vs_sft_v3_pp_mean": -1.4983,
+      "extra_gpu_h": 26.934400000000004
+    },
+    {
+      "name": "Distill on GRPO R4",
+      "label": "+ GRPO, then distillation",
+      "arms": [
+        "Distill on GRPO R4 s42"
+      ],
+      "seeds": [
+        {
+          "run": "Qwen3.5-9B--en--sft--adapter--en_only_decision_distill_grpo_r4_seed42",
+          "hire_pct": 21.784219001610307,
+          "unstable_pct": 1.5185185185185186,
+          "base_unstable_pct": 11.65121412803532,
+          "delta_pp": -10.132695609516801,
+          "ci": [
+            -12.21621903360314,
+            -7.982965415746874
+          ]
+        }
+      ],
+      "delta_pp_mean": -10.132695609516801,
+      "unstable_pct_mean": 1.5185185185185186,
+      "hire_pct_mean": 21.784219001610307,
+      "delta_vs_sft_v3_pp_mean": -0.1601,
+      "extra_gpu_h": 32.0781
     }
   ]
 }

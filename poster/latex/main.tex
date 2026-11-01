@@ -43,15 +43,15 @@ Best SFT (SFT-v3),58.2*,blue,0,0,1.85,1.0,2.78,82.4,78.56,85.79,15.4,0,21.64,0.0
 Best DPO,58.2*,amber,0,0,1.56,0.9,2.32,82.24,78.26,85.72,29.31,0,25.68,0.0,0.5,DPO,3
 Best GRPO,58.2*,purple,0,0,1.62,0.96,2.37,82.15,78.09,85.56,31.59,0,32.47,0.0,0.5,GRPO,3
 Distilled SFT,58.2*,blue,1,0,1.53,0.81,2.36,82.6,78.49,86.12,31.59,0,21.64,5.18,0.5,dSFT,3
-Distilled DPO,--,amber,1,1,0,0,0,0,0,0,0,0,0,0,0,dDPO,0
-Distilled GRPO,--,purple,1,1,0,0,0,0,0,0,0,0,0,0,0,dGRPO,0
+Distilled DPO (n=1),58.2*,amber,1,0,0.59,0.22,1.11,82.64,78.66,86.17,32.86,0,25.67,5.44,0.5,dDPO,1
+Distilled GRPO (n=1),58.2*,purple,1,0,1.59,0.7,2.67,82.13,78.26,85.48,31.59,0,32.47,5.06,0.5,dGRPO,1
 }\ModelData
 
 \pgfplotstableread[col sep=comma]{
 method,colour,pending,delta,lo,hi
 SFT,blue,0,0.2,-0.53,0.89
-DPO,amber,1,0,0,0
-GRPO,purple,1,0,0,0
+DPO,amber,0,-0.18,-0.91,0.37
+GRPO,purple,0,1.03,0.29,1.96
 }\DeltaData
 
 \newcommand{\NPairs}{450}
@@ -79,6 +79,17 @@ GRPO,purple,1,0,0,0
 \newcommand{\LayersPct}{0.424}
 \newcommand{\StandardParams}{58.2}
 \newcommand{\StandardPct}{0.650}
+\newcommand{\WindowParams}{11.4}
+\newcommand{\WindowOnly}{+0.53}
+\newcommand{\WindowOnlySeeds}{+0.26 / +0.74 / +0.58}
+\newcommand{\WindowRemoved}{+0.11}
+\newcommand{\WindowRemovedSeeds}{+0.07 / +0.11 / +0.16}
+\newcommand{\AllPairsRemoved}{52--66}
+\newcommand{\WidenRange}{2.0--2.7}
+\newcommand{\StudentDPO}{\textminus{}0.07 [\textminus{}0.44, +0.33]}
+\newcommand{\StudentGRPO}{+0.02 [\textminus{}0.77, +0.82]}
+\newcommand{\StudentDPOPoint}{\textminus{}0.07}
+\newcommand{\StudentGRPOPoint}{+0.02}
 \newcommand{\DistillAgreeDelta}{+0.20}
 \newcommand{\DistillAgreeCI}{[\textminus{}0.53, +0.89]}
 % END GENERATED DATA
@@ -87,15 +98,16 @@ GRPO,purple,1,0,0,0
 \newcommand{\PosterTitle}{Reducing Attribute Sensitivity in Hiring LLMs}
 % Honest framing: the distillation objective came from the self-distillation
 % family (docs/DECISION_DISTILL.md, 2026-10-27), before the patching of the
-% distilled model. Patching locates the pathway and explains what distillation
-% changes; the one patching-guided variant run so far (layers 0-20) was worse.
-% Change this line to "Mechanistic findings inform distillation" only once a
-% distillation designed from the patching result has been trained and audited.
+% distilled model. The distillation designed from Marta's pathway (LoRA on
+% layers 15-20, docs/PATCHING_DISTILL.md section 1A) came out H0, so by that
+% card's rule the subtitle stays as it is; the window-removed ablation (section
+% F) says the trained adapter's gain does not need layers 15-20.
 \newcommand{\PosterSubtitle}{Activation patching locates the attribute pathway; SFT, DPO, GRPO and self-distillation compared at a matched hire rate}
 \newcommand{\PosterAuthors}{Authors and affiliations [to finalise]}
 % docs/INTERP_SFT_V3.md, Patching (Marta Samoilenko): 64 pairs per contrast, 3 contrasts,
-% pairs picked for |dm_base| >= 0.5; per-pair |dm| falls 61-77% on them.
-\newcommand{\MechanisticFinding}{SFT-v3 removes 61--77\% of the per-pair effect (patched pairs);\\
+% pairs picked for |dm_base| >= 0.5; per-pair |dm| falls 61-77% on them, and by
+% \AllPairsRemoved% on all 450 pairs (latex_data.py, from the patching manifest).
+\newcommand{\MechanisticFinding}{SFT-v3 removes \AllPairsRemoved\% of the per-pair effect (all 450 pairs);\\
   the rest still reaches the decision tokens at layers 15--20 (head L15.H11).}
 
 % The decision-distillation design as trained (docs/DECISION_DISTILL.md).
@@ -105,11 +117,13 @@ GRPO,purple,1,0,0,0
 
 \newcommand{\StandardTrainable}{\StandardParams*}
 \newcommand{\DistilledSFTTrainable}{\StandardParams}
-\newcommand{\DistilledDPOTrainable}{to run}
-\newcommand{\DistilledGRPOTrainable}{to run}
-\newcommand{\DistilledFractions}{SFT student: \StandardPct\% of the \BackboneB B text backbone}
-\newcommand{\BehaviourFinding}{Distilled SFT: \DistillMatched{} pp vs SFT-v3 at matched rate\\
-  (seeds \DistillSeeds);\\agreement \DistillAgreeDelta{} pp \DistillAgreeCI.}
+\newcommand{\DistilledDPOTrainable}{\StandardParams}
+\newcommand{\DistilledGRPOTrainable}{\StandardParams}
+\newcommand{\DistilledFractions}{each \StandardPct\% of the \BackboneB B backbone; the served model stays 9B}
+% docs/PATCHING_DISTILL.md, B: each student against its own seed-42 parent (compare-arms).
+\newcommand{\BehaviourFinding}{dSFT: \DistillMatched{} pp vs SFT-v3, matched rate (\DistillSeeds)\\
+  dDPO / dGRPO vs their parent: \StudentDPOPoint{} / \StudentGRPOPoint{} pp (one seed)\\
+  Agreement, dSFT $-$ SFT-v3: \DistillAgreeDelta{} pp \DistillAgreeCI}
 \newcommand{\ComputeFinding}{+\DistillTrainGPUh{} GPU-h of training over SFT-v3 (+\DistillExtraGPUh{} with its data)}
 
 
@@ -205,7 +219,7 @@ GRPO,purple,1,0,0,0
 \Txt[text=greenDark]{48}{50}{780}{13}{\bfseries GTC 2027 / RESEARCH POSTER}
 \node[anchor=north east,inner sep=0pt,outer sep=0pt,text=draft,
   font=\sffamily\bfseries\fontsize{19.5}{22.4}\selectfont]
-  at (2016,50) {DRAFT / MEASURED RESULTS / TWO SLOTS TO RUN};
+  at (2016,50) {DRAFT / MEASURED RESULTS};
 \Txt[align=center,text=ink]{48}{88}{1968}{49}{\bfseries\PosterTitle}
 \Txt[align=center,text=teal]{48}{151}{1968}{25}{\bfseries\PosterSubtitle}
 \Txt[align=center,text=muted]{48}{192}{1968}{15}{\PosterAuthors}
@@ -244,7 +258,7 @@ GRPO,purple,1,0,0,0
 \Rect{48}{815}{420}{33}{setupColour}
 \Txt[text=ink]{64}{822}{388}{22}{\bfseries Experiment setup}
 \Txt{64}{860}{388}{15}{Qwen3.5-9B / rank-32 LoRA / English\\
-  Three seeds per post-SFT method; checkpoint declared\\
+  3 seeds per method (students 1); checkpoint declared\\
   Primary: unstable-set change at matched hire rate\\
   Quality: agreement with GPT-4o + its hires' recall\\
   95\% CI: candidate-clustered bootstrap [4]}
@@ -289,8 +303,8 @@ GRPO,purple,1,0,0,0
 
 \foreach \yy/\col/\ttl/\desc/\fam in {
   748/blue/{SFT: teacher targets}/{\RelSFT{} rows, 8-vote teacher [5]}/{SFT\\(3 seeds)},
-  806/amber/{DPO: answer pairs}/{\RelDPO{} on-policy pairs [5]}/{DPO\\to run},
-  864/purple/{GRPO: sampled answers}/{\RelRL{} prompts, anchor reward [5]}/{GRPO\\to run}}{%
+  806/amber/{DPO: answer pairs}/{\RelDPO{} on-policy pairs [5]}/{DPO\\(1 seed)},
+  864/purple/{GRPO: sampled answers}/{\RelRL{} prompts, anchor reward [5]}/{GRPO\\(1 seed)}}{%
   \Rect[draw=rule,line width=0.9bp]{512}{\yy}{225}{50}{white}
   \Txt[text=\col]{523}{\yy+8}{203}{15}{\bfseries\ttl}
   \Txt{523}{\yy+31}{203}{12}{\desc}
@@ -313,8 +327,9 @@ GRPO,purple,1,0,0,0
 \Txt[text=teal]{771}{866}{183}{14.5}{\bfseries Updated parameters}
 \Txt[text=body]{771}{886}{183}{11.5}{\UpdatedParameters}
 
-% The one patching-guided variant so far (docs/DISTILL_LAYERS.md), seed 43.
-\Txt[text=muted]{512}{922}{620}{12.3}{Layer-restricted control: LoRA on layers 0--20 only (\LayersParams M), chosen from a layer-masked adapter check, \LayersControl{} pp vs all layers, same seed and steps.}
+% The window from Marta's patching (docs/PATCHING_DISTILL.md, sections A and F), three seeds each:
+% trained alone it loses the gain; removed from the trained all-layer adapter, it leaves the gain.
+\Txt[text=muted]{512}{922}{620}{12.3}{Placed by patching, 3 seeds each: LoRA on layers 15--20 only (\WindowParams M) loses the gain, \WindowOnly{} pp vs all layers; the trained adapter with 15--20 removed keeps it, \WindowRemoved{} pp.}
 \Rect{512}{953}{620}{29}{ink}
 \Txt[text=white,align=center]{524}{960}{596}{15.5}{\bfseries Shared evaluation: Base + parents + distilled models}
 \foreach \yy in {773,831,889}{\draw[teal,line width=1.2bp] (1132,\yy) -- (1142,\yy);}
@@ -323,7 +338,7 @@ GRPO,purple,1,0,0,0
 
 % RIGHT / A: seven model slots, co-aligned names, parameters and CIs.
 \Txt[text=blue]{1192}{284}{808}{22}{\bfseries A\quad Quality and stability across seven model slots}
-\Txt[text=muted]{1192}{322}{808}{13.5}{Audits' greedy decisions; seed means where a model has three seeds; 95\% CI over candidates}
+\Txt[text=muted]{1192}{322}{808}{13.5}{Audits' greedy decisions at each model's own hire rate; seed means where a model has three seeds; 95\% CI over candidates}
 \Txt[text=ink]{1192}{373}{194}{14.5}{\bfseries Model}
 \Txt[text=ink,align=center]{1390}{363}{88}{14}{\bfseries Trainable\\(M)}
 \Txt[text=ink,align=center]{1488}{373}{232}{13.5}{\bfseries Unstable sets (\%)}
@@ -362,7 +377,7 @@ GRPO,purple,1,0,0,0
 \Txt[text=muted]{1192}{666}{290}{12.5}{Base: no adaptation}
 \Txt[text=muted,align=center]{1495}{699}{215}{12.5}{lower is better}
 \Txt[text=muted,align=center]{1764}{699}{222}{12.5}{higher is better}
-\Txt[text=muted]{1192}{691}{290}{12.5}{Matched hire rate vs SFT-v3: dSFT \DistillMatched,\\DPO \DPOMatched, GRPO \GRPOMatched{} pp [4]}
+\Txt[text=muted]{1192}{691}{290}{12.5}{Matched hire rate vs SFT-v3, 3-seed means:\\dSFT \DistillMatched, DPO \DPOMatched, GRPO \GRPOMatched{} pp [4]}
 \Txt[text=muted]{1192}{728}{808}{12.5}{Open: before distillation / Filled: after / Dashed: Base / Bars: 95\% CI / Best: lowest 3-seed mean vs SFT-v3, after the audits}
 \Txt[text=muted]{1192}{751}{808}{12.5}{*LoRA r32, \StandardParams M per stage (\StandardPct\% of the \BackboneB B backbone); each post-SFT row adds one stage to SFT-v3.}
 \draw[rule,line width=1bp] (1192,777) -- (2000,777);
@@ -388,7 +403,7 @@ GRPO,purple,1,0,0,0
     \CI{1270}{290}{-4}{4}{\yy}{\D}{\DL}{\DH}{\RowColour}
   \fi
 }
-\Txt[text=muted]{1192}{975}{378}{11.5}{Distilled $-$ parent / paired 95\% CI over candidates}
+\Txt[text=muted]{1192}{975}{378}{11.5}{Distilled $-$ parent (SFT-v3; DPO, GRPO seed 42) / paired 95\% CI over candidates}
 
 % RIGHT / C: cost stack, inclusive of SFT-v3, to the audited checkpoint.
 \Txt[text=blue]{1604}{794}{396}{19}{\bfseries C\quad GPU time}
@@ -424,11 +439,11 @@ GRPO,purple,1,0,0,0
 \Txt[text=ink]{64}{1028}{388}{26}{\bfseries 5. Conclusion\\and Findings}
 \draw[greenDark,line width=1.2bp] (492,1007) -- (2016,1007);
 \Txt[text=blue]{512}{1021}{410}{18}{\bfseries Mechanism}
-\Txt{512}{1050}{410}{14.5}{The attribute pathway survives SFT-v3 (L15.H11),\\weakened; distillation shrinks margins along it.}
+\Txt{512}{1050}{410}{14.5}{The attribute pathway survives SFT-v3 (L15.H11);\\distillation keeps its gain with layers 15--20 removed.}
 \Txt[text=blue]{952}{1021}{423}{18}{\bfseries Behaviour + quality}
 \Txt[text=muted]{952}{1050}{423}{12}{\BehaviourFinding}
 \Txt[text=blue]{1415}{1021}{460}{18}{\bfseries Distilled parameters + compute}
-\Txt[text=muted]{1415}{1048}{460}{12.8}{Trainable SFT / DPO / GRPO: \DistilledSFTTrainable{} M / \DistilledDPOTrainable{} / \DistilledGRPOTrainable\\
+\Txt[text=muted]{1415}{1048}{460}{12.8}{Trainable LoRA, SFT / DPO / GRPO students: \DistilledSFTTrainable{} / \DistilledDPOTrainable{} / \DistilledGRPOTrainable{} M\\
   \DistilledFractions\\\ComputeFinding}
 \node[anchor=north west,inner sep=0pt] at (1940,1018)
   {\qrcode[height=1.33in]{https://github.com/Stereotypes-in-LLMs/hiring\_bias\_mitigation\_at/blob/main/poster/DETAILS.md}};
@@ -458,8 +473,9 @@ GRPO,purple,1,0,0,0
 %
 % Still open before submission:
 % (1) Authors, affiliations and final title.
-% (2) Distilled DPO and distilled GRPO: not trained.
-% (3) A distillation designed from Marta's pathway (layers 15-20, L15.H11,
-%     MLP 31): not trained; only then may the subtitle say patching informs it.
+% (2) Distilled DPO and distilled GRPO: one seed each, neither different from
+%     its parent at matched rate (docs/PATCHING_DISTILL.md, B).
+% (3) The distillation designed from Marta's pathway (layers 15-20) is H0, so the
+%     subtitle stays; the window-removed ablation is 'not needed' (section F).
 % (4) "Best" was chosen after the audits (lowest seed mean); say so or fix a
 %     rule before any new audit.

@@ -187,7 +187,7 @@ def numbers() -> dict:
     put("b_block", f"{float(sh['block']):.0f}", "reports/throughput_b/shared_prefix_all450.csv")
 
     # Mechanism: what later training does to SFT-v3's pathway.
-    for arm, key in (("dpo4880", "dpo_scale"), ("grpo525", "grpo_scale")):
+    for arm, key in (("dpo4880", "dpo_scale"), ("grpo_r4", "grpo_scale")):   # the poster's arms
         path = f"reports/interp/distill/{arm}/sensitivity.csv"
         scale = {x["r_scale"] for x in rows(path)}
         if len(scale) != 1:
@@ -204,6 +204,41 @@ def numbers() -> dict:
                for k in ("S_exact_a_median_delta", "S_q_a_median_delta",
                          "S_exact_a_slope_delta", "S_q_a_slope_delta"))
     put("scale_change", "exactly 0" if zero else "not 0", "reports/scale_control/summary.csv")
+    mr = "reports/margin_readout/readout.csv"
+    widen = [float(r["a_median"]) for r in rows(mr)
+             if re.fullmatch(r"(DPO_V3_4880|GRPO\+decay R4) s4[234]", r["label"])]
+    if len(widen) != 6:
+        raise SystemExit(f"{mr}: expected six DPO and GRPO seeds, found {len(widen)}")
+    put("widen_range", f"×{min(widen):.1f}–{max(widen):.1f}", mr)
+
+    # The patching-informed round (docs/PATCHING_DISTILL.md), each arm head to head at a matched
+    # hire rate (compare-arms rows of reports/comparisons.csv).
+    arm_run = {r["label"]: r["run"] for r in rows("reports/final/arms.csv")}
+
+    def vs(label: str, against: str) -> dict:
+        return one(comp, run=arm_run.get(label, label), against=arm_run.get(against, against))
+
+    def with_ci(r: dict) -> str:
+        return f"{pp(r['delta_pp'])} {ci(r['ci_low_pp'], r['ci_high_pp'])}"
+
+    def three(run_of) -> list[str]:
+        ds = [float(vs(run_of(s), f"Distill s{s}")["delta_pp"]) for s in (42, 43, 44)]
+        return [pp(sum(ds) / 3), " / ".join(pp(d) for d in ds)]
+
+    put("window_only", three(lambda s: f"Distill layers 15-20 s{s}"), comp)
+    put("window_removed", three(lambda s: arm_run[f"Distill s{s}"] + "_xw15_20"), comp)
+    put("quarter_window", with_ci(vs("Distill window + GDN s42", "Distill s42")), comp)
+    put("quarter_rank8", with_ci(vs("Distill rank 8 s42", "Distill s42")), comp)
+    put("student_dpo", with_ci(vs("Distill on DPO s42", "DPO_V3_4880 s42")), comp)
+    put("student_grpo", with_ci(vs("Distill on GRPO R4 s42", "GRPO+decay R4 s42")), comp)
+    floor = [r for r in rows(comp) if r["run"].endswith("decision_distill_floor4_seed42")
+             and r["against"] == arm_run["Distill s42"]]
+    put("floor_pilot", with_ci(floor[0]) if floor else "", comp)
+    params = {r["run"]: r for r in rows("reports/cost/params.csv")}
+    for key, run in (("window_params", "decision_distill_l15_20_seed42"),
+                     ("quarter_window_params", "decision_distill_w15_20_seed42"),
+                     ("quarter_rank8_params", "decision_distill_r8_seed42")):
+        put(key, f"{int(params[run]['params_trainable']) / 1e6:.1f}M", "reports/cost/params.csv")
 
     std = "src/hiring_bias_mitigation/analysis/eval_standard.py"
     code = (ROOT / std).read_text()
