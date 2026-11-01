@@ -206,6 +206,9 @@ the same 9B model.
 | 10 | 5228626 | C seed 42 training: 341 steps, 1:13:38; layers 15-20 only, 38 modules (the 26 of arm A plus `in_proj_qkv`, `in_proj_z`, `out_proj` of GDN 16, 17, 18, 20), 15,073,280 parameters (read from `adapter_model.safetensors`); 4.890 GPU-h measured | 4.91 | 28.24 |
 | 11 | 5228681 | DPO student training: 341 steps, 1:22:05; all layers, 128 modules, 58,195,968 parameters, trained on DPO_V3_4880 s42 checkpoint-305 merged (read from `adapter_model.safetensors`, `run_config.json`); 5.453 GPU-h measured | 5.47 | 33.71 |
 | 12 | 5228682 | GRPO student training: 341 steps, 1:16:19; all layers, 128 modules, 58,195,968 parameters, trained on GRPO + decay R4 s42 merged; 5.068 GPU-h measured | 5.09 | 38.80 |
+| 13 | 5229370 | C seed 42 audit against SFT-v3: +0.13 pp, every guardrail passes, conforms; merge kept 94.3% | 1.23 | 40.03 |
+| 14 | 5229488 | DPO student audit against SFT-v3: −1.50 pp, every guardrail passes, conforms; merge kept 96.5% | 1.23 | 41.26 |
+| 15 | 5229489 | GRPO student audit: failed after the merge, node nid006377 reported "No CUDA GPUs are available" (`logs/xw-eval-arm-5229489.out`); resubmitted, excluding that node | 0.57 | 41.83 |
 
 ## 3. Result
 
@@ -237,6 +240,60 @@ guardrail and every comparison conforms.
 - **Wording, as registered:** "distillation confined to layers 15-20 at the same learning rate
   loses the gain (mean +0.53 pp against all layers, three seeds)".
 
+
+### B. The same distillation on the DPO and GRPO models (pilots, one seed each)
+
+**DPO student** (`decision_distill_dpo4880_seed42`, parent DPO_V3_4880 s42 checkpoint-305).
+Every guardrail passes against SFT-v3 and both comparisons conform (commit a8be782).
+
+| comparison | pp [95% CI] | hire rate |
+|---|---|---|
+| against the parent (`compare-arms`, the registered question) | −0.07 [−0.44, +0.33] | 23.16% |
+| against SFT-v3 (the standard, context) | −1.50 [−2.42, −0.64] | 23.17% |
+| the parent against SFT-v3, for reference | −1.03 [−1.81, −0.28] | 22.80% |
+
+- **Fact.** Against its parent the change is −0.07 pp and its interval holds 0: by the registered
+  wording, not distinguishable from the parent. At the matched rate the parent has 0.63% unstable
+  sets and the student 0.56% (`reports/operating_point/v2/…dpo4880_seed42--vs--…dpo_v3_4880_step305.json`).
+- **Fact.** Against SFT-v3 the student reads −1.50 pp, the lowest of any arm, with 0.59% unstable
+  sets (`reports/reference_metrics.csv`). Most of it is the parent's own seed-42 draw, the best of
+  DPO's three seeds (−1.03, −0.09, +0.20; mean −0.31). As registered, it is not reported as
+  "distilled DPO beats SFT-v3".
+- **Fact (decisions).** The student differs from its parent on 276 of 31,050 decisions, from
+  SFT-v3 on 475; the parent differs from SFT-v3 on 309.
+- **Interpretation, not confirmed.** Distillation moves the DPO model about as much as it moves
+  SFT-v3, but the parent is already at 0.6-0.9% unstable sets, so there is little left for the
+  attribute-free teacher to remove. The two head-to-head numbers (−0.07 against the parent and
+  −0.47 more than the parent against SFT-v3) differ because each SFT-v3 comparison is matched at
+  that arm's own hire rate.
+- **Unknown.** A second seed of the student; whether the parent's other seeds would gain more.
+
+**GRPO student**: the audit failed on a node fault and is resubmitted (ledger row 15).
+
+### C. The whole pathway window, GDN mixers included (pilot: the gate fails, seeds 43 and 44 not run)
+
+Seed 42, against the all-layer arm of seed 42 (`compare-arms`) and against SFT-v3 (the standard;
+`reports/comparisons.csv`, `reports/reference_metrics.csv`). Every guardrail passes and both
+comparisons conform (commit a8be782).
+
+| seed | against all layers, pp [95% CI] | against SFT-v3, pp [95% CI] |
+|---|---|---|
+| 42 | +0.26 [−0.37, +0.89] | +0.13 [−0.27, +0.58] |
+
+- **Fact.** The pilot rule needs ≤ +0.20 against all layers and a change below 0 against SFT-v3.
+  Both fail, so seeds 43 and 44 are not run (section 1C).
+- **Fact.** The GDN projections were trained: their update norms ‖BA‖·α/r are 0.16-0.29, in
+  the range of the window's MLP projections (0.14-0.38), and the merge kept 94.3% of the update
+  (`adapter_model.safetensors`, `reports/reference_metrics.csv`). So the result is not a LoRA left
+  at zero.
+- **Fact (decisions, `outputs/raw/`).** Of 31,050 decisions, arm C differs from SFT-v3 on 144 and
+  from arm A seed 42 on 73. Arm A seed 42 differs from SFT-v3 on 171, the all-layer arm of seed 42
+  on 472. Its hire rate is 22.84% (SFT-v3 22.75%, arm A 22.88%, all layers 23.41%).
+- **Interpretation, not confirmed.** Training the window's mixers as well does not make the
+  windowed adapter move SFT-v3's decisions. The same numbers as arm A seed 42 (+0.26, +0.13)
+  follow from both staying close to SFT-v3, not from identical models.
+- **Wording:** "distillation confined to layers 15-20, GDN mixers included (a quarter of the
+  trainable parameters), seed 42: +0.26 pp against all layers; not continued".
 
 ## 4. Reading
 
