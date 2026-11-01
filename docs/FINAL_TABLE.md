@@ -157,6 +157,23 @@ between 0.52% and 1.11%, seed 43's between 1.43% and 1.81%, and seed 44's betwee
   - None of these is a cost per unit of stability gained: with three seeds, DPO's gain over
     SFT-v3 is not established.
 
+## Added 2026-11-01: the patching-informed round
+
+[`PATCHING_DISTILL.md`](PATCHING_DISTILL.md) adds seven arms to `arms.csv`: layers 15-20 for
+seeds 42-44, the window with its GDN mixers (s42) and rank 8 on all layers (s42), all
+`headline = no` like the layer-restricted run before them, and decision distillation on each
+of DPO_V3_4880 s42 and GRPO+decay R4 s42, `headline = yes` with one seed each. The cost tables
+were regenerated on 2026-11-01 (201 jobs, 351 records, 569 steps), and the Decision
+distillation family's exploration now includes the round's cost arm, `patching_distill`
+(`families.csv`). The window-removed ablation (section F there) is not a trained arm and is
+not listed.
+
+For the two students the own point and the common point disagree in direction: the DPO student
+reads −1.50 against its parent's −1.03 at its own point but −0.72 against −0.81 at 22.51%, the
+GRPO student −0.16 against −0.73 and −0.51 against −0.31. Their head-to-head comparisons with
+the parent at the student's hire rate, −0.07 [−0.44, +0.33] and +0.02 [−0.77, +0.82], are the
+readings that card registered.
+
 ## Caveats
 
 - Three seeds per recipe at most; a seed sd from three draws is rough. GRPO-525 is exploratory

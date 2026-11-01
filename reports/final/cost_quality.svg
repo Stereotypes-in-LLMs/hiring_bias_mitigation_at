@@ -61,6 +61,10 @@
 <circle cx="344.1" cy="269.0" r="2.5" fill="#1baf7a" fill-opacity="0.6"/>
 <line x1="342.8" x2="342.8" y1="323.2" y2="204.9" stroke="#1baf7a" stroke-width="1.5" stroke-opacity="0.35"/>
 <circle cx="342.8" cy="262.2" r="2.5" fill="#1baf7a" fill-opacity="0.6"/>
+<line x1="400.0" x2="400.0" y1="374.5" y2="226.2" stroke="#1baf7a" stroke-width="1.5" stroke-opacity="0.35"/>
+<circle cx="400.0" cy="296.3" r="2.5" fill="#1baf7a" fill-opacity="0.6"/>
+<line x1="485.1" x2="485.1" y1="357.8" y2="200.9" stroke="#1baf7a" stroke-width="1.5" stroke-opacity="0.35"/>
+<circle cx="485.1" cy="278.2" r="2.5" fill="#1baf7a" fill-opacity="0.6"/>
 <circle cx="297.8" cy="253.1" r="6" stroke-width="2" fill="#2a78d6" stroke="#fcfcfb"/>
 <circle cx="585.1" cy="245.6" r="6" stroke-width="2" fill="#fcfcfb" stroke="#eb6834"/>
 <circle cx="562.2" cy="249.5" r="6" stroke-width="2" fill="#eb6834" stroke="#fcfcfb"/>
@@ -68,6 +72,8 @@
 <circle cx="418.0" cy="248.2" r="6" stroke-width="2" fill="#eb6834" stroke="#fcfcfb"/>
 <circle cx="328.5" cy="222.5" r="6" stroke-width="2" fill="#eb6834" stroke="#fcfcfb"/>
 <circle cx="343.1" cy="258.5" r="6" stroke-width="2" fill="#1baf7a" stroke="#fcfcfb"/>
+<circle cx="400.0" cy="296.3" r="6" stroke-width="2" fill="#1baf7a" stroke="#fcfcfb"/>
+<circle cx="485.1" cy="278.2" r="6" stroke-width="2" fill="#1baf7a" stroke="#fcfcfb"/>
 <polyline points="335.5,222.5 594,222.5" fill="none" stroke="#c3c2b7" stroke-width="1"/>
 <text x="598" y="226.5">DAPO+decay D1 <tspan fill="#52514e">· 3 seeds · TPR +1.3</tspan></text>
 <polyline points="593.4,240.7 594,240.7" fill="none" stroke="#c3c2b7" stroke-width="1"/>
@@ -82,4 +88,8 @@
 <text x="598" y="304.7">DPO_V3_4880 <tspan fill="#52514e">· 3 seeds · TPR +0.5</tspan></text>
 <polyline points="350.1,258.5 594,315.7" fill="none" stroke="#c3c2b7" stroke-width="1"/>
 <text x="598" y="319.7">Distill <tspan fill="#52514e">· 3 seeds · TPR -0.3</tspan></text>
+<polyline points="492.1,278.2 594,330.7" fill="none" stroke="#c3c2b7" stroke-width="1"/>
+<text x="598" y="334.7">Distill on GRPO R4 <tspan fill="#52514e">· 1 seed · TPR +0.5</tspan></text>
+<polyline points="407.0,296.3 594,345.7" fill="none" stroke="#c3c2b7" stroke-width="1"/>
+<text x="598" y="349.7">Distill on DPO <tspan fill="#52514e">· 1 seed · TPR +0.0</tspan></text>
 </svg>

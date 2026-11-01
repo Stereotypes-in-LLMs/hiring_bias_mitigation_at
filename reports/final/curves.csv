@@ -1223,3 +1223,360 @@ GRPO from distill s42,Qwen3.5-9B--en--grpo--adapter--en_only_grpo_improve_r6_dis
 GRPO from distill s42,Qwen3.5-9B--en--grpo--adapter--en_only_grpo_improve_r6_distill_seed42,34.0,1.7083
 GRPO from distill s42,Qwen3.5-9B--en--grpo--adapter--en_only_grpo_improve_r6_distill_seed42,34.5,1.545
 GRPO from distill s42,Qwen3.5-9B--en--grpo--adapter--en_only_grpo_improve_r6_distill_seed42,35.0,1.5556
+Distill layers 15-20 s42,Qwen3.5-9B--en--sft--adapter--en_only_decision_distill_l15_20_seed42,10.0,1.1543
+Distill layers 15-20 s42,Qwen3.5-9B--en--sft--adapter--en_only_decision_distill_l15_20_seed42,10.5,1.4768
+Distill layers 15-20 s42,Qwen3.5-9B--en--sft--adapter--en_only_decision_distill_l15_20_seed42,11.0,1.6735
+Distill layers 15-20 s42,Qwen3.5-9B--en--sft--adapter--en_only_decision_distill_l15_20_seed42,11.5,1.9206
+Distill layers 15-20 s42,Qwen3.5-9B--en--sft--adapter--en_only_decision_distill_l15_20_seed42,12.0,1.9909
+Distill layers 15-20 s42,Qwen3.5-9B--en--sft--adapter--en_only_decision_distill_l15_20_seed42,12.5,1.8696
+Distill layers 15-20 s42,Qwen3.5-9B--en--sft--adapter--en_only_decision_distill_l15_20_seed42,13.0,1.5279
+Distill layers 15-20 s42,Qwen3.5-9B--en--sft--adapter--en_only_decision_distill_l15_20_seed42,13.5,1.1425
+Distill layers 15-20 s42,Qwen3.5-9B--en--sft--adapter--en_only_decision_distill_l15_20_seed42,14.0,1.5021
+Distill layers 15-20 s42,Qwen3.5-9B--en--sft--adapter--en_only_decision_distill_l15_20_seed42,14.5,1.5494
+Distill layers 15-20 s42,Qwen3.5-9B--en--sft--adapter--en_only_decision_distill_l15_20_seed42,15.0,1.7499
+Distill layers 15-20 s42,Qwen3.5-9B--en--sft--adapter--en_only_decision_distill_l15_20_seed42,15.5,1.7774
+Distill layers 15-20 s42,Qwen3.5-9B--en--sft--adapter--en_only_decision_distill_l15_20_seed42,16.0,1.9615
+Distill layers 15-20 s42,Qwen3.5-9B--en--sft--adapter--en_only_decision_distill_l15_20_seed42,16.5,1.9478
+Distill layers 15-20 s42,Qwen3.5-9B--en--sft--adapter--en_only_decision_distill_l15_20_seed42,17.0,1.7917
+Distill layers 15-20 s42,Qwen3.5-9B--en--sft--adapter--en_only_decision_distill_l15_20_seed42,17.5,1.6167
+Distill layers 15-20 s42,Qwen3.5-9B--en--sft--adapter--en_only_decision_distill_l15_20_seed42,18.0,1.6398
+Distill layers 15-20 s42,Qwen3.5-9B--en--sft--adapter--en_only_decision_distill_l15_20_seed42,18.5,1.8187
+Distill layers 15-20 s42,Qwen3.5-9B--en--sft--adapter--en_only_decision_distill_l15_20_seed42,19.0,1.8152
+Distill layers 15-20 s42,Qwen3.5-9B--en--sft--adapter--en_only_decision_distill_l15_20_seed42,19.5,2.0326
+Distill layers 15-20 s42,Qwen3.5-9B--en--sft--adapter--en_only_decision_distill_l15_20_seed42,20.0,2.1691
+Distill layers 15-20 s42,Qwen3.5-9B--en--sft--adapter--en_only_decision_distill_l15_20_seed42,20.5,2.3219
+Distill layers 15-20 s42,Qwen3.5-9B--en--sft--adapter--en_only_decision_distill_l15_20_seed42,21.0,2.1713
+Distill layers 15-20 s42,Qwen3.5-9B--en--sft--adapter--en_only_decision_distill_l15_20_seed42,21.5,2.1047
+Distill layers 15-20 s42,Qwen3.5-9B--en--sft--adapter--en_only_decision_distill_l15_20_seed42,22.0,2.0552
+Distill layers 15-20 s42,Qwen3.5-9B--en--sft--adapter--en_only_decision_distill_l15_20_seed42,22.5,1.963
+Distill layers 15-20 s42,Qwen3.5-9B--en--sft--adapter--en_only_decision_distill_l15_20_seed42,23.0,2.1247
+Distill layers 15-20 s42,Qwen3.5-9B--en--sft--adapter--en_only_decision_distill_l15_20_seed42,23.5,2.2059
+Distill layers 15-20 s42,Qwen3.5-9B--en--sft--adapter--en_only_decision_distill_l15_20_seed42,24.0,2.0327
+Distill layers 15-20 s42,Qwen3.5-9B--en--sft--adapter--en_only_decision_distill_l15_20_seed42,24.5,2.0011
+Distill layers 15-20 s42,Qwen3.5-9B--en--sft--adapter--en_only_decision_distill_l15_20_seed42,25.0,1.9501
+Distill layers 15-20 s42,Qwen3.5-9B--en--sft--adapter--en_only_decision_distill_l15_20_seed42,25.5,1.6059
+Distill layers 15-20 s42,Qwen3.5-9B--en--sft--adapter--en_only_decision_distill_l15_20_seed42,26.0,1.3673
+Distill layers 15-20 s42,Qwen3.5-9B--en--sft--adapter--en_only_decision_distill_l15_20_seed42,26.5,1.5516
+Distill layers 15-20 s42,Qwen3.5-9B--en--sft--adapter--en_only_decision_distill_l15_20_seed42,27.0,1.8735
+Distill layers 15-20 s42,Qwen3.5-9B--en--sft--adapter--en_only_decision_distill_l15_20_seed42,27.5,2.1602
+Distill layers 15-20 s42,Qwen3.5-9B--en--sft--adapter--en_only_decision_distill_l15_20_seed42,28.0,2.1481
+Distill layers 15-20 s42,Qwen3.5-9B--en--sft--adapter--en_only_decision_distill_l15_20_seed42,28.5,2.3445
+Distill layers 15-20 s42,Qwen3.5-9B--en--sft--adapter--en_only_decision_distill_l15_20_seed42,29.0,2.3543
+Distill layers 15-20 s42,Qwen3.5-9B--en--sft--adapter--en_only_decision_distill_l15_20_seed42,29.5,2.6202
+Distill layers 15-20 s42,Qwen3.5-9B--en--sft--adapter--en_only_decision_distill_l15_20_seed42,30.0,2.5439
+Distill layers 15-20 s42,Qwen3.5-9B--en--sft--adapter--en_only_decision_distill_l15_20_seed42,30.5,2.2875
+Distill layers 15-20 s42,Qwen3.5-9B--en--sft--adapter--en_only_decision_distill_l15_20_seed42,31.0,2.0463
+Distill layers 15-20 s42,Qwen3.5-9B--en--sft--adapter--en_only_decision_distill_l15_20_seed42,31.5,1.6667
+Distill layers 15-20 s42,Qwen3.5-9B--en--sft--adapter--en_only_decision_distill_l15_20_seed42,32.0,1.5185
+Distill layers 15-20 s42,Qwen3.5-9B--en--sft--adapter--en_only_decision_distill_l15_20_seed42,32.5,1.7778
+Distill layers 15-20 s42,Qwen3.5-9B--en--sft--adapter--en_only_decision_distill_l15_20_seed42,33.0,1.8519
+Distill layers 15-20 s42,Qwen3.5-9B--en--sft--adapter--en_only_decision_distill_l15_20_seed42,33.5,1.7159
+Distill layers 15-20 s42,Qwen3.5-9B--en--sft--adapter--en_only_decision_distill_l15_20_seed42,34.0,1.6151
+Distill layers 15-20 s42,Qwen3.5-9B--en--sft--adapter--en_only_decision_distill_l15_20_seed42,34.5,1.5881
+Distill layers 15-20 s42,Qwen3.5-9B--en--sft--adapter--en_only_decision_distill_l15_20_seed42,35.0,1.9744
+Distill layers 15-20 s43,Qwen3.5-9B--en--sft--adapter--en_only_decision_distill_l15_20_seed43,10.0,1.0142
+Distill layers 15-20 s43,Qwen3.5-9B--en--sft--adapter--en_only_decision_distill_l15_20_seed43,10.5,1.4233
+Distill layers 15-20 s43,Qwen3.5-9B--en--sft--adapter--en_only_decision_distill_l15_20_seed43,11.0,1.6889
+Distill layers 15-20 s43,Qwen3.5-9B--en--sft--adapter--en_only_decision_distill_l15_20_seed43,11.5,1.6879
+Distill layers 15-20 s43,Qwen3.5-9B--en--sft--adapter--en_only_decision_distill_l15_20_seed43,12.0,1.7415
+Distill layers 15-20 s43,Qwen3.5-9B--en--sft--adapter--en_only_decision_distill_l15_20_seed43,12.5,1.828
+Distill layers 15-20 s43,Qwen3.5-9B--en--sft--adapter--en_only_decision_distill_l15_20_seed43,13.0,1.5309
+Distill layers 15-20 s43,Qwen3.5-9B--en--sft--adapter--en_only_decision_distill_l15_20_seed43,13.5,1.2882
+Distill layers 15-20 s43,Qwen3.5-9B--en--sft--adapter--en_only_decision_distill_l15_20_seed43,14.0,1.5427
+Distill layers 15-20 s43,Qwen3.5-9B--en--sft--adapter--en_only_decision_distill_l15_20_seed43,14.5,1.537
+Distill layers 15-20 s43,Qwen3.5-9B--en--sft--adapter--en_only_decision_distill_l15_20_seed43,15.0,1.7229
+Distill layers 15-20 s43,Qwen3.5-9B--en--sft--adapter--en_only_decision_distill_l15_20_seed43,15.5,1.9509
+Distill layers 15-20 s43,Qwen3.5-9B--en--sft--adapter--en_only_decision_distill_l15_20_seed43,16.0,2.0033
+Distill layers 15-20 s43,Qwen3.5-9B--en--sft--adapter--en_only_decision_distill_l15_20_seed43,16.5,2.0741
+Distill layers 15-20 s43,Qwen3.5-9B--en--sft--adapter--en_only_decision_distill_l15_20_seed43,17.0,1.723
+Distill layers 15-20 s43,Qwen3.5-9B--en--sft--adapter--en_only_decision_distill_l15_20_seed43,17.5,1.6197
+Distill layers 15-20 s43,Qwen3.5-9B--en--sft--adapter--en_only_decision_distill_l15_20_seed43,18.0,1.4815
+Distill layers 15-20 s43,Qwen3.5-9B--en--sft--adapter--en_only_decision_distill_l15_20_seed43,18.5,1.6085
+Distill layers 15-20 s43,Qwen3.5-9B--en--sft--adapter--en_only_decision_distill_l15_20_seed43,19.0,1.9914
+Distill layers 15-20 s43,Qwen3.5-9B--en--sft--adapter--en_only_decision_distill_l15_20_seed43,19.5,2.0942
+Distill layers 15-20 s43,Qwen3.5-9B--en--sft--adapter--en_only_decision_distill_l15_20_seed43,20.0,2.0561
+Distill layers 15-20 s43,Qwen3.5-9B--en--sft--adapter--en_only_decision_distill_l15_20_seed43,20.5,2.2125
+Distill layers 15-20 s43,Qwen3.5-9B--en--sft--adapter--en_only_decision_distill_l15_20_seed43,21.0,2.2484
+Distill layers 15-20 s43,Qwen3.5-9B--en--sft--adapter--en_only_decision_distill_l15_20_seed43,21.5,1.9849
+Distill layers 15-20 s43,Qwen3.5-9B--en--sft--adapter--en_only_decision_distill_l15_20_seed43,22.0,2.021
+Distill layers 15-20 s43,Qwen3.5-9B--en--sft--adapter--en_only_decision_distill_l15_20_seed43,22.5,2.0698
+Distill layers 15-20 s43,Qwen3.5-9B--en--sft--adapter--en_only_decision_distill_l15_20_seed43,23.0,2.1189
+Distill layers 15-20 s43,Qwen3.5-9B--en--sft--adapter--en_only_decision_distill_l15_20_seed43,23.5,2.0454
+Distill layers 15-20 s43,Qwen3.5-9B--en--sft--adapter--en_only_decision_distill_l15_20_seed43,24.0,2.1848
+Distill layers 15-20 s43,Qwen3.5-9B--en--sft--adapter--en_only_decision_distill_l15_20_seed43,24.5,2.1453
+Distill layers 15-20 s43,Qwen3.5-9B--en--sft--adapter--en_only_decision_distill_l15_20_seed43,25.0,1.9863
+Distill layers 15-20 s43,Qwen3.5-9B--en--sft--adapter--en_only_decision_distill_l15_20_seed43,25.5,1.734
+Distill layers 15-20 s43,Qwen3.5-9B--en--sft--adapter--en_only_decision_distill_l15_20_seed43,26.0,1.3721
+Distill layers 15-20 s43,Qwen3.5-9B--en--sft--adapter--en_only_decision_distill_l15_20_seed43,26.5,1.5741
+Distill layers 15-20 s43,Qwen3.5-9B--en--sft--adapter--en_only_decision_distill_l15_20_seed43,27.0,1.9547
+Distill layers 15-20 s43,Qwen3.5-9B--en--sft--adapter--en_only_decision_distill_l15_20_seed43,27.5,2.04
+Distill layers 15-20 s43,Qwen3.5-9B--en--sft--adapter--en_only_decision_distill_l15_20_seed43,28.0,2.1563
+Distill layers 15-20 s43,Qwen3.5-9B--en--sft--adapter--en_only_decision_distill_l15_20_seed43,28.5,2.2104
+Distill layers 15-20 s43,Qwen3.5-9B--en--sft--adapter--en_only_decision_distill_l15_20_seed43,29.0,2.4227
+Distill layers 15-20 s43,Qwen3.5-9B--en--sft--adapter--en_only_decision_distill_l15_20_seed43,29.5,2.6333
+Distill layers 15-20 s43,Qwen3.5-9B--en--sft--adapter--en_only_decision_distill_l15_20_seed43,30.0,2.6422
+Distill layers 15-20 s43,Qwen3.5-9B--en--sft--adapter--en_only_decision_distill_l15_20_seed43,30.5,2.477
+Distill layers 15-20 s43,Qwen3.5-9B--en--sft--adapter--en_only_decision_distill_l15_20_seed43,31.0,2.2195
+Distill layers 15-20 s43,Qwen3.5-9B--en--sft--adapter--en_only_decision_distill_l15_20_seed43,31.5,1.9259
+Distill layers 15-20 s43,Qwen3.5-9B--en--sft--adapter--en_only_decision_distill_l15_20_seed43,32.0,1.9571
+Distill layers 15-20 s43,Qwen3.5-9B--en--sft--adapter--en_only_decision_distill_l15_20_seed43,32.5,1.7505
+Distill layers 15-20 s43,Qwen3.5-9B--en--sft--adapter--en_only_decision_distill_l15_20_seed43,33.0,1.6606
+Distill layers 15-20 s43,Qwen3.5-9B--en--sft--adapter--en_only_decision_distill_l15_20_seed43,33.5,1.7112
+Distill layers 15-20 s43,Qwen3.5-9B--en--sft--adapter--en_only_decision_distill_l15_20_seed43,34.0,1.3515
+Distill layers 15-20 s43,Qwen3.5-9B--en--sft--adapter--en_only_decision_distill_l15_20_seed43,34.5,1.7133
+Distill layers 15-20 s43,Qwen3.5-9B--en--sft--adapter--en_only_decision_distill_l15_20_seed43,35.0,1.8661
+Distill layers 15-20 s44,Qwen3.5-9B--en--sft--adapter--en_only_decision_distill_l15_20_seed44,10.0,1.0131
+Distill layers 15-20 s44,Qwen3.5-9B--en--sft--adapter--en_only_decision_distill_l15_20_seed44,10.5,1.6565
+Distill layers 15-20 s44,Qwen3.5-9B--en--sft--adapter--en_only_decision_distill_l15_20_seed44,11.0,1.74
+Distill layers 15-20 s44,Qwen3.5-9B--en--sft--adapter--en_only_decision_distill_l15_20_seed44,11.5,1.9768
+Distill layers 15-20 s44,Qwen3.5-9B--en--sft--adapter--en_only_decision_distill_l15_20_seed44,12.0,1.9959
+Distill layers 15-20 s44,Qwen3.5-9B--en--sft--adapter--en_only_decision_distill_l15_20_seed44,12.5,1.8502
+Distill layers 15-20 s44,Qwen3.5-9B--en--sft--adapter--en_only_decision_distill_l15_20_seed44,13.0,1.4876
+Distill layers 15-20 s44,Qwen3.5-9B--en--sft--adapter--en_only_decision_distill_l15_20_seed44,13.5,1.273
+Distill layers 15-20 s44,Qwen3.5-9B--en--sft--adapter--en_only_decision_distill_l15_20_seed44,14.0,1.4815
+Distill layers 15-20 s44,Qwen3.5-9B--en--sft--adapter--en_only_decision_distill_l15_20_seed44,14.5,1.5965
+Distill layers 15-20 s44,Qwen3.5-9B--en--sft--adapter--en_only_decision_distill_l15_20_seed44,15.0,1.6204
+Distill layers 15-20 s44,Qwen3.5-9B--en--sft--adapter--en_only_decision_distill_l15_20_seed44,15.5,1.7511
+Distill layers 15-20 s44,Qwen3.5-9B--en--sft--adapter--en_only_decision_distill_l15_20_seed44,16.0,1.9259
+Distill layers 15-20 s44,Qwen3.5-9B--en--sft--adapter--en_only_decision_distill_l15_20_seed44,16.5,1.9571
+Distill layers 15-20 s44,Qwen3.5-9B--en--sft--adapter--en_only_decision_distill_l15_20_seed44,17.0,1.8733
+Distill layers 15-20 s44,Qwen3.5-9B--en--sft--adapter--en_only_decision_distill_l15_20_seed44,17.5,1.7888
+Distill layers 15-20 s44,Qwen3.5-9B--en--sft--adapter--en_only_decision_distill_l15_20_seed44,18.0,1.7585
+Distill layers 15-20 s44,Qwen3.5-9B--en--sft--adapter--en_only_decision_distill_l15_20_seed44,18.5,1.6667
+Distill layers 15-20 s44,Qwen3.5-9B--en--sft--adapter--en_only_decision_distill_l15_20_seed44,19.0,1.7222
+Distill layers 15-20 s44,Qwen3.5-9B--en--sft--adapter--en_only_decision_distill_l15_20_seed44,19.5,2.0318
+Distill layers 15-20 s44,Qwen3.5-9B--en--sft--adapter--en_only_decision_distill_l15_20_seed44,20.0,2.1808
+Distill layers 15-20 s44,Qwen3.5-9B--en--sft--adapter--en_only_decision_distill_l15_20_seed44,20.5,2.1668
+Distill layers 15-20 s44,Qwen3.5-9B--en--sft--adapter--en_only_decision_distill_l15_20_seed44,21.0,2.0825
+Distill layers 15-20 s44,Qwen3.5-9B--en--sft--adapter--en_only_decision_distill_l15_20_seed44,21.5,1.9218
+Distill layers 15-20 s44,Qwen3.5-9B--en--sft--adapter--en_only_decision_distill_l15_20_seed44,22.0,1.9161
+Distill layers 15-20 s44,Qwen3.5-9B--en--sft--adapter--en_only_decision_distill_l15_20_seed44,22.5,1.8116
+Distill layers 15-20 s44,Qwen3.5-9B--en--sft--adapter--en_only_decision_distill_l15_20_seed44,23.0,2.0704
+Distill layers 15-20 s44,Qwen3.5-9B--en--sft--adapter--en_only_decision_distill_l15_20_seed44,23.5,2.2916
+Distill layers 15-20 s44,Qwen3.5-9B--en--sft--adapter--en_only_decision_distill_l15_20_seed44,24.0,2.228
+Distill layers 15-20 s44,Qwen3.5-9B--en--sft--adapter--en_only_decision_distill_l15_20_seed44,24.5,2.0064
+Distill layers 15-20 s44,Qwen3.5-9B--en--sft--adapter--en_only_decision_distill_l15_20_seed44,25.0,1.7255
+Distill layers 15-20 s44,Qwen3.5-9B--en--sft--adapter--en_only_decision_distill_l15_20_seed44,25.5,1.7452
+Distill layers 15-20 s44,Qwen3.5-9B--en--sft--adapter--en_only_decision_distill_l15_20_seed44,26.0,1.5133
+Distill layers 15-20 s44,Qwen3.5-9B--en--sft--adapter--en_only_decision_distill_l15_20_seed44,26.5,1.5164
+Distill layers 15-20 s44,Qwen3.5-9B--en--sft--adapter--en_only_decision_distill_l15_20_seed44,27.0,1.5706
+Distill layers 15-20 s44,Qwen3.5-9B--en--sft--adapter--en_only_decision_distill_l15_20_seed44,27.5,2.0353
+Distill layers 15-20 s44,Qwen3.5-9B--en--sft--adapter--en_only_decision_distill_l15_20_seed44,28.0,2.1111
+Distill layers 15-20 s44,Qwen3.5-9B--en--sft--adapter--en_only_decision_distill_l15_20_seed44,28.5,2.0988
+Distill layers 15-20 s44,Qwen3.5-9B--en--sft--adapter--en_only_decision_distill_l15_20_seed44,29.0,2.3575
+Distill layers 15-20 s44,Qwen3.5-9B--en--sft--adapter--en_only_decision_distill_l15_20_seed44,29.5,2.6877
+Distill layers 15-20 s44,Qwen3.5-9B--en--sft--adapter--en_only_decision_distill_l15_20_seed44,30.0,2.5405
+Distill layers 15-20 s44,Qwen3.5-9B--en--sft--adapter--en_only_decision_distill_l15_20_seed44,30.5,2.4489
+Distill layers 15-20 s44,Qwen3.5-9B--en--sft--adapter--en_only_decision_distill_l15_20_seed44,31.0,2.07
+Distill layers 15-20 s44,Qwen3.5-9B--en--sft--adapter--en_only_decision_distill_l15_20_seed44,31.5,1.9051
+Distill layers 15-20 s44,Qwen3.5-9B--en--sft--adapter--en_only_decision_distill_l15_20_seed44,32.0,1.7972
+Distill layers 15-20 s44,Qwen3.5-9B--en--sft--adapter--en_only_decision_distill_l15_20_seed44,32.5,1.623
+Distill layers 15-20 s44,Qwen3.5-9B--en--sft--adapter--en_only_decision_distill_l15_20_seed44,33.0,1.6193
+Distill layers 15-20 s44,Qwen3.5-9B--en--sft--adapter--en_only_decision_distill_l15_20_seed44,33.5,1.6368
+Distill layers 15-20 s44,Qwen3.5-9B--en--sft--adapter--en_only_decision_distill_l15_20_seed44,34.0,1.5536
+Distill layers 15-20 s44,Qwen3.5-9B--en--sft--adapter--en_only_decision_distill_l15_20_seed44,34.5,1.9391
+Distill layers 15-20 s44,Qwen3.5-9B--en--sft--adapter--en_only_decision_distill_l15_20_seed44,35.0,2.14
+Distill window + GDN s42,Qwen3.5-9B--en--sft--adapter--en_only_decision_distill_w15_20_seed42,10.0,1.1778
+Distill window + GDN s42,Qwen3.5-9B--en--sft--adapter--en_only_decision_distill_w15_20_seed42,10.5,1.536
+Distill window + GDN s42,Qwen3.5-9B--en--sft--adapter--en_only_decision_distill_w15_20_seed42,11.0,1.7098
+Distill window + GDN s42,Qwen3.5-9B--en--sft--adapter--en_only_decision_distill_w15_20_seed42,11.5,1.8257
+Distill window + GDN s42,Qwen3.5-9B--en--sft--adapter--en_only_decision_distill_w15_20_seed42,12.0,1.9938
+Distill window + GDN s42,Qwen3.5-9B--en--sft--adapter--en_only_decision_distill_w15_20_seed42,12.5,1.8571
+Distill window + GDN s42,Qwen3.5-9B--en--sft--adapter--en_only_decision_distill_w15_20_seed42,13.0,1.5438
+Distill window + GDN s42,Qwen3.5-9B--en--sft--adapter--en_only_decision_distill_w15_20_seed42,13.5,1.2578
+Distill window + GDN s42,Qwen3.5-9B--en--sft--adapter--en_only_decision_distill_w15_20_seed42,14.0,1.431
+Distill window + GDN s42,Qwen3.5-9B--en--sft--adapter--en_only_decision_distill_w15_20_seed42,14.5,1.6648
+Distill window + GDN s42,Qwen3.5-9B--en--sft--adapter--en_only_decision_distill_w15_20_seed42,15.0,1.7603
+Distill window + GDN s42,Qwen3.5-9B--en--sft--adapter--en_only_decision_distill_w15_20_seed42,15.5,1.7974
+Distill window + GDN s42,Qwen3.5-9B--en--sft--adapter--en_only_decision_distill_w15_20_seed42,16.0,1.9034
+Distill window + GDN s42,Qwen3.5-9B--en--sft--adapter--en_only_decision_distill_w15_20_seed42,16.5,1.9259
+Distill window + GDN s42,Qwen3.5-9B--en--sft--adapter--en_only_decision_distill_w15_20_seed42,17.0,1.8117
+Distill window + GDN s42,Qwen3.5-9B--en--sft--adapter--en_only_decision_distill_w15_20_seed42,17.5,1.6951
+Distill window + GDN s42,Qwen3.5-9B--en--sft--adapter--en_only_decision_distill_w15_20_seed42,18.0,1.6145
+Distill window + GDN s42,Qwen3.5-9B--en--sft--adapter--en_only_decision_distill_w15_20_seed42,18.5,1.7778
+Distill window + GDN s42,Qwen3.5-9B--en--sft--adapter--en_only_decision_distill_w15_20_seed42,19.0,1.9121
+Distill window + GDN s42,Qwen3.5-9B--en--sft--adapter--en_only_decision_distill_w15_20_seed42,19.5,2.0503
+Distill window + GDN s42,Qwen3.5-9B--en--sft--adapter--en_only_decision_distill_w15_20_seed42,20.0,2.081
+Distill window + GDN s42,Qwen3.5-9B--en--sft--adapter--en_only_decision_distill_w15_20_seed42,20.5,2.3109
+Distill window + GDN s42,Qwen3.5-9B--en--sft--adapter--en_only_decision_distill_w15_20_seed42,21.0,2.2034
+Distill window + GDN s42,Qwen3.5-9B--en--sft--adapter--en_only_decision_distill_w15_20_seed42,21.5,2.0173
+Distill window + GDN s42,Qwen3.5-9B--en--sft--adapter--en_only_decision_distill_w15_20_seed42,22.0,1.9259
+Distill window + GDN s42,Qwen3.5-9B--en--sft--adapter--en_only_decision_distill_w15_20_seed42,22.5,1.9578
+Distill window + GDN s42,Qwen3.5-9B--en--sft--adapter--en_only_decision_distill_w15_20_seed42,23.0,2.033
+Distill window + GDN s42,Qwen3.5-9B--en--sft--adapter--en_only_decision_distill_w15_20_seed42,23.5,2.1761
+Distill window + GDN s42,Qwen3.5-9B--en--sft--adapter--en_only_decision_distill_w15_20_seed42,24.0,2.1237
+Distill window + GDN s42,Qwen3.5-9B--en--sft--adapter--en_only_decision_distill_w15_20_seed42,24.5,2.037
+Distill window + GDN s42,Qwen3.5-9B--en--sft--adapter--en_only_decision_distill_w15_20_seed42,25.0,2.1063
+Distill window + GDN s42,Qwen3.5-9B--en--sft--adapter--en_only_decision_distill_w15_20_seed42,25.5,1.5201
+Distill window + GDN s42,Qwen3.5-9B--en--sft--adapter--en_only_decision_distill_w15_20_seed42,26.0,1.4321
+Distill window + GDN s42,Qwen3.5-9B--en--sft--adapter--en_only_decision_distill_w15_20_seed42,26.5,1.561
+Distill window + GDN s42,Qwen3.5-9B--en--sft--adapter--en_only_decision_distill_w15_20_seed42,27.0,1.8478
+Distill window + GDN s42,Qwen3.5-9B--en--sft--adapter--en_only_decision_distill_w15_20_seed42,27.5,2.037
+Distill window + GDN s42,Qwen3.5-9B--en--sft--adapter--en_only_decision_distill_w15_20_seed42,28.0,2.149
+Distill window + GDN s42,Qwen3.5-9B--en--sft--adapter--en_only_decision_distill_w15_20_seed42,28.5,2.2329
+Distill window + GDN s42,Qwen3.5-9B--en--sft--adapter--en_only_decision_distill_w15_20_seed42,29.0,2.5275
+Distill window + GDN s42,Qwen3.5-9B--en--sft--adapter--en_only_decision_distill_w15_20_seed42,29.5,2.6555
+Distill window + GDN s42,Qwen3.5-9B--en--sft--adapter--en_only_decision_distill_w15_20_seed42,30.0,2.5048
+Distill window + GDN s42,Qwen3.5-9B--en--sft--adapter--en_only_decision_distill_w15_20_seed42,30.5,2.2833
+Distill window + GDN s42,Qwen3.5-9B--en--sft--adapter--en_only_decision_distill_w15_20_seed42,31.0,1.9752
+Distill window + GDN s42,Qwen3.5-9B--en--sft--adapter--en_only_decision_distill_w15_20_seed42,31.5,1.9328
+Distill window + GDN s42,Qwen3.5-9B--en--sft--adapter--en_only_decision_distill_w15_20_seed42,32.0,1.5333
+Distill window + GDN s42,Qwen3.5-9B--en--sft--adapter--en_only_decision_distill_w15_20_seed42,32.5,1.6621
+Distill window + GDN s42,Qwen3.5-9B--en--sft--adapter--en_only_decision_distill_w15_20_seed42,33.0,1.8519
+Distill window + GDN s42,Qwen3.5-9B--en--sft--adapter--en_only_decision_distill_w15_20_seed42,33.5,1.7613
+Distill window + GDN s42,Qwen3.5-9B--en--sft--adapter--en_only_decision_distill_w15_20_seed42,34.0,1.6004
+Distill window + GDN s42,Qwen3.5-9B--en--sft--adapter--en_only_decision_distill_w15_20_seed42,34.5,1.6049
+Distill window + GDN s42,Qwen3.5-9B--en--sft--adapter--en_only_decision_distill_w15_20_seed42,35.0,1.985
+Distill rank 8 s42,Qwen3.5-9B--en--sft--adapter--en_only_decision_distill_r8_seed42,10.0,1.0303
+Distill rank 8 s42,Qwen3.5-9B--en--sft--adapter--en_only_decision_distill_r8_seed42,10.5,1.2081
+Distill rank 8 s42,Qwen3.5-9B--en--sft--adapter--en_only_decision_distill_r8_seed42,11.0,1.6332
+Distill rank 8 s42,Qwen3.5-9B--en--sft--adapter--en_only_decision_distill_r8_seed42,11.5,1.8184
+Distill rank 8 s42,Qwen3.5-9B--en--sft--adapter--en_only_decision_distill_r8_seed42,12.0,1.8519
+Distill rank 8 s42,Qwen3.5-9B--en--sft--adapter--en_only_decision_distill_r8_seed42,12.5,1.8734
+Distill rank 8 s42,Qwen3.5-9B--en--sft--adapter--en_only_decision_distill_r8_seed42,13.0,1.4898
+Distill rank 8 s42,Qwen3.5-9B--en--sft--adapter--en_only_decision_distill_r8_seed42,13.5,1.5486
+Distill rank 8 s42,Qwen3.5-9B--en--sft--adapter--en_only_decision_distill_r8_seed42,14.0,1.4815
+Distill rank 8 s42,Qwen3.5-9B--en--sft--adapter--en_only_decision_distill_r8_seed42,14.5,1.5306
+Distill rank 8 s42,Qwen3.5-9B--en--sft--adapter--en_only_decision_distill_r8_seed42,15.0,1.6287
+Distill rank 8 s42,Qwen3.5-9B--en--sft--adapter--en_only_decision_distill_r8_seed42,15.5,1.6667
+Distill rank 8 s42,Qwen3.5-9B--en--sft--adapter--en_only_decision_distill_r8_seed42,16.0,1.8077
+Distill rank 8 s42,Qwen3.5-9B--en--sft--adapter--en_only_decision_distill_r8_seed42,16.5,1.81
+Distill rank 8 s42,Qwen3.5-9B--en--sft--adapter--en_only_decision_distill_r8_seed42,17.0,1.7778
+Distill rank 8 s42,Qwen3.5-9B--en--sft--adapter--en_only_decision_distill_r8_seed42,17.5,1.5455
+Distill rank 8 s42,Qwen3.5-9B--en--sft--adapter--en_only_decision_distill_r8_seed42,18.0,1.4884
+Distill rank 8 s42,Qwen3.5-9B--en--sft--adapter--en_only_decision_distill_r8_seed42,18.5,1.6997
+Distill rank 8 s42,Qwen3.5-9B--en--sft--adapter--en_only_decision_distill_r8_seed42,19.0,2.0254
+Distill rank 8 s42,Qwen3.5-9B--en--sft--adapter--en_only_decision_distill_r8_seed42,19.5,1.9546
+Distill rank 8 s42,Qwen3.5-9B--en--sft--adapter--en_only_decision_distill_r8_seed42,20.0,1.8889
+Distill rank 8 s42,Qwen3.5-9B--en--sft--adapter--en_only_decision_distill_r8_seed42,20.5,1.9128
+Distill rank 8 s42,Qwen3.5-9B--en--sft--adapter--en_only_decision_distill_r8_seed42,21.0,1.7019
+Distill rank 8 s42,Qwen3.5-9B--en--sft--adapter--en_only_decision_distill_r8_seed42,21.5,1.7086
+Distill rank 8 s42,Qwen3.5-9B--en--sft--adapter--en_only_decision_distill_r8_seed42,22.0,1.6986
+Distill rank 8 s42,Qwen3.5-9B--en--sft--adapter--en_only_decision_distill_r8_seed42,22.5,1.8077
+Distill rank 8 s42,Qwen3.5-9B--en--sft--adapter--en_only_decision_distill_r8_seed42,23.0,2.03
+Distill rank 8 s42,Qwen3.5-9B--en--sft--adapter--en_only_decision_distill_r8_seed42,23.5,2.0494
+Distill rank 8 s42,Qwen3.5-9B--en--sft--adapter--en_only_decision_distill_r8_seed42,24.0,2.0456
+Distill rank 8 s42,Qwen3.5-9B--en--sft--adapter--en_only_decision_distill_r8_seed42,24.5,1.9059
+Distill rank 8 s42,Qwen3.5-9B--en--sft--adapter--en_only_decision_distill_r8_seed42,25.0,1.6222
+Distill rank 8 s42,Qwen3.5-9B--en--sft--adapter--en_only_decision_distill_r8_seed42,25.5,1.7323
+Distill rank 8 s42,Qwen3.5-9B--en--sft--adapter--en_only_decision_distill_r8_seed42,26.0,1.5422
+Distill rank 8 s42,Qwen3.5-9B--en--sft--adapter--en_only_decision_distill_r8_seed42,26.5,1.4831
+Distill rank 8 s42,Qwen3.5-9B--en--sft--adapter--en_only_decision_distill_r8_seed42,27.0,1.6479
+Distill rank 8 s42,Qwen3.5-9B--en--sft--adapter--en_only_decision_distill_r8_seed42,27.5,2.0101
+Distill rank 8 s42,Qwen3.5-9B--en--sft--adapter--en_only_decision_distill_r8_seed42,28.0,1.8889
+Distill rank 8 s42,Qwen3.5-9B--en--sft--adapter--en_only_decision_distill_r8_seed42,28.5,2.0424
+Distill rank 8 s42,Qwen3.5-9B--en--sft--adapter--en_only_decision_distill_r8_seed42,29.0,2.2039
+Distill rank 8 s42,Qwen3.5-9B--en--sft--adapter--en_only_decision_distill_r8_seed42,29.5,2.3903
+Distill rank 8 s42,Qwen3.5-9B--en--sft--adapter--en_only_decision_distill_r8_seed42,30.0,2.5105
+Distill rank 8 s42,Qwen3.5-9B--en--sft--adapter--en_only_decision_distill_r8_seed42,30.5,2.2963
+Distill rank 8 s42,Qwen3.5-9B--en--sft--adapter--en_only_decision_distill_r8_seed42,31.0,2.3377
+Distill rank 8 s42,Qwen3.5-9B--en--sft--adapter--en_only_decision_distill_r8_seed42,31.5,2.0359
+Distill rank 8 s42,Qwen3.5-9B--en--sft--adapter--en_only_decision_distill_r8_seed42,32.0,1.5662
+Distill rank 8 s42,Qwen3.5-9B--en--sft--adapter--en_only_decision_distill_r8_seed42,32.5,1.4115
+Distill rank 8 s42,Qwen3.5-9B--en--sft--adapter--en_only_decision_distill_r8_seed42,33.0,1.5556
+Distill rank 8 s42,Qwen3.5-9B--en--sft--adapter--en_only_decision_distill_r8_seed42,33.5,1.567
+Distill rank 8 s42,Qwen3.5-9B--en--sft--adapter--en_only_decision_distill_r8_seed42,34.0,1.53
+Distill rank 8 s42,Qwen3.5-9B--en--sft--adapter--en_only_decision_distill_r8_seed42,34.5,1.5776
+Distill rank 8 s42,Qwen3.5-9B--en--sft--adapter--en_only_decision_distill_r8_seed42,35.0,1.6049
+Distill on DPO s42,Qwen3.5-9B--en--sft--adapter--en_only_decision_distill_dpo4880_seed42,10.0,2.5988
+Distill on DPO s42,Qwen3.5-9B--en--sft--adapter--en_only_decision_distill_dpo4880_seed42,10.5,2.7295
+Distill on DPO s42,Qwen3.5-9B--en--sft--adapter--en_only_decision_distill_dpo4880_seed42,11.0,2.8412
+Distill on DPO s42,Qwen3.5-9B--en--sft--adapter--en_only_decision_distill_dpo4880_seed42,11.5,2.6914
+Distill on DPO s42,Qwen3.5-9B--en--sft--adapter--en_only_decision_distill_dpo4880_seed42,12.0,2.5415
+Distill on DPO s42,Qwen3.5-9B--en--sft--adapter--en_only_decision_distill_dpo4880_seed42,12.5,2.3916
+Distill on DPO s42,Qwen3.5-9B--en--sft--adapter--en_only_decision_distill_dpo4880_seed42,13.0,2.0753
+Distill on DPO s42,Qwen3.5-9B--en--sft--adapter--en_only_decision_distill_dpo4880_seed42,13.5,1.7293
+Distill on DPO s42,Qwen3.5-9B--en--sft--adapter--en_only_decision_distill_dpo4880_seed42,14.0,1.4809
+Distill on DPO s42,Qwen3.5-9B--en--sft--adapter--en_only_decision_distill_dpo4880_seed42,14.5,1.3836
+Distill on DPO s42,Qwen3.5-9B--en--sft--adapter--en_only_decision_distill_dpo4880_seed42,15.0,1.2334
+Distill on DPO s42,Qwen3.5-9B--en--sft--adapter--en_only_decision_distill_dpo4880_seed42,15.5,1.5093
+Distill on DPO s42,Qwen3.5-9B--en--sft--adapter--en_only_decision_distill_dpo4880_seed42,16.0,1.7729
+Distill on DPO s42,Qwen3.5-9B--en--sft--adapter--en_only_decision_distill_dpo4880_seed42,16.5,1.7383
+Distill on DPO s42,Qwen3.5-9B--en--sft--adapter--en_only_decision_distill_dpo4880_seed42,17.0,2.0841
+Distill on DPO s42,Qwen3.5-9B--en--sft--adapter--en_only_decision_distill_dpo4880_seed42,17.5,2.2926
+Distill on DPO s42,Qwen3.5-9B--en--sft--adapter--en_only_decision_distill_dpo4880_seed42,18.0,2.4397
+Distill on DPO s42,Qwen3.5-9B--en--sft--adapter--en_only_decision_distill_dpo4880_seed42,18.5,2.1313
+Distill on DPO s42,Qwen3.5-9B--en--sft--adapter--en_only_decision_distill_dpo4880_seed42,19.0,1.9737
+Distill on DPO s42,Qwen3.5-9B--en--sft--adapter--en_only_decision_distill_dpo4880_seed42,19.5,2.0489
+Distill on DPO s42,Qwen3.5-9B--en--sft--adapter--en_only_decision_distill_dpo4880_seed42,20.0,2.028
+Distill on DPO s42,Qwen3.5-9B--en--sft--adapter--en_only_decision_distill_dpo4880_seed42,20.5,1.963
+Distill on DPO s42,Qwen3.5-9B--en--sft--adapter--en_only_decision_distill_dpo4880_seed42,21.0,1.9647
+Distill on DPO s42,Qwen3.5-9B--en--sft--adapter--en_only_decision_distill_dpo4880_seed42,21.5,1.8904
+Distill on DPO s42,Qwen3.5-9B--en--sft--adapter--en_only_decision_distill_dpo4880_seed42,22.0,1.8387
+Distill on DPO s42,Qwen3.5-9B--en--sft--adapter--en_only_decision_distill_dpo4880_seed42,22.5,1.1044
+Distill on DPO s42,Qwen3.5-9B--en--sft--adapter--en_only_decision_distill_dpo4880_seed42,23.0,0.6255
+Distill on DPO s42,Qwen3.5-9B--en--sft--adapter--en_only_decision_distill_dpo4880_seed42,23.5,0.8519
+Distill on DPO s42,Qwen3.5-9B--en--sft--adapter--en_only_decision_distill_dpo4880_seed42,24.0,1.0123
+Distill on DPO s42,Qwen3.5-9B--en--sft--adapter--en_only_decision_distill_dpo4880_seed42,24.5,1.8622
+Distill on DPO s42,Qwen3.5-9B--en--sft--adapter--en_only_decision_distill_dpo4880_seed42,25.0,2.36
+Distill on DPO s42,Qwen3.5-9B--en--sft--adapter--en_only_decision_distill_dpo4880_seed42,25.5,2.3704
+Distill on DPO s42,Qwen3.5-9B--en--sft--adapter--en_only_decision_distill_dpo4880_seed42,26.0,2.4135
+Distill on DPO s42,Qwen3.5-9B--en--sft--adapter--en_only_decision_distill_dpo4880_seed42,26.5,2.6969
+Distill on DPO s42,Qwen3.5-9B--en--sft--adapter--en_only_decision_distill_dpo4880_seed42,27.0,2.3407
+Distill on DPO s42,Qwen3.5-9B--en--sft--adapter--en_only_decision_distill_dpo4880_seed42,27.5,2.0509
+Distill on DPO s42,Qwen3.5-9B--en--sft--adapter--en_only_decision_distill_dpo4880_seed42,28.0,2.2758
+Distill on DPO s42,Qwen3.5-9B--en--sft--adapter--en_only_decision_distill_dpo4880_seed42,28.5,2.4843
+Distill on DPO s42,Qwen3.5-9B--en--sft--adapter--en_only_decision_distill_dpo4880_seed42,29.0,2.5086
+Distill on DPO s42,Qwen3.5-9B--en--sft--adapter--en_only_decision_distill_dpo4880_seed42,29.5,2.7859
+Distill on DPO s42,Qwen3.5-9B--en--sft--adapter--en_only_decision_distill_dpo4880_seed42,30.0,3.2315
+Distill on DPO s42,Qwen3.5-9B--en--sft--adapter--en_only_decision_distill_dpo4880_seed42,30.5,3.6772
+Distill on DPO s42,Qwen3.5-9B--en--sft--adapter--en_only_decision_distill_dpo4880_seed42,31.0,3.9907
+Distill on DPO s42,Qwen3.5-9B--en--sft--adapter--en_only_decision_distill_dpo4880_seed42,31.5,4.2635
+Distill on DPO s42,Qwen3.5-9B--en--sft--adapter--en_only_decision_distill_dpo4880_seed42,32.0,4.5363
+Distill on DPO s42,Qwen3.5-9B--en--sft--adapter--en_only_decision_distill_dpo4880_seed42,32.5,4.8091
+Distill on DPO s42,Qwen3.5-9B--en--sft--adapter--en_only_decision_distill_dpo4880_seed42,33.0,5.0819
+Distill on DPO s42,Qwen3.5-9B--en--sft--adapter--en_only_decision_distill_dpo4880_seed42,33.5,5.3564
+Distill on DPO s42,Qwen3.5-9B--en--sft--adapter--en_only_decision_distill_dpo4880_seed42,34.0,5.5098
+Distill on DPO s42,Qwen3.5-9B--en--sft--adapter--en_only_decision_distill_dpo4880_seed42,34.5,5.6064
+Distill on DPO s42,Qwen3.5-9B--en--sft--adapter--en_only_decision_distill_dpo4880_seed42,35.0,5.7036
+Distill on GRPO R4 s42,Qwen3.5-9B--en--sft--adapter--en_only_decision_distill_grpo_r4_seed42,10.0,1.9219
+Distill on GRPO R4 s42,Qwen3.5-9B--en--sft--adapter--en_only_decision_distill_grpo_r4_seed42,10.5,1.8051
+Distill on GRPO R4 s42,Qwen3.5-9B--en--sft--adapter--en_only_decision_distill_grpo_r4_seed42,11.0,1.5381
+Distill on GRPO R4 s42,Qwen3.5-9B--en--sft--adapter--en_only_decision_distill_grpo_r4_seed42,11.5,1.2729
+Distill on GRPO R4 s42,Qwen3.5-9B--en--sft--adapter--en_only_decision_distill_grpo_r4_seed42,12.0,1.496
+Distill on GRPO R4 s42,Qwen3.5-9B--en--sft--adapter--en_only_decision_distill_grpo_r4_seed42,12.5,1.6465
+Distill on GRPO R4 s42,Qwen3.5-9B--en--sft--adapter--en_only_decision_distill_grpo_r4_seed42,13.0,1.5827
+Distill on GRPO R4 s42,Qwen3.5-9B--en--sft--adapter--en_only_decision_distill_grpo_r4_seed42,13.5,1.7086
+Distill on GRPO R4 s42,Qwen3.5-9B--en--sft--adapter--en_only_decision_distill_grpo_r4_seed42,14.0,1.865
+Distill on GRPO R4 s42,Qwen3.5-9B--en--sft--adapter--en_only_decision_distill_grpo_r4_seed42,14.5,1.7895
+Distill on GRPO R4 s42,Qwen3.5-9B--en--sft--adapter--en_only_decision_distill_grpo_r4_seed42,15.0,1.7778
+Distill on GRPO R4 s42,Qwen3.5-9B--en--sft--adapter--en_only_decision_distill_grpo_r4_seed42,15.5,2.0236
+Distill on GRPO R4 s42,Qwen3.5-9B--en--sft--adapter--en_only_decision_distill_grpo_r4_seed42,16.0,1.7199
+Distill on GRPO R4 s42,Qwen3.5-9B--en--sft--adapter--en_only_decision_distill_grpo_r4_seed42,16.5,1.8793
+Distill on GRPO R4 s42,Qwen3.5-9B--en--sft--adapter--en_only_decision_distill_grpo_r4_seed42,17.0,1.7062
+Distill on GRPO R4 s42,Qwen3.5-9B--en--sft--adapter--en_only_decision_distill_grpo_r4_seed42,17.5,1.6479
+Distill on GRPO R4 s42,Qwen3.5-9B--en--sft--adapter--en_only_decision_distill_grpo_r4_seed42,18.0,1.5419
+Distill on GRPO R4 s42,Qwen3.5-9B--en--sft--adapter--en_only_decision_distill_grpo_r4_seed42,18.5,1.6667
+Distill on GRPO R4 s42,Qwen3.5-9B--en--sft--adapter--en_only_decision_distill_grpo_r4_seed42,19.0,1.8633
+Distill on GRPO R4 s42,Qwen3.5-9B--en--sft--adapter--en_only_decision_distill_grpo_r4_seed42,19.5,1.6632
+Distill on GRPO R4 s42,Qwen3.5-9B--en--sft--adapter--en_only_decision_distill_grpo_r4_seed42,20.0,1.7019
+Distill on GRPO R4 s42,Qwen3.5-9B--en--sft--adapter--en_only_decision_distill_grpo_r4_seed42,20.5,1.4834
+Distill on GRPO R4 s42,Qwen3.5-9B--en--sft--adapter--en_only_decision_distill_grpo_r4_seed42,21.0,1.467
+Distill on GRPO R4 s42,Qwen3.5-9B--en--sft--adapter--en_only_decision_distill_grpo_r4_seed42,21.5,1.5995
+Distill on GRPO R4 s42,Qwen3.5-9B--en--sft--adapter--en_only_decision_distill_grpo_r4_seed42,22.0,1.5242
+Distill on GRPO R4 s42,Qwen3.5-9B--en--sft--adapter--en_only_decision_distill_grpo_r4_seed42,22.5,1.2963
+Distill on GRPO R4 s42,Qwen3.5-9B--en--sft--adapter--en_only_decision_distill_grpo_r4_seed42,23.0,1.2022
+Distill on GRPO R4 s42,Qwen3.5-9B--en--sft--adapter--en_only_decision_distill_grpo_r4_seed42,23.5,1.4074
+Distill on GRPO R4 s42,Qwen3.5-9B--en--sft--adapter--en_only_decision_distill_grpo_r4_seed42,24.0,1.7336
+Distill on GRPO R4 s42,Qwen3.5-9B--en--sft--adapter--en_only_decision_distill_grpo_r4_seed42,24.5,1.7037
+Distill on GRPO R4 s42,Qwen3.5-9B--en--sft--adapter--en_only_decision_distill_grpo_r4_seed42,25.0,1.6067
+Distill on GRPO R4 s42,Qwen3.5-9B--en--sft--adapter--en_only_decision_distill_grpo_r4_seed42,25.5,1.6409
+Distill on GRPO R4 s42,Qwen3.5-9B--en--sft--adapter--en_only_decision_distill_grpo_r4_seed42,26.0,1.6213
+Distill on GRPO R4 s42,Qwen3.5-9B--en--sft--adapter--en_only_decision_distill_grpo_r4_seed42,26.5,1.7605
+Distill on GRPO R4 s42,Qwen3.5-9B--en--sft--adapter--en_only_decision_distill_grpo_r4_seed42,27.0,2.0853
+Distill on GRPO R4 s42,Qwen3.5-9B--en--sft--adapter--en_only_decision_distill_grpo_r4_seed42,27.5,2.0784
+Distill on GRPO R4 s42,Qwen3.5-9B--en--sft--adapter--en_only_decision_distill_grpo_r4_seed42,28.0,2.0485
+Distill on GRPO R4 s42,Qwen3.5-9B--en--sft--adapter--en_only_decision_distill_grpo_r4_seed42,28.5,1.7688
+Distill on GRPO R4 s42,Qwen3.5-9B--en--sft--adapter--en_only_decision_distill_grpo_r4_seed42,29.0,1.646
+Distill on GRPO R4 s42,Qwen3.5-9B--en--sft--adapter--en_only_decision_distill_grpo_r4_seed42,29.5,1.4986
+Distill on GRPO R4 s42,Qwen3.5-9B--en--sft--adapter--en_only_decision_distill_grpo_r4_seed42,30.0,1.5111
+Distill on GRPO R4 s42,Qwen3.5-9B--en--sft--adapter--en_only_decision_distill_grpo_r4_seed42,30.5,1.8861
+Distill on GRPO R4 s42,Qwen3.5-9B--en--sft--adapter--en_only_decision_distill_grpo_r4_seed42,31.0,1.9777
+Distill on GRPO R4 s42,Qwen3.5-9B--en--sft--adapter--en_only_decision_distill_grpo_r4_seed42,31.5,2.1036
+Distill on GRPO R4 s42,Qwen3.5-9B--en--sft--adapter--en_only_decision_distill_grpo_r4_seed42,32.0,2.2906
+Distill on GRPO R4 s42,Qwen3.5-9B--en--sft--adapter--en_only_decision_distill_grpo_r4_seed42,32.5,2.2705
+Distill on GRPO R4 s42,Qwen3.5-9B--en--sft--adapter--en_only_decision_distill_grpo_r4_seed42,33.0,2.2148
+Distill on GRPO R4 s42,Qwen3.5-9B--en--sft--adapter--en_only_decision_distill_grpo_r4_seed42,33.5,2.1127
+Distill on GRPO R4 s42,Qwen3.5-9B--en--sft--adapter--en_only_decision_distill_grpo_r4_seed42,34.0,2.006
+Distill on GRPO R4 s42,Qwen3.5-9B--en--sft--adapter--en_only_decision_distill_grpo_r4_seed42,34.5,2.0031
+Distill on GRPO R4 s42,Qwen3.5-9B--en--sft--adapter--en_only_decision_distill_grpo_r4_seed42,35.0,2.2896

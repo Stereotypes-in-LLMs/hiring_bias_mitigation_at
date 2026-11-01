@@ -178,3 +178,25 @@ job_id,job_name,partition,state,start,end,elapsed_h,nodes,gpus,node_h,gpu_h_allo
 5199738,xw-dpo,normal,COMPLETED,2026-10-29 12:32:02,2026-10-29 13:33:20,1.0217,1,4,1.0217,4.0867,1.24,/ritom/scratch/cscs/zhang/xw/hiring_bias_mitigation_at-report,records,4.0646,0.0221
 5200680,xw-eval-arm,normal,COMPLETED,2026-10-29 13:33:58,2026-10-29 13:52:17,0.3053,1,4,0.3053,1.2211,0.387,/ritom/scratch/cscs/zhang/xw/hiring_bias_mitigation_at-report,records,0.5036,0.7175
 5200964,xw-opc,debug,COMPLETED,2026-10-29 13:54:32,2026-10-29 14:07:17,0.2125,1,4,0.2125,0.85,0.223,/ritom/scratch/cscs/zhang/xw/hiring_bias_mitigation_at-report,records,0.2096,0.6404
+5227361,xw-distill,normal,COMPLETED,2026-11-01 09:33:06,2026-11-01 10:46:35,1.2247,1,4,1.2247,4.8989,1.35,/ritom/scratch/cscs/zhang/xw/hiring_bias_mitigation_at-pdistill,records,4.8798,0.0191
+5228013,xw-eval-arm,normal,COMPLETED,2026-11-01 10:47:51,2026-11-01 11:05:57,0.3017,1,4,0.3017,1.2067,0.375,/ritom/scratch/cscs/zhang/xw/hiring_bias_mitigation_at-pdistill,records,0.4999,0.7068
+5228130,xw-distill,normal,COMPLETED,2026-11-01 11:03:58,2026-11-01 12:16:46,1.2133,1,4,1.2133,4.8533,1.378,/ritom/scratch/cscs/zhang/xw/hiring_bias_mitigation_at-pdistill,records,4.8363,0.017
+5228131,xw-distill,normal,COMPLETED,2026-11-01 11:04:00,2026-11-01 12:16:20,1.2056,1,4,1.2056,4.8222,,/ritom/scratch/cscs/zhang/xw/hiring_bias_mitigation_at-pdistill,records,4.8031,0.0191
+5228155,xw-interp,normal,COMPLETED,2026-11-01 11:09:16,2026-11-01 11:41:51,0.5431,1,4,0.5431,2.1722,0.803,/ritom/scratch/cscs/zhang/xw/hiring_bias_mitigation_at-pdistill,records,0.9991,1.1731
+5228380,xw-interp,normal,COMPLETED,2026-11-01 11:45:24,2026-11-01 12:08:19,0.3819,1,4,0.3819,1.5278,0.868,/ritom/scratch/cscs/zhang/xw/hiring_bias_mitigation_at-pdistill,records,1.3636,0.1642
+5228526,xw-interp,normal,COMPLETED,2026-11-01 12:10:20,2026-11-01 12:29:27,0.3186,1,4,0.3186,1.2744,0.489,/ritom/scratch/cscs/zhang/xw/hiring_bias_mitigation_at-pdistill,records,0.714,0.5604
+5228565,xw-eval-arm,normal,COMPLETED,2026-11-01 12:18:14,2026-11-01 12:36:51,0.3103,1,4,0.3103,1.2411,0.384,/ritom/scratch/cscs/zhang/xw/hiring_bias_mitigation_at-pdistill,records,0.5091,0.732
+5228566,xw-eval-arm,normal,COMPLETED,2026-11-01 12:18:16,2026-11-01 12:38:26,0.3361,1,4,0.3361,1.3444,0.408,/ritom/scratch/cscs/zhang/xw/hiring_bias_mitigation_at-pdistill,records,0.5144,0.83
+5228626,xw-distill,normal,COMPLETED,2026-11-01 12:30:39,2026-11-01 13:44:17,1.2272,1,4,1.2272,4.9089,1.317,/ritom/scratch/cscs/zhang/xw/hiring_bias_mitigation_at-pdistill,records,4.8901,0.0188
+5228681,xw-distill,normal,COMPLETED,2026-11-01 12:39:36,2026-11-01 14:01:41,1.3681,1,4,1.3681,5.4722,1.5,/ritom/scratch/cscs/zhang/xw/hiring_bias_mitigation_at-pdistill,records,5.4528,0.0194
+5228682,xw-distill,normal,COMPLETED,2026-11-01 12:39:36,2026-11-01 13:55:55,1.2719,1,4,1.2719,5.0878,,/ritom/scratch/cscs/zhang/xw/hiring_bias_mitigation_at-pdistill,records,5.0684,0.0194
+5229370,xw-eval-arm,normal,COMPLETED,2026-11-01 13:47:03,2026-11-01 14:05:34,0.3086,1,4,0.3086,1.2344,0.39,/ritom/scratch/cscs/zhang/xw/hiring_bias_mitigation_at-pdistill,records,0.508,0.7264
+5229488,xw-eval-arm,normal,COMPLETED,2026-11-01 14:02:47,2026-11-01 14:21:12,0.3069,1,4,0.3069,1.2278,0.382,/ritom/scratch/cscs/zhang/xw/hiring_bias_mitigation_at-pdistill,records,0.5041,0.7237
+5229489,xw-eval-arm,normal,FAILED,2026-11-01 14:02:48,2026-11-01 14:11:23,0.1431,1,4,0.1431,0.5722,0.06,/ritom/scratch/cscs/zhang/xw/hiring_bias_mitigation_at-pdistill,records,0.0,0.5722
+5229552,xw-distill,normal,COMPLETED,2026-11-01 14:06:32,2026-11-01 15:28:36,1.3678,1,4,1.3678,5.4711,1.458,/ritom/scratch/cscs/zhang/xw/hiring_bias_mitigation_at-pdistill,records,5.4523,0.0188
+5229674,xw-eval-arm,normal,COMPLETED,2026-11-01 14:23:13,2026-11-01 14:38:13,0.25,1,4,0.25,1.0,0.333,/ritom/scratch/cscs/zhang/xw/hiring_bias_mitigation_at-pdistill,records,0.4361,0.5639
+5230014,xw-eval-arm,normal,COMPLETED,2026-11-01 15:15:05,2026-11-01 15:33:01,0.2989,1,4,0.2989,1.1956,0.372,/ritom/scratch/cscs/zhang/xw/hiring_bias_mitigation_at-pdistill,records,0.4939,0.7017
+5230015,xw-eval-arm,normal,COMPLETED,2026-11-01 15:15:05,2026-11-01 15:33:24,0.3053,1,4,0.3053,1.2211,,/ritom/scratch/cscs/zhang/xw/hiring_bias_mitigation_at-pdistill,records,0.5078,0.7133
+5230126,xw-distill,normal,RUNNING,2026-11-01 15:29:32,,0.4381,1,4,0.4381,1.7522,,/ritom/scratch/cscs/zhang/xw/hiring_bias_mitigation_at-pfloor,records,1.6827,0.0695
+5230147,xw-eval-arm,normal,COMPLETED,2026-11-01 15:34:22,2026-11-01 15:52:29,0.3019,1,4,0.3019,1.2078,,/ritom/scratch/cscs/zhang/xw/hiring_bias_mitigation_at-pdistill,records,0.4988,0.709
+5230148,xw-eval-arm,normal,COMPLETED,2026-11-01 15:34:22,2026-11-01 15:52:44,0.3061,1,4,0.3061,1.2244,0.382,/ritom/scratch/cscs/zhang/xw/hiring_bias_mitigation_at-pdistill,records,0.5034,0.721
