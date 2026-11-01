@@ -30,6 +30,9 @@ def write(n: dict, path: Path) -> None:
         f"| {r['model']} | {r['seeds'] or '—'} | {r['hire']} | {r['unstable']} | "
         f"{r['delta'] or '—'} | {r['range'] or '—'} | {r['gpu_h'] or '—'} |" for r in n["vs_base"])
     sources = "\n".join(f"| `{k}` | {v} |" for k, v in sorted(n["sources"].items()))
+    floor = (" A different change, the teacher's margin floored at 4 logits (one seed, "
+             f"exploratory): {n['floor_pilot']} pp; undecided, no seed added."
+             if n["floor_pilot"] else "")
 
     text = f"""# Poster details
 
@@ -41,8 +44,12 @@ and on the poster is generated from the repository's result tables by
 
 A set is the attribute variants of one CV within one protected group and one wording. It is
 unstable when its variants do not all get the same decision. Instability depends on how many
-people a model hires, so every method is moved to SFT-v3's hire rate ({n['common_hire']})
-before it is compared. The full standard, its guardrails and protocol:
+people a model hires, so two models are compared at a matched hire rate: one is moved to the
+other's rate before sets are counted. Against SFT-v3, the standard moves SFT-v3 to each method's
+own rate; head to head (a variant against the adapter it changes, a student against its
+parent), that adapter or parent is moved; against the base model (the results table below),
+the base model is moved; and the final table also moves every method to SFT-v3's own rate
+({n['common_hire']}). The full standard, its guardrails and protocol:
 {_doc("docs/EVAL_STANDARD.md")}.
 
 Why it matters: our GRPO pilot looked more stable ({n['grpo_pilot_delta']} pp) only because it
@@ -81,7 +88,8 @@ GPT-4o's reference decision: {ex['reference_decision']}. SFT-v3 on the attribute
   the first SFT by {n['sft_v3_vs_v1']} pp and on the base model by {n['sft_v3_vs_base']} pp
   (one seed).
 - After SFT-v3: DPO on 4,880 on-policy pairs ({n['dpo_steps']} steps), GRPO and DAPO with
-  learning-rate decay, decision distillation. Three training seeds each; checkpoints declared
+  learning-rate decay, decision distillation. Three training seeds each, one for decision
+  distillation on top of DPO and of GRPO and for GRPO on distillation; checkpoints declared
   before the audit, except GRPO checkpoint 525.
 - Guardrails: merge keeps at least {n['min_merge_kept_pct']}% of the update; hire rate on
   GPT-4o's hires falls by at most {n['max_tpr_drop_pp']} pp; agreement with GPT-4o falls by at
@@ -122,21 +130,43 @@ decay ({_doc("reports/final/curves.csv")}).
 ![Across hire rates](figures/curves.svg)
 
 **Cost.** Exploring GRPO and DAPO took {n['explore_rl']} GPU-h, DPO {n['explore_dpo']} and
-distillation {n['explore_distill']} ({n['explore_ratio']}). One evaluation uses
-{n['eval_gpu_h']} GPU-h; the project allocated {n['gpu_h_total']} GPU-h in total
-({_doc("docs/FINAL_TABLE.md")}, {_doc("docs/COST.md")}).
+distillation {n['explore_distill']} ({n['explore_ratio']};
+{_doc("reports/final/family_cost.csv")}). One evaluation uses {n['eval_gpu_h']} GPU-h; the
+project allocated {n['gpu_h_total']} GPU-h in total ({_doc("reports/cost/by_stage.csv")};
+{_doc("docs/FINAL_TABLE.md")}, {_doc("docs/COST.md")}).
 
 **Inside the model** (Marta Samoilenko's activation patching). In the base model the attribute
 reaches the decision at layers {n['pathway_layers']} through a hub in layer-15 attention (head
 L15.H11), read out by MLP 31. SFT-v3 removes {n['sft_v3_effect_removed']} of the per-pair
-effect and keeps the route ({_doc("docs/INTERP_SFT_V3.md")}). Distillation keeps
-{n['distill_kept']} of SFT-v3's effect on the same route; DPO and GRPO widen every margin
-{n['dpo_scale']} and {n['grpo_scale']} ({_doc("docs/DISTILL_PATCHING.md")},
-{_doc("docs/RL_PATCHING.md")}). Rescaling SFT-v3's margins changes the matched metric by
-{n['scale_change']}; {n['borderline_fixed_share']} of the sets distillation fixes are on pairs
-near the cut, a post-hoc reading ({_doc("docs/SCALE_CONTROL.md")}).
+effect on the patched pairs, and keeps the route there ({_doc("docs/INTERP_SFT_V3.md")}); on all
+{n['audit_pairs']} pairs it removes {n['sft_v3_effect_removed_all']}
+({_doc("poster/effect_share.py")}). Distillation keeps {n['distill_kept']} of SFT-v3's effect
+on the same route ({_doc("docs/DISTILL_PATCHING.md")}). DPO_V3_4880 and GRPO + decay R4 widen the
+median attribute-free margin {n['dpo_scale']} and {n['grpo_scale']} at seed 42
+({_doc("docs/RL_PATCHING.md")}; {_doc("docs/PATCHING_DISTILL.md")}, section 4), and
+{n['widen_range']} over all six of their seeds, on the standard's margins
+({_doc("reports/margin_readout/readout.csv")}). Rescaling SFT-v3's
+margins changes the matched metric by {n['scale_change']}; {n['borderline_fixed_share']} of the
+sets distillation fixes are on pairs near the cut, a post-hoc reading
+({_doc("docs/SCALE_CONTROL.md")}).
 
 ![Where the attribute reaches the decision: base model and SFT-v3](figures/residual.svg)
+
+**Placing distillation by patching** ({_doc("docs/PATCHING_DISTILL.md")}; each arm against
+the all-layer adapter of the same seed at a matched hire rate). Trained only on layers 15–20
+({n['window_params']} trainable parameters) at the same learning rate, distillation loses its
+gain: {n['window_only'][0]} pp over three seeds ({n['window_only'][1]}); the window arms also end
+training at a higher loss, so a smaller adapter underfitting at that learning rate is not ruled
+out. The trained all-layer adapter with layers 15–20 removed keeps the gain:
+{n['window_removed'][0]} pp ({n['window_removed'][1]}), an ablation of an adapter trained with
+those layers, which does not show what a model trained without them would do. One-seed pilots
+at a quarter of the trainable parameters, on the window with its GDN mixers
+({n['quarter_window_params']}, {n['quarter_window']} pp) or at rank 8 over every layer
+({n['quarter_rank8_params']}, {n['quarter_rank8']} pp), failed their gates at the same learning
+rate and were not continued.{floor}
+Decision distillation on top of DPO and of GRPO, each against its own seed-42 parent:
+{n['student_dpo']} and {n['student_grpo']} pp (one seed each). Every arm serves the same 9B
+model; LoRA sizes count trainable parameters.
 
 **The audit as an inference load.** Against cache off and shuffled order, the audits' own setup
 saves {n['b_saved']} of generation time ({n['b_speedup']}); sorting by prefix saves a further
@@ -150,6 +180,9 @@ of {n['b_block_bound']} ({_doc("docs/THROUGHPUT_B.md")}). A null result over
 
 English only; one 9B model; {n['audit_candidates']} benchmark candidates. Patching on 64 pairs
 per contrast and one pair selection. GRPO checkpoint 525 was picked with audit numbers in view.
+The students, the quarter-size pilots and the margin floor have one seed each. The students'
+parents are the best of their method's three seeds; the pilots and the margin floor are
+compared with distillation's seed 42, the weakest of its three.
 
 ## Sources
 

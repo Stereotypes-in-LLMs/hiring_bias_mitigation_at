@@ -49,7 +49,9 @@ AUDIT_RUN = {"base": "Qwen3.5-9B--en--baseline",
              "distill43_t0_20":
                  "Qwen3.5-9B--en--sft--adapter--en_only_decision_distill_l0_20_seed43",
              "dpo4880": "Qwen3.5-9B--en--dpo--adapter--en_only_dpo_v3_4880_step305",
-             "grpo525": "Qwen3.5-9B--en--grpo--adapter--en_only_grpo_v3_all_step525"}
+             "grpo525": "Qwen3.5-9B--en--grpo--adapter--en_only_grpo_v3_all_step525",
+             "grpo_r4": "Qwen3.5-9B--en--grpo--adapter--en_only_grpo_improve_r4_tipped_v2",
+             "pd42": "Qwen3.5-9B--en--sft--adapter--en_only_decision_distill_l15_20_seed42"}
 #: The same base audit under the name it has on the CSCS output drive.
 AUDIT_FALLBACK = {"base": "Qwen3.5-9B--en--baseline--cscs"}
 # SFT-v3's audit responses are not in the public responses dataset. Its release carries the

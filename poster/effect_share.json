@@ -1,0 +1,18 @@
+{
+  "source": "poster/effect_share.py, contrasts-grid-en.parquet (scripts/interp/04_manifest.py)",
+  "contrasts": {
+    "mil_combat_civ_expl": {
+      "pairs": 450,
+      "removed_pct": 65.79629516601562
+    },
+    "mil_combat_civ_impl": {
+      "pairs": 450,
+      "removed_pct": 51.94535827636719
+    },
+    "rel_atheist_christian_impl": {
+      "pairs": 450,
+      "removed_pct": 60.892913818359375
+    }
+  },
+  "range": "52–66%"
+}

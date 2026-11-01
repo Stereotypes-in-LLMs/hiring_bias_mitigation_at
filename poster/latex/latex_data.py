@@ -37,21 +37,27 @@ BASE_RUN = "Qwen3.5-9B--en--baseline--cscs"
 HF_V3_REVISION = "3b8b1c47189d00ca9cf4eb88195c0b84ff81d889"   # hf_v3_manifest.json was taken here
 SFT_V3 = "SFT-v3"
 
-# slot, recipe or arm label (None: not trained), colour, filled, short name
+# slot, recipe or arm label (None: not trained), colour, filled, short name. The poster has
+# one neutral family and one accent (main.tex, DESIGN): Base gray, the parents ink and every
+# distilled model green; names, weight and open / filled points tell the rows apart.
 SLOTS = [
     ("Base", None, "gray", 0, "Base"),
-    ("Best SFT (SFT-v3)", SFT_V3, "blue", 0, "SFT"),
-    ("Best DPO", "DPO_V3_4880", "amber", 0, "DPO"),
-    ("Best GRPO", "GRPO+decay R4", "purple", 0, "GRPO"),
-    ("Distilled SFT", "Distill", "blue", 1, "dSFT"),
-    ("Distilled DPO", None, "amber", 1, "dDPO"),
-    ("Distilled GRPO", None, "purple", 1, "dGRPO"),
+    ("Best SFT (SFT-v3)", SFT_V3, "ink", 0, "SFT"),
+    ("Best DPO", "DPO_V3_4880", "ink", 0, "DPO"),
+    ("Best GRPO", "GRPO+decay R4", "ink", 0, "GRPO"),
+    ("Distilled SFT", "Distill", "greenDark", 1, "dSFT"),
+    ("Distilled DPO (n=1)", "Distill on DPO", "greenDark", 1, "dDPO"),
+    ("Distilled GRPO (n=1)", "Distill on GRPO R4", "greenDark", 1, "dGRPO"),
 ]
+# The students (docs/PATCHING_DISTILL.md, B): one seed each, distilled from this parent arm.
+STUDENT_PARENT = {"Distill on DPO": "DPO_V3_4880 s42", "Distill on GRPO R4": "GRPO+decay R4 s42"}
 # The reports/cost/params.csv row that counts each trained slot's LoRA (one stage).
 PARAMS_ROW = {SFT_V3: "qwen3.5-9b_en_only_sft_v3_additional",
               "DPO_V3_4880": "qwen3.5-9b_en_only_dpo_v3_4880",
               "GRPO+decay R4": "grpo_improve_r4_tipped_v2",
-              "Distill": "decision_distill_seed42"}
+              "Distill": "decision_distill_seed42",
+              "Distill on DPO": "decision_distill_dpo4880_seed42",
+              "Distill on GRPO R4": "decision_distill_grpo_r4_seed42"}
 
 
 def rows(rel: str) -> list[dict]:
@@ -128,6 +134,15 @@ def main() -> None:
     sft = table[SFT_V3]
     sft_data, sft_train = float(sft["data_gpu_h"]), float(sft["train_gpu_h"])
 
+    def parent_counts(label: str) -> pd.DataFrame:
+        run = arms[label]
+        f, r = counts(run), refm[run]
+        u, a = 100 * f.unstable.sum() / f.sets.sum(), 100 * f.agree.sum() / f.decided.sum()
+        if abs(u - float(r["unstable_within_group_pct"])) > 0.01 or \
+           abs(a - float(r["agree_gpt4o_pct"])) > 0.01:
+            raise SystemExit(f"{run}: {u:.3f}/{a:.3f} differ from reference_metrics")
+        return f.reindex(index, fill_value=0.0)
+
     def mean_of(name: str, col: str) -> float:
         labs = labels_of(name)
         return sum(float(table[lab][col]) for lab in labs) / len(labs)
@@ -139,7 +154,7 @@ def main() -> None:
             model_rows.append(dict(model=slot, params="--", colour=colour, filled=filled,
                                    pending=1, instability=0, ilo=0, ihi=0, quality=0, qlo=0,
                                    qhi=0, data=0, patch=0, train=0, distill=0, eval=0,
-                                   short=short, seeds=0))
+                                   short=short, seeds=0, hasparent=0, pu=0, pq=0))
             continue
         u = ratio(per[slot], "unstable", "sets", w)
         q = ratio(per[slot], "agree", "decided", w)
@@ -150,33 +165,48 @@ def main() -> None:
             p = f"{int(params[PARAMS_ROW[name]]['params_trainable']) / 1e6:.1f}*"   # footnoted
             if name == SFT_V3:
                 data, train, dist = sft_data, sft_train, 0.0
+            elif name in STUDENT_PARENT:
+                # final_table's train adds the parent's training: split it back out. The
+                # student's data_jobs list its parent's too (reports/final/arms.csv).
+                parent = table[STUDENT_PARENT[name]]
+                data = sft_data + mean_of(name, "data_gpu_h")
+                train = sft_train + float(parent["train_gpu_h"])
+                dist = mean_of(name, "train_gpu_h") - float(parent["train_gpu_h"])
             elif recipes[name]["family"] == "distill":
                 data = sft_data + mean_of(name, "data_gpu_h")
                 train, dist = sft_train, mean_of(name, "train_gpu_h")
             else:
                 data = sft_data + mean_of(name, "data_gpu_h")
                 train, dist = sft_train + mean_of(name, "train_gpu_h"), 0.0
+        # A student's own parent (one seed, the best of three), drawn open on the student's row:
+        # the Best DPO / Best GRPO rows are three-seed means, not what the student started from.
+        pu = pq = 0.0
+        if name in STUDENT_PARENT:
+            parent_per = parent_counts(STUDENT_PARENT[name])
+            pu = ratio(parent_per, "unstable", "sets", w)[0]
+            pq = ratio(parent_per, "agree", "decided", w)[0]
         model_rows.append(dict(
             model=slot, params=p, colour=colour, filled=filled, pending=0,
             instability=round(u[0], 2), ilo=round(u[1], 2), ihi=round(u[2], 2),
             quality=round(q[0], 2), qlo=round(q[1], 2), qhi=round(q[2], 2),
             data=round(data, 2), patch=0, train=round(train, 2), distill=round(dist, 2),
-            eval=round(eval_gpu_h, 2), short=short, seeds=len(runs)))
+            eval=round(eval_gpu_h, 2), short=short, seeds=len(runs),
+            hasparent=int(name in STUDENT_PARENT), pu=round(pu, 2), pq=round(pq, 2)))
 
-    # Paired change in agreement, distilled minus parent; pending where no student exists.
+    # Paired change in agreement, distilled minus parent: SFT-v3 for the distilled SFT, and each
+    # student's own seed-42 parent, not its method's three-seed mean.
     delta_rows = []
-    for method, colour, student, parent in (("SFT", "blue", "Distilled SFT", "Best SFT (SFT-v3)"),
-                                            ("DPO", "amber", None, "Best DPO"),
-                                            ("GRPO", "purple", None, "Best GRPO")):
-        if student is None:
-            delta_rows.append(dict(method=method, colour=colour, pending=1, delta=0, lo=0, hi=0))
-            continue
-        a, b = per[student], per[parent]
+    for method, student, parent in (
+            ("SFT", "Distilled SFT", "Best SFT (SFT-v3)"),
+            ("DPO", "Distilled DPO (n=1)", STUDENT_PARENT["Distill on DPO"]),
+            ("GRPO", "Distilled GRPO (n=1)", STUDENT_PARENT["Distill on GRPO R4"])):
+        a = per[student]
+        b = per[parent] if parent in per else parent_counts(parent)
         point = 100 * (a.agree.sum() / a.decided.sum() - b.agree.sum() / b.decided.sum())
         draws = 100 * ((w @ a.agree.to_numpy()) / (w @ a.decided.to_numpy())
                        - (w @ b.agree.to_numpy()) / (w @ b.decided.to_numpy()))
         lo, hi = np.percentile(draws, [2.5, 97.5])
-        delta_rows.append(dict(method=method, colour=colour, pending=0, delta=round(point, 2),
+        delta_rows.append(dict(method=method, colour="greenDark", pending=0, delta=round(point, 2),
                                lo=round(lo, 2), hi=round(hi, 2)))
 
     # Matched-hire-rate effects against SFT-v3 (the standard), per seed and as seed means.
@@ -187,6 +217,21 @@ def main() -> None:
 
     comp = {(r["run"], r["against"]): r for r in rows("reports/comparisons.csv")}
     layers = comp[(arms["Distill layers 0-20 s43"], arms["Distill s43"])]
+
+    def interval(run: str, against: str) -> str:
+        c = comp[(run, against)]
+        return f"{tm(c['delta_pp'])} [{tm(c['ci_low_pp'])}, {tm(c['ci_high_pp'])}]"
+
+    def per_seed(run_of, against_of) -> list[float]:
+        return [float(comp[(run_of(s), against_of(s))]["delta_pp"]) for s in (42, 43, 44)]
+
+    full = lambda s: arms[f"Distill s{s}"]  # noqa: E731
+    window_only = per_seed(lambda s: arms[f"Distill layers 15-20 s{s}"], full)
+    window_removed = per_seed(lambda s: f"{full(s)}_xw15_20", full)   # docs/PATCHING_DISTILL.md, F
+    widen = pd.read_csv(ROOT / "reports/margin_readout/readout.csv")
+    widen = widen[widen["label"].str.match(r"(DPO_V3_4880|GRPO\+decay R4) s4[234]$")]
+    assert len(widen) == 6, widen["label"].tolist()
+    window_params = int(params["decision_distill_l15_20_seed42"]["params_trainable"])
     lp = params["decision_distill_l0_20_seed43"]
     d = recipes["Distill"]
     dseeds = [table[lab] for lab in labels_of("Distill")]
@@ -228,6 +273,14 @@ def main() -> None:
         "LayersPct": f"{float(lp['trainable_pct_of_text']):.3f}",
         "StandardParams": f"{int(params['decision_distill_seed42']['params_trainable']) / 1e6:.1f}",
         "StandardPct": f"{float(params['decision_distill_seed42']['trainable_pct_of_text']):.3f}",
+        "WindowParams": f"{window_params / 1e6:.1f}",
+        "WindowOnly": tm(sum(window_only) / 3),
+        "WindowOnlySeeds": " / ".join(tm(v) for v in window_only),
+        "WindowRemoved": tm(sum(window_removed) / 3),
+        "WindowRemovedSeeds": " / ".join(tm(v) for v in window_removed),
+        "WidenRange": f"{widen['a_median'].min():.1f}--{widen['a_median'].max():.1f}",
+        "StudentDPO": interval(arms["Distill on DPO s42"], arms["DPO_V3_4880 s42"]),
+        "StudentGRPO": interval(arms["Distill on GRPO R4 s42"], arms["GRPO+decay R4 s42"]),
         "DistillAgreeDelta": tm(delta_rows[0]["delta"]),
         "DistillAgreeCI": f"[{tm(delta_rows[0]['lo'])}, {tm(delta_rows[0]['hi'])}]",
     }

@@ -3,8 +3,9 @@
 Same standard as every comparison here (``scripts/operating_point_control.py``): each arm at its
 own greedy hire rate, the base model moved to the same hire count, 95% CI over candidates. The
 rows are fixed below: DPO and GRPO (each method's recipe with three training seeds and the lowest
-seed-mean change against SFT-v3), decision distillation, and GRPO trained on top of the
-distilled model (one seed; DPO on top of distillation was never trained). Writes
+seed-mean change against SFT-v3), decision distillation, GRPO trained on top of the
+distilled model (one seed; DPO on top of distillation was never trained), and decision
+distillation on top of DPO and of GRPO (one seed each, docs/PATCHING_DISTILL.md). Writes
 ``poster/base_compare.json``.
 
     HBM_OUTPUT_ROOT=$XW ../venv/bin/python poster/base_compare.py
@@ -31,6 +32,8 @@ ROWS = [
     ("GRPO+decay R4", "+ GRPO"),
     ("Distill", "+ decision distillation"),
     ("GRPO from distill s42", "+ distillation, then GRPO"),
+    ("Distill on DPO", "+ DPO, then distillation"),
+    ("Distill on GRPO R4", "+ GRPO, then distillation"),
 ]
 
 
@@ -47,16 +50,13 @@ def main() -> None:
     base, _ = opc.load_scores(BASE_RUN, "base")
     arm_rows = rows("reports/final/arms.csv")
     arms = {r["label"]: r["run"] for r in arm_rows}
-    parent = {r["label"]: r["parent"] for r in arm_rows}
-    by_run = {r["run"]: r["label"] for r in arm_rows}
     table = {r["label"]: r for r in rows("reports/final/final_table.csv")}
 
     def gpu_h(label: str) -> float:
-        """Extra GPU-h over SFT-v3; an arm trained on top of another arm adds that arm's
-        training (their data is the same round-3 data, counted once)."""
-        up = by_run.get(parent[label])
-        extra = float(table[label]["extra_gpu_h"])
-        return extra + (float(table[up]["train_gpu_h"]) if up and up != "SFT-v3" else 0.0)
+        """Extra GPU-h over SFT-v3, as final_table.py counts it: the arm's data jobs (an arm
+        trained on another arm lists that arm's jobs too, reports/final/arms.csv) plus the
+        training to the audited checkpoint, the parent arm's training included."""
+        return float(table[label]["extra_gpu_h"])
 
     def against_base(run: str) -> dict:
         frame, _ = opc.load_scores(run, "adapter")

@@ -172,9 +172,11 @@ def family_cost(families: pd.DataFrame) -> pd.DataFrame:
     for fam in families.itertuples():
         mine = set(fam.cost_arms.split())
         part = steps[arms.map(lambda a, mine=mine: bool(mine & set(a)))]
-        ok = part["status"].fillna("ok") == "ok"
+        # As in cost_report.py: a running step is neither ok nor failed.
+        status = part["status"].fillna("ok")
+        not_ok = ~status.isin(["ok", "running"])
         rows.append({"family": fam.family, "gpu_h": round(float(part["gpu_h"].sum()), 2),
-                     "gpu_h_not_ok": round(float(part.loc[~ok, "gpu_h"].sum()), 2),
+                     "gpu_h_not_ok": round(float(part.loc[not_ok, "gpu_h"].sum()), 2),
                      "by_stage": "; ".join(f"{s} {g:.2f}" for s, g in
                                            part.groupby("stage")["gpu_h"].sum().items()),
                      "jobs": part["job_id"].nunique(), "steps": len(part),
