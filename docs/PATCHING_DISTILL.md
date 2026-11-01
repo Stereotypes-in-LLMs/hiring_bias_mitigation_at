@@ -180,8 +180,40 @@ worse than distillation on all layers. The served model stays the same 9B model.
 | 4 | 5228131 | A seed 44 training: 341 steps, 1:12:20; 26 modules, 11,403,264 parameters; 4.803 GPU-h measured | 4.82 | 15.78 |
 | 5 | 5228155 | Full-grid margins, GRPO R4 s42 and A s42 (two GPUs of four); gate 99.65% / 99.57% | 2.17 | 17.95 |
 | 6 | 5228380 | Patching, sel_sft_v3: GRPO R4 s42 on 3 contrasts, A s42 on implicit combat | 1.53 | 19.48 |
+| 7 | 5228526 | Patching of A s42 (explicit combat, atheist) and noise passes (2,048 rows) for GRPO R4 s42 and A s42 | 1.27 | 20.75 |
+| 8 | 5228565 | A seed 43 audit against SFT-v3: +0.27 pp, every guardrail passes, conforms | 1.24 | 21.99 |
+| 9 | 5228566 | A seed 44 audit against SFT-v3: −0.00 pp, every guardrail passes, conforms | 1.34 | 23.33 |
 
 ## 3. Result
+
+### A. Distillation confined to layers 15-20 (registered call: H0)
+
+Each seed against the all-layer arm of the same seed (`compare-arms`), and against SFT-v3 (the
+standard; `reports/comparisons.csv`, `reports/reference_metrics.csv`). Every seed passes every
+guardrail and every comparison conforms.
+
+| seed | against all layers, pp [95% CI] | against SFT-v3, pp [95% CI] |
+|---|---|---|
+| 42 | +0.26 [−0.32, +0.82] | +0.13 [−0.33, +0.59] |
+| 43 | +0.74 [+0.01, +1.45] | +0.27 [−0.19, +0.77] |
+| 44 | +0.58 [−0.13, +1.24] | −0.00 [−0.45, +0.48] |
+
+- **Fact.** The mean change against all layers is +0.53 pp, above +0.30: by the registered rule,
+  **H0, the gain is lost**. No seed is below SFT-v3 by more than 0.01 pp; the mean against SFT-v3
+  is +0.13.
+- **Fact (patching, seed 42; `reports/interp/distill/pd42/`).** The confined adapter barely moves
+  SFT-v3: the attribute effect is 0.88-0.90 of SFT-v3's and the margin scale 0.84, against
+  0.39-0.47 and 0.45-0.46 for all-layer distillation. The component profile correlates with
+  SFT-v3's at r = 0.997-0.998, and the attribute difference at the decision tokens over depths
+  15-20 is unchanged (ratio 1.000).
+- **Interpretation, not confirmed.** What all-layer distillation changes, it changes mostly
+  outside the window where the attribute reaches the decision. Read with the scale-only control
+  (`SCALE_CONTROL.md`), the window is where the attribute arrives, not where the gain is made.
+- **Unknown.** Whether training the window's GDN mixers as well (arm C) or a larger learning
+  rate changes this; the logs show no underfitting (§0, review).
+- **Wording, as registered:** "distillation confined to layers 15-20 at the same learning rate
+  loses the gain (mean +0.53 pp against all layers, three seeds)".
+
 
 ## 4. Reading
 
