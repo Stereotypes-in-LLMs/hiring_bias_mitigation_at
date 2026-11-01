@@ -318,8 +318,11 @@ seed 44 when a slot frees.
 | 19 | 5230015 | F seed 43 audit (window removed) against SFT-v3: −0.46 pp, every guardrail passes, conforms; merge kept 92.0% | 1.22 | 50.72 |
 | 20 | 5230147 | D seed 42 audit against SFT-v3: +0.04 pp, every guardrail passes (merge kept 80.4%, the guardrail is 80%), conforms | 1.21 | 51.93 |
 | 21 | 5230148 | F seed 44 audit (window removed) against SFT-v3: −0.26 pp, every guardrail passes, conforms; merge kept 92.0% | 1.22 | 53.15 |
-| 22 | 5230126 | E seed 42 training (margin floor 4, from worktree `-pfloor` at fa0b9f2, clean): 341 steps, 1:17:37; all layers, 128 modules, 58,195,968 parameters; the floor lifted 80-100% of the attributed targets at the last logging points; 5.157 GPU-h measured | 5.17 | 58.32 |
-| 23 | 5230734 | E seed 42 audit against SFT-v3: +0.13 pp, every guardrail passes, conforms; merge kept 96.9% | 1.21 | 59.53 |
+| 22 | 5230126 | E seed 42 training (margin floor 4, from worktree `-pfloor` at fa0b9f2, clean): 341 steps, 1:17:37; all layers, 128 modules, 58,195,968 parameters; the logged share of attributed rows within 4 logits was 80-100% at the last logging points (ties counted, an upper bound on the share lifted; code at fa0b9f2); 5.157 GPU-h measured | 5.17 | 58.32 |
+| 23 | 5230734 | E seed 42 audit against SFT-v3: +0.12 pp, every guardrail passes, conforms; merge kept 96.9% | 1.21 | 59.53 |
+
+The running total adds the rounded rows; `reports/cost/jobs.csv` gives 59.55 GPU-h allocated for
+the 23 jobs of `patching_distill`, under the day's 60.
 
 ## 3. Result
 
@@ -479,26 +482,29 @@ fa0b9f2).
 
 | seed | against plain distillation s42, pp [95% CI] | against SFT-v3, pp [95% CI] |
 |---|---|---|
-| 42 | +0.09 [−0.97, +1.08] | +0.13 [−0.65, +0.87] |
+| 42 | +0.09 [−0.97, +1.08] | +0.12 [−0.65, +0.87] |
 
-- **Fact.** It is neither "promising" (below 0 against SFT-v3 and Δ ≤ 0) nor "worse" (Δ above
-  +0.20, or a failed guardrail): by the registered rule, **undecided**, and no seed is added
-  without the user (section 1E).
+- **Fact.** It is neither "promising" (below 0 against SFT-v3 with every guardrail passing, and
+  Δ ≤ 0) nor "worse" (Δ above +0.20, or a failed guardrail): by the registered rule,
+  **undecided**, and no seed is added without the user (section 1E). Its change against SFT-v3
+  is 0.12495 in the op-margin-v2 JSON (first written +0.13 from `comparisons.csv`'s 0.125).
 - **Fact.** Against SFT-v3 its TPR changes −2.30 pp and its agreement −0.69 pp; its greedy hire
   rate is 21.91% (SFT-v3 22.75%, plain s42 23.41%); the merge kept 96.9%
   (`reports/reference_metrics.csv`).
 - **Fact (secondary readouts, registered in 1E, deciding nothing).** E changes 549 of 31,050
   SFT-v3 decisions (plain s42: 472) and differs from plain s42 on 509. Its margin scale is ×0.36
   of SFT-v3's (plain ×0.47-0.51), while SFT-v3's 35 borderline pairs move ×3.67, 10.2 times the
-  global factor (DPO's seeds 11.5-12.8). On those pairs E has 42 unstable sets against 37.9 for
-  SFT-v3 at the matched count; plain s42 has 44 against 50.3. The sets E fixes overlap plain
-  s42's by 0.10 (`reports/margin_readout/readout.csv`).
-- **Interpretation, not confirmed.** In the margins the floor did what it was meant to: it
-  pushed the borderline pairs away from SFT-v3's cut. At the arm's own matched cut (21.83% on the
-  margins) those pairs are no more stable than SFT-v3's. "Borderline at SFT-v3's cut" may be the
-  wrong band for an arm that moves the hire rate, as `SCALE_CONTROL.md` notes for GRPO.
+  global factor (DPO's seeds 11.5-12.8). Head to head, on those pairs E has 42 unstable sets
+  against 40.75 for plain s42 moved to E's hire count; 42 of E's 49 unstable sets lie on them.
+  The sets E fixes against SFT-v3 overlap plain s42's by 0.10
+  (`reports/margin_readout/readout.csv`, rows `E floor 4 s42` and `E floor 4 s42 / plain s42`).
+- **Interpretation, not confirmed.** The floor moved the borderline pairs' attribute-free
+  margins away from SFT-v3's cut (×3.67, 10.2 times the global factor), but their attributed
+  variants still split: the aim of section 1E, all of a pair's variants on one side, was not
+  reached. "Borderline at SFT-v3's cut" may also be the wrong band for an arm that moves the hire
+  rate (21.83% on the margins), as `SCALE_CONTROL.md` notes for GRPO.
 - **Wording:** "the teacher's margin floored at 4 logits, one seed: +0.09 pp against plain
-  distillation and +0.13 against SFT-v3; undecided, not continued".
+  distillation and +0.12 against SFT-v3; undecided, no seed added without the user's decision".
 
 ### F. The window removed from the trained all-layer adapter (registered call: not needed)
 
@@ -550,34 +556,43 @@ standard). Every seed passes every guardrail and every comparison conforms (comm
   (3E) and gets no seeds without the user.
 
 **Patching of the poster's GRPO (GRPO + decay R4 s42; jobs 5228155, 5228380, 5228526;
-`reports/interp/distill/grpo_r4/`).** Against SFT-v3, on all 450 pairs per contrast:
-- Margin scale ×2.16 (r_scale), attribute effect ×1.22, ×1.38 and ×1.75 (r_attr: combat implicit,
-  combat explicit, atheist), so ρ is 0.56, 0.64 and 0.81 (noise-corrected 0.85, 0.95, 1.26)
-  (`sensitivity.csv`).
-- It keeps SFT-v3's route. L15.H11 is the top head on all three contrasts, followed by L17.H0 and
-  L19.H11 (atheist: L19.H11 and L7.H8), and the component profile correlates with SFT-v3's at
-  r = 0.90-0.97 (`component_summary.csv`). The attribute difference over depths 15-20 is
-  unchanged (ratio 0.97-1.01, `residual.csv`).
+`reports/interp/distill/grpo_r4/`).** Against SFT-v3:
+- On all 450 pairs per contrast: margin scale ×2.16 (r_scale), attribute effect ×1.22, ×1.38 and
+  ×1.75 (r_attr: combat implicit, combat explicit, atheist), so ρ is 0.56, 0.64 and 0.81
+  (noise-corrected 0.85, 0.95, 1.26) (`sensitivity.csv`); the attribute difference over depths
+  15-20 is unchanged (ratio 0.97-1.01, `residual.csv`).
+- On the 64 patched pairs per contrast (sel_sft_v3): it keeps SFT-v3's route. L15.H11 is the top
+  head on all three contrasts, followed by L17.H0 and L19.H11 (atheist: L19.H11 and L7.H8), and
+  the component profile correlates with SFT-v3's at r = 0.90-0.97 (`component_summary.csv`).
 
 **Margin readout** (`scripts/margin_readout.py` on the standard's op-margin-v2 margins,
 `reports/margin_readout/readout.csv`; post hoc, deciding nothing).
 - DPO_V3_4880 and GRPO + decay R4 widen the median attribute-free margin in all six of their
   seeds, ×2.04-2.69 of SFT-v3's.
-- The students compress their parent's scale ×0.16 (DPO) and ×0.24 (GRPO), to ×0.44 and ×0.51
-  of SFT-v3's, about plain distillation's ×0.47-0.51. Their parent's borderline pairs move about
-  as much as everything else (×0.86 and ×1.16 of the global factor).
+- The students compress their parent's scale ×0.16 (DPO) and ×0.24 (GRPO), to ×0.44 and ×0.50
+  of SFT-v3's, about plain distillation's ×0.47-0.51. SFT-v3's 35 borderline pairs move, from
+  parent to student, about as much as everything else (×0.86 and ×1.16 of the global factor);
+  the parents sit far from the cut on those pairs (×34.1 and ×9.5 of SFT-v3's |m|).
 - The window arms barely compress (×0.83-0.85), D reaches ×0.78, the ablated adapters ×0.62-0.66.
-- The within-set spread ratio (`rho` there) is coarse: near the cut the margins sit on a
-  1/8-logit grid, which inflates the spread of a compressed model. It is not used.
+- The within-set spread ratio (`spread_ratio` there, and `rho` = spread_ratio / a_median) is
+  coarse: near the cut the margins sit on a 1/8-logit grid, which inflates the spread of a
+  compressed model. It is not used.
 
-**What the round supports.**
-- Patching locates where the attribute reaches the decision, layers 15-20. Confining distillation
-  there at the same learning rate loses its gain (A, three seeds); removing the window from the
-  trained adapter keeps it (F, three seeds). Distillation's useful change lies mostly outside the
-  window, with the caveats of 3F.
-- Distilling the DPO or GRPO model onto its own attribute-free decision compresses it as it does
-  SFT-v3 and leaves its stability at a matched rate where it was (one seed each). It does pull the
-  GRPO model's hire rate and TPR back toward SFT-v3's.
+**What the round supports** (registered calls and measured facts only).
+- Patching locates where the attribute reaches the decision, layers 15-20. Distillation confined
+  to layers 15-20 at the same learning rate loses the gain (A, +0.53 pp against all layers, three
+  seeds). Removing layers 15-20 from the trained all-layer adapter keeps the gain (F, +0.11 pp,
+  three seeds): the rest of the adapter suffices as trained.
+- Neither student is better than its parent at a matched hire rate (DPO −0.07 [−0.44, +0.33],
+  GRPO +0.02 [−0.77, +0.82]; one seed each).
+- Post hoc, distillation compresses the DPO and GRPO models' margins more than SFT-v3's (×0.16
+  and ×0.24 of the parent's scale, against ×0.47-0.51), ending near plain distillation's
+  absolute scale (×0.44 and ×0.50 of SFT-v3's).
+
+**Interpretation, not confirmed.** Distillation's useful change lies mostly outside the window
+(3F, with its caveats and the untested duplication alternative). On one seed, distillation pulls
+the GRPO model's greedy hire rate (21.91%, parent 20.93%) and TPR (−1.67 pp against SFT-v3,
+parent −4.70) back toward SFT-v3's.
 
 **What it does not support.** That placing the update by patching improves distillation; that
 any student is better than its parent, or than SFT-v3; that a quarter-size adapter keeps the gain
@@ -588,7 +603,8 @@ seed, undecided); that any arm makes the served model smaller.
 
 - Every arm used the same learning rate and α/r. A, C and D cannot tell "the placement is not
   enough" from "a smaller adapter underfits at this learning rate": the window arms end training
-  at a higher loss (3A).
+  at a higher loss (3A). D also cannot separate rank, update size and the merge's rounding
+  (80.4% kept, 3D).
 - F ablates adapters that were trained with the window present. It does not show what a model
   trained without the window would do.
 - The students, C, D and E have one seed. The students' parents are the best of their method's

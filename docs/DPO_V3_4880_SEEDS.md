@@ -77,7 +77,7 @@ GPU-h are measured steps from `reports/cost/steps.csv`; allocated hours in brack
 | 4 | seed 44: evaluation | 5200680 (commit 1b981f6) | 0.50 [1.22] | done 2026-10-29, 0:18:19; comparison did not conform (row 5) |
 | 5 | seed 44: margin pass and comparison again | 5200964 (commit d047eaa), `op_control.sbatch` | 0.21 [0.85] | done 2026-10-29, 0:12:45; conforms |
 
-Spent: 9.31 GPU-h measured, 11.43 allocated, of the 12 GPU-h cap.
+Spent: 9.32 GPU-h measured, 11.43 allocated, of the 12 GPU-h cap.
 
 Row 5 was not planned. While job 5200680 ran, `scripts/final_table.py` was edited in the
 worktree the job ran from, and the standard stamps any uncommitted file under `scripts/`, so

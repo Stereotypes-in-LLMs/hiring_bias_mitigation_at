@@ -32,7 +32,8 @@ only, although GRPO-v3-all trained on the same pairs.
   included as in the guardrail, for the arm moved to 22.51% (margins). The standard's greedy
   guardrails at the arm's own point are carried as they are (`reports/reference_metrics.csv`).
 - **Cost** (`reports/cost/`, regenerated 2026-11-01 after the patching-informed round, from 202
-  jobs and 573 recorded steps; first regenerated 2026-10-29 from 179 jobs).
+  jobs: 573 steps, 355 of them measured by step records; first regenerated 2026-10-29 from 179
+  jobs).
   All of it is measured GPU-h, and rows are never summed:
   - **data**: the recipe steps of the jobs that built the arm's training data. A job shared by
     several arms counts in full in each of them.
@@ -111,7 +112,7 @@ between 0.52% and 1.11%, seed 43's between 1.43% and 1.81%, and seed 44's betwee
 |---|---|---|---|
 | one model (extra GPU-h) | 17.95 (DPO_V3_4880, mean of 3 seeds) | 37.90 (ckpt 525), 27.0 (R4), 20.3 (D1) | 21.4 |
 | of which training | 4.03–4.06 | 21.71 / 10.8 / 4.1 | 5.2 |
-| exploration, every step of the family | 43.02 (27 jobs; 9.31 of it this seed round) | 238.60 (60 jobs; 8.68 failed or cut) | 69.26 (30 jobs, the 2026-11-01 round included; 23.25 before it) |
+| exploration, every step of the family | 43.02 (27 jobs; 9.32 of it this seed round) | 238.60 (60 jobs; 8.68 failed or cut) | 69.26 (30 jobs, the 2026-11-01 round included; 23.25 before it) |
 
 - The fixed evaluation costs 0.50 GPU-h measured per `evaluate_arm` job, median of 25 recorded
   jobs. That is 1.21 GPU-h allocated, since the job holds a 4-GPU node.
@@ -197,7 +198,8 @@ readings that card registered.
 - Decision distillation's rows are built on CPU from grpo-v3-all's prompt set, so its data
   cost is GRPO-v3-all's (16.19).
 - Exploration counts the steps under the family's cost arms (`reports/final/families.csv`).
-  Activation patching is analysis and is left out (decision_distill 6.72, rl_patching 3.18).
+  Activation patching is analysis and is left out (decision_distill 6.72, patching_distill 3.08,
+  rl_patching 3.18).
 - Measured GPU-h counts the GPUs a step's processes ran on. The allocation billed is higher by
   the idle share.
 
