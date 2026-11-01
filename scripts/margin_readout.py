@@ -1,5 +1,5 @@
 """Margin readout of each audited arm against a reference arm, from the standard's own margins
-(docs/PATCHING_DISTILL.md, section 4; post hoc, deciding nothing).
+(docs/PATCHING_DISTILL.md, sections 3 and 4; post hoc, deciding nothing).
 
     python scripts/margin_readout.py
 
@@ -15,6 +15,9 @@ $HBM_OUTPUT_ROOT/outputs/operating_point/v2/):
                     |m| < 2, scale_only_control.borderline_pairs), arm over reference, and
   border_over_global  border_growth / a_median: how much further the arm moves those pairs from
                     the cut than everything else;
+  unstable_border_arm / unstable_border_ref  unstable sets on those borderline pairs, the arm's
+                    at its greedy cut and the reference's at the matched count (weighted where
+                    its cut ties; scale_only_control.set_flags);
   fixed_overlap_d42 for an arm read against SFT-v3, the weighted Jaccard of the sets it fixes
                     with those all-layer distillation s42 fixes (scale_only_control.set_flags:
                     a fixed set weighs SFT-v3's matched flag times one minus the arm's).
@@ -91,9 +94,13 @@ def readout(ref: pd.DataFrame, run: pd.DataFrame, border: set[str]) -> dict:
               / set_spread(both, "margin_ref").median())
     free = both[(both["condition"] == "attr_free") & both["pair_id"].isin(list(border))]
     growth = free["margin_run"].abs().median() / free["margin_ref"].abs().median()
+    flags = SC.set_flags(ref, run)
+    on = flags.index.get_level_values("pair_id").isin(list(border))
     return {"prompts": len(both), "a_median": scale["a_median"], "spread_ratio": float(spread),
             "rho": float(spread / scale["a_median"]), "border_growth": float(growth),
-            "border_over_global": float(growth / scale["a_median"])}
+            "border_over_global": float(growth / scale["a_median"]),
+            "unstable_border_arm": float(flags["run"][on].sum()),
+            "unstable_border_ref": float(flags["ref"][on].sum())}
 
 
 def main() -> None:

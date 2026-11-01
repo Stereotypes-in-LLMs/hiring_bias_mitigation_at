@@ -332,3 +332,9 @@ output_dir,arm,checkpoint_step,saved_at,job_id,n_gpus,gpu_h_segment_to_checkpoin
 /ritom/scratch/cscs/zhang/xw/outputs/distill/decision_distill_r8_seed42,patching_distill,300,2026-11-01 15:19:26,5229552,4,4.8411,0.0,4.8411
 /ritom/scratch/cscs/zhang/xw/outputs/distill/decision_distill_r8_seed42,patching_distill,341,2026-11-01 15:28:31,5229552,4,5.4467,0.0,5.4467
 /ritom/scratch/cscs/zhang/xw/outputs/distill/decision_distill_floor4_seed42,patching_distill,50,2026-11-01 15:45:51,5230126,4,1.07,0.0,1.07
+/ritom/scratch/cscs/zhang/xw/outputs/distill/decision_distill_floor4_seed42,patching_distill,100,2026-11-01 15:56:35,5230126,4,1.7856,0.0,1.7856
+/ritom/scratch/cscs/zhang/xw/outputs/distill/decision_distill_floor4_seed42,patching_distill,150,2026-11-01 16:07:15,5230126,4,2.4967,0.0,2.4967
+/ritom/scratch/cscs/zhang/xw/outputs/distill/decision_distill_floor4_seed42,patching_distill,200,2026-11-01 16:17:43,5230126,4,3.1944,0.0,3.1944
+/ritom/scratch/cscs/zhang/xw/outputs/distill/decision_distill_floor4_seed42,patching_distill,250,2026-11-01 16:28:07,5230126,4,3.8878,0.0,3.8878
+/ritom/scratch/cscs/zhang/xw/outputs/distill/decision_distill_floor4_seed42,patching_distill,300,2026-11-01 16:38:35,5230126,4,4.5856,0.0,4.5856
+/ritom/scratch/cscs/zhang/xw/outputs/distill/decision_distill_floor4_seed42,patching_distill,341,2026-11-01 16:47:04,5230126,4,5.1511,0.0,5.1511

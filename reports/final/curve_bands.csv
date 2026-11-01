@@ -29,3 +29,4 @@ Distill window + GDN s42,Qwen3.5-9B--en--sft--adapter--en_only_decision_distill_
 Distill rank 8 s42,Qwen3.5-9B--en--sft--adapter--en_only_decision_distill_r8_seed42,-0.001,-0.143,-0.233,-0.106,-0.141,74.51
 Distill on DPO s42,Qwen3.5-9B--en--sft--adapter--en_only_decision_distill_dpo4880_seed42,0.699,0.039,-0.594,0.466,2.747,33.333
 Distill on GRPO R4 s42,Qwen3.5-9B--en--sft--adapter--en_only_decision_distill_grpo_r4_seed42,0.116,-0.135,-0.596,-0.187,0.102,62.745
+Distill floor 4 s42,Qwen3.5-9B--en--sft--adapter--en_only_decision_distill_floor4_seed42,1.64,1.507,-0.257,0.434,1.91,17.647

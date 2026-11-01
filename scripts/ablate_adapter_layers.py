@@ -7,10 +7,11 @@ An ablation of a trained adapter, not a trained arm (docs/PATCHING_DISTILL.md, s
 `lora_B` of every module in layers FIRST..LAST (inclusive) is set to zero, so those modules add
 nothing (the update is scaling * B @ A) and every other tensor is copied bit for bit. The layer
 is read from the tensor name with the same pattern as `interp.spec.mask_adapter_layers`, which
-does the same thing at run time by zeroing the scaling. `adapter_config.json` and
-`run_config.json` are copied unchanged, so `mitigation.merge.adapter_chain` stacks the copy on
-the same parent as the original; `ablation.json` records the source, its hash and what was
-zeroed. Paths resolve under $HBM_OUTPUT_ROOT as the configs do. CPU only.
+does the complement at run time: it keeps layers FIRST..LAST and zeroes the scaling outside.
+`adapter_config.json` and `run_config.json` are copied unchanged, so
+`mitigation.merge.adapter_chain` stacks the copy on the same parent as the original;
+`ablation.json` records the source, its hash and what was zeroed. Paths resolve under
+$HBM_OUTPUT_ROOT as the configs do. CPU only.
 """
 
 from __future__ import annotations

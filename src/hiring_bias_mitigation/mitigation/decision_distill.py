@@ -121,7 +121,8 @@ def trainer_class(token_ids, margin_floor=None):
                     (float(kl.detach().mean()), float(p.mean()), float(q.mean())))
                 if margin_floor is not None:
                     two = teacher.index_select(-1, idx).float()
-                    lifted = (two[:, 0] - two[:, 1]).abs() < float(margin_floor)
+                    margin = two[:, 0] - two[:, 1]   # an exact tie keeps q = 0.5: not lifted
+                    lifted = (margin != 0) & (margin.abs() < float(margin_floor))
                     self._floor_log = getattr(self, "_floor_log", {})
                     self._floor_log.setdefault(key, []).append(float(lifted.float().mean()))
             return (loss, {"logits": student}) if return_outputs else loss

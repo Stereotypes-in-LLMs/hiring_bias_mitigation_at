@@ -319,6 +319,7 @@ seed 44 when a slot frees.
 | 20 | 5230147 | D seed 42 audit against SFT-v3: +0.04 pp, every guardrail passes (merge kept 80.4%, the guardrail is 80%), conforms | 1.21 | 51.93 |
 | 21 | 5230148 | F seed 44 audit (window removed) against SFT-v3: −0.26 pp, every guardrail passes, conforms; merge kept 92.0% | 1.22 | 53.15 |
 | 22 | 5230126 | E seed 42 training (margin floor 4, from worktree `-pfloor` at fa0b9f2, clean): 341 steps, 1:17:37; all layers, 128 modules, 58,195,968 parameters; the floor lifted 80-100% of the attributed targets at the last logging points; 5.157 GPU-h measured | 5.17 | 58.32 |
+| 23 | 5230734 | E seed 42 audit against SFT-v3: +0.13 pp, every guardrail passes, conforms; merge kept 96.9% | 1.21 | 59.53 |
 
 ## 3. Result
 
@@ -470,6 +471,35 @@ guardrail passes against SFT-v3 and both comparisons conform (commit e352d6a).
   continued" (first written "did not keep distillation's gain", corrected after review: a failed
   pilot only stops the arm). The served model is the same 9B model in every arm.
 
+### E. The teacher's margin floored at 4 logits (pilot: undecided, no seed added)
+
+Seed 42, against the all-layer arm of seed 42 (`compare-arms`) and against SFT-v3 (the
+standard). Every guardrail passes and both comparisons conform (commit a32a8c9; trained at
+fa0b9f2).
+
+| seed | against plain distillation s42, pp [95% CI] | against SFT-v3, pp [95% CI] |
+|---|---|---|
+| 42 | +0.09 [−0.97, +1.08] | +0.13 [−0.65, +0.87] |
+
+- **Fact.** It is neither "promising" (below 0 against SFT-v3 and Δ ≤ 0) nor "worse" (Δ above
+  +0.20, or a failed guardrail): by the registered rule, **undecided**, and no seed is added
+  without the user (section 1E).
+- **Fact.** Against SFT-v3 its TPR changes −2.30 pp and its agreement −0.69 pp; its greedy hire
+  rate is 21.91% (SFT-v3 22.75%, plain s42 23.41%); the merge kept 96.9%
+  (`reports/reference_metrics.csv`).
+- **Fact (secondary readouts, registered in 1E, deciding nothing).** E changes 549 of 31,050
+  SFT-v3 decisions (plain s42: 472) and differs from plain s42 on 509. Its margin scale is ×0.36
+  of SFT-v3's (plain ×0.47-0.51), while SFT-v3's 35 borderline pairs move ×3.67, 10.2 times the
+  global factor (DPO's seeds 11.5-12.8). On those pairs E has 42 unstable sets against 37.9 for
+  SFT-v3 at the matched count; plain s42 has 44 against 50.3. The sets E fixes overlap plain
+  s42's by 0.10 (`reports/margin_readout/readout.csv`).
+- **Interpretation, not confirmed.** In the margins the floor did what it was meant to: it
+  pushed the borderline pairs away from SFT-v3's cut. At the arm's own matched cut (21.83% on the
+  margins) those pairs are no more stable than SFT-v3's. "Borderline at SFT-v3's cut" may be the
+  wrong band for an arm that moves the hire rate, as `SCALE_CONTROL.md` notes for GRPO.
+- **Wording:** "the teacher's margin floored at 4 logits, one seed: +0.09 pp against plain
+  distillation and +0.13 against SFT-v3; undecided, not continued".
+
 ### F. The window removed from the trained all-layer adapter (registered call: not needed)
 
 Each seed against the full adapter of the same seed (`compare-arms`) and against SFT-v3 (the
@@ -516,8 +546,8 @@ standard). Every seed passes every guardrail and every comparison conforms (comm
 - G1, the pathway window not worse than all layers: not met. A is H0 at the same learning rate
   (3A), and C's pilot failed its gate (3C).
 - G2, the students better than their parents: not met (3B; one seed each).
-- G3, a variant clearly better than SFT-v3 over three seeds: E's pilot decides whether it is worth
-  seeds (3E).
+- G3, a variant clearly better than SFT-v3 over three seeds: not reached. E's pilot is undecided
+  (3E) and gets no seeds without the user.
 
 **Patching of the poster's GRPO (GRPO + decay R4 s42; jobs 5228155, 5228380, 5228526;
 `reports/interp/distill/grpo_r4/`).** Against SFT-v3, on all 450 pairs per contrast:
@@ -551,7 +581,8 @@ standard). Every seed passes every guardrail and every comparison conforms (comm
 
 **What it does not support.** That placing the update by patching improves distillation; that
 any student is better than its parent, or than SFT-v3; that a quarter-size adapter keeps the gain
-(two pilots failed their gates, nothing more); that any arm makes the served model smaller.
+(two pilots failed their gates, nothing more); that flooring the teacher's margin helps (one
+seed, undecided); that any arm makes the served model smaller.
 
 ## 5. Caveats
 
