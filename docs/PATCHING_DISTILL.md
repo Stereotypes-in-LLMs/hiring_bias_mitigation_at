@@ -16,6 +16,27 @@ undecided band, just short of "gain lost". This round tests a
 design taken from Marta Samoilenko's patching of SFT-v3, and fills the poster's two empty
 student slots.
 
+## 0. The goal for 2026-11-01, and the rules for exploring
+
+The user, 2026-11-01: "set a goal to make the results better; today you can keep exploring", up
+to three jobs at a time today.
+
+**Goal.** Make "patching informs distillation" true and the result stronger, in this order:
+- **G1 (registered, section 1A).** Distillation confined to the pathway window, with a fifth of
+  the trainable parameters, is not worse than all-layer distillation (H1).
+- **G2.** Distilling the DPO and GRPO models, each with a window taken from that parent's own
+  patching, improves on the parent at matched hire rate.
+- **G3 (exploration).** A distillation variant whose three-seed mean is clearly better than
+  SFT-v3: every seed below 0 and at least two seeds with the 95% interval below 0.
+
+**Rules.**
+- Each variant is written into this card, with its seeds and decision rule, before its job.
+- Nothing is called better on one seed; a promising single seed is followed by two more seeds.
+- Every variant tried is reported, including the worse ones.
+- The 450-pair benchmark has been read many times, so the verdicts stay exploratory.
+- Cap for the day: 60 GPU-h allocated under `patching_distill` (the 40 registered plus 20 for
+  exploration). Stop and ask before going over.
+
 ## 1. Registration (2026-11-01, before any run)
 
 ### A. Distillation on the pathway Marta's patching found
@@ -117,6 +138,8 @@ SFT-v3 (−0.57 pp, three seeds), and every guardrail passes against SFT-v3.
 
 | # | job | what | GPU-h allocated | running total |
 |---|---|---|---|---|
+| 1 | 5227361 | A seed 42 training: 341 steps, 1:13:29; adapter on layers 15-20 only, 26 modules, 11,403,264 parameters (read from `adapter_model.safetensors`); 4.880 GPU-h measured | 4.90 | 4.90 |
+| 2 | 5228013 | A seed 42 audit against SFT-v3: +0.13 pp, every guardrail passes, conforms; merge kept 95.7% | 1.21 | 6.11 |
 
 ## 3. Result
 
