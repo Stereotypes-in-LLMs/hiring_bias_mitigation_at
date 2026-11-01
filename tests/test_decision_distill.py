@@ -19,6 +19,7 @@ sys.path.insert(0, str(ROOT / "src"))
 from hiring_bias_mitigation.mitigation.decision_distill import (  # noqa: E402
     collate,
     decision_kl,
+    teacher_target,
     trainer_class,
 )
 
@@ -94,6 +95,40 @@ def test_attributed_row_moves_toward_the_free_decision():
     _, loss = run_loss(model, [0, 2], [0, 8])  # attributed prompt hires less than its free one
     loss.backward()
     assert model.adapter.grad < 0  # descent raises the hire logit on the attributed prompt
+
+
+def test_margin_floor_lifts_small_margins_and_keeps_large_ones_and_ties():
+    def q_hire(h, r, floor):
+        return float(teacher_target(logits(h, r), (HIRE, REJECT), floor).exp()[0, 0])
+
+    sig = lambda m: 1 / (1 + math.exp(-m))  # noqa: E731
+    assert abs(q_hire(0.5, 0.0, 4.0) - sig(4.0)) < 1e-6     # lifted, sign kept
+    assert abs(q_hire(0.0, 1.0, 4.0) - sig(-4.0)) < 1e-6    # a reject stays a reject
+    assert abs(q_hire(6.0, 0.0, 4.0) - sig(6.0)) < 1e-6     # already confident: unchanged
+    assert abs(q_hire(2.0, 2.0, 4.0) - 0.5) < 1e-7          # an exact tie stays a tie
+    assert abs(q_hire(0.5, 0.0, None) - sig(0.5)) < 1e-6    # no floor: the teacher itself
+    # The KL is the binary formula against the lifted target, and 0 when the student is there.
+    p, q = sig(0.5), sig(4.0)
+    want = q * math.log(q / p) + (1 - q) * math.log((1 - q) / (1 - p))
+    got = float(decision_kl(logits(0.5, 0.0), logits(0.3, 0.0), (HIRE, REJECT), 4.0))
+    assert abs(got - want) < 1e-6
+    assert float(decision_kl(logits(4.0, 0.0), logits(0.3, 0.0), (HIRE, REJECT), 4.0)) < 1e-7
+
+
+def test_trainer_with_a_floor_logs_the_lifted_target_and_its_share():
+    cls = trainer_class((HIRE, REJECT), 4.0)
+    trainer = cls.__new__(cls)
+    trainer.accelerator = SimpleNamespace(unwrap_model=lambda m: m)
+    trainer._distill_log = {}
+    model = Toy()
+    inputs = {"input_ids": torch.tensor([[0, 5]]), "teacher_ids": torch.tensor([[0, 5]]),
+              "is_free": torch.tensor([True])}
+    loss = trainer.compute_loss(model, inputs)  # table hire logit at token 5 is 2/9: |m| < 4
+    loss.backward()
+    _kl, _p, q = trainer._distill_log["free"][0]
+    assert abs(q - 1 / (1 + math.exp(-4.0))) < 1e-6
+    assert trainer._floor_log["free"] == [1.0]
+    assert float(loss) > 0 and model.adapter.grad < 0  # descent makes the hire more confident
 
 
 def test_one_prompt_per_device():
