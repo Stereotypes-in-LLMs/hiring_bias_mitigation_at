@@ -101,8 +101,41 @@ REPO=$PWD`.
 |---|---|---|---|---|
 | 1 | 5236801 | B3, both paths (nid006001), 13:55 wall: vLLM rollouts `train_runtime` 183.5 s, cost step 557 s (0.619 GPU-h measured); transformers rollouts `train_runtime` 200.5 s, cost step 268 s (0.298 GPU-h). 1,536 completions each (6 steps × 256), mean length 37 tokens, none clipped (`logs/xw-bench-grpo-5236801.out`) | 0.93 | 0.93 |
 | 2 | 5236800 | B2, both runs (nid006496), 55:50 wall: 4 GPUs under DDP `train_runtime` 549.6 s, 2.33 samples/s, cost step 850 s (0.945 GPU-h measured, 562 kJ); 1 GPU `train_runtime` 2,420 s, 0.53 samples/s, cost step 2,489 s (0.691 GPU-h, 453 kJ); 40 steps of 32 rows each, train_loss 0.066 / 0.070 (`logs/xw-bench-train-5236800.out`) | 3.72 | 4.65 |
+| 3 | 5236799 | B1, six runs (nid006001 node group, one GPU each), 43:03 wall: `vllm` `generate_s` 64.4 / 65.0 s (load 74 / 86 s, wall 150 / 161 s, 0.0126 kWh); `hf8` 1,065 / 1,117 s (load 15 s, wall 1,085 / 1,137 s, 0.0739 kWh); `hf32` 460 / 480 s (load 16 s, wall 481 / 502 s, 0.0488 kWh); 3,105 decisions each, all decided (`logs/xw-bench-audit-5236799-*.log`, `reports/throughput_b/accel/`) | 2.87 | 7.52 |
 
 ## 3. Result
+
+### B1. The audit's generation: vLLM against transformers' generate
+
+**Fact.** On the same 3,105 prompts and one GH200 each, steady-state generation took 64.7 s
+under the audits' engine (vLLM 0.31, prefix cache on; two repeats, 64.4 and 65.0 s), 1,091 s
+under transformers' generate in batches of 8 (1,065 and 1,117 s) and 470 s in batches of 32
+(460 and 480 s): **16.9×** against `hf8`, 7.3× against `hf32`; `hf32` alone is 2.3× over
+`hf8`. Requests per second 48.0 against 2.85 and 6.61; GPU-seconds per 1,000 decisions
+(generation only) 20.8 against 351 and 151; GPU energy per run 0.0126 against 0.0739 and
+0.0488 kWh (5.9× less than `hf8`). The engine's start-up is longer, 80 s against 15 s of model
+load, so end to end the ratio on this one-tenth audit is 7.1× (wall 156 against 1,111 s); on a
+full audit the start-up is paid once for ten times the prompts. Prefix cache hit rate 17.6%
+(408 k of 2.31 M prompt tokens).
+
+**Decisions.** The two vLLM repeats decide identically to each other and to the production base
+audit on all 3,105 rows (text identical on 92.7%, the cache and order effects of round 2). The
+transformers runs differ from vLLM on 7–10 rows (99.68–99.78% the same decision), from each
+other on 1 row (`hf8` r1 against r2) and across batch sizes on 10–11 rows; the hire/reject
+direction of the differing rows is balanced (4 against 3). Transformers' raw output ends in a
+newline that vLLM strips, so `same_text` between the two backends is 0 by construction; the
+JSON inside is the same (`reports/throughput_b/accel/identity.csv`).
+
+**Against the registration.** Several times faster, as expected, and the decisions differ on
+0.2–0.3% of rows, under the 1% registered as counting against.
+
+**Interpretation, not confirmed.** Continuous batching with paged KV cache keeps the GPU busy
+while static left-padded batches wait for their longest sequence; `hf32` recovering 2.3× by
+batch size alone says much of `hf8`'s loss is occupancy. The prefix cache's share is known from
+round 2 (1.10×), not separated here.
+
+**Unknown.** Two repeats each on different GPUs of one node; transformers at batch 64 or with
+sorted lengths; the ratio for the student models and for the 122B teacher.
 
 ### B2. Training: one GPU against four under DDP
 

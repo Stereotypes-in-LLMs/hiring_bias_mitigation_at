@@ -74,7 +74,7 @@ Self-distillation,dSFT,44,-0.328,-1.038,0.339,-0.285,\textminus{}0.285
 
 \pgfplotstableread[col sep=comma]{
 key,label,sub,speedup,pending,text
-audit,Audit generation,vLLM vs transformers generate,0,1,to run
+audit,Audit generation,vLLM vs transformers generate,16.87,0,\texttimes16.9
 train,Training, 4 vs 1 GPU,DDP, the same 32-row steps,4.4,0,\texttimes4.4
 grpo,GRPO rollouts,colocated vLLM vs transformers,1.09,0,\texttimes1.1
 }\AccelData
@@ -166,7 +166,7 @@ grpo,GRPO rollouts,colocated vLLM vs transformers,1.09,0,\texttimes1.1
 \newcommand{\AuditKWh}{0.105}
 \newcommand{\PrefixSpeedup}{1.10}
 \newcommand{\AgreeHFvLLM}{99.6--99.8}
-\newcommand{\ProjectGPUh}{547}
+\newcommand{\ProjectGPUh}{548}
 \newcommand{\ProjectKWh}{143}
 \newcommand{\PatchForwardsPerPair}{250}
 \newcommand{\AtPHeads}{896}
@@ -176,7 +176,7 @@ grpo,GRPO rollouts,colocated vLLM vs transformers,1.09,0,\texttimes1.1
 \newcommand{\PatchStepsOK}{21}
 \newcommand{\MarginsStepMin}{32}
 \newcommand{\MarginsPeakGiB}{87}
-\newcommand{\PatchTotalGPUh}{13.0}
+\newcommand{\PatchTotalGPUh}{13.2}
 \newcommand{\BackendUnstableMax}{0.22}
 % END GENERATED DATA
 
