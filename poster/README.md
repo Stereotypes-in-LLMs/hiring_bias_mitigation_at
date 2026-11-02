@@ -12,8 +12,12 @@ measurable work; DPO, GRPO and self-distillation, one stage each on SFT-v3 over 
 move the matched metric by −0.28 to −0.16 pp, so they are compared on the tail of the attribute
 effect, the overlap of their seeds' unstable sets, their route through the model (Marta
 Samoilenko's activation patching, sections 2A-2B for Base vs SFT-v3, 2C for the three methods)
-and their cost. Five model slots: Base, SFT-v3 and the three stages. DPO's seed 42 (−1.03 pp)
-appears only as the seed lesson. The Typst version below (44 x 35 in) came first and keeps the
+and their cost. The results column is conclusion first: a headline card (Base moved to SFT-v3's
+hire rate, 11.8% → 1.8%, and agreement 78.8% → 82.4%), then the nine post-SFT seeds at the
+common point with their paired CIs and 3-seed means (section 4A), the attribute effect's tail on
+a log axis (4B) and the seeds' overlap (4C); all drawn in TikZ from the generated tables, after
+the user's 2026-11-02 reference bundle. DPO's seed 42 (−1.03 pp at its own point) appears only
+as the seed lesson. The Typst version below (44 x 35 in) came first and keeps the
 older seven-slot layout.
 
 ## Typst version
