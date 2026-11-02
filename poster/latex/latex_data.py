@@ -1,9 +1,14 @@
 """Numbers for the LaTeX poster, written into ``main.tex`` between its GENERATED DATA markers.
 
-The poster's seven model slots: the base model, the best SFT, DPO and GRPO, and the distilled
-version of each. "Best" is the recipe with the lowest seed-mean change against SFT-v3 among
-those with three training seeds (reports/final/recipes.csv); it was chosen after the audits.
-A slot with no trained model is marked pending, never filled in.
+The poster's five model slots: the base model, SFT-v3 (every method's start and the standard's
+reference arm) and one stage after it: the best DPO, the best GRPO and self-distillation, three
+seeds each. "Best" is the recipe with the lowest seed-mean change against SFT-v3 among those
+with three training seeds (reports/final/recipes.csv); it was chosen after the audits.
+
+Beside the audits, the patching of one seed per method against SFT-v3 (reports/interp/distill/
+<spec>/, docs/RL_PATCHING.md, docs/PATCHING_DISTILL.md section 4, docs/DISTILL_PATCHING.md),
+the overlap of each method's unstable sets across its seeds (reports/seed_overlap/overlap.csv)
+and the margin scale per seed (reports/margin_readout/readout.csv) fill the PathData table.
 
 Per model, from the audits' greedy decisions (outputs/raw/<run>.parquet), as in
 reports/reference_metrics.csv: the share of unstable within-group sets and the agreement with
@@ -37,30 +42,27 @@ BASE_RUN = "Qwen3.5-9B--en--baseline--cscs"
 HF_V3_REVISION = "3b8b1c47189d00ca9cf4eb88195c0b84ff81d889"   # hf_v3_manifest.json was taken here
 SFT_V3 = "SFT-v3"
 
-# slot, recipe or arm label (None: not trained), colour, filled, short name. The poster has
-# one neutral family and one accent (main.tex, DESIGN): Base gray, the parents ink and every
-# distilled model green; names, weight and open / filled points tell the rows apart.
+# slot, recipe or arm label (None: the base model), colour, filled, short name. The poster has
+# one neutral family and one accent (main.tex, DESIGN): Base gray and SFT-v3 ink, both open;
+# every stage after SFT-v3 green and filled. Names and weight tell the rows apart.
 SLOTS = [
     ("Base", None, "gray", 0, "Base"),
-    ("Best SFT (SFT-v3)", SFT_V3, "ink", 0, "SFT"),
-    ("Best DPO", "DPO_V3_4880", "ink", 0, "DPO"),
-    ("Best GRPO", "GRPO+decay R4", "ink", 0, "GRPO"),
-    ("Distilled SFT", "Distill", "greenDark", 1, "dSFT"),
-    ("Distilled DPO (n=2)", "Distill on DPO", "greenDark", 1, "dDPO"),
-    ("Distilled GRPO (n=2)", "Distill on GRPO R4", "greenDark", 1, "dGRPO"),
+    ("SFT-v3", SFT_V3, "ink", 0, "SFT-v3"),
+    ("DPO", "DPO_V3_4880", "greenDark", 1, "DPO"),
+    ("GRPO + lr decay", "GRPO+decay R4", "greenDark", 1, "GRPO"),
+    ("Self-distillation", "Distill", "greenDark", 1, "dSFT"),
 ]
-# The students (docs/PATCHING_DISTILL.md, B; docs/DISTILL_FOLLOWUP.md, G): two seeds each, each
-# distilled from the parent arm of its own seed, in the order of reports/final/arms.csv.
-STUDENT_PARENT = {"Distill on DPO": ["DPO_V3_4880 s42", "DPO_V3_4880 s43"],
-                  "Distill on GRPO R4": ["GRPO+decay R4 s42", "GRPO+decay R4 s43"]}
+POST_SFT = [slot for slot, name, *_ in SLOTS if name not in (None, SFT_V3)]
+# The patched seed of each post-SFT method (reports/interp/distill/<spec>/), its seed-overlap
+# recipe (reports/seed_overlap/overlap.csv) and its margin-readout label prefix.
+PATCHED = {"DPO": ("dpo4880", "DPO_V3_4880", "DPO_V3_4880"),
+           "GRPO + lr decay": ("grpo_r4", "GRPO+decay R4", "GRPO+decay R4"),
+           "Self-distillation": ("distill43", "Distill", "distill")}
 # The reports/cost/params.csv row that counts each trained slot's LoRA (one stage).
 PARAMS_ROW = {SFT_V3: "qwen3.5-9b_en_only_sft_v3_additional",
               "DPO_V3_4880": "qwen3.5-9b_en_only_dpo_v3_4880",
               "GRPO+decay R4": "grpo_improve_r4_tipped_v2",
-              "Distill": "decision_distill_seed42",
-              "Distill on DPO": "decision_distill_dpo4880_seed42",
-              "Distill on GRPO R4": "decision_distill_grpo_r4_seed42"}
-
+              "Distill": "decision_distill_seed42"}
 
 def rows(rel: str) -> list[dict]:
     with open(ROOT / rel, newline="") as f:
@@ -136,87 +138,42 @@ def main() -> None:
     sft = table[SFT_V3]
     sft_data, sft_train = float(sft["data_gpu_h"]), float(sft["train_gpu_h"])
 
-    def parent_counts(label: str) -> pd.DataFrame:
-        run = arms[label]
-        f, r = counts(run), refm[run]
-        u, a = 100 * f.unstable.sum() / f.sets.sum(), 100 * f.agree.sum() / f.decided.sum()
-        if abs(u - float(r["unstable_within_group_pct"])) > 0.01 or \
-           abs(a - float(r["agree_gpt4o_pct"])) > 0.01:
-            raise SystemExit(f"{run}: {u:.3f}/{a:.3f} differ from reference_metrics")
-        return f.reindex(index, fill_value=0.0)
-
-    def parents_counts(name: str) -> pd.DataFrame:
-        """A student's parents, seed for seed with the student's own runs, averaged like per."""
-        labels = STUDENT_PARENT[name]
-        if len(labels) != len(labels_of(name)):
-            raise SystemExit(f"{name}: {len(labels_of(name))} student seeds, {len(labels)} parents")
-        return sum(parent_counts(lab) for lab in labels) / len(labels)
-
     def mean_of(name: str, col: str) -> float:
         labs = labels_of(name)
         return sum(float(table[lab][col]) for lab in labs) / len(labs)
 
-    model_rows, findings = [], {}
+    model_rows = []
     for slot, name, colour, filled, short in SLOTS:
-        pending = name is None and slot != "Base"
-        if pending:
-            model_rows.append(dict(model=slot, params="--", colour=colour, filled=filled,
-                                   pending=1, instability=0, ilo=0, ihi=0, quality=0, qlo=0,
-                                   qhi=0, data=0, patch=0, train=0, distill=0, eval=0,
-                                   short=short, seeds=0, hasparent=0, pu=0, pq=0))
-            continue
         u = ratio(per[slot], "unstable", "sets", w)
         q = ratio(per[slot], "agree", "decided", w)
-        runs = runs_of(name)
         if name is None:
-            p, data, train, dist = "--", 0.0, 0.0, 0.0
-        else:
+            p, data, train, post = "--", 0.0, 0.0, 0.0
+        elif name == SFT_V3:
             p = f"{int(params[PARAMS_ROW[name]]['params_trainable']) / 1e6:.1f}*"   # footnoted
-            if name == SFT_V3:
-                data, train, dist = sft_data, sft_train, 0.0
-            elif name in STUDENT_PARENT:
-                # final_table's train adds the parent's training: split it back out. The
-                # student's data_jobs list its parent's too (reports/final/arms.csv).
-                parent_train = np.mean([float(table[lab]["train_gpu_h"])
-                                        for lab in STUDENT_PARENT[name]])
-                data = sft_data + mean_of(name, "data_gpu_h")
-                train = sft_train + parent_train
-                dist = mean_of(name, "train_gpu_h") - parent_train
-            elif recipes[name]["family"] == "distill":
-                data = sft_data + mean_of(name, "data_gpu_h")
-                train, dist = sft_train, mean_of(name, "train_gpu_h")
-            else:
-                data = sft_data + mean_of(name, "data_gpu_h")
-                train, dist = sft_train + mean_of(name, "train_gpu_h"), 0.0
-        # A student's own parents (seeds 42 and 43), drawn open on the student's row: the Best
-        # DPO / Best GRPO rows are three-seed means, not what the students started from.
-        pu = pq = 0.0
-        if name in STUDENT_PARENT:
-            parent_per = parents_counts(name)
-            pu = ratio(parent_per, "unstable", "sets", w)[0]
-            pq = ratio(parent_per, "agree", "decided", w)[0]
+            data, train, post = sft_data, sft_train, 0.0
+        else:
+            # One stage on SFT-v3 merged: its own data beyond SFT-v3's and its own training
+            # (final_table.csv data_gpu_h and train_gpu_h of the recipe, seed means).
+            p = f"{int(params[PARAMS_ROW[name]]['params_trainable']) / 1e6:.1f}*"
+            data = sft_data + mean_of(name, "data_gpu_h")
+            train, post = sft_train, mean_of(name, "train_gpu_h")
         model_rows.append(dict(
             model=slot, params=p, colour=colour, filled=filled, pending=0,
             instability=round(u[0], 2), ilo=round(u[1], 2), ihi=round(u[2], 2),
             quality=round(q[0], 2), qlo=round(q[1], 2), qhi=round(q[2], 2),
-            data=round(data, 2), patch=0, train=round(train, 2), distill=round(dist, 2),
-            eval=round(eval_gpu_h, 2), short=short, seeds=len(runs),
-            hasparent=int(name in STUDENT_PARENT), pu=round(pu, 2), pq=round(pq, 2)))
+            data=round(data, 2), train=round(train, 2), post=round(post, 2),
+            eval=round(eval_gpu_h, 2), short=short, seeds=len(runs_of(name))))
 
-    # Paired change in agreement, distilled minus parent: SFT-v3 for the distilled SFT, and each
-    # student seed's own parent seed, not its method's three-seed mean.
+    # Paired change in agreement with GPT-4o, each post-SFT method minus SFT-v3: the same
+    # resampled candidates on both sides, seed-mean counts for the method.
     delta_rows = []
-    for method, student, parent in (
-            ("SFT", "Distilled SFT", "Best SFT (SFT-v3)"),
-            ("DPO", "Distilled DPO (n=2)", "Distill on DPO"),
-            ("GRPO", "Distilled GRPO (n=2)", "Distill on GRPO R4")):
-        a = per[student]
-        b = per[parent] if parent in per else parents_counts(parent)
+    for slot in POST_SFT:
+        a, b = per[slot], per["SFT-v3"]
         point = 100 * (a.agree.sum() / a.decided.sum() - b.agree.sum() / b.decided.sum())
         draws = 100 * ((w @ a.agree.to_numpy()) / (w @ a.decided.to_numpy())
                        - (w @ b.agree.to_numpy()) / (w @ b.decided.to_numpy()))
         lo, hi = np.percentile(draws, [2.5, 97.5])
-        delta_rows.append(dict(method=method, colour="greenDark", pending=0, delta=round(point, 2),
+        delta_rows.append(dict(method=slot, colour="greenDark", pending=0, delta=round(point, 2),
                                lo=round(lo, 2), hi=round(hi, 2)))
 
     # Matched-hire-rate effects against SFT-v3 (the standard), per seed and as seed means.
@@ -226,36 +183,74 @@ def main() -> None:
         return ("\\textminus{}" if v < 0 else "+") + f"{abs(v)}"
 
     comp = {(r["run"], r["against"]): r for r in rows("reports/comparisons.csv")}
-    layers = comp[(arms["Distill layers 0-20 s43"], arms["Distill s43"])]
-
-    def interval(run: str, against: str) -> str:
-        c = comp[(run, against)]
-        return f"{tm(c['delta_pp'])} [{tm(c['ci_low_pp'])}, {tm(c['ci_high_pp'])}]"
-
-    def student_vs_parents(name: str) -> str:
-        """Seed mean of each student seed against its own parent seed (compare-arms), with seeds."""
-        vals = [float(comp[(arms[st], arms[pa])]["delta_pp"])
-                for st, pa in zip(labels_of(name), STUDENT_PARENT[name], strict=True)]
-        return f"{tm(sum(vals) / len(vals))} ({' / '.join(tm(v) for v in vals)})"
 
     def per_seed(run_of, against_of) -> list[float]:
         return [float(comp[(run_of(s), against_of(s))]["delta_pp"]) for s in (42, 43, 44)]
 
+    def rng(vals, fmt: str) -> str:
+        return f"{min(vals):{fmt}}--{max(vals):{fmt}}"
+
     full = lambda s: arms[f"Distill s{s}"]  # noqa: E731
     window_only = per_seed(lambda s: arms[f"Distill layers 15-20 s{s}"], full)
     window_removed = per_seed(lambda s: f"{full(s)}_xw15_20", full)   # docs/PATCHING_DISTILL.md, F
-    widen = pd.read_csv(ROOT / "reports/margin_readout/readout.csv")
-    widen = widen[widen["label"].str.match(r"(DPO_V3_4880|GRPO\+decay R4) s4[234]$")]
-    assert len(widen) == 6, widen["label"].tolist()
-    window_params = int(params["decision_distill_l15_20_seed42"]["params_trainable"])
-    lp = params["decision_distill_l0_20_seed43"]
+    window_kept = per_seed(lambda s: f"{full(s)}_xk15_20", full)      # docs/DISTILL_FOLLOWUP.md, H
+    readout = pd.read_csv(ROOT / "reports/margin_readout/readout.csv")
+    readout = readout.set_index("label")["a_median"]
+    overlap = pd.read_csv(ROOT / "reports/seed_overlap/overlap.csv")
+    # Rescaling SFT-v3's margins leaves the matched statistic unchanged (docs/SCALE_CONTROL.md, P1).
+    sc = pd.read_csv(ROOT / "reports/scale_control/summary.csv")
+    zero = (sc[[c for c in sc.columns if c.endswith("_delta")]] == 0).all().all()
+
+    # One row per post-SFT method: the patched seed's route and tail against SFT-v3, the margin
+    # scale over its three seeds, and how much its seeds' unstable sets overlap.
+    path_rows, scales, tails, jacs, borders, profiles, ranks = [], {}, {}, {}, {}, {}, {}
+    for slot, short in ((s, sh) for s, n, _c, _f, sh in SLOTS if s in POST_SFT):
+        spec, recipe, prefix = PATCHED[slot]
+        sens = pd.read_csv(ROOT / f"reports/interp/distill/{spec}/sensitivity.csv")
+        comps = pd.read_csv(ROOT / f"reports/interp/distill/{spec}/component_summary.csv")
+        assert len(sens) == 3 and len(comps) == 3, spec
+        a_med = [float(readout[f"{prefix} s{s}"]) for s in (42, 43, 44)]
+        jac = overlap[(overlap["recipe"] == recipe) & overlap["seeds"].str.contains("/")]["jaccard"]
+        border = overlap[(overlap["recipe"] == recipe) & ~overlap["seeds"].str.contains("/")]
+        border = 100 * border["on_borderline_share"]
+        assert len(jac) == 3 and len(border) == 3, recipe
+        p99 = sens["r_attr_p99"]
+        scales[slot], tails[slot] = rng(a_med, ".2f"), rng(p99, ".1f" if p99.max() >= 1 else ".2f")
+        jacs[slot], borders[slot] = rng(jac, ".2f"), rng(border, ".0f") + "\\%"
+        profiles[slot] = rng(comps["profile_r"], ".2f")
+        ranks[slot] = " / ".join(str(int(v)) for v in comps["l15h11_rank_spec"])
+        same = (comps["profile_r"] >= 0.80).all() and (comps["l15h11_rank_spec"] <= 3).all()
+        route = ("same (compressed)" if same and float(sens["r_scale"].iloc[0]) < 1
+                 else "same route" if same else "shifted later")
+        path_rows.append(dict(
+            method=slot, short=short, rmean=round(float(comps["profile_r"].mean()), 3),
+            rrange=profiles[slot], ranks=ranks[slot], scale=f"{float(sens['r_scale'].iloc[0]):.2f}",
+            route=route, p99mean=round(float(sens["r_attr_p99"].mean()), 2), p99range=tails[slot],
+            jmean=round(float(jac.mean()), 3), jrange=jacs[slot], border=borders[slot]))
+    rl = [PATCHED[s][0] for s in ("DPO", "GRPO + lr decay")]
+    rl_p99 = pd.concat(
+        pd.read_csv(ROOT / f"reports/interp/distill/{spec}/sensitivity.csv")["r_attr_p99"]
+        for spec in rl)
+    rl_jac = overlap[overlap["recipe"].isin(["DPO_V3_4880", "GRPO+decay R4"])
+                     & overlap["seeds"].str.contains("/")]["jaccard"]
+    base_cmp = json.loads((HERE.parent / "base_compare.json").read_text())
+    post = ("DPO_V3_4880", "GRPO+decay R4", "Distill")
+    post_means = [float(recipes[n]["delta_common_pp"]) for n in post]
+    post_gpu = [mean_of(n, "train_gpu_h") for n in post]
+    dpo_impl = pd.read_csv(ROOT / "reports/interp/distill/dpo4880/component_summary.csv")
+    dpo_late = dpo_impl.set_index("contrast").loc["mil_combat_civ_impl", "top3_heads_spec"]
+    dpo_late = dpo_late.split()[0]
+
+    window_params = params["decision_distill_l15_20_seed42"]
     d = recipes["Distill"]
     dseeds = [table[lab] for lab in labels_of("Distill")]
+    dpo_seeds = [table[lab] for lab in labels_of("DPO_V3_4880")]
+    all_seeds = [table[lab] for n in post for lab in labels_of(n)]
     raw = pd.read_parquet(RAW / f"{arms[SFT_V3]}.parquet",
                           columns=[*SET, "protected_attr", "candidate_id", "job_id"])
     att = raw[raw["condition"] != "attr_free"]
     values = att.groupby("protected_group")["protected_attr"].nunique()
-    findings_data = {
+    findings = {
         "NPairs": f"{raw['pair_id'].nunique():,}",
         "NCandidates": f"{raw['candidate_id'].nunique():,}",
         "NPrompts": f"{len(raw):,}",
@@ -269,40 +264,64 @@ def main() -> None:
     # The released training data (Stereotypes-in-LLMs/hiring-bias-mitigation-v3): its manifest,
     # pinned at the Hub revision in HF_V3_REVISION, copied to hf_v3_manifest.json.
     rel = json.loads((HERE / "hf_v3_manifest.json").read_text())["files"]
-    findings_data.update({
+    findings.update({
         "RelSFT": f"{rel['data/sft/train.parquet']['rows']:,}",
         "RelDPO": f"{rel['data/dpo/train.parquet']['rows']:,}",
         "RelRL": f"{rel['data/rl/train.parquet']['rows']:,}",
     })
     # The poster quotes the common point: every arm moved to SFT-v3's own hire rate (the user,
     # 2026-11-01; docs/DISTILL_FOLLOWUP.md, section 0), not each arm's own point.
-    findings = {**findings_data,
+    agree = {r["method"]: r for r in delta_rows}
+    findings.update({
         "CommonHire": f"{float(dseeds[0]['common_hire_rate_pct']):.2f}",
         "DistillMatched": tm(d["delta_common_pp"]),
         "DistillSeeds": " / ".join(tm(s["delta_common_pp"]) for s in dseeds),
-        "DistillSeedsBelowZero": str(sum(float(s["delta_common_pp"]) < 0 for s in dseeds)),
-        "DistillCIBelowZero": str(sum(float(s["ci_common_high"]) < 0 for s in dseeds)),
         "DPOMatched": tm(recipes["DPO_V3_4880"]["delta_common_pp"]),
         "GRPOMatched": tm(recipes["GRPO+decay R4"]["delta_common_pp"]),
-        "DistillExtraGPUh": f"{float(d['extra_gpu_h']):.1f}",
+        # Seeds whose common-point interval lies below 0, of the nine post-SFT seeds.
+        "CommonCIBelow": str(sum(float(s["ci_common_high"]) < 0 for s in all_seeds)),
+        # DPO at its own point, the seed that read as a result and its replicates.
+        "DPOSeedsOwn": " / ".join(tm(s["delta_own_pp"]) for s in dpo_seeds),
+        "DPOBestOwn": tm(min(float(s["delta_own_pp"]) for s in dpo_seeds)),
+        "AgreeDPO": tm(agree["DPO"]["delta"]),
+        "AgreeGRPO": tm(agree["GRPO + lr decay"]["delta"]),
+        "AgreeDistill": tm(agree["Self-distillation"]["delta"]),
+        "AgreeAbsMax": f"{max(abs(float(r['delta'])) for r in delta_rows):.2f}",
+        "PostDPO": f"{mean_of('DPO_V3_4880', 'train_gpu_h'):.1f}",
+        "PostGRPO": f"{mean_of('GRPO+decay R4', 'train_gpu_h'):.1f}",
         "DistillTrainGPUh": f"{mean_of('Distill', 'train_gpu_h'):.1f}",
-        "LayersControl": (f"{tm(layers['delta_pp'])} "
-                          f"[{tm(layers['ci_low_pp'])}, {tm(layers['ci_high_pp'])}]"),
-        "LayersParams": f"{int(lp['params_trainable']) / 1e6:.1f}",
-        "LayersPct": f"{float(lp['trainable_pct_of_text']):.3f}",
+        "DistillExtraGPUh": f"{float(d['extra_gpu_h']):.1f}",
         "StandardParams": f"{int(params['decision_distill_seed42']['params_trainable']) / 1e6:.1f}",
         "StandardPct": f"{float(params['decision_distill_seed42']['trainable_pct_of_text']):.3f}",
-        "WindowParams": f"{window_params / 1e6:.1f}",
+        "WindowParams": f"{int(window_params['params_trainable']) / 1e6:.1f}",
         "WindowOnly": tm(sum(window_only) / 3),
-        "WindowOnlySeeds": " / ".join(tm(v) for v in window_only),
         "WindowRemoved": tm(sum(window_removed) / 3),
-        "WindowRemovedSeeds": " / ".join(tm(v) for v in window_removed),
-        "WidenRange": f"{widen['a_median'].min():.1f}--{widen['a_median'].max():.1f}",
-        "StudentDPO": student_vs_parents("Distill on DPO"),
-        "StudentGRPO": student_vs_parents("Distill on GRPO R4"),
-        "DistillAgreeDelta": tm(delta_rows[0]["delta"]),
-        "DistillAgreeCI": f"[{tm(delta_rows[0]['lo'])}, {tm(delta_rows[0]['hi'])}]",
-    }
+        "WindowKept": tm(sum(window_kept) / 3),
+        "WidenRange": rng([readout[f"{p} s{s}"] for p in ("DPO_V3_4880", "GRPO+decay R4")
+                           for s in (42, 43, 44)], ".1f"),
+        "ScaleControl": "exactly 0" if zero else "not 0",
+        "SFTTrainGPUh": f"{sft_train:.1f}",
+        # The take-home: Base moved to SFT-v3's hire rate against SFT-v3 (poster/base_compare.json,
+        # operating_point_control.matched_comparison), and the three post-SFT means' span.
+        "BaseAtSFT": f"{float(base_cmp['sft_v3']['base_unstable_pct']):.1f}",
+        "SFTOwn": f"{float(base_cmp['sft_v3']['unstable_pct']):.1f}",
+        "SFTvsBase": (f"{tm(base_cmp['sft_v3']['delta_pp'])} [{tm(base_cmp['sft_v3']['ci'][0])}, "
+                      f"{tm(base_cmp['sft_v3']['ci'][1])}]"),
+        "PostLow": tm(min(post_means)), "PostHigh": tm(max(post_means)),
+        "PostGPUhLow": f"{min(post_gpu):.1f}", "PostGPUhHigh": f"{max(post_gpu):.1f}",
+        "TailRL": rng(rl_p99, ".1f"), "JacRL": rng(rl_jac, ".2f"),
+        "DPOLateHead": dpo_late,
+        **{f"Scale{k}": scales[s] for k, s in (("DPO", "DPO"), ("GRPO", "GRPO + lr decay"),
+                                                ("Distill", "Self-distillation"))},
+        **{f"Tail{k}": tails[s] for k, s in (("DPO", "DPO"), ("GRPO", "GRPO + lr decay"),
+                                              ("Distill", "Self-distillation"))},
+        **{f"Jac{k}": jacs[s] for k, s in (("DPO", "DPO"), ("GRPO", "GRPO + lr decay"),
+                                            ("Distill", "Self-distillation"))},
+        **{f"Border{k}": borders[s] for k, s in (("DPO", "DPO"), ("GRPO", "GRPO + lr decay"),
+                                                  ("Distill", "Self-distillation"))},
+        **{f"Prof{k}": profiles[s] for k, s in (("DPO", "DPO"), ("GRPO", "GRPO + lr decay"),
+                                                 ("Distill", "Self-distillation"))},
+    })
 
     def tex_table(name: str, recs: list[dict]) -> str:
         cols = list(recs[0])
@@ -310,7 +329,8 @@ def main() -> None:
         return f"\\pgfplotstableread[col sep=comma]{{\n{','.join(cols)}\n{body}\n}}\\{name}\n"
 
     out = ["% Generated by poster/latex/latex_data.py -- do not edit; rerun the script.",
-           tex_table("ModelData", model_rows), tex_table("DeltaData", delta_rows)]
+           tex_table("ModelData", model_rows), tex_table("DeltaData", delta_rows),
+           tex_table("PathData", path_rows)]
     for k, v in findings.items():
         out.append(f"\\newcommand{{\\{k}}}{{{v}}}")
     # Written into main.tex between its markers, so the poster is one self-contained file.

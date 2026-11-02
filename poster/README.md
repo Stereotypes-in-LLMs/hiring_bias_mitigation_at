@@ -6,7 +6,15 @@ into its GENERATED DATA block and checks every run against `reports/reference_me
 Upload `main.tex` alone to Overleaf, or run `pdflatex` twice. It has not been compiled on Daint
 (no TeX there). Two colours only: a blue-grey neutral family and one green accent; a model
 is told apart by its name, weight and open / filled points (the DESIGN block in `main.tex`).
-The Typst version below (44 x 35 in) came first.
+
+Its story (the user, 2026-11-02): a take-home and three findings. One SFT stage does the
+measurable work; DPO, GRPO and self-distillation, one stage each on SFT-v3 over three seeds,
+move the matched metric by −0.28 to −0.16 pp, so they are compared on the tail of the attribute
+effect, the overlap of their seeds' unstable sets, their route through the model (Marta
+Samoilenko's activation patching, sections 2A-2B for Base vs SFT-v3, 2C for the three methods)
+and their cost. Five model slots: Base, SFT-v3 and the three stages. DPO's seed 42 (−1.03 pp)
+appears only as the seed lesson. The Typst version below (44 x 35 in) came first and keeps the
+older seven-slot layout.
 
 ## Typst version
 
