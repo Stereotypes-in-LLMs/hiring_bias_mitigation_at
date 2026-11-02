@@ -138,10 +138,10 @@ project allocated {n['gpu_h_total']} GPU-h in total ({_doc("reports/cost/by_stag
 **Inside the model** (Marta Samoilenko's activation patching). In the base model the attribute
 reaches the decision at layers {n['pathway_layers']} through a hub in layer-15 attention (head
 L15.H11), read out by MLP 31. SFT-v3 removes {n['sft_v3_effect_removed']} of the per-pair
-effect on the patched pairs, and keeps the route there ({_doc("docs/INTERP_SFT_V3.md")}); on all
+effect on the patched pairs, with a similar patching profile there ({_doc("docs/INTERP_SFT_V3.md")}); on all
 {n['audit_pairs']} pairs it removes {n['sft_v3_effect_removed_all']}
 ({_doc("poster/effect_share.py")}). Distillation keeps {n['distill_kept']} of SFT-v3's effect
-on the same route ({_doc("docs/DISTILL_PATCHING.md")}). DPO_V3_4880 and GRPO + decay R4 widen the
+with a similar patching profile ({_doc("docs/DISTILL_PATCHING.md")}). DPO_V3_4880 and GRPO + decay R4 widen the
 median attribute-free margin {n['dpo_scale']} and {n['grpo_scale']} at seed 42
 ({_doc("docs/RL_PATCHING.md")}; {_doc("docs/PATCHING_DISTILL.md")}, section 4), and
 {n['widen_range']} over all six of their seeds, on the standard's margins

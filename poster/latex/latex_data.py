@@ -212,11 +212,13 @@ def main() -> None:
     dpo_late = dpo_impl.set_index("contrast").loc["mil_combat_civ_impl", "top3_heads_spec"]
     dpo_late = dpo_late.split()[0]
     path_rows, scales, tails, jacs, borders, profiles, ranks = [], {}, {}, {}, {}, {}, {}
+    n_contrasts: set[int] = set()
     for slot, short in ((s, sh) for s, n, _c, _f, sh in SLOTS if s in POST_SFT):
         spec, recipe, prefix = PATCHED[slot]
         sens = pd.read_csv(ROOT / f"reports/interp/distill/{spec}/sensitivity.csv")
         comps = pd.read_csv(ROOT / f"reports/interp/distill/{spec}/component_summary.csv")
-        assert len(sens) == 3 and len(comps) == 3, spec
+        assert len(sens) == len(comps) >= 3, spec
+        n_contrasts.add(len(sens))
         a_med = [float(readout[f"{prefix} s{s}"]) for s in (42, 43, 44)]
         jac = overlap[(overlap["recipe"] == recipe) & overlap["seeds"].str.contains("/")]["jaccard"]
         border = overlap[(overlap["recipe"] == recipe) & ~overlap["seeds"].str.contains("/")]
@@ -228,8 +230,8 @@ def main() -> None:
         profiles[slot] = rng(comps["profile_r"], ".2f")
         ranks[slot] = " / ".join(str(int(v)) for v in comps["l15h11_rank_spec"])
         same = (comps["profile_r"] >= 0.80).all() and (comps["l15h11_rank_spec"] <= 3).all()
-        route = ("same (compressed)" if same and float(sens["r_scale"].iloc[0]) < 1
-                 else "same route" if same else f"partly later ({dpo_late})")
+        route = ("similar (attenuated)" if same and float(sens["r_scale"].iloc[0]) < 1
+                 else "similar profile" if same else f"partly later ({dpo_late})")
         path_rows.append(dict(
             method=slot, short=short, rmean=round(float(comps["profile_r"].mean()), 3),
             rrange=profiles[slot], ranks=ranks[slot], scale=f"{float(sens['r_scale'].iloc[0]):.2f}",
@@ -361,34 +363,49 @@ def main() -> None:
                    if i > 0), default=len(sentence))
         return tex(sentence[:cut].rstrip()) + " \\ldots"
 
+    def cue(sentence: str, other: str) -> str:
+        """The clipped sentence, the words it does not share with the other one emphasised."""
+        words = clipped(sentence).split(" ")
+        theirs = clipped(other).split(" ")
+        assert len(words) == len(theirs), (words, theirs)
+        out, faint = [], []
+        for w, o in zip(words, theirs, strict=True):
+            if w == o:
+                faint.append(w)
+                continue
+            if faint:
+                out.append(f"\\Faint{{{' '.join(faint)}}}")
+                faint = []
+            out.append(w)
+        if faint:
+            out.append(f"\\Faint{{{' '.join(faint)}}}")
+        return " ".join(out)
+
     cases = json.loads((HERE.parent / "cases.json").read_text())
     case = next(c for c in cases["cases"] if c["group"] == cases["poster_case"])
     case_counts = cases["counts"]
     sft_reason = case["sft_v3"]["feedback"].split(". ")[0].rstrip(".") + "."
-    ev = case["cv_positions"][0]
-    first_years = years = case["cv_years_covered"]
-    from datetime import date as _date
+    def month(t: str) -> str:
+        return f"{t[3:5]}/{t[6:]}"
 
-    def _d(t: str) -> _date:
-        d, m, y = (int(v) for v in t.split("."))
-        return _date(y, m, d)
-
-    a, b = re.split(r"\s*[-–]\s*", ev["dates"])
-    first_years = round((_d(b) - _d(a)).days / 365.25, 1)
-    last = case["cv_positions"][-1]["dates"].split("-")[-1].split("–")[-1]
-    detail = ev["detail"].rstrip(". ")
+    roles = []
+    for pos in case["cv_positions"]:
+        a, b = re.split(r"\s*[-–]\s*", pos["dates"])
+        roles.append(f"{tex(pos['position'])}, {month(a)}--{month(b)}")
     decisions = case["base"]["decisions"]
     rejected = [v for v, d in decisions.items() if d == "reject"]
     findings.update({
         "CaseJob": tex(case["job_position"]),
-        "CaseRequirement": tex(case["job_requirement"].split(", account")[0]),
-        "CaseEvidence": tex(f"{len(case['cv_positions'])} dated sales roles, "
-                           f"{a[3:5]}/{a[6:]} to {last[3:5]}/{last[6:]}, {years} years covered; "
-                           f"first: {ev['position']}, "
-                           f"{detail[:1].lower()}{detail[1:]} "
-                           f"({first_years} years)"),
-        "CaseHireSentence": clipped(case["base"]["hire"]["sentence"]),
-        "CaseRejectSentence": clipped(case["base"]["reject"]["sentence"]),
+        "CaseRequirement": tex(case["job_requirement"].split(", account")[0]
+                                  .replace("years' of", "years of")),
+        # The CV's dated roles as written and the years they cover, overlaps counted once
+        # (pick_cases.py, years_covered): the reader checks the requirement against the CV.
+        "CaseRoles": "; ".join(roles),
+        "CaseYears": f"{case['cv_years_covered']}",
+        "CaseHireSentence": cue(case["base"]["hire"]["sentence"],
+                                case["base"]["reject"]["sentence"]),
+        "CaseRejectSentence": cue(case["base"]["reject"]["sentence"],
+                                  case["base"]["hire"]["sentence"]),
         "CaseHireReason": tex(case["base"]["hire"]["feedback"]),
         "CaseRejectReason": tex(case["base"]["reject"]["feedback"]),
         "CaseSFTReason": tex(sft_reason),
@@ -442,9 +459,28 @@ def main() -> None:
     audits = [json.loads((ROOT / f"reports/interp/margins_summary-{spec}-grid-en.json")
                          .read_text())["audit"]
               for spec in ("sft_v3", "dpo4880", "grpo_r4", "distill43")]
+    # Interventions per pair in the poster's patched runs (scripts/interp/10_patch.py): the
+    # real-patching sweep (real-*.parquet) and the head verification (verify.parquet), per pair.
+    evals, real_n, verify_n = [], [], []
+    patch_root = RAW.parent / "interp/patching"
+    for spec in ("sft_v3", *(v[0] for v in PATCHED.values())):
+        for run in sorted((patch_root / spec / "grid").glob("*-n64-s42-sel_sft_v3")):
+            if not (run / "verify.parquet").exists():  # a run still in progress
+                continue
+            real = pd.concat(pd.read_parquet(f, columns=["pair_uid"]) for f in run.glob("real-*"))
+            ver = pd.read_parquet(run / "verify.parquet", columns=["pair_uid"])
+            r, v = real.groupby("pair_uid").size(), ver.groupby("pair_uid").size()
+            assert r.nunique() == 1 and v.nunique() == 1, run
+            real_n.append(int(r.iloc[0]))
+            verify_n.append(int(v.iloc[0]))
+            evals.append(real_n[-1] + verify_n[-1])
+    assert len(evals) >= 12, len(evals)
     backend_gap = max(abs(a["unstable_sets_hf_pct"] - a["unstable_sets_audit_pct"]) for a in audits)
     findings.update({
-        "PatchForwardsPerPair": str(33 * 2 + 64 * 2 + (24 * 2 + 8)),
+        "NPatchContrasts": str(max(n_contrasts)),
+        "PatchEvalsPerPair": rng(evals, "d"),
+        "PatchRealPerPair": rng(real_n, "d"),
+        "PatchVerifyPerPair": rng(verify_n, "d"),
         "AtPHeads": f"{128 + 768:,}",
         "PatchStepMin": f"{patch_ok['wall_s'].median() / 60:.0f}",
         "PatchStepGPUh": f"{patch_ok['gpu_h'].median():.2f}",
@@ -474,10 +510,10 @@ def main() -> None:
         return a / b if a and b else None
 
     for key, label, sub, value in (
-            ("audit", "Audit generation", "vLLM vs transformers generate", b1),
-            ("train", "Training, 4 vs 1 GPU", "DDP, the same 32-row steps",
+            ("audit", "Audit generation", "vLLM vs HF transformers", b1),
+            ("train", "Training: 4 vs 1 GPU", "DDP; same 32-row steps",
              speedup_ratio("bench-distill-ddp1", "bench-distill-ddp4")),
-            ("grpo", "GRPO rollouts", "colocated vLLM vs transformers",
+            ("grpo", "GRPO rollouts", "colocated vLLM vs HF",
              speedup_ratio("bench-grpo-rollout-hf", "bench-grpo-rollout-vllm"))):
         accel_rows.append(dict(key=key, label=label, sub=sub,
                                speedup=round(value, 2) if value else 0,
@@ -486,6 +522,9 @@ def main() -> None:
 
     def tex_table(name: str, recs: list[dict]) -> str:
         cols = list(recs[0])
+        # col sep=comma: a comma inside a value would shift every later column of its row.
+        bad = [(c, r[c]) for r in recs for c in cols if "," in str(r[c])]
+        assert not bad, (name, bad)
         body = "\n".join(",".join(str(r[c]) for c in cols) for r in recs)
         return f"\\pgfplotstableread[col sep=comma]{{\n{','.join(cols)}\n{body}\n}}\\{name}\n"
 

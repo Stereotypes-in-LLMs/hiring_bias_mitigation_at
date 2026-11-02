@@ -119,10 +119,10 @@ project allocated 540 GPU-h in total ([`reports/cost/by_stage.csv`](https://gith
 **Inside the model** (Marta Samoilenko's activation patching). In the base model the attribute
 reaches the decision at layers 15–20 through a hub in layer-15 attention (head
 L15.H11), read out by MLP 31. SFT-v3 removes 61–77% of the per-pair
-effect on the patched pairs, and keeps the route there ([`docs/INTERP_SFT_V3.md`](https://github.com/Stereotypes-in-LLMs/hiring_bias_mitigation_at/blob/main/docs/INTERP_SFT_V3.md)); on all
+effect on the patched pairs, with a similar patching profile there ([`docs/INTERP_SFT_V3.md`](https://github.com/Stereotypes-in-LLMs/hiring_bias_mitigation_at/blob/main/docs/INTERP_SFT_V3.md)); on all
 450 pairs it removes 52–66%
 ([`poster/effect_share.py`](https://github.com/Stereotypes-in-LLMs/hiring_bias_mitigation_at/blob/main/poster/effect_share.py)). Distillation keeps 35–41% of SFT-v3's effect
-on the same route ([`docs/DISTILL_PATCHING.md`](https://github.com/Stereotypes-in-LLMs/hiring_bias_mitigation_at/blob/main/docs/DISTILL_PATCHING.md)). DPO_V3_4880 and GRPO + decay R4 widen the
+with a similar patching profile ([`docs/DISTILL_PATCHING.md`](https://github.com/Stereotypes-in-LLMs/hiring_bias_mitigation_at/blob/main/docs/DISTILL_PATCHING.md)). DPO_V3_4880 and GRPO + decay R4 widen the
 median attribute-free margin 2.7× and 2.2× at seed 42
 ([`docs/RL_PATCHING.md`](https://github.com/Stereotypes-in-LLMs/hiring_bias_mitigation_at/blob/main/docs/RL_PATCHING.md); [`docs/PATCHING_DISTILL.md`](https://github.com/Stereotypes-in-LLMs/hiring_bias_mitigation_at/blob/main/docs/PATCHING_DISTILL.md), section 4), and
 ×2.0–2.7 over all six of their seeds, on the standard's margins
