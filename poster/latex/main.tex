@@ -344,36 +344,38 @@ Gender / implicit,0.72,0.20,\textminus{}72\%
 \Txt[text=greenDark]{72}{845}{352}{12.7}{\bfseries New: seed sweeps; controlled overlap; editing probes.}
 
 % -------------------------- 2. BEHAVIOURAL RESULTS ---------------------------
-\Rect{472}{155}{800}{407}{panel}
+\Rect{472}{155}{800}{413}{panel}
 \Section{472}{155}{800}{24}{2. Behavioural results}
 \Txt[text=greenDark]{488}{207}{768}{24}{\bfseries SFT delivers the main stability gain}
-\Rect[draw=greenDark,line width=1bp]{488}{244}{768}{74}{greenPale}
-\Txt[text=greenDark]{499}{253}{260}{13.3}{\bfseries Unstable at \CommonHire\% hire}
-\Txt[text=ink]{499}{277}{260}{34}{\bfseries \BaseAtSFT\% \textrightarrow{} \SFTOwn\%}
-\Txt[text=greenDark]{769}{253}{257}{13.3}{\bfseries Base to SFT; paired 95\% CI}
-\Txt[text=ink]{769}{285}{257}{18}{\bfseries \SFTvsBase{} pp}
-\Txt[text=greenDark]{1034}{250}{216}{13.3}{\bfseries GPT-4o agreement [7]\\greedy, at own hire rates}
-\Txt[text=ink]{1034}{285}{216}{28}{\bfseries \BaseAgree\% \textrightarrow{} \SFTAgree\%}
-\node[anchor=north west,inner sep=0pt] at (472,321)
+\Rect[draw=greenDark,line width=1bp]{488}{238}{768}{72}{greenPale}
+\Txt[text=greenDark]{499}{247}{260}{13.3}{\bfseries Unstable at \CommonHire\% hire}
+\Txt[text=ink]{499}{269}{260}{34}{\bfseries \BaseAtSFT\% \textrightarrow{} \SFTOwn\%}
+\Txt[text=greenDark]{769}{247}{257}{13.3}{\bfseries Base to SFT; paired 95\% CI}
+\Txt[text=ink]{769}{277}{257}{18}{\bfseries \SFTvsBase{} pp}
+\Txt[text=greenDark]{1034}{244}{216}{13.3}{\bfseries GPT-4o agreement [7]\\greedy, at own hire rates}
+\Txt[text=ink]{1034}{277}{216}{28}{\bfseries \BaseAgree\% \textrightarrow{} \SFTAgree\%}
+\node[anchor=north west,inner sep=0pt] at (472,309)
   {\includegraphics[width=16.666667in,keepaspectratio]{figures/behaviour.pdf}};
-\Txt{488}{533}{360}{13.3}{Paired 95\% candidate-bootstrap CIs at 22.51\% hire.\\Seeds 42/43/44 top to bottom; 1 of 9 excludes zero.}
-\Txt{870}{533}{386}{13.3}{Thick: seed means; thin: seeds.\\\textbf{DPO worsens at 31--35\% hire.}}
+\Txt{488}{518}{374}{12.7}{Paired 95\% candidate-bootstrap CIs; seeds 42/43/44 top to bottom. Only 1 of 9 excludes zero.}
+\Txt{880}{518}{376}{12.7}{Mean $\Delta$ vs SFT at 22.51\% hire: \PostLow{} to \PostHigh{} pp. Thick curves: seed means; thin: seeds.}
+\Txt[text=ink]{488}{549}{768}{15.3}{\bfseries Additional gains are uncertain and depend on hire rate; DPO worsens at 31--35\%.}
 
 % -------------------------- 3. RESIDUAL RISK ---------------------------------
 \Rect{472}{570}{800}{290}{panel}
 \Section{472}{570}{800}{24}{3. Residual risk changes with training}
 \node[anchor=north west,inner sep=0pt] at (472,608)
   {\includegraphics[width=16.666667in,keepaspectratio]{figures/residual.pdf}};
-\Txt{488}{771}{768}{13.3}{Left: each seed's own greedy threshold (seeds 43/44); control: SFT recalibrated to that seed's hire rate. Right: DPO/GRPO show lower p50 and higher p99 absolute logit effects; four contrasts \texttimes{} 450 pairs, one checkpoint per stage.}
-\Rect{488}{808}{768}{52}{greenPale}
-\Txt[text=ink]{498}{814}{748}{16}{\bfseries \BorderDistill{} of distillation's unstable sets lie in \NBorder{} borderline pairs.}
-\Txt{498}{837}{748}{13.3}{Each model's own threshold; \NBorder{}/\NPairs{} pairs have an attribute-free SFT margin below 2 logits.}
+\Txt[text=ink]{488}{768}{768}{15.3}{\bfseries Training changes which sets are unstable beyond the rate-matched SFT control.}
+\Txt{488}{789}{768}{12.7}{Seeds 43/44; SFT recalibrated to each hire rate: overlap 0.26--0.45 vs control 0.83--0.91.\\Tails: DPO/GRPO lower p50, higher p99; 4 contrasts \texttimes{} 450 pairs, one checkpoint/stage; spans = ranges.}
+\Rect{488}{824}{768}{36}{greenPale}
+\Txt[text=ink]{498}{827}{748}{15}{\bfseries \BorderDistill{} of distillation's unstable sets lie in \NBorder{} borderline pairs.}
+\Txt{498}{845}{748}{12.7}{Own thresholds; \NBorder{}/\NPairs{} pairs have an absolute attribute-free SFT margin below 2 logits.}
 
 % -------------------------- 4. MARTA'S ACTIVATION PATCHING --------------------
 % Original A/B wording, terminology, data and diagram structure retained.
 % Larger labels and vertical spacing improve readability; dashed edges remain untested.
 \Rect{1296}{155}{720}{705}{panel}
-\Section{1296}{155}{720}{24}{4. Methods and mechanistic findings}
+\Section{1296}{155}{720}{24}{4. Inside the model}
 \Txt[text=greenDark]{1312}{203}{688}{16}{\bfseries A\quad How activation patching probes attribute effects [5]}
 \Txt[text=ink]{1312}{234}{210}{15}{\bfseries Swap one activation}
 \NodeBox{1322}{263}{90}{28}{ink}{white}{13.3}{Attribute A}
@@ -411,12 +413,7 @@ Gender / implicit,0.72,0.20,\textminus{}72\%
 \Txt{1572}{410}{50}{13.3}{layer}
 \Txt{1312}{451}{688}{14}{\textbf{Readers}: layers 7--14 whose patch removes part of the effect upstream. \textbf{Hub}: the head (layer 15, head 11) whose patch removes the most. \textbf{Opposers}: heads whose patch increases the effect: they push against the bias. \textbf{Readout}: the last MLP, where the margin forms.}
 \Txt{1312}{505}{688}{14}{\textbf{Dashed connections:} schematic; edges not individually tested.}
-\Rect[draw=greenDark,line width=1.2bp]{1312}{530}{688}{62}{greenPale}
-\Txt[text=greenDark]{1324}{537}{664}{16}{\bfseries Gender / implicit: effect reduction, all 450 pairs}
-\Txt[text=ink]{1324}{558}{122}{28}{\bfseries \GenderFullRemoval\%}
-\Txt[text=ink]{1460}{566}{256}{16}{95\% CI [\GenderFullRemovalCI\%]}
-\Txt[text=ink]{1740}{560}{248}{20}{\bfseries vs 72\% selected}
-
+\begin{scope}[shift={(0,-72)}]
 \Rect[draw=greenDark,line width=1bp]{1312}{602}{688}{170}{greenPale}
 \Txt[text=greenDark]{1326}{610}{500}{15}{\bfseries B\quad Effect-selected pairs: Base vs SFT}
 \Rect{1860}{614}{10}{10}{gray}\Txt{1874}{611}{52}{14}{Base}
@@ -441,8 +438,15 @@ Gender / implicit,0.72,0.20,\textminus{}72\%
 \Txt[text=gray]{1918}{670}{70}{14}{\bfseries\HubBase}
 \Txt[text=ink]{1918}{718}{70}{14}{\bfseries\HubSFT}
 \Txt{1740}{740}{248}{14}{logits / pair, combat implicit}
-\Txt{1312}{786}{688}{14}{\textbf{Post-SFT probes}: 64 SFT-selected pairs per contrast, gender 45; one checkpoint per stage.}
-\Txt{1312}{808}{688}{14}{Component correlations and the matched-parameter control: DETAILS.md (QR code).}
+\end{scope}
+\Rect[draw=greenDark,line width=1.2bp]{1312}{710}{688}{82}{greenPale}
+\Txt[text=greenDark]{1324}{717}{664}{16}{\bfseries Gender / implicit: effect reduction, all 450 pairs}
+\Txt[text=ink]{1324}{738}{122}{28}{\bfseries \GenderFullRemoval\%}
+\Txt[text=ink]{1460}{746}{256}{16}{95\% CI [\GenderFullRemovalCI\%]}
+\Txt[text=ink]{1740}{740}{248}{20}{\bfseries vs 72\% selected}
+\Txt[text=ink]{1324}{775}{664}{14}{Other three probed contrasts: \OtherFullRemoval\% reduction across all 450 pairs.}
+\Txt[text=ink]{1312}{805}{688}{14.5}{\bfseries Post-SFT component profiles correlate with SFT (r = 0.65--0.98).}
+\Txt{1312}{828}{688}{13.3}{64 SFT-selected pairs/contrast, gender 45; one checkpoint per stage.\\Component profiles and parameter-matched editing control [4]: details via QR.}
 
 % -------------------------- 5. HARDWARE AND SOFTWARE ------------------------
 \Rect{48}{875}{1968}{136}{panel}
@@ -480,7 +484,7 @@ Gender / implicit,0.72,0.20,\textminus{}72\%
 
 % -------------------------- TAKE-HOME / REFERENCES ---------------------------
 \draw[greenDark,line width=1bp] (48,1013) -- (2016,1013);
-\Txt[text=ink]{48}{1017}{1840}{17.3}{\bfseries SFT delivers the main gain; additional training depends on the operating point and changes residual risk.}
+\Txt[text=ink]{48}{1017}{1840}{16.3}{\bfseries SFT gives the main stability gain; further training changes residual risk, with gains that depend on hire rate. The hub patching effect falls about 5\texttimes{} after SFT on 64 Base-selected combat/implicit pairs.}
 \Txt{48}{1039}{1840}{13.3}{One DPO seed alone would have read as a 1 pp gain at its own hire rate. Exploratory development benchmark; agreement is a proxy.}
 \Txt[text=body]{48}{1056}{1840}{8.8}{%
 \href{https://arxiv.org/abs/2106.09685}{[1] Hu et al., LoRA: Low-Rank Adaptation of Large Language Models (2021).}
