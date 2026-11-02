@@ -348,7 +348,8 @@ Religion / implicit,1.32,0.52,\textminus{}61\%
 \Txt[text=muted]{868}{650}{90}{10.5}{logits / pair}
 \draw[greenDark,dashed,line width=2bp,-{Latex[length=8bp,width=5.5bp]}]
   (822,664) -- (822,682);
-\Txt[text=greenDark]{846}{666}{286}{12}{Shows what distillation changes}
+% B shows Base and SFT-v3 only; whether distillation acts on this pathway is the window line in C.
+\Txt[text=greenDark]{846}{666}{286}{12}{Does distillation act here? Tested below \textdownarrow}
 
 \Txt[text=greenDark]{512}{684}{620}{16}{\bfseries C\quad DECISION DISTILLATION, READ THROUGH PATCHING}
 \Txt[text=ink]{512}{718}{225}{15}{\bfseries Current training signals}
@@ -504,7 +505,10 @@ Religion / implicit,1.32,0.52,\textminus{}61\%
 \Txt[text=ink]{64}{1028}{388}{26}{\bfseries 5. Conclusion\\and Findings}
 \draw[greenDark,line width=1.2bp] (492,1007) -- (2016,1007);
 \Txt[text=greenDark]{512}{1021}{410}{18}{\bfseries Mechanism}
-\Txt{512}{1050}{410}{14.5}{The pathway survives SFT-v3 (L15.H11); distillation's trained adapter keeps its gain with layers 15--20 removed.}
+% GRPO same pathway, DPO not by the registered rule, late heads (docs/RL_PATCHING.md, 2026-10-29;
+% DPO_V3_4880 s42 and GRPO-v3-all ckpt 525). Distillation: window removed keeps the gain, kept alone
+% loses most of it (docs/PATCHING_DISTILL.md F; docs/DISTILL_FOLLOWUP.md H).
+\Txt{512}{1050}{410}{14.5}{L15.H11 pathway survives SFT-v3 and GRPO; DPO moves part later. Distillation's gain is mostly outside layers 15--20.}
 \Txt[text=greenDark]{952}{1021}{423}{18}{\bfseries Behaviour + quality}
 \Txt[text=muted]{952}{1050}{423}{12}{\BehaviourFinding}
 \Txt[text=greenDark]{1415}{1021}{460}{18}{\bfseries Distilled parameters + compute}
@@ -538,9 +542,11 @@ Religion / implicit,1.32,0.52,\textminus{}61\%
 %
 % Still open before submission:
 % (1) Authors, affiliations and final title.
-% (2) Distilled DPO and distilled GRPO: one seed each, neither different from
-%     its parent at matched rate (docs/PATCHING_DISTILL.md, B).
+% (2) Distilled DPO and distilled GRPO: two seeds each, neither better than its
+%     parent (docs/DISTILL_FOLLOWUP.md, G). Two epochs of distillation are a
+%     sensitivity check (section I), not a slot, unless the user decides so.
 % (3) The distillation designed from Marta's pathway (layers 15-20) is H0, so the
-%     subtitle stays; the window-removed ablation is 'not needed' (section F).
+%     subtitle stays; the window-removed ablation is 'not needed' (section F), and
+%     the window kept alone does not carry the gain (DISTILL_FOLLOWUP.md, H).
 % (4) "Best" was chosen after the audits (lowest seed mean); say so or fix a
 %     rule before any new audit.
