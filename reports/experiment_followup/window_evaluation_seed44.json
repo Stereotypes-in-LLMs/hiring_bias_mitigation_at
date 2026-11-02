@@ -1,0 +1,10 @@
+{
+  "seed": 44,
+  "audit_config": "configs/audit/qwen3.5-9b_en_decision_distill_l15_20_r163_seed44_gh200.yaml",
+  "adapter_fingerprint": "7ec3796aaacfadc8",
+  "completed": true,
+  "comparisons": [
+    "sft_v3",
+    "same_seed_full_layer"
+  ]
+}

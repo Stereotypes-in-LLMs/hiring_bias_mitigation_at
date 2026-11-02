@@ -1,0 +1,24 @@
+{
+  "source_path": "/ritom/scratch/cscs/zhang/xw/outputs/distill/decision_distill_l15_20_seed44/checkpoint-341/trainer_state.json",
+  "source_sha256": "329523cc2b2eaeeff9bd6f7e612ed84e164229b4c3d7af29bd746f99b042ebbd",
+  "snapshot_scope": "terminal fields and last loss record only, extracted from trainer_state.json",
+  "data": {
+    "global_step": 341,
+    "epoch": 1,
+    "max_steps": 341,
+    "num_train_epochs": 1,
+    "last_logged_loss": {
+      "distill/attr_kl": 0.010907962982689118,
+      "distill/attr_p_hire": 0.5203355030271651,
+      "distill/attr_q_hire": 0.5270876880918414,
+      "distill/free_kl": 0.006044767819002317,
+      "distill/free_p_hire": 0.32272729543986145,
+      "distill/free_q_hire": 0.3089896539879522,
+      "epoch": 0.9974330766409975,
+      "grad_norm": 0.8336660861968994,
+      "learning_rate": 6.741573033707882e-7,
+      "loss": 0.021132366359233858,
+      "step": 340
+    }
+  }
+}

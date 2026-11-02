@@ -2,8 +2,9 @@
 
 This page supports **What Changes After SFT? Auditing Hiring Decisions and Internal Pathways**.
 Rebuild it with `python poster/revision_details.py` after regenerating the CPU and compute summaries.
-The tables below use completed measurements. New window-rank and mechanism-seed experiments are
-registered separately and are not evidence for this version.
+The tables below use completed measurements, including all three registered window-r163
+parameter-budget controls. The mechanism panels retain their stated selected-checkpoint scope;
+additional mechanism-seed results have not been incorporated into those panels.
 
 ## Scope and interpretation
 
@@ -175,16 +176,96 @@ Some random-control intervals are wide, especially gender, so controls cannot al
 as negligible. Sources: [`reports/poster_followup/head_verification.csv`](https://github.com/Stereotypes-in-LLMs/hiring_bias_mitigation_at/blob/main/reports/poster_followup/head_verification.csv),
 [`reports/poster_followup/target_heads.csv`](https://github.com/Stereotypes-in-LLMs/hiring_bias_mitigation_at/blob/main/reports/poster_followup/target_heads.csv).
 
-The original window-only LoRA has 11.4M trainable parameters versus 58.2M for full-layer r32,
-and ends at higher loss. Its negative result is confounded by capacity and optimization.
-The registered r163 window has 58.085M parameters versus 58.196M for full-layer r32, within 0.2%.
-Pending results cannot yet establish whether localization guides editing.
-Protocol and job records: [`docs/POSTER_FOLLOWUP_EXPERIMENTS.md`](https://github.com/Stereotypes-in-LLMs/hiring_bias_mitigation_at/blob/main/docs/POSTER_FOLLOWUP_EXPERIMENTS.md) and
-[`reports/experiment_followup/submissions.json`](https://github.com/Stereotypes-in-LLMs/hiring_bias_mitigation_at/blob/main/reports/experiment_followup/submissions.json).
+## Completed parameter-budget control for window LoRA
+
+The original layers 15–20 window at rank 32 has 11,403,264 trainable parameters;
+the full-layer r32 adapter has 58,195,968. The registered window r163 has
+58,085,376 saved parameters, 0.1900% below full, within the declared 0.2% tolerance.
+All three training and dependent evaluation jobs completed successfully. Each uses the declared
+final 341-step, one-epoch checkpoint, the same data and training settings as its full-layer
+seed, with alpha/r fixed at two. Layer placement and rank differ, so matching parameter count
+does not equalize optimization geometry or representational capacity.
+
+The primary comparison is window minus same-seed full-layer instability, at the full arm's
+own greedy hire count. Positive is worse. Each 95% interval uses 1,000 paired candidate
+bootstrap draws with thresholds fixed. The old r32 window is recomputed on this same basis:
+
+| Seed | Window arm | Full-arm hire rate | Change vs full, pp | Paired 95% CI |
+| --- | --- | --- | --- | --- |
+| 42 | Window r32, 11.4M | 23.027% | +0.430 | [-0.269, +1.097] |
+| 42 | Window r163, 58.1M | 23.027% | +0.037 | [-0.722, +0.685] |
+| 43 | Window r32, 11.4M | 22.831% | +0.741 | [+0.053, +1.446] |
+| 43 | Window r163, 58.1M | 22.831% | +0.684 | [+0.010, +1.341] |
+| 44 | Window r32, 11.4M | 22.992% | +0.624 | [-0.056, +1.259] |
+| 44 | Window r163, 58.1M | 22.992% | +0.443 | [-0.095, +1.008] |
+
+The descriptive three-seed mean gap falls from
++0.598 pp to
++0.388 pp. The matched-budget estimates
+are positive for all three seeds, but only 1/3
+intervals exclude zero. There is no aggregate three-seed CI and no equivalence test.
+The poster's earlier +0.53 pp used a different operating-point convention; it must not be
+compared directly with the new +0.39 pp. The displayed +0.60 → +0.39 pp uses one shared convention.
+
+At the secondary common SFT-v3 hire count of 6,990/31,050, or 22.512%, the mean gaps are
++0.417 pp and
++0.339 pp. All three matched-budget intervals cross zero:
+
+| Seed | Window arm | Change vs full at 22.512%, pp | Paired 95% CI |
+| --- | --- | --- | --- |
+| 42 | Window r32, 11.4M | +0.268 | [-0.312, +0.839] |
+| 42 | Window r163, 58.1M | +0.063 | [-0.391, +0.490] |
+| 43 | Window r32, 11.4M | +0.670 | [-0.088, +1.393] |
+| 43 | Window r163, 58.1M | +0.610 | [-0.075, +1.229] |
+| 44 | Window r32, 11.4M | +0.315 | [-0.345, +0.976] |
+| 44 | Window r163, 58.1M | +0.345 | [-0.285, +0.895] |
+
+The larger window adapter reduces the observed average gap. These results neither establish
+equivalence with full-layer adaptation nor a general failure of localization-guided editing.
+This is a registered follow-up on the exploratory development benchmark, not held-out confirmation.
+The experiment is motivated by the distinction between localization and editing in Hase et al. [4].
+
+Training, merge and reference-agreement checks:
+
+| Seed | Arm | Last logged loss, step 340 | Merge projection retained | GPT-4o agreement | Agreement vs full, pp |
+| --- | --- | --- | --- | --- | --- |
+| 42 | full_r32 | 0.01243 | 92.197% | 82.548% | +0.000 |
+| 42 | window_r32 | 0.02052 | 95.684% | 82.461% | -0.087 |
+| 42 | window_r163 | 0.01440 | 99.069% | 82.676% | +0.129 |
+| 43 | full_r32 | 0.01265 | 91.918% | 82.712% | +0.000 |
+| 43 | window_r32 | 0.01857 | 95.937% | 82.654% | -0.058 |
+| 43 | window_r163 | 0.01590 | 99.033% | 82.393% | -0.319 |
+| 44 | full_r32 | 0.01516 | 91.999% | 82.531% | +0.000 |
+| 44 | window_r32 | 0.02113 | 95.546% | 82.660% | +0.129 |
+| 44 | window_r163 | 0.01787 | 99.003% | 82.773% | +0.242 |
+
+Loss is the last logged interval at step 340 of the 341-step run, not a whole-run average.
+The larger window has lower logged loss than the old window but higher loss than full layers
+in each seed. All arms decide 100% of prompts, with no parse failures or refusals. Agreement
+uses each model's own greedy operating point, rather than a matched rate; it remains a proxy.
+The matched window's agreement differences are +0.129, −0.319 and +0.242 pp versus full.
+
+The merge diagnostic is the projection retained along the intended adapter update:
+`sum((W_after - W_before) * D) / sum(D * D)`, with `D = B @ A * scaling` computed in float32
+and the merge performed in the base dtype; before/after weights are promoted to float32
+to measure the change. It describes the last adapter in
+the chain, not an energy fraction or a count of changed weights. The retained projection
+is about 99.0% for r163, versus about 92% for full-layer r32 and 96% for old-window r32.
+This difference in bf16 merge retention, alongside rank and
+optimization geometry, prevents attributing the change solely to parameter count. These are
+served merged-checkpoint outcomes. Source manifests, adapter settings, training-state snapshots,
+quality records and hashes are indexed in [`reports/poster_followup/window_budget_guardrails.json`](https://github.com/Stereotypes-in-LLMs/hiring_bias_mitigation_at/blob/main/reports/poster_followup/window_budget_guardrails.json).
+
+Protocol: [`docs/POSTER_FOLLOWUP_EXPERIMENTS.md`](https://github.com/Stereotypes-in-LLMs/hiring_bias_mitigation_at/blob/main/docs/POSTER_FOLLOWUP_EXPERIMENTS.md). Completed source tables, parameter counts,
+bootstrap specification and hashes: [`reports/poster_followup/window_budget_summary.json`](https://github.com/Stereotypes-in-LLMs/hiring_bias_mitigation_at/blob/main/reports/poster_followup/window_budget_summary.json).
+Regenerate the summary and poster macros with [`poster/latex/window_data.py`](https://github.com/Stereotypes-in-LLMs/hiring_bias_mitigation_at/blob/main/poster/latex/window_data.py).
+Per-seed comparisons and completion markers are under `reports/experiment_followup/window_seed42`,
+`window_seed43` and `window_seed44`; accepted jobs are in [`reports/experiment_followup/submissions.json`](https://github.com/Stereotypes-in-LLMs/hiring_bias_mitigation_at/blob/main/reports/experiment_followup/submissions.json).
 
 ## NVIDIA acceleration, timing scope and cost
 
 The platform is CSCS Alps, with four NVIDIA GH200 GPUs per node and 96 GiB HBM3 per GPU.
+The measured software stack uses vLLM 0.31, TRL 1.15 / PEFT and PyTorch DDP in bf16.
 The inference benchmark has 3,105 prompts and 2 repeats per condition.
 The three bars measure generation only; startup is excluded.
 
@@ -220,6 +301,7 @@ Actual selected-pair metadata, rather than the requested cap, defines the 64-pai
 It contains 22 measured runs, a median 20 min and
 0.33 used GPU-h per model × contrast, and peak 42 GiB.
 Full 31,050-prompt margin scoring is a separate 32-minute, 87-GiB pass.
+Each of the patching and margin-scoring passes fits separately on one GH200 without CPU offload.
 The source snapshot totals 552 **allocated** GPU-h and 144 kWh measured
 GPU energy. It excludes follow-up jobs submitted after that snapshot.
 All source hashes, selected cost records, excluded-pilot logic and timing scopes are in
@@ -227,14 +309,14 @@ All source hashes, selected cost records, excluded-pilot logic and timing scopes
 
 ## References, code and data
 
-The poster keeps short scope notes beside each figure. Full citations and detailed controls
-are collected here so they remain readable rather than forming a small-text footer.
+The poster includes numbered references and printed project/data addresses. Full citations
+and detailed controls are also collected here.
 
-- [Hu et al., LoRA: Low-Rank Adaptation of Large Language Models, 2021](https://arxiv.org/abs/2106.09685).
-- [Rafailov et al., Direct Preference Optimization, 2023](https://arxiv.org/abs/2305.18290).
-- [Shao et al., DeepSeekMath, introducing GRPO, 2024](https://arxiv.org/abs/2402.03300).
-- [Hase et al., Does Localization Inform Editing?, 2023](https://arxiv.org/abs/2301.04213).
-- [Zhang and Nanda, Towards Best Practices of Activation Patching, 2024](https://arxiv.org/abs/2309.16042).
+- [1] [Hu et al., LoRA: Low-Rank Adaptation of Large Language Models, 2021](https://arxiv.org/abs/2106.09685).
+- [2] [Rafailov et al., Direct Preference Optimization, 2023](https://arxiv.org/abs/2305.18290).
+- [3] [Shao et al., DeepSeekMath, introducing GRPO, 2024](https://arxiv.org/abs/2402.03300).
+- [4] [Hase et al., Does Localization Inform Editing?, 2023](https://arxiv.org/abs/2301.04213).
+- [5] [Zhang and Nanda, Towards Best Practices of Activation Patching, 2024](https://arxiv.org/abs/2309.16042).
 - [Project code](https://github.com/Stereotypes-in-LLMs/hiring_bias_mitigation_at).
 - [Hiring-bias-mitigation-v3 dataset](https://huggingface.co/datasets/Stereotypes-in-LLMs/hiring-bias-mitigation-v3).
 
@@ -243,7 +325,8 @@ are collected here so they remain readable rather than forming a small-text foot
 1. Run `scripts/poster_audit_followup.py` in the project environment with the canonical raw outputs.
 2. Run `poster/latex/latex_data.py --compute-only` to refresh the measured compute block.
 3. Run `poster/latex/plot_revision.py` to regenerate the two vector figures.
-4. Run `poster/revision_details.py`, then compile `poster/latex/main.tex` with pdfLaTeX twice.
+4. Run `poster/latex/window_data.py` to validate and summarize the three completed budget controls.
+5. Run `poster/revision_details.py`, then compile `poster/latex/main.tex` with pdfLaTeX twice.
 
-The poster uses vector charts and embedded fonts. Publication still requires the author and
-affiliation information, which is intentionally omitted from this revision.
+The poster uses vector charts and embedded fonts. The author and affiliation line remains
+an explicit placeholder until the author order is agreed.

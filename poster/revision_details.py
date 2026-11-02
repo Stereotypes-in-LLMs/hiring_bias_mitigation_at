@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import csv
+import hashlib
 import json
 from pathlib import Path
 
@@ -32,6 +33,33 @@ def write(path=ROOT / "poster/DETAILS.md"):
     if not summary["complete"]:
         raise ValueError("CPU evidence is incomplete")
     compute = json.loads((ROOT / "reports/poster_followup/compute_summary.json").read_text())
+    window = json.loads((ROOT / "reports/poster_followup/window_budget_summary.json").read_text())
+    if not window["complete"] or window["seeds"] != [42, 43, 44]:
+        raise ValueError("Window parameter-budget evaluation is incomplete")
+    for name, expected in window["source_sha256"].items():
+        if hashlib.sha256((ROOT / name).read_bytes()).hexdigest() != expected:
+            raise ValueError(f"Stale window summary; rerun poster/latex/window_data.py: {name}")
+    window_primary, window_common = [], []
+    guardrails = json.loads((ROOT / "reports/poster_followup/window_budget_guardrails.json").read_text())
+    if not guardrails["registered_trainer_settings_identical"] or len(guardrails["records"]) != 9:
+        raise ValueError("Window training/quality checks are incomplete")
+    window_checks = []
+    for row in guardrails["records"]:
+        if row["completed_global_step"] != 341 or row["last_logged_training_loss"]["optimizer_step"] != 340:
+            raise ValueError("Unexpected checkpoint or training-loss scope")
+        window_checks.append([row["seed"], row["arm"],
+                              f"{row['last_logged_training_loss']['value']:.5f}",
+                              f"{row['merge_kept_pct']:.3f}%",
+                              f"{row['quality']['agree_gpt4o_pct']:.3f}%",
+                              f"{row['quality']['agreement_delta_vs_same_seed_full_pp']:+.3f}"])
+    for row in window["rows"]:
+        for arm, label in (("window_r32", "Window r32, 11.4M"), ("window_r163", "Window r163, 58.1M")):
+            p, c = row["primary"][arm], row["common"][arm]
+            window_primary.append([row["seed"], label, f"{p['hire_rate_pct']:.3f}%",
+                                   f"{p['delta_window_minus_full_pp']:+.3f}",
+                                   f"[{p['ci_low']:+.3f}, {p['ci_high']:+.3f}]"])
+            window_common.append([row["seed"], label, f"{c['delta_arm_minus_full_pp']:+.3f}",
+                                  f"[{c['ci_low']:+.3f}, {c['ci_high']:+.3f}]"])
     m = compute["macros"]
     final = read("reports/final/final_table.csv")
     curves = read("reports/final/curves.csv")
@@ -72,8 +100,9 @@ def write(path=ROOT / "poster/DETAILS.md"):
 
 This page supports **What Changes After SFT? Auditing Hiring Decisions and Internal Pathways**.
 Rebuild it with `python poster/revision_details.py` after regenerating the CPU and compute summaries.
-The tables below use completed measurements. New window-rank and mechanism-seed experiments are
-registered separately and are not evidence for this version.
+The tables below use completed measurements, including all three registered window-r163
+parameter-budget controls. The mechanism panels retain their stated selected-checkpoint scope;
+additional mechanism-seed results have not been incorporated into those panels.
 
 ## Scope and interpretation
 
@@ -168,16 +197,72 @@ Some random-control intervals are wide, especially gender, so controls cannot al
 as negligible. Sources: {link('reports/poster_followup/head_verification.csv')},
 {link('reports/poster_followup/target_heads.csv')}.
 
-The original window-only LoRA has 11.4M trainable parameters versus 58.2M for full-layer r32,
-and ends at higher loss. Its negative result is confounded by capacity and optimization.
-The registered r163 window has 58.085M parameters versus 58.196M for full-layer r32, within 0.2%.
-Pending results cannot yet establish whether localization guides editing.
-Protocol and job records: {link('docs/POSTER_FOLLOWUP_EXPERIMENTS.md')} and
-{link('reports/experiment_followup/submissions.json')}.
+## Completed parameter-budget control for window LoRA
+
+The original layers 15–20 window at rank 32 has 11,403,264 trainable parameters;
+the full-layer r32 adapter has 58,195,968. The registered window r163 has
+58,085,376 saved parameters, 0.1900% below full, within the declared 0.2% tolerance.
+All three training and dependent evaluation jobs completed successfully. Each uses the declared
+final 341-step, one-epoch checkpoint, the same data and training settings as its full-layer
+seed, with alpha/r fixed at two. Layer placement and rank differ, so matching parameter count
+does not equalize optimization geometry or representational capacity.
+
+The primary comparison is window minus same-seed full-layer instability, at the full arm's
+own greedy hire count. Positive is worse. Each 95% interval uses 1,000 paired candidate
+bootstrap draws with thresholds fixed. The old r32 window is recomputed on this same basis:
+
+{table(['Seed', 'Window arm', 'Full-arm hire rate', 'Change vs full, pp', 'Paired 95% CI'], window_primary)}
+
+The descriptive three-seed mean gap falls from
+{window['seed_means_pp']['primary']['window_r32']:+.3f} pp to
+{window['seed_means_pp']['primary']['window_r163']:+.3f} pp. The matched-budget estimates
+are positive for all three seeds, but only {window['matched_seed_cis_above_zero']['primary']}/3
+intervals exclude zero. There is no aggregate three-seed CI and no equivalence test.
+The poster's earlier +0.53 pp used a different operating-point convention; it must not be
+compared directly with the new +0.39 pp. The displayed +0.60 → +0.39 pp uses one shared convention.
+
+At the secondary common SFT-v3 hire count of 6,990/31,050, or 22.512%, the mean gaps are
+{window['seed_means_pp']['common']['window_r32']:+.3f} pp and
+{window['seed_means_pp']['common']['window_r163']:+.3f} pp. All three matched-budget intervals cross zero:
+
+{table(['Seed', 'Window arm', 'Change vs full at 22.512%, pp', 'Paired 95% CI'], window_common)}
+
+The larger window adapter reduces the observed average gap. These results neither establish
+equivalence with full-layer adaptation nor a general failure of localization-guided editing.
+This is a registered follow-up on the exploratory development benchmark, not held-out confirmation.
+The experiment is motivated by the distinction between localization and editing in Hase et al. [4].
+
+Training, merge and reference-agreement checks:
+
+{table(['Seed', 'Arm', 'Last logged loss, step 340', 'Merge projection retained', 'GPT-4o agreement', 'Agreement vs full, pp'], window_checks)}
+
+Loss is the last logged interval at step 340 of the 341-step run, not a whole-run average.
+The larger window has lower logged loss than the old window but higher loss than full layers
+in each seed. All arms decide 100% of prompts, with no parse failures or refusals. Agreement
+uses each model's own greedy operating point, rather than a matched rate; it remains a proxy.
+The matched window's agreement differences are +0.129, −0.319 and +0.242 pp versus full.
+
+The merge diagnostic is the projection retained along the intended adapter update:
+`sum((W_after - W_before) * D) / sum(D * D)`, with `D = B @ A * scaling` computed in float32
+and the merge performed in the base dtype; before/after weights are promoted to float32
+to measure the change. It describes the last adapter in
+the chain, not an energy fraction or a count of changed weights. The retained projection
+is about 99.0% for r163, versus about 92% for full-layer r32 and 96% for old-window r32.
+This difference in bf16 merge retention, alongside rank and
+optimization geometry, prevents attributing the change solely to parameter count. These are
+served merged-checkpoint outcomes. Source manifests, adapter settings, training-state snapshots,
+quality records and hashes are indexed in {link('reports/poster_followup/window_budget_guardrails.json')}.
+
+Protocol: {link('docs/POSTER_FOLLOWUP_EXPERIMENTS.md')}. Completed source tables, parameter counts,
+bootstrap specification and hashes: {link('reports/poster_followup/window_budget_summary.json')}.
+Regenerate the summary and poster macros with {link('poster/latex/window_data.py')}.
+Per-seed comparisons and completion markers are under `reports/experiment_followup/window_seed42`,
+`window_seed43` and `window_seed44`; accepted jobs are in {link('reports/experiment_followup/submissions.json')}.
 
 ## NVIDIA acceleration, timing scope and cost
 
 The platform is CSCS Alps, with four NVIDIA GH200 GPUs per node and 96 GiB HBM3 per GPU.
+The measured software stack uses vLLM 0.31, TRL 1.15 / PEFT and PyTorch DDP in bf16.
 The inference benchmark has {m['AuditBenchPrompts']} prompts and {m['AuditBenchRepeats']} repeats per condition.
 The three bars measure generation only; startup is excluded.
 
@@ -211,6 +296,7 @@ Actual selected-pair metadata, rather than the requested cap, defines the 64-pai
 It contains {m['PatchRunsSixtyFour']} measured runs, a median {m['PatchStepMin']} min and
 {m['PatchStepGPUh']} used GPU-h per model × contrast, and peak {m['PatchPeakGiB']} GiB.
 Full 31,050-prompt margin scoring is a separate {m['MarginsStepMin']}-minute, {m['MarginsPeakGiB']}-GiB pass.
+Each of the patching and margin-scoring passes fits separately on one GH200 without CPU offload.
 The source snapshot totals {m['ProjectGPUh']} **allocated** GPU-h and {m['ProjectKWh']} kWh measured
 GPU energy. It excludes follow-up jobs submitted after that snapshot.
 All source hashes, selected cost records, excluded-pilot logic and timing scopes are in
@@ -218,14 +304,14 @@ All source hashes, selected cost records, excluded-pilot logic and timing scopes
 
 ## References, code and data
 
-The poster keeps short scope notes beside each figure. Full citations and detailed controls
-are collected here so they remain readable rather than forming a small-text footer.
+The poster includes numbered references and printed project/data addresses. Full citations
+and detailed controls are also collected here.
 
-- [Hu et al., LoRA: Low-Rank Adaptation of Large Language Models, 2021](https://arxiv.org/abs/2106.09685).
-- [Rafailov et al., Direct Preference Optimization, 2023](https://arxiv.org/abs/2305.18290).
-- [Shao et al., DeepSeekMath, introducing GRPO, 2024](https://arxiv.org/abs/2402.03300).
-- [Hase et al., Does Localization Inform Editing?, 2023](https://arxiv.org/abs/2301.04213).
-- [Zhang and Nanda, Towards Best Practices of Activation Patching, 2024](https://arxiv.org/abs/2309.16042).
+- [1] [Hu et al., LoRA: Low-Rank Adaptation of Large Language Models, 2021](https://arxiv.org/abs/2106.09685).
+- [2] [Rafailov et al., Direct Preference Optimization, 2023](https://arxiv.org/abs/2305.18290).
+- [3] [Shao et al., DeepSeekMath, introducing GRPO, 2024](https://arxiv.org/abs/2402.03300).
+- [4] [Hase et al., Does Localization Inform Editing?, 2023](https://arxiv.org/abs/2301.04213).
+- [5] [Zhang and Nanda, Towards Best Practices of Activation Patching, 2024](https://arxiv.org/abs/2309.16042).
 - [Project code](https://github.com/Stereotypes-in-LLMs/hiring_bias_mitigation_at).
 - [Hiring-bias-mitigation-v3 dataset](https://huggingface.co/datasets/Stereotypes-in-LLMs/hiring-bias-mitigation-v3).
 
@@ -234,10 +320,11 @@ are collected here so they remain readable rather than forming a small-text foot
 1. Run `scripts/poster_audit_followup.py` in the project environment with the canonical raw outputs.
 2. Run `poster/latex/latex_data.py --compute-only` to refresh the measured compute block.
 3. Run `poster/latex/plot_revision.py` to regenerate the two vector figures.
-4. Run `poster/revision_details.py`, then compile `poster/latex/main.tex` with pdfLaTeX twice.
+4. Run `poster/latex/window_data.py` to validate and summarize the three completed budget controls.
+5. Run `poster/revision_details.py`, then compile `poster/latex/main.tex` with pdfLaTeX twice.
 
-The poster uses vector charts and embedded fonts. Publication still requires the author and
-affiliation information, which is intentionally omitted from this revision.
+The poster uses vector charts and embedded fonts. The author and affiliation line remains
+an explicit placeholder until the author order is agreed.
 """
     path.write_text(text)
 

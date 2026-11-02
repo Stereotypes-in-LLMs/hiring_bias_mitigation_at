@@ -1,0 +1,30 @@
+{
+  "source_path": "/ritom/scratch/cscs/zhang/xw/outputs/distill/decision_distill_seed42/run_config.json",
+  "source_sha256": "aa2f8b5768fdbd16bb0de9c3f680bb7f1daa91a66aaf8715f4b8802fe30a3ebe",
+  "snapshot_scope": "complete source JSON",
+  "data": {
+    "base_model": "/ritom/scratch/cscs/zhang/xw/outputs/sft/qwen3.5-9b_en_only_sft_v3_additional",
+    "stage": "decision_distill",
+    "use_lora": true,
+    "data_config": "configs/data/en_only_distill_v3_all.yaml",
+    "config_path": "configs/mitigation/distill/decision_distill_seed42.yaml",
+    "languages": [
+      "en"
+    ],
+    "protected_groups": [
+      "military_status",
+      "gender",
+      "religion"
+    ],
+    "mitigation_family": "decision_distill",
+    "objective": "decision_distill",
+    "n_train": 10907,
+    "n_free_rows": 1767,
+    "decision_token_ids": [
+      33304,
+      45427
+    ],
+    "sft_checkpoint": "outputs/sft/qwen3.5-9b_en_only_sft_v3_additional",
+    "status": "done"
+  }
+}

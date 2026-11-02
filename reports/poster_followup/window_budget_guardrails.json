@@ -1,0 +1,1112 @@
+{
+  "analysis": "Completed window-LoRA parameter-budget follow-up guardrails",
+  "publication": {
+    "snapshot_directory": "reports/poster_followup/window_budget_sources",
+    "snapshots": [
+      "reports/poster_followup/window_budget_sources/full_r32_seed42/run_config.json",
+      "reports/poster_followup/window_budget_sources/full_r32_seed42/adapter_config.json",
+      "reports/poster_followup/window_budget_sources/full_r32_seed42/reference_metrics.json",
+      "reports/poster_followup/window_budget_sources/full_r32_seed42/trainer_state_terminal.json",
+      "reports/poster_followup/window_budget_sources/window_r32_seed42/run_config.json",
+      "reports/poster_followup/window_budget_sources/window_r32_seed42/adapter_config.json",
+      "reports/poster_followup/window_budget_sources/window_r32_seed42/reference_metrics.json",
+      "reports/poster_followup/window_budget_sources/window_r32_seed42/trainer_state_terminal.json",
+      "reports/poster_followup/window_budget_sources/window_r163_seed42/run_config.json",
+      "reports/poster_followup/window_budget_sources/window_r163_seed42/adapter_config.json",
+      "reports/poster_followup/window_budget_sources/window_r163_seed42/reference_metrics.json",
+      "reports/poster_followup/window_budget_sources/window_r163_seed42/trainer_state_terminal.json",
+      "reports/poster_followup/window_budget_sources/full_r32_seed43/run_config.json",
+      "reports/poster_followup/window_budget_sources/full_r32_seed43/adapter_config.json",
+      "reports/poster_followup/window_budget_sources/full_r32_seed43/reference_metrics.json",
+      "reports/poster_followup/window_budget_sources/full_r32_seed43/trainer_state_terminal.json",
+      "reports/poster_followup/window_budget_sources/window_r32_seed43/run_config.json",
+      "reports/poster_followup/window_budget_sources/window_r32_seed43/adapter_config.json",
+      "reports/poster_followup/window_budget_sources/window_r32_seed43/reference_metrics.json",
+      "reports/poster_followup/window_budget_sources/window_r32_seed43/trainer_state_terminal.json",
+      "reports/poster_followup/window_budget_sources/window_r163_seed43/run_config.json",
+      "reports/poster_followup/window_budget_sources/window_r163_seed43/adapter_config.json",
+      "reports/poster_followup/window_budget_sources/window_r163_seed43/reference_metrics.json",
+      "reports/poster_followup/window_budget_sources/window_r163_seed43/trainer_state_terminal.json",
+      "reports/poster_followup/window_budget_sources/full_r32_seed44/run_config.json",
+      "reports/poster_followup/window_budget_sources/full_r32_seed44/adapter_config.json",
+      "reports/poster_followup/window_budget_sources/full_r32_seed44/reference_metrics.json",
+      "reports/poster_followup/window_budget_sources/full_r32_seed44/trainer_state_terminal.json",
+      "reports/poster_followup/window_budget_sources/window_r32_seed44/run_config.json",
+      "reports/poster_followup/window_budget_sources/window_r32_seed44/adapter_config.json",
+      "reports/poster_followup/window_budget_sources/window_r32_seed44/reference_metrics.json",
+      "reports/poster_followup/window_budget_sources/window_r32_seed44/trainer_state_terminal.json",
+      "reports/poster_followup/window_budget_sources/window_r163_seed44/run_config.json",
+      "reports/poster_followup/window_budget_sources/window_r163_seed44/adapter_config.json",
+      "reports/poster_followup/window_budget_sources/window_r163_seed44/reference_metrics.json",
+      "reports/poster_followup/window_budget_sources/window_r163_seed44/trainer_state_terminal.json"
+    ],
+    "snapshot_format": "Wrapper contains original source path and SHA256; data is the complete source JSON except trainer_state_terminal.json, which contains explicitly selected terminal fields and the final logged loss record.",
+    "source_hashes_match_guardrail_records": true,
+    "screening": "Snapshot fields were inspected and scanned for credential and raw CV/prompt-text keys. They contain adapter configuration, run metadata, aggregate evaluation metrics, and terminal training metrics; no credentials or raw CV/prompt text were found."
+  },
+  "merge_retention_definition": {
+    "formula": "100 * sum((W_merged - W_before) * D) / sum(D * D)",
+    "exact_update": "D = (B @ A) * scaling, computed in float32",
+    "written_update": "W_merged - W_before after merge into base dtype",
+    "interpretation": "Projection coefficient of the written update onto the intended update; not a norm ratio, energy fraction, or fraction of nonzero weights.",
+    "reported_adapter": "last adapter in the served merged chain",
+    "implementation": "src/hiring_bias_mitigation/mitigation/merge.py:merge_measured",
+    "reporting": "src/hiring_bias_mitigation/analysis/reference_metrics.py:merge_kept_pct"
+  },
+  "merge_retention_scope": "Percentage of the last adapter's own parameter update retained by the served merge; not behavioral agreement or accuracy.",
+  "completion_and_parameter_checks": {
+    "42": {
+      "saved_parameter_check": {
+        "repository_path": "reports/experiment_followup/window_budget_seed42_after.json",
+        "sha256": "238a652d00784689a4d48ce56236307abe1f8b6caadb1c152e33f4176ff2df9b",
+        "record": {
+          "phase": "after",
+          "seed": 42,
+          "config": "configs/mitigation/distill/decision_distill_l15_20_r163_seed42.yaml",
+          "full_parameters": 58195968,
+          "old_window_parameters": 11403264,
+          "new_window_expected_parameters": 58085376,
+          "relative_parameter_gap_pct": -0.19003378378378288,
+          "rank": 163,
+          "alpha": 326,
+          "layers": [
+            15,
+            20
+          ],
+          "budget_tolerance_pct": 0.2,
+          "saved_parameters": 58085376,
+          "saved_adapter": "/ritom/scratch/cscs/zhang/xw/outputs/distill/decision_distill_l15_20_r163_seed42"
+        }
+      },
+      "completed_evaluation": {
+        "repository_path": "reports/experiment_followup/window_evaluation_seed42.json",
+        "sha256": "7b9e241e29d49d909aa9dcac3c5afae50e5ecd5783fd3f4fb0b5e529ed88323a",
+        "record": {
+          "seed": 42,
+          "audit_config": "configs/audit/qwen3.5-9b_en_decision_distill_l15_20_r163_seed42_gh200.yaml",
+          "adapter_fingerprint": "25fe8479911d2299",
+          "completed": true,
+          "comparisons": [
+            "sft_v3",
+            "same_seed_full_layer"
+          ]
+        }
+      }
+    },
+    "43": {
+      "saved_parameter_check": {
+        "repository_path": "reports/experiment_followup/window_budget_seed43_after.json",
+        "sha256": "a6d2d3742156315843ebc6cfd62548d2654b864310f6ba8bd55c0be720d37bb8",
+        "record": {
+          "phase": "after",
+          "seed": 43,
+          "config": "configs/mitigation/distill/decision_distill_l15_20_r163_seed43.yaml",
+          "full_parameters": 58195968,
+          "old_window_parameters": 11403264,
+          "new_window_expected_parameters": 58085376,
+          "relative_parameter_gap_pct": -0.19003378378378288,
+          "rank": 163,
+          "alpha": 326,
+          "layers": [
+            15,
+            20
+          ],
+          "budget_tolerance_pct": 0.2,
+          "saved_parameters": 58085376,
+          "saved_adapter": "/ritom/scratch/cscs/zhang/xw/outputs/distill/decision_distill_l15_20_r163_seed43"
+        }
+      },
+      "completed_evaluation": {
+        "repository_path": "reports/experiment_followup/window_evaluation_seed43.json",
+        "sha256": "5d08895a3e03a36c9bd882ba3071aa2503ff24bf2543c378731c37c30179c896",
+        "record": {
+          "seed": 43,
+          "audit_config": "configs/audit/qwen3.5-9b_en_decision_distill_l15_20_r163_seed43_gh200.yaml",
+          "adapter_fingerprint": "73b51e571b696326",
+          "completed": true,
+          "comparisons": [
+            "sft_v3",
+            "same_seed_full_layer"
+          ]
+        }
+      }
+    },
+    "44": {
+      "saved_parameter_check": {
+        "repository_path": "reports/experiment_followup/window_budget_seed44_after.json",
+        "sha256": "96734f95e67f81fba1839c48ff04860a9cf1316b01f00e3f970d0478c6c6d119",
+        "record": {
+          "phase": "after",
+          "seed": 44,
+          "config": "configs/mitigation/distill/decision_distill_l15_20_r163_seed44.yaml",
+          "full_parameters": 58195968,
+          "old_window_parameters": 11403264,
+          "new_window_expected_parameters": 58085376,
+          "relative_parameter_gap_pct": -0.19003378378378288,
+          "rank": 163,
+          "alpha": 326,
+          "layers": [
+            15,
+            20
+          ],
+          "budget_tolerance_pct": 0.2,
+          "saved_parameters": 58085376,
+          "saved_adapter": "/ritom/scratch/cscs/zhang/xw/outputs/distill/decision_distill_l15_20_r163_seed44"
+        }
+      },
+      "completed_evaluation": {
+        "repository_path": "reports/experiment_followup/window_evaluation_seed44.json",
+        "sha256": "489a547b7fc8368f4add11f9381341f3b8476e4ac00af18cf94926cfab36062e",
+        "record": {
+          "seed": 44,
+          "audit_config": "configs/audit/qwen3.5-9b_en_decision_distill_l15_20_r163_seed44_gh200.yaml",
+          "adapter_fingerprint": "7ec3796aaacfadc8",
+          "completed": true,
+          "comparisons": [
+            "sft_v3",
+            "same_seed_full_layer"
+          ]
+        }
+      }
+    }
+  },
+  "source_scope": "read-only snapshot of completed CSCS outputs",
+  "interpretation": {
+    "valid_scope": "descriptive comparison of served merged checkpoints at matched operating points",
+    "cautions": [
+      "Parameter counts are near-matched, not exactly equal: 58,085,376 versus 58,195,968, -0.1900%.",
+      "Changing window rank from 32 to 163 also changes parameterization and optimization geometry; alpha/r remains 2.",
+      "Merge retention differs materially across full, old-window and high-rank window adapters; this is not a capacity-only causal intervention.",
+      "All final adapters completed 341 steps and one epoch; terminal losses are last logged intervals at step 340, not whole-run averages.",
+      "Own-operating-point GPT-4o agreement is descriptive and is not matched-rate or hiring-ground-truth accuracy.",
+      "Primary seed-level uncertainty does not establish equivalence; no across-seed confidence interval is inferred from the seed mean."
+    ]
+  },
+  "parameter_budget": {
+    "full_r32": 58195968,
+    "window_r32": 11403264,
+    "window_r163": 58085376,
+    "window_r163_gap_pct": -0.19003378378378288
+  },
+  "registered_trainer_settings_identical": true,
+  "registered_trainer_settings": {
+    "base_model": "Qwen/Qwen3.5-9B",
+    "data_config": "configs/data/en_only_distill_v3_all.yaml",
+    "sft_checkpoint": "outputs/sft/qwen3.5-9b_en_only_sft_v3_additional",
+    "num_train_epochs": 1,
+    "max_steps": -1,
+    "learning_rate": 3e-05,
+    "lr_scheduler_type": "warmup_stable_decay",
+    "lr_scheduler_kwargs": {
+      "num_decay_steps": 89,
+      "decay_type": "linear"
+    },
+    "warmup_steps": 5,
+    "per_device_train_batch_size": 1,
+    "gradient_accumulation_steps": 8,
+    "gradient_checkpointing": true,
+    "gradient_checkpointing_kwargs": {
+      "use_reentrant": false
+    },
+    "ddp_find_unused_parameters": false,
+    "lora_dropout": 0,
+    "weight_decay": 0,
+    "dtype": "bfloat16",
+    "logging_steps": 5
+  },
+  "records": [
+    {
+      "seed": 42,
+      "arm": "full_r32",
+      "run": "Qwen3.5-9B--en--sft--adapter--en_only_decision_distill_seed42",
+      "rank": 32,
+      "alpha": 64,
+      "layers": "all 32 layers",
+      "training_status": "done",
+      "final_checkpoint": "checkpoint-341",
+      "completed_global_step": 341,
+      "completed_epoch": 1,
+      "n_train": 10907,
+      "n_free_rows": 1767,
+      "last_logged_training_loss": {
+        "value": 0.01242668330669403,
+        "optimizer_step": 340,
+        "epoch": 0.9974330766409975,
+        "learning_rate": 6.741573033707882e-07,
+        "scope": "last logged interval at step 340 of 341; not whole-run average"
+      },
+      "quality": {
+        "agree_gpt4o_pct": 82.5475040257649,
+        "tpr_vs_gpt4o_pct": 58.93719806763285,
+        "decided_pct": 100,
+        "parse_failure_pct": 0,
+        "refusal_pct": 0,
+        "scope": "greedy decisions at each model's own operating point; GPT-4o is a reference proxy",
+        "agreement_delta_vs_same_seed_full_pp": 0,
+        "tpr_delta_vs_same_seed_full_pp": 0
+      },
+      "merge_kept_pct": 92.19738781582068,
+      "registered_trainer_settings": {
+        "base_model": "Qwen/Qwen3.5-9B",
+        "data_config": "configs/data/en_only_distill_v3_all.yaml",
+        "sft_checkpoint": "outputs/sft/qwen3.5-9b_en_only_sft_v3_additional",
+        "num_train_epochs": 1,
+        "max_steps": -1,
+        "learning_rate": 3e-05,
+        "lr_scheduler_type": "warmup_stable_decay",
+        "lr_scheduler_kwargs": {
+          "num_decay_steps": 89,
+          "decay_type": "linear"
+        },
+        "warmup_steps": 5,
+        "per_device_train_batch_size": 1,
+        "gradient_accumulation_steps": 8,
+        "gradient_checkpointing": true,
+        "gradient_checkpointing_kwargs": {
+          "use_reentrant": false
+        },
+        "ddp_find_unused_parameters": false,
+        "lora_dropout": 0,
+        "weight_decay": 0,
+        "dtype": "bfloat16",
+        "logging_steps": 5
+      },
+      "sources": {
+        "configuration": {
+          "path": "/ritom/scratch/cscs/zhang/xw/hiring_bias_mitigation_at/configs/mitigation/distill/decision_distill_seed42.yaml",
+          "sha256": "b6b3662923d2a68ef02fa6d2fe2b882177c528d7d876f15b64fe55f5165ff09f",
+          "repository_path": "configs/mitigation/distill/decision_distill_seed42.yaml",
+          "repository_url": "https://github.com/Stereotypes-in-LLMs/hiring_bias_mitigation_at/blob/main/configs/mitigation/distill/decision_distill_seed42.yaml"
+        },
+        "reference_metrics": {
+          "path": "/ritom/scratch/cscs/zhang/xw/hiring_bias_mitigation_at/reports/reference_metrics/Qwen3.5-9B--en--sft--adapter--en_only_decision_distill_seed42.json",
+          "sha256": "b2880ec6cb0fed8a213d778cbab03f70448539f4bbb61c449108b6fcad679345",
+          "repository_path": "reports/reference_metrics/Qwen3.5-9B--en--sft--adapter--en_only_decision_distill_seed42.json",
+          "repository_url": "https://github.com/Stereotypes-in-LLMs/hiring_bias_mitigation_at/blob/main/reports/reference_metrics/Qwen3.5-9B--en--sft--adapter--en_only_decision_distill_seed42.json",
+          "snapshot_repository_path": "reports/poster_followup/window_budget_sources/full_r32_seed42/reference_metrics.json",
+          "snapshot_repository_url": "https://github.com/Stereotypes-in-LLMs/hiring_bias_mitigation_at/blob/main/reports/poster_followup/window_budget_sources/full_r32_seed42/reference_metrics.json",
+          "snapshot_scope": "complete source JSON"
+        },
+        "run_manifest": {
+          "path": "/ritom/scratch/cscs/zhang/xw/outputs/distill/decision_distill_seed42/run_config.json",
+          "sha256": "aa2f8b5768fdbd16bb0de9c3f680bb7f1daa91a66aaf8715f4b8802fe30a3ebe",
+          "snapshot_repository_path": "reports/poster_followup/window_budget_sources/full_r32_seed42/run_config.json",
+          "snapshot_repository_url": "https://github.com/Stereotypes-in-LLMs/hiring_bias_mitigation_at/blob/main/reports/poster_followup/window_budget_sources/full_r32_seed42/run_config.json",
+          "snapshot_scope": "complete source JSON"
+        },
+        "final_trainer_state": {
+          "path": "/ritom/scratch/cscs/zhang/xw/outputs/distill/decision_distill_seed42/checkpoint-341/trainer_state.json",
+          "sha256": "1e3fc1621a70f0fd3fb94780c5457713ccb229b7c092d03f3432499525d16bc8",
+          "snapshot_repository_path": "reports/poster_followup/window_budget_sources/full_r32_seed42/trainer_state_terminal.json",
+          "snapshot_repository_url": "https://github.com/Stereotypes-in-LLMs/hiring_bias_mitigation_at/blob/main/reports/poster_followup/window_budget_sources/full_r32_seed42/trainer_state_terminal.json",
+          "snapshot_scope": "terminal fields and last loss record only, extracted from trainer_state.json"
+        },
+        "adapter_config": {
+          "path": "/ritom/scratch/cscs/zhang/xw/outputs/distill/decision_distill_seed42/adapter_config.json",
+          "sha256": "9b4133bfe5f50d95543cb5ef629c277db0e655cefe9e3cd1721581b6a15d0321",
+          "snapshot_repository_path": "reports/poster_followup/window_budget_sources/full_r32_seed42/adapter_config.json",
+          "snapshot_repository_url": "https://github.com/Stereotypes-in-LLMs/hiring_bias_mitigation_at/blob/main/reports/poster_followup/window_budget_sources/full_r32_seed42/adapter_config.json",
+          "snapshot_scope": "complete source JSON"
+        }
+      }
+    },
+    {
+      "seed": 42,
+      "arm": "window_r32",
+      "run": "Qwen3.5-9B--en--sft--adapter--en_only_decision_distill_l15_20_seed42",
+      "rank": 32,
+      "alpha": 64,
+      "layers": [
+        15,
+        20
+      ],
+      "training_status": "done",
+      "final_checkpoint": "checkpoint-341",
+      "completed_global_step": 341,
+      "completed_epoch": 1,
+      "n_train": 10907,
+      "n_free_rows": 1767,
+      "last_logged_training_loss": {
+        "value": 0.02052408754825592,
+        "optimizer_step": 340,
+        "epoch": 0.9974330766409975,
+        "learning_rate": 6.741573033707882e-07,
+        "scope": "last logged interval at step 340 of 341; not whole-run average"
+      },
+      "quality": {
+        "agree_gpt4o_pct": 82.46054750402575,
+        "tpr_vs_gpt4o_pct": 58.009661835748794,
+        "decided_pct": 100,
+        "parse_failure_pct": 0,
+        "refusal_pct": 0,
+        "scope": "greedy decisions at each model's own operating point; GPT-4o is a reference proxy",
+        "agreement_delta_vs_same_seed_full_pp": -0.0869565217391397,
+        "tpr_delta_vs_same_seed_full_pp": -0.927536231884055
+      },
+      "merge_kept_pct": 95.68391699935431,
+      "registered_trainer_settings": {
+        "base_model": "Qwen/Qwen3.5-9B",
+        "data_config": "configs/data/en_only_distill_v3_all.yaml",
+        "sft_checkpoint": "outputs/sft/qwen3.5-9b_en_only_sft_v3_additional",
+        "num_train_epochs": 1,
+        "max_steps": -1,
+        "learning_rate": 3e-05,
+        "lr_scheduler_type": "warmup_stable_decay",
+        "lr_scheduler_kwargs": {
+          "num_decay_steps": 89,
+          "decay_type": "linear"
+        },
+        "warmup_steps": 5,
+        "per_device_train_batch_size": 1,
+        "gradient_accumulation_steps": 8,
+        "gradient_checkpointing": true,
+        "gradient_checkpointing_kwargs": {
+          "use_reentrant": false
+        },
+        "ddp_find_unused_parameters": false,
+        "lora_dropout": 0,
+        "weight_decay": 0,
+        "dtype": "bfloat16",
+        "logging_steps": 5
+      },
+      "sources": {
+        "configuration": {
+          "path": "/ritom/scratch/cscs/zhang/xw/hiring_bias_mitigation_at/configs/mitigation/distill/decision_distill_l15_20_seed42.yaml",
+          "sha256": "e14158f65c0686a082a0db2c3786da1437e81e5728fbb2f013a402ca8f0c1e85",
+          "repository_path": "configs/mitigation/distill/decision_distill_l15_20_seed42.yaml",
+          "repository_url": "https://github.com/Stereotypes-in-LLMs/hiring_bias_mitigation_at/blob/main/configs/mitigation/distill/decision_distill_l15_20_seed42.yaml"
+        },
+        "reference_metrics": {
+          "path": "/ritom/scratch/cscs/zhang/xw/hiring_bias_mitigation_at/reports/reference_metrics/Qwen3.5-9B--en--sft--adapter--en_only_decision_distill_l15_20_seed42.json",
+          "sha256": "0ee422a64081a45369a4d86b99ecfa0556fa333cbcdd2d7d1ee37a772b0054de",
+          "repository_path": "reports/reference_metrics/Qwen3.5-9B--en--sft--adapter--en_only_decision_distill_l15_20_seed42.json",
+          "repository_url": "https://github.com/Stereotypes-in-LLMs/hiring_bias_mitigation_at/blob/main/reports/reference_metrics/Qwen3.5-9B--en--sft--adapter--en_only_decision_distill_l15_20_seed42.json",
+          "snapshot_repository_path": "reports/poster_followup/window_budget_sources/window_r32_seed42/reference_metrics.json",
+          "snapshot_repository_url": "https://github.com/Stereotypes-in-LLMs/hiring_bias_mitigation_at/blob/main/reports/poster_followup/window_budget_sources/window_r32_seed42/reference_metrics.json",
+          "snapshot_scope": "complete source JSON"
+        },
+        "run_manifest": {
+          "path": "/ritom/scratch/cscs/zhang/xw/outputs/distill/decision_distill_l15_20_seed42/run_config.json",
+          "sha256": "3c85a2ec74d11c331c844bc5fa3f9cee8f14ed28c8f02784cd81406ad4b88223",
+          "snapshot_repository_path": "reports/poster_followup/window_budget_sources/window_r32_seed42/run_config.json",
+          "snapshot_repository_url": "https://github.com/Stereotypes-in-LLMs/hiring_bias_mitigation_at/blob/main/reports/poster_followup/window_budget_sources/window_r32_seed42/run_config.json",
+          "snapshot_scope": "complete source JSON"
+        },
+        "final_trainer_state": {
+          "path": "/ritom/scratch/cscs/zhang/xw/outputs/distill/decision_distill_l15_20_seed42/checkpoint-341/trainer_state.json",
+          "sha256": "c0bc8951447c5f3cfb4f3b347dffaec6658a89b49ce446c509cff1c605115b53",
+          "snapshot_repository_path": "reports/poster_followup/window_budget_sources/window_r32_seed42/trainer_state_terminal.json",
+          "snapshot_repository_url": "https://github.com/Stereotypes-in-LLMs/hiring_bias_mitigation_at/blob/main/reports/poster_followup/window_budget_sources/window_r32_seed42/trainer_state_terminal.json",
+          "snapshot_scope": "terminal fields and last loss record only, extracted from trainer_state.json"
+        },
+        "adapter_config": {
+          "path": "/ritom/scratch/cscs/zhang/xw/outputs/distill/decision_distill_l15_20_seed42/adapter_config.json",
+          "sha256": "f425fa28daefd02443fb5f8ec4940ac5c1201c200ea3452cee2a0f3bc54406d8",
+          "snapshot_repository_path": "reports/poster_followup/window_budget_sources/window_r32_seed42/adapter_config.json",
+          "snapshot_repository_url": "https://github.com/Stereotypes-in-LLMs/hiring_bias_mitigation_at/blob/main/reports/poster_followup/window_budget_sources/window_r32_seed42/adapter_config.json",
+          "snapshot_scope": "complete source JSON"
+        }
+      }
+    },
+    {
+      "seed": 42,
+      "arm": "window_r163",
+      "run": "Qwen3.5-9B--en--sft--adapter--en_only_decision_distill_l15_20_r163_seed42",
+      "rank": 163,
+      "alpha": 326,
+      "layers": [
+        15,
+        20
+      ],
+      "training_status": "done",
+      "final_checkpoint": "checkpoint-341",
+      "completed_global_step": 341,
+      "completed_epoch": 1,
+      "n_train": 10907,
+      "n_free_rows": 1767,
+      "last_logged_training_loss": {
+        "value": 0.014404377341270447,
+        "optimizer_step": 340,
+        "epoch": 0.9974330766409975,
+        "learning_rate": 6.741573033707882e-07,
+        "scope": "last logged interval at step 340 of 341; not whole-run average"
+      },
+      "quality": {
+        "agree_gpt4o_pct": 82.67632850241546,
+        "tpr_vs_gpt4o_pct": 58.328502415458935,
+        "decided_pct": 100,
+        "parse_failure_pct": 0,
+        "refusal_pct": 0,
+        "scope": "greedy decisions at each model's own operating point; GPT-4o is a reference proxy",
+        "agreement_delta_vs_same_seed_full_pp": 0.12882447665056418,
+        "tpr_delta_vs_same_seed_full_pp": -0.608695652173914
+      },
+      "merge_kept_pct": 99.06872649596758,
+      "registered_trainer_settings": {
+        "base_model": "Qwen/Qwen3.5-9B",
+        "data_config": "configs/data/en_only_distill_v3_all.yaml",
+        "sft_checkpoint": "outputs/sft/qwen3.5-9b_en_only_sft_v3_additional",
+        "num_train_epochs": 1,
+        "max_steps": -1,
+        "learning_rate": 3e-05,
+        "lr_scheduler_type": "warmup_stable_decay",
+        "lr_scheduler_kwargs": {
+          "num_decay_steps": 89,
+          "decay_type": "linear"
+        },
+        "warmup_steps": 5,
+        "per_device_train_batch_size": 1,
+        "gradient_accumulation_steps": 8,
+        "gradient_checkpointing": true,
+        "gradient_checkpointing_kwargs": {
+          "use_reentrant": false
+        },
+        "ddp_find_unused_parameters": false,
+        "lora_dropout": 0,
+        "weight_decay": 0,
+        "dtype": "bfloat16",
+        "logging_steps": 5
+      },
+      "sources": {
+        "configuration": {
+          "path": "/ritom/scratch/cscs/zhang/xw/hiring_bias_mitigation_at/configs/mitigation/distill/decision_distill_l15_20_r163_seed42.yaml",
+          "sha256": "330c53b444ffb29b58dbf9bd2bd44ec9310cd86c50f068880d5774cb7f145907",
+          "repository_path": "configs/mitigation/distill/decision_distill_l15_20_r163_seed42.yaml",
+          "repository_url": "https://github.com/Stereotypes-in-LLMs/hiring_bias_mitigation_at/blob/main/configs/mitigation/distill/decision_distill_l15_20_r163_seed42.yaml"
+        },
+        "reference_metrics": {
+          "path": "/ritom/scratch/cscs/zhang/xw/hiring_bias_mitigation_at/reports/reference_metrics/Qwen3.5-9B--en--sft--adapter--en_only_decision_distill_l15_20_r163_seed42.json",
+          "sha256": "3a8e04e025fe6dec927f00ea5bef2cd0a48f66505d2af47b660418d6a81787da",
+          "repository_path": "reports/reference_metrics/Qwen3.5-9B--en--sft--adapter--en_only_decision_distill_l15_20_r163_seed42.json",
+          "repository_url": "https://github.com/Stereotypes-in-LLMs/hiring_bias_mitigation_at/blob/main/reports/reference_metrics/Qwen3.5-9B--en--sft--adapter--en_only_decision_distill_l15_20_r163_seed42.json",
+          "snapshot_repository_path": "reports/poster_followup/window_budget_sources/window_r163_seed42/reference_metrics.json",
+          "snapshot_repository_url": "https://github.com/Stereotypes-in-LLMs/hiring_bias_mitigation_at/blob/main/reports/poster_followup/window_budget_sources/window_r163_seed42/reference_metrics.json",
+          "snapshot_scope": "complete source JSON"
+        },
+        "run_manifest": {
+          "path": "/ritom/scratch/cscs/zhang/xw/outputs/distill/decision_distill_l15_20_r163_seed42/run_config.json",
+          "sha256": "6ce7431b7bdcc92b467fa7d18ef13aca59ffd5e83b818d903d285f6996140cca",
+          "snapshot_repository_path": "reports/poster_followup/window_budget_sources/window_r163_seed42/run_config.json",
+          "snapshot_repository_url": "https://github.com/Stereotypes-in-LLMs/hiring_bias_mitigation_at/blob/main/reports/poster_followup/window_budget_sources/window_r163_seed42/run_config.json",
+          "snapshot_scope": "complete source JSON"
+        },
+        "final_trainer_state": {
+          "path": "/ritom/scratch/cscs/zhang/xw/outputs/distill/decision_distill_l15_20_r163_seed42/checkpoint-341/trainer_state.json",
+          "sha256": "14b96cb978f59006f452699a9537a3b837a81936ca5846a18fdbd73bf13ce448",
+          "snapshot_repository_path": "reports/poster_followup/window_budget_sources/window_r163_seed42/trainer_state_terminal.json",
+          "snapshot_repository_url": "https://github.com/Stereotypes-in-LLMs/hiring_bias_mitigation_at/blob/main/reports/poster_followup/window_budget_sources/window_r163_seed42/trainer_state_terminal.json",
+          "snapshot_scope": "terminal fields and last loss record only, extracted from trainer_state.json"
+        },
+        "adapter_config": {
+          "path": "/ritom/scratch/cscs/zhang/xw/outputs/distill/decision_distill_l15_20_r163_seed42/adapter_config.json",
+          "sha256": "8116b1687f83ce2f848f80a5666fcbf13d22eb9fbfa09c80556d83b644505f08",
+          "snapshot_repository_path": "reports/poster_followup/window_budget_sources/window_r163_seed42/adapter_config.json",
+          "snapshot_repository_url": "https://github.com/Stereotypes-in-LLMs/hiring_bias_mitigation_at/blob/main/reports/poster_followup/window_budget_sources/window_r163_seed42/adapter_config.json",
+          "snapshot_scope": "complete source JSON"
+        }
+      }
+    },
+    {
+      "seed": 43,
+      "arm": "full_r32",
+      "run": "Qwen3.5-9B--en--sft--adapter--en_only_decision_distill_seed43",
+      "rank": 32,
+      "alpha": 64,
+      "layers": "all 32 layers",
+      "training_status": "done",
+      "final_checkpoint": "checkpoint-341",
+      "completed_global_step": 341,
+      "completed_epoch": 1,
+      "n_train": 10907,
+      "n_free_rows": 1767,
+      "last_logged_training_loss": {
+        "value": 0.012645995616912842,
+        "optimizer_step": 340,
+        "epoch": 0.9974330766409975,
+        "learning_rate": 6.741573033707882e-07,
+        "scope": "last logged interval at step 340 of 341; not whole-run average"
+      },
+      "quality": {
+        "agree_gpt4o_pct": 82.71175523349437,
+        "tpr_vs_gpt4o_pct": 59.014492753623195,
+        "decided_pct": 100,
+        "parse_failure_pct": 0,
+        "refusal_pct": 0,
+        "scope": "greedy decisions at each model's own operating point; GPT-4o is a reference proxy",
+        "agreement_delta_vs_same_seed_full_pp": 0,
+        "tpr_delta_vs_same_seed_full_pp": 0
+      },
+      "merge_kept_pct": 91.91753980088248,
+      "registered_trainer_settings": {
+        "base_model": "Qwen/Qwen3.5-9B",
+        "data_config": "configs/data/en_only_distill_v3_all.yaml",
+        "sft_checkpoint": "outputs/sft/qwen3.5-9b_en_only_sft_v3_additional",
+        "num_train_epochs": 1,
+        "max_steps": -1,
+        "learning_rate": 3e-05,
+        "lr_scheduler_type": "warmup_stable_decay",
+        "lr_scheduler_kwargs": {
+          "num_decay_steps": 89,
+          "decay_type": "linear"
+        },
+        "warmup_steps": 5,
+        "per_device_train_batch_size": 1,
+        "gradient_accumulation_steps": 8,
+        "gradient_checkpointing": true,
+        "gradient_checkpointing_kwargs": {
+          "use_reentrant": false
+        },
+        "ddp_find_unused_parameters": false,
+        "lora_dropout": 0,
+        "weight_decay": 0,
+        "dtype": "bfloat16",
+        "logging_steps": 5
+      },
+      "sources": {
+        "configuration": {
+          "path": "/ritom/scratch/cscs/zhang/xw/hiring_bias_mitigation_at/configs/mitigation/distill/decision_distill_seed43.yaml",
+          "sha256": "28b4ee69c5e485f0f7f103744c1beee411b7a5994eebe8231a56c04ea64952d6",
+          "repository_path": "configs/mitigation/distill/decision_distill_seed43.yaml",
+          "repository_url": "https://github.com/Stereotypes-in-LLMs/hiring_bias_mitigation_at/blob/main/configs/mitigation/distill/decision_distill_seed43.yaml"
+        },
+        "reference_metrics": {
+          "path": "/ritom/scratch/cscs/zhang/xw/hiring_bias_mitigation_at/reports/reference_metrics/Qwen3.5-9B--en--sft--adapter--en_only_decision_distill_seed43.json",
+          "sha256": "9457f8f41f8f19c29ec29d150818435ea481e67941d73435a9b16759c192fc99",
+          "repository_path": "reports/reference_metrics/Qwen3.5-9B--en--sft--adapter--en_only_decision_distill_seed43.json",
+          "repository_url": "https://github.com/Stereotypes-in-LLMs/hiring_bias_mitigation_at/blob/main/reports/reference_metrics/Qwen3.5-9B--en--sft--adapter--en_only_decision_distill_seed43.json",
+          "snapshot_repository_path": "reports/poster_followup/window_budget_sources/full_r32_seed43/reference_metrics.json",
+          "snapshot_repository_url": "https://github.com/Stereotypes-in-LLMs/hiring_bias_mitigation_at/blob/main/reports/poster_followup/window_budget_sources/full_r32_seed43/reference_metrics.json",
+          "snapshot_scope": "complete source JSON"
+        },
+        "run_manifest": {
+          "path": "/ritom/scratch/cscs/zhang/xw/outputs/distill/decision_distill_seed43/run_config.json",
+          "sha256": "1f0ff11a627bf90077846d1d9afd6cdb618c76337bf52f0973e3fe12c2acf239",
+          "snapshot_repository_path": "reports/poster_followup/window_budget_sources/full_r32_seed43/run_config.json",
+          "snapshot_repository_url": "https://github.com/Stereotypes-in-LLMs/hiring_bias_mitigation_at/blob/main/reports/poster_followup/window_budget_sources/full_r32_seed43/run_config.json",
+          "snapshot_scope": "complete source JSON"
+        },
+        "final_trainer_state": {
+          "path": "/ritom/scratch/cscs/zhang/xw/outputs/distill/decision_distill_seed43/checkpoint-341/trainer_state.json",
+          "sha256": "e0a7748940a7660ca26d528973daaa817208b719fc176a105e10252608ea7b9a",
+          "snapshot_repository_path": "reports/poster_followup/window_budget_sources/full_r32_seed43/trainer_state_terminal.json",
+          "snapshot_repository_url": "https://github.com/Stereotypes-in-LLMs/hiring_bias_mitigation_at/blob/main/reports/poster_followup/window_budget_sources/full_r32_seed43/trainer_state_terminal.json",
+          "snapshot_scope": "terminal fields and last loss record only, extracted from trainer_state.json"
+        },
+        "adapter_config": {
+          "path": "/ritom/scratch/cscs/zhang/xw/outputs/distill/decision_distill_seed43/adapter_config.json",
+          "sha256": "44a82e56bde73418e1b2fc3203f4dc089696ccedae62798c74ccb311634be26f",
+          "snapshot_repository_path": "reports/poster_followup/window_budget_sources/full_r32_seed43/adapter_config.json",
+          "snapshot_repository_url": "https://github.com/Stereotypes-in-LLMs/hiring_bias_mitigation_at/blob/main/reports/poster_followup/window_budget_sources/full_r32_seed43/adapter_config.json",
+          "snapshot_scope": "complete source JSON"
+        }
+      }
+    },
+    {
+      "seed": 43,
+      "arm": "window_r32",
+      "run": "Qwen3.5-9B--en--sft--adapter--en_only_decision_distill_l15_20_seed43",
+      "rank": 32,
+      "alpha": 64,
+      "layers": [
+        15,
+        20
+      ],
+      "training_status": "done",
+      "final_checkpoint": "checkpoint-341",
+      "completed_global_step": 341,
+      "completed_epoch": 1,
+      "n_train": 10907,
+      "n_free_rows": 1767,
+      "last_logged_training_loss": {
+        "value": 0.01857108473777771,
+        "optimizer_step": 340,
+        "epoch": 0.9974330766409975,
+        "learning_rate": 6.741573033707882e-07,
+        "scope": "last logged interval at step 340 of 341; not whole-run average"
+      },
+      "quality": {
+        "agree_gpt4o_pct": 82.65378421900161,
+        "tpr_vs_gpt4o_pct": 58.415458937198075,
+        "decided_pct": 100,
+        "parse_failure_pct": 0,
+        "refusal_pct": 0,
+        "scope": "greedy decisions at each model's own operating point; GPT-4o is a reference proxy",
+        "agreement_delta_vs_same_seed_full_pp": -0.05797101449276454,
+        "tpr_delta_vs_same_seed_full_pp": -0.5990338164251199
+      },
+      "merge_kept_pct": 95.9370364689959,
+      "registered_trainer_settings": {
+        "base_model": "Qwen/Qwen3.5-9B",
+        "data_config": "configs/data/en_only_distill_v3_all.yaml",
+        "sft_checkpoint": "outputs/sft/qwen3.5-9b_en_only_sft_v3_additional",
+        "num_train_epochs": 1,
+        "max_steps": -1,
+        "learning_rate": 3e-05,
+        "lr_scheduler_type": "warmup_stable_decay",
+        "lr_scheduler_kwargs": {
+          "num_decay_steps": 89,
+          "decay_type": "linear"
+        },
+        "warmup_steps": 5,
+        "per_device_train_batch_size": 1,
+        "gradient_accumulation_steps": 8,
+        "gradient_checkpointing": true,
+        "gradient_checkpointing_kwargs": {
+          "use_reentrant": false
+        },
+        "ddp_find_unused_parameters": false,
+        "lora_dropout": 0,
+        "weight_decay": 0,
+        "dtype": "bfloat16",
+        "logging_steps": 5
+      },
+      "sources": {
+        "configuration": {
+          "path": "/ritom/scratch/cscs/zhang/xw/hiring_bias_mitigation_at/configs/mitigation/distill/decision_distill_l15_20_seed43.yaml",
+          "sha256": "f62c12cf6cb92170eb65f5bfed61aa6ab5a9298772c7e37832e5caecc3535f81",
+          "repository_path": "configs/mitigation/distill/decision_distill_l15_20_seed43.yaml",
+          "repository_url": "https://github.com/Stereotypes-in-LLMs/hiring_bias_mitigation_at/blob/main/configs/mitigation/distill/decision_distill_l15_20_seed43.yaml"
+        },
+        "reference_metrics": {
+          "path": "/ritom/scratch/cscs/zhang/xw/hiring_bias_mitigation_at/reports/reference_metrics/Qwen3.5-9B--en--sft--adapter--en_only_decision_distill_l15_20_seed43.json",
+          "sha256": "4e08b087b0f4e2e2c640e22abce36ea19dbb096a7f6fefa2107059d15ad662a2",
+          "repository_path": "reports/reference_metrics/Qwen3.5-9B--en--sft--adapter--en_only_decision_distill_l15_20_seed43.json",
+          "repository_url": "https://github.com/Stereotypes-in-LLMs/hiring_bias_mitigation_at/blob/main/reports/reference_metrics/Qwen3.5-9B--en--sft--adapter--en_only_decision_distill_l15_20_seed43.json",
+          "snapshot_repository_path": "reports/poster_followup/window_budget_sources/window_r32_seed43/reference_metrics.json",
+          "snapshot_repository_url": "https://github.com/Stereotypes-in-LLMs/hiring_bias_mitigation_at/blob/main/reports/poster_followup/window_budget_sources/window_r32_seed43/reference_metrics.json",
+          "snapshot_scope": "complete source JSON"
+        },
+        "run_manifest": {
+          "path": "/ritom/scratch/cscs/zhang/xw/outputs/distill/decision_distill_l15_20_seed43/run_config.json",
+          "sha256": "67244cd897fe9f6894ba1154d85f2cc594989d443234154439220ab2370406c3",
+          "snapshot_repository_path": "reports/poster_followup/window_budget_sources/window_r32_seed43/run_config.json",
+          "snapshot_repository_url": "https://github.com/Stereotypes-in-LLMs/hiring_bias_mitigation_at/blob/main/reports/poster_followup/window_budget_sources/window_r32_seed43/run_config.json",
+          "snapshot_scope": "complete source JSON"
+        },
+        "final_trainer_state": {
+          "path": "/ritom/scratch/cscs/zhang/xw/outputs/distill/decision_distill_l15_20_seed43/checkpoint-341/trainer_state.json",
+          "sha256": "0e9931b689bccc9bfbdf6cb6b19694c53280d81dd047f67d2e4da58c689515ac",
+          "snapshot_repository_path": "reports/poster_followup/window_budget_sources/window_r32_seed43/trainer_state_terminal.json",
+          "snapshot_repository_url": "https://github.com/Stereotypes-in-LLMs/hiring_bias_mitigation_at/blob/main/reports/poster_followup/window_budget_sources/window_r32_seed43/trainer_state_terminal.json",
+          "snapshot_scope": "terminal fields and last loss record only, extracted from trainer_state.json"
+        },
+        "adapter_config": {
+          "path": "/ritom/scratch/cscs/zhang/xw/outputs/distill/decision_distill_l15_20_seed43/adapter_config.json",
+          "sha256": "7b8821243a53c59bf37f448b34224afea8aac78b42f4ca41576144d4b4721e73",
+          "snapshot_repository_path": "reports/poster_followup/window_budget_sources/window_r32_seed43/adapter_config.json",
+          "snapshot_repository_url": "https://github.com/Stereotypes-in-LLMs/hiring_bias_mitigation_at/blob/main/reports/poster_followup/window_budget_sources/window_r32_seed43/adapter_config.json",
+          "snapshot_scope": "complete source JSON"
+        }
+      }
+    },
+    {
+      "seed": 43,
+      "arm": "window_r163",
+      "run": "Qwen3.5-9B--en--sft--adapter--en_only_decision_distill_l15_20_r163_seed43",
+      "rank": 163,
+      "alpha": 326,
+      "layers": [
+        15,
+        20
+      ],
+      "training_status": "done",
+      "final_checkpoint": "checkpoint-341",
+      "completed_global_step": 341,
+      "completed_epoch": 1,
+      "n_train": 10907,
+      "n_free_rows": 1767,
+      "last_logged_training_loss": {
+        "value": 0.015899902582168578,
+        "optimizer_step": 340,
+        "epoch": 0.9974330766409975,
+        "learning_rate": 6.741573033707882e-07,
+        "scope": "last logged interval at step 340 of 341; not whole-run average"
+      },
+      "quality": {
+        "agree_gpt4o_pct": 82.39291465378422,
+        "tpr_vs_gpt4o_pct": 57.77777777777777,
+        "decided_pct": 100,
+        "parse_failure_pct": 0,
+        "refusal_pct": 0,
+        "scope": "greedy decisions at each model's own operating point; GPT-4o is a reference proxy",
+        "agreement_delta_vs_same_seed_full_pp": -0.3188405797101552,
+        "tpr_delta_vs_same_seed_full_pp": -1.2367149758454232
+      },
+      "merge_kept_pct": 99.03339695738987,
+      "registered_trainer_settings": {
+        "base_model": "Qwen/Qwen3.5-9B",
+        "data_config": "configs/data/en_only_distill_v3_all.yaml",
+        "sft_checkpoint": "outputs/sft/qwen3.5-9b_en_only_sft_v3_additional",
+        "num_train_epochs": 1,
+        "max_steps": -1,
+        "learning_rate": 3e-05,
+        "lr_scheduler_type": "warmup_stable_decay",
+        "lr_scheduler_kwargs": {
+          "num_decay_steps": 89,
+          "decay_type": "linear"
+        },
+        "warmup_steps": 5,
+        "per_device_train_batch_size": 1,
+        "gradient_accumulation_steps": 8,
+        "gradient_checkpointing": true,
+        "gradient_checkpointing_kwargs": {
+          "use_reentrant": false
+        },
+        "ddp_find_unused_parameters": false,
+        "lora_dropout": 0,
+        "weight_decay": 0,
+        "dtype": "bfloat16",
+        "logging_steps": 5
+      },
+      "sources": {
+        "configuration": {
+          "path": "/ritom/scratch/cscs/zhang/xw/hiring_bias_mitigation_at/configs/mitigation/distill/decision_distill_l15_20_r163_seed43.yaml",
+          "sha256": "d3861e4d7e047dc41c14178a8d9d4e70346e1a8f342f6930ee637f12928a9228",
+          "repository_path": "configs/mitigation/distill/decision_distill_l15_20_r163_seed43.yaml",
+          "repository_url": "https://github.com/Stereotypes-in-LLMs/hiring_bias_mitigation_at/blob/main/configs/mitigation/distill/decision_distill_l15_20_r163_seed43.yaml"
+        },
+        "reference_metrics": {
+          "path": "/ritom/scratch/cscs/zhang/xw/hiring_bias_mitigation_at/reports/reference_metrics/Qwen3.5-9B--en--sft--adapter--en_only_decision_distill_l15_20_r163_seed43.json",
+          "sha256": "20ff7f77e69fef8d4e78d65b4e7cdf463541ea5648e408356000b9605e53e4d9",
+          "repository_path": "reports/reference_metrics/Qwen3.5-9B--en--sft--adapter--en_only_decision_distill_l15_20_r163_seed43.json",
+          "repository_url": "https://github.com/Stereotypes-in-LLMs/hiring_bias_mitigation_at/blob/main/reports/reference_metrics/Qwen3.5-9B--en--sft--adapter--en_only_decision_distill_l15_20_r163_seed43.json",
+          "snapshot_repository_path": "reports/poster_followup/window_budget_sources/window_r163_seed43/reference_metrics.json",
+          "snapshot_repository_url": "https://github.com/Stereotypes-in-LLMs/hiring_bias_mitigation_at/blob/main/reports/poster_followup/window_budget_sources/window_r163_seed43/reference_metrics.json",
+          "snapshot_scope": "complete source JSON"
+        },
+        "run_manifest": {
+          "path": "/ritom/scratch/cscs/zhang/xw/outputs/distill/decision_distill_l15_20_r163_seed43/run_config.json",
+          "sha256": "cc04de6c854f37c1cebff9361d4622948da98b36909d586c402fb86d3d34cea1",
+          "snapshot_repository_path": "reports/poster_followup/window_budget_sources/window_r163_seed43/run_config.json",
+          "snapshot_repository_url": "https://github.com/Stereotypes-in-LLMs/hiring_bias_mitigation_at/blob/main/reports/poster_followup/window_budget_sources/window_r163_seed43/run_config.json",
+          "snapshot_scope": "complete source JSON"
+        },
+        "final_trainer_state": {
+          "path": "/ritom/scratch/cscs/zhang/xw/outputs/distill/decision_distill_l15_20_r163_seed43/checkpoint-341/trainer_state.json",
+          "sha256": "d9a9fcf145544ff08094740c7935bf011178b415e31218b5f8358640eff4cb61",
+          "snapshot_repository_path": "reports/poster_followup/window_budget_sources/window_r163_seed43/trainer_state_terminal.json",
+          "snapshot_repository_url": "https://github.com/Stereotypes-in-LLMs/hiring_bias_mitigation_at/blob/main/reports/poster_followup/window_budget_sources/window_r163_seed43/trainer_state_terminal.json",
+          "snapshot_scope": "terminal fields and last loss record only, extracted from trainer_state.json"
+        },
+        "adapter_config": {
+          "path": "/ritom/scratch/cscs/zhang/xw/outputs/distill/decision_distill_l15_20_r163_seed43/adapter_config.json",
+          "sha256": "d704f7194ed12274d769f19e957e9d0c6187d766da02f3b5870e174c2cd3f9e7",
+          "snapshot_repository_path": "reports/poster_followup/window_budget_sources/window_r163_seed43/adapter_config.json",
+          "snapshot_repository_url": "https://github.com/Stereotypes-in-LLMs/hiring_bias_mitigation_at/blob/main/reports/poster_followup/window_budget_sources/window_r163_seed43/adapter_config.json",
+          "snapshot_scope": "complete source JSON"
+        }
+      }
+    },
+    {
+      "seed": 44,
+      "arm": "full_r32",
+      "run": "Qwen3.5-9B--en--sft--adapter--en_only_decision_distill_seed44",
+      "rank": 32,
+      "alpha": 64,
+      "layers": "all 32 layers",
+      "training_status": "done",
+      "final_checkpoint": "checkpoint-341",
+      "completed_global_step": 341,
+      "completed_epoch": 1,
+      "n_train": 10907,
+      "n_free_rows": 1767,
+      "last_logged_training_loss": {
+        "value": 0.01516438126564026,
+        "optimizer_step": 340,
+        "epoch": 0.9974330766409975,
+        "learning_rate": 6.741573033707882e-07,
+        "scope": "last logged interval at step 340 of 341; not whole-run average"
+      },
+      "quality": {
+        "agree_gpt4o_pct": 82.53140096618358,
+        "tpr_vs_gpt4o_pct": 58.850241545893724,
+        "decided_pct": 100,
+        "parse_failure_pct": 0,
+        "refusal_pct": 0,
+        "scope": "greedy decisions at each model's own operating point; GPT-4o is a reference proxy",
+        "agreement_delta_vs_same_seed_full_pp": 0,
+        "tpr_delta_vs_same_seed_full_pp": 0
+      },
+      "merge_kept_pct": 91.99928836789266,
+      "registered_trainer_settings": {
+        "base_model": "Qwen/Qwen3.5-9B",
+        "data_config": "configs/data/en_only_distill_v3_all.yaml",
+        "sft_checkpoint": "outputs/sft/qwen3.5-9b_en_only_sft_v3_additional",
+        "num_train_epochs": 1,
+        "max_steps": -1,
+        "learning_rate": 3e-05,
+        "lr_scheduler_type": "warmup_stable_decay",
+        "lr_scheduler_kwargs": {
+          "num_decay_steps": 89,
+          "decay_type": "linear"
+        },
+        "warmup_steps": 5,
+        "per_device_train_batch_size": 1,
+        "gradient_accumulation_steps": 8,
+        "gradient_checkpointing": true,
+        "gradient_checkpointing_kwargs": {
+          "use_reentrant": false
+        },
+        "ddp_find_unused_parameters": false,
+        "lora_dropout": 0,
+        "weight_decay": 0,
+        "dtype": "bfloat16",
+        "logging_steps": 5
+      },
+      "sources": {
+        "configuration": {
+          "path": "/ritom/scratch/cscs/zhang/xw/hiring_bias_mitigation_at/configs/mitigation/distill/decision_distill_seed44.yaml",
+          "sha256": "55b9acbdbf67e59ee072a22a1e24dfe2985e19285ea13b841a590493f8151c0b",
+          "repository_path": "configs/mitigation/distill/decision_distill_seed44.yaml",
+          "repository_url": "https://github.com/Stereotypes-in-LLMs/hiring_bias_mitigation_at/blob/main/configs/mitigation/distill/decision_distill_seed44.yaml"
+        },
+        "reference_metrics": {
+          "path": "/ritom/scratch/cscs/zhang/xw/hiring_bias_mitigation_at/reports/reference_metrics/Qwen3.5-9B--en--sft--adapter--en_only_decision_distill_seed44.json",
+          "sha256": "3faf7481f1fc700af91d4d1a787734b21df45f8d25d91ffdaa0ed92f5ba684e8",
+          "repository_path": "reports/reference_metrics/Qwen3.5-9B--en--sft--adapter--en_only_decision_distill_seed44.json",
+          "repository_url": "https://github.com/Stereotypes-in-LLMs/hiring_bias_mitigation_at/blob/main/reports/reference_metrics/Qwen3.5-9B--en--sft--adapter--en_only_decision_distill_seed44.json",
+          "snapshot_repository_path": "reports/poster_followup/window_budget_sources/full_r32_seed44/reference_metrics.json",
+          "snapshot_repository_url": "https://github.com/Stereotypes-in-LLMs/hiring_bias_mitigation_at/blob/main/reports/poster_followup/window_budget_sources/full_r32_seed44/reference_metrics.json",
+          "snapshot_scope": "complete source JSON"
+        },
+        "run_manifest": {
+          "path": "/ritom/scratch/cscs/zhang/xw/outputs/distill/decision_distill_seed44/run_config.json",
+          "sha256": "1c33fd25979bfb13618b0785fe47f9aade63cb0363b1a10e0352a5fd5187d15b",
+          "snapshot_repository_path": "reports/poster_followup/window_budget_sources/full_r32_seed44/run_config.json",
+          "snapshot_repository_url": "https://github.com/Stereotypes-in-LLMs/hiring_bias_mitigation_at/blob/main/reports/poster_followup/window_budget_sources/full_r32_seed44/run_config.json",
+          "snapshot_scope": "complete source JSON"
+        },
+        "final_trainer_state": {
+          "path": "/ritom/scratch/cscs/zhang/xw/outputs/distill/decision_distill_seed44/checkpoint-341/trainer_state.json",
+          "sha256": "9571ed5dc9dda52356eb500a78bff09775cecdd1c33625ce777d987a092dbc30",
+          "snapshot_repository_path": "reports/poster_followup/window_budget_sources/full_r32_seed44/trainer_state_terminal.json",
+          "snapshot_repository_url": "https://github.com/Stereotypes-in-LLMs/hiring_bias_mitigation_at/blob/main/reports/poster_followup/window_budget_sources/full_r32_seed44/trainer_state_terminal.json",
+          "snapshot_scope": "terminal fields and last loss record only, extracted from trainer_state.json"
+        },
+        "adapter_config": {
+          "path": "/ritom/scratch/cscs/zhang/xw/outputs/distill/decision_distill_seed44/adapter_config.json",
+          "sha256": "9ff571f57fe84e7cf0f365143bbe3e48b2c90523c2c724102356368ad1dac141",
+          "snapshot_repository_path": "reports/poster_followup/window_budget_sources/full_r32_seed44/adapter_config.json",
+          "snapshot_repository_url": "https://github.com/Stereotypes-in-LLMs/hiring_bias_mitigation_at/blob/main/reports/poster_followup/window_budget_sources/full_r32_seed44/adapter_config.json",
+          "snapshot_scope": "complete source JSON"
+        }
+      }
+    },
+    {
+      "seed": 44,
+      "arm": "window_r32",
+      "run": "Qwen3.5-9B--en--sft--adapter--en_only_decision_distill_l15_20_seed44",
+      "rank": 32,
+      "alpha": 64,
+      "layers": [
+        15,
+        20
+      ],
+      "training_status": "done",
+      "final_checkpoint": "checkpoint-341",
+      "completed_global_step": 341,
+      "completed_epoch": 1,
+      "n_train": 10907,
+      "n_free_rows": 1767,
+      "last_logged_training_loss": {
+        "value": 0.021132366359233858,
+        "optimizer_step": 340,
+        "epoch": 0.9974330766409975,
+        "learning_rate": 6.741573033707882e-07,
+        "scope": "last logged interval at step 340 of 341; not whole-run average"
+      },
+      "quality": {
+        "agree_gpt4o_pct": 82.66022544283413,
+        "tpr_vs_gpt4o_pct": 58.714975845410635,
+        "decided_pct": 100,
+        "parse_failure_pct": 0,
+        "refusal_pct": 0,
+        "scope": "greedy decisions at each model's own operating point; GPT-4o is a reference proxy",
+        "agreement_delta_vs_same_seed_full_pp": 0.12882447665054997,
+        "tpr_delta_vs_same_seed_full_pp": -0.13526570048308884
+      },
+      "merge_kept_pct": 95.54648105256345,
+      "registered_trainer_settings": {
+        "base_model": "Qwen/Qwen3.5-9B",
+        "data_config": "configs/data/en_only_distill_v3_all.yaml",
+        "sft_checkpoint": "outputs/sft/qwen3.5-9b_en_only_sft_v3_additional",
+        "num_train_epochs": 1,
+        "max_steps": -1,
+        "learning_rate": 3e-05,
+        "lr_scheduler_type": "warmup_stable_decay",
+        "lr_scheduler_kwargs": {
+          "num_decay_steps": 89,
+          "decay_type": "linear"
+        },
+        "warmup_steps": 5,
+        "per_device_train_batch_size": 1,
+        "gradient_accumulation_steps": 8,
+        "gradient_checkpointing": true,
+        "gradient_checkpointing_kwargs": {
+          "use_reentrant": false
+        },
+        "ddp_find_unused_parameters": false,
+        "lora_dropout": 0,
+        "weight_decay": 0,
+        "dtype": "bfloat16",
+        "logging_steps": 5
+      },
+      "sources": {
+        "configuration": {
+          "path": "/ritom/scratch/cscs/zhang/xw/hiring_bias_mitigation_at/configs/mitigation/distill/decision_distill_l15_20_seed44.yaml",
+          "sha256": "0ee6393993bfd105e13229f49be79068fa8d3e92a97a2510dd627e0051297fdb",
+          "repository_path": "configs/mitigation/distill/decision_distill_l15_20_seed44.yaml",
+          "repository_url": "https://github.com/Stereotypes-in-LLMs/hiring_bias_mitigation_at/blob/main/configs/mitigation/distill/decision_distill_l15_20_seed44.yaml"
+        },
+        "reference_metrics": {
+          "path": "/ritom/scratch/cscs/zhang/xw/hiring_bias_mitigation_at/reports/reference_metrics/Qwen3.5-9B--en--sft--adapter--en_only_decision_distill_l15_20_seed44.json",
+          "sha256": "4cdf543337da309adc295e85406e4fe8606c35ba6279c2af35ed0a136c26ae24",
+          "repository_path": "reports/reference_metrics/Qwen3.5-9B--en--sft--adapter--en_only_decision_distill_l15_20_seed44.json",
+          "repository_url": "https://github.com/Stereotypes-in-LLMs/hiring_bias_mitigation_at/blob/main/reports/reference_metrics/Qwen3.5-9B--en--sft--adapter--en_only_decision_distill_l15_20_seed44.json",
+          "snapshot_repository_path": "reports/poster_followup/window_budget_sources/window_r32_seed44/reference_metrics.json",
+          "snapshot_repository_url": "https://github.com/Stereotypes-in-LLMs/hiring_bias_mitigation_at/blob/main/reports/poster_followup/window_budget_sources/window_r32_seed44/reference_metrics.json",
+          "snapshot_scope": "complete source JSON"
+        },
+        "run_manifest": {
+          "path": "/ritom/scratch/cscs/zhang/xw/outputs/distill/decision_distill_l15_20_seed44/run_config.json",
+          "sha256": "81c6ff3dad2fac17a75c4e46633dab3e1c84d8688623cb0959dfb06226f11970",
+          "snapshot_repository_path": "reports/poster_followup/window_budget_sources/window_r32_seed44/run_config.json",
+          "snapshot_repository_url": "https://github.com/Stereotypes-in-LLMs/hiring_bias_mitigation_at/blob/main/reports/poster_followup/window_budget_sources/window_r32_seed44/run_config.json",
+          "snapshot_scope": "complete source JSON"
+        },
+        "final_trainer_state": {
+          "path": "/ritom/scratch/cscs/zhang/xw/outputs/distill/decision_distill_l15_20_seed44/checkpoint-341/trainer_state.json",
+          "sha256": "329523cc2b2eaeeff9bd6f7e612ed84e164229b4c3d7af29bd746f99b042ebbd",
+          "snapshot_repository_path": "reports/poster_followup/window_budget_sources/window_r32_seed44/trainer_state_terminal.json",
+          "snapshot_repository_url": "https://github.com/Stereotypes-in-LLMs/hiring_bias_mitigation_at/blob/main/reports/poster_followup/window_budget_sources/window_r32_seed44/trainer_state_terminal.json",
+          "snapshot_scope": "terminal fields and last loss record only, extracted from trainer_state.json"
+        },
+        "adapter_config": {
+          "path": "/ritom/scratch/cscs/zhang/xw/outputs/distill/decision_distill_l15_20_seed44/adapter_config.json",
+          "sha256": "a2f09504301fa4ada189c81ab6df17a74fd6c25083208d54011945ed5c0d8022",
+          "snapshot_repository_path": "reports/poster_followup/window_budget_sources/window_r32_seed44/adapter_config.json",
+          "snapshot_repository_url": "https://github.com/Stereotypes-in-LLMs/hiring_bias_mitigation_at/blob/main/reports/poster_followup/window_budget_sources/window_r32_seed44/adapter_config.json",
+          "snapshot_scope": "complete source JSON"
+        }
+      }
+    },
+    {
+      "seed": 44,
+      "arm": "window_r163",
+      "run": "Qwen3.5-9B--en--sft--adapter--en_only_decision_distill_l15_20_r163_seed44",
+      "rank": 163,
+      "alpha": 326,
+      "layers": [
+        15,
+        20
+      ],
+      "training_status": "done",
+      "final_checkpoint": "checkpoint-341",
+      "completed_global_step": 341,
+      "completed_epoch": 1,
+      "n_train": 10907,
+      "n_free_rows": 1767,
+      "last_logged_training_loss": {
+        "value": 0.017867228388786315,
+        "optimizer_step": 340,
+        "epoch": 0.9974330766409975,
+        "learning_rate": 6.741573033707882e-07,
+        "scope": "last logged interval at step 340 of 341; not whole-run average"
+      },
+      "quality": {
+        "agree_gpt4o_pct": 82.77294685990339,
+        "tpr_vs_gpt4o_pct": 58.78260869565217,
+        "decided_pct": 100,
+        "parse_failure_pct": 0,
+        "refusal_pct": 0,
+        "scope": "greedy decisions at each model's own operating point; GPT-4o is a reference proxy",
+        "agreement_delta_vs_same_seed_full_pp": 0.2415458937198025,
+        "tpr_delta_vs_same_seed_full_pp": -0.06763285024155152
+      },
+      "merge_kept_pct": 99.00308501873056,
+      "registered_trainer_settings": {
+        "base_model": "Qwen/Qwen3.5-9B",
+        "data_config": "configs/data/en_only_distill_v3_all.yaml",
+        "sft_checkpoint": "outputs/sft/qwen3.5-9b_en_only_sft_v3_additional",
+        "num_train_epochs": 1,
+        "max_steps": -1,
+        "learning_rate": 3e-05,
+        "lr_scheduler_type": "warmup_stable_decay",
+        "lr_scheduler_kwargs": {
+          "num_decay_steps": 89,
+          "decay_type": "linear"
+        },
+        "warmup_steps": 5,
+        "per_device_train_batch_size": 1,
+        "gradient_accumulation_steps": 8,
+        "gradient_checkpointing": true,
+        "gradient_checkpointing_kwargs": {
+          "use_reentrant": false
+        },
+        "ddp_find_unused_parameters": false,
+        "lora_dropout": 0,
+        "weight_decay": 0,
+        "dtype": "bfloat16",
+        "logging_steps": 5
+      },
+      "sources": {
+        "configuration": {
+          "path": "/ritom/scratch/cscs/zhang/xw/hiring_bias_mitigation_at/configs/mitigation/distill/decision_distill_l15_20_r163_seed44.yaml",
+          "sha256": "d2e23d7603008cf8c321cfd322df1aa7fdcfac6fc9e3a27f56431c8e03be34fd",
+          "repository_path": "configs/mitigation/distill/decision_distill_l15_20_r163_seed44.yaml",
+          "repository_url": "https://github.com/Stereotypes-in-LLMs/hiring_bias_mitigation_at/blob/main/configs/mitigation/distill/decision_distill_l15_20_r163_seed44.yaml"
+        },
+        "reference_metrics": {
+          "path": "/ritom/scratch/cscs/zhang/xw/hiring_bias_mitigation_at/reports/reference_metrics/Qwen3.5-9B--en--sft--adapter--en_only_decision_distill_l15_20_r163_seed44.json",
+          "sha256": "87681c4926b3c401b922d29eafa69f6ddb2ce37792eac07816835fdf3d7fb2e3",
+          "repository_path": "reports/reference_metrics/Qwen3.5-9B--en--sft--adapter--en_only_decision_distill_l15_20_r163_seed44.json",
+          "repository_url": "https://github.com/Stereotypes-in-LLMs/hiring_bias_mitigation_at/blob/main/reports/reference_metrics/Qwen3.5-9B--en--sft--adapter--en_only_decision_distill_l15_20_r163_seed44.json",
+          "snapshot_repository_path": "reports/poster_followup/window_budget_sources/window_r163_seed44/reference_metrics.json",
+          "snapshot_repository_url": "https://github.com/Stereotypes-in-LLMs/hiring_bias_mitigation_at/blob/main/reports/poster_followup/window_budget_sources/window_r163_seed44/reference_metrics.json",
+          "snapshot_scope": "complete source JSON"
+        },
+        "run_manifest": {
+          "path": "/ritom/scratch/cscs/zhang/xw/outputs/distill/decision_distill_l15_20_r163_seed44/run_config.json",
+          "sha256": "777b1cfc7f54956217b96ae9b09ce45b6610e9f18cf25e0f461df9b452c696d4",
+          "snapshot_repository_path": "reports/poster_followup/window_budget_sources/window_r163_seed44/run_config.json",
+          "snapshot_repository_url": "https://github.com/Stereotypes-in-LLMs/hiring_bias_mitigation_at/blob/main/reports/poster_followup/window_budget_sources/window_r163_seed44/run_config.json",
+          "snapshot_scope": "complete source JSON"
+        },
+        "final_trainer_state": {
+          "path": "/ritom/scratch/cscs/zhang/xw/outputs/distill/decision_distill_l15_20_r163_seed44/checkpoint-341/trainer_state.json",
+          "sha256": "88fc096baf4f90bc2f00cd47e8ed44427db8dc0064ac56fc0856d4b6c5103a45",
+          "snapshot_repository_path": "reports/poster_followup/window_budget_sources/window_r163_seed44/trainer_state_terminal.json",
+          "snapshot_repository_url": "https://github.com/Stereotypes-in-LLMs/hiring_bias_mitigation_at/blob/main/reports/poster_followup/window_budget_sources/window_r163_seed44/trainer_state_terminal.json",
+          "snapshot_scope": "terminal fields and last loss record only, extracted from trainer_state.json"
+        },
+        "adapter_config": {
+          "path": "/ritom/scratch/cscs/zhang/xw/outputs/distill/decision_distill_l15_20_r163_seed44/adapter_config.json",
+          "sha256": "33b93bd1e1097f73236b0945c55b45a2bbd64dc4dda887866c28fa53c4caf81e",
+          "snapshot_repository_path": "reports/poster_followup/window_budget_sources/window_r163_seed44/adapter_config.json",
+          "snapshot_repository_url": "https://github.com/Stereotypes-in-LLMs/hiring_bias_mitigation_at/blob/main/reports/poster_followup/window_budget_sources/window_r163_seed44/adapter_config.json",
+          "snapshot_scope": "complete source JSON"
+        }
+      }
+    }
+  ],
+  "three_seed_descriptive_means": {
+    "full_r32": {
+      "last_logged_training_loss": 0.013412353396415711,
+      "agreement_pct": 82.59688674181429,
+      "agreement_delta_vs_full_pp": 0,
+      "merge_kept_pct": 92.03807199486528
+    },
+    "window_r32": {
+      "last_logged_training_loss": 0.020075846215089163,
+      "agreement_pct": 82.59151905528716,
+      "agreement_delta_vs_full_pp": -0.005367686527118091,
+      "merge_kept_pct": 95.72247817363788
+    },
+    "window_r163": {
+      "last_logged_training_loss": 0.016057169437408446,
+      "agreement_pct": 82.61406333870102,
+      "agreement_delta_vs_full_pp": 0.017176596886737155,
+      "merge_kept_pct": 99.035069490696
+    }
+  }
+}

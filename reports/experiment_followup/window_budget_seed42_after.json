@@ -1,0 +1,18 @@
+{
+  "phase": "after",
+  "seed": 42,
+  "config": "configs/mitigation/distill/decision_distill_l15_20_r163_seed42.yaml",
+  "full_parameters": 58195968,
+  "old_window_parameters": 11403264,
+  "new_window_expected_parameters": 58085376,
+  "relative_parameter_gap_pct": -0.19003378378378288,
+  "rank": 163,
+  "alpha": 326,
+  "layers": [
+    15,
+    20
+  ],
+  "budget_tolerance_pct": 0.2,
+  "saved_parameters": 58085376,
+  "saved_adapter": "/ritom/scratch/cscs/zhang/xw/outputs/distill/decision_distill_l15_20_r163_seed42"
+}

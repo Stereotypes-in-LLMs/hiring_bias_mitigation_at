@@ -1,0 +1,336 @@
+{
+  "training_seed": 42,
+  "standard": "op-margin-v2",
+  "primary_sign": "window minus full; positive is worse",
+  "primary_operating_point": "same-seed full-layer r32 arm's own greedy hire count",
+  "secondary_operating_point": "SFT-v3's own greedy hire count, equal for all arms",
+  "bootstrap": {
+    "draws": 1000,
+    "seed": 42,
+    "unit": "candidate",
+    "cuts": "fixed"
+  },
+  "canonical_source_sha256": "5f9f57fc8b814fed9530f8aac26ac62e33023265ff96d416ea9abf0a58746456",
+  "score_sha256": {
+    "Qwen3.5-9B--en--sft--adapter--en_only_sft_v3_additional": "ab9c84c76a0b3394483df1e18782cb61375a8a5c398374b95a5f5f519068fc48",
+    "Qwen3.5-9B--en--sft--adapter--en_only_decision_distill_seed42": "1a65c8d63d8c9d9e61f365ec47996f451d50749e1b6bcec881321aa0e22b679e",
+    "Qwen3.5-9B--en--sft--adapter--en_only_decision_distill_l15_20_seed42": "4efc86a468a258eab43f4cdf312dd0890c4a6d6212f90e2f9f56d44b57b2f60d",
+    "Qwen3.5-9B--en--sft--adapter--en_only_decision_distill_l15_20_r163_seed42": "d94d1c25ecb250798e72ab82b197683e6c7003ccd6a613aa0c822b902bb73aa6"
+  },
+  "inputs": {
+    "sft_v3": {
+      "standard": "op-margin-v2",
+      "scoring": "log-probabilities of the first token of each decision word after the forced prefix, gathered by vLLM from the full softmax over the raw logits (logprob_token_ids); margin = logprob_hire - logprob_reject",
+      "run": "Qwen3.5-9B--en--sft--adapter--en_only_sft_v3_additional",
+      "which": "adapter",
+      "config": "configs/audit/qwen3.5-9b_en_sft_v3_additional_gh200.yaml",
+      "prompts": {
+        "n": 31050,
+        "sha1": "6ecf987f91e4a15f2992d185b415a4ae4eeb0d51"
+      },
+      "decision": {
+        "prefix": "{\"decision\": \"",
+        "words": [
+          "hire",
+          "reject"
+        ],
+        "token_ids": [
+          33304,
+          45427
+        ],
+        "chat_template_kwargs": {
+          "enable_thinking": false
+        },
+        "sampled_decision_token_share": 1.0
+      },
+      "model": {
+        "served": "/ritom/scratch/cscs/zhang/xw/outputs/merged/qwen3.5-9b_en_only_sft_v3_additional",
+        "base": "Qwen/Qwen3.5-9B",
+        "base_revision": "c202236235762e1c871ad0ccb60c8ee5ba337b9a",
+        "adapters": [
+          {
+            "path": "/ritom/scratch/cscs/zhang/xw/outputs/sft/qwen3.5-9b_en_only_sft_v3_additional",
+            "sha256": "d8d63526a43dab37a1fb41a7d7a3541f6a023c4fa2a19e9409e04da331e419ee"
+          }
+        ]
+      },
+      "engine": {
+        "gpu_memory_utilization": 0.55,
+        "max_model_len": 8192,
+        "trust_remote_code": true,
+        "seed": 42,
+        "max_num_seqs": 64,
+        "gdn_prefill_backend": "triton"
+      },
+      "software": {
+        "vllm": "0.31.0",
+        "torch": "2.13.0",
+        "transformers": "5.17.0"
+      },
+      "code": {
+        "commit": "b1cc95fec51a122abdcac9ab8297da88779ec8e9",
+        "uncommitted": []
+      },
+      "wall_seconds": 697.4,
+      "written": "2026-10-20T20:57:59+00:00"
+    },
+    "full_r32": {
+      "standard": "op-margin-v2",
+      "scoring": "log-probabilities of the first token of each decision word after the forced prefix, gathered by vLLM from the full softmax over the raw logits (logprob_token_ids); margin = logprob_hire - logprob_reject",
+      "run": "Qwen3.5-9B--en--sft--adapter--en_only_decision_distill_seed42",
+      "which": "adapter",
+      "config": "configs/audit/qwen3.5-9b_en_decision_distill_seed42_gh200.yaml",
+      "prompts": {
+        "n": 31050,
+        "sha1": "6ecf987f91e4a15f2992d185b415a4ae4eeb0d51"
+      },
+      "decision": {
+        "prefix": "{\"decision\": \"",
+        "words": [
+          "hire",
+          "reject"
+        ],
+        "token_ids": [
+          33304,
+          45427
+        ],
+        "chat_template_kwargs": {
+          "enable_thinking": false
+        },
+        "sampled_decision_token_share": 1.0
+      },
+      "model": {
+        "served": "/ritom/scratch/cscs/zhang/xw/outputs/merged/decision_distill_seed42",
+        "base": "Qwen/Qwen3.5-9B",
+        "base_revision": "c202236235762e1c871ad0ccb60c8ee5ba337b9a",
+        "adapters": [
+          {
+            "path": "/ritom/scratch/cscs/zhang/xw/outputs/sft/qwen3.5-9b_en_only_sft_v3_additional",
+            "sha256": "d8d63526a43dab37a1fb41a7d7a3541f6a023c4fa2a19e9409e04da331e419ee"
+          },
+          {
+            "path": "/ritom/scratch/cscs/zhang/xw/outputs/distill/decision_distill_seed42",
+            "sha256": "c504c69107f38da77c7858e50353cb5fb770a96cca56e59be8db2af60472b945"
+          }
+        ]
+      },
+      "engine": {
+        "gpu_memory_utilization": 0.55,
+        "max_model_len": 8192,
+        "trust_remote_code": true,
+        "seed": 42,
+        "max_num_seqs": 64,
+        "gdn_prefill_backend": "triton"
+      },
+      "software": {
+        "vllm": "0.31.0",
+        "torch": "2.13.0",
+        "transformers": "5.17.0"
+      },
+      "code": {
+        "commit": "0e2833c45a802953d47ccd78134e223a2acd4b62",
+        "uncommitted": []
+      },
+      "wall_seconds": 693.2,
+      "written": "2026-10-27T11:31:33+00:00"
+    },
+    "window_r32": {
+      "standard": "op-margin-v2",
+      "scoring": "log-probabilities of the first token of each decision word after the forced prefix, gathered by vLLM from the full softmax over the raw logits (logprob_token_ids); margin = logprob_hire - logprob_reject",
+      "run": "Qwen3.5-9B--en--sft--adapter--en_only_decision_distill_l15_20_seed42",
+      "which": "adapter",
+      "config": "configs/audit/qwen3.5-9b_en_decision_distill_l15_20_seed42_gh200.yaml",
+      "prompts": {
+        "n": 31050,
+        "sha1": "6ecf987f91e4a15f2992d185b415a4ae4eeb0d51"
+      },
+      "decision": {
+        "prefix": "{\"decision\": \"",
+        "words": [
+          "hire",
+          "reject"
+        ],
+        "token_ids": [
+          33304,
+          45427
+        ],
+        "chat_template_kwargs": {
+          "enable_thinking": false
+        },
+        "sampled_decision_token_share": 1.0
+      },
+      "model": {
+        "served": "/ritom/scratch/cscs/zhang/xw/outputs/merged/decision_distill_l15_20_seed42",
+        "base": "Qwen/Qwen3.5-9B",
+        "base_revision": "c202236235762e1c871ad0ccb60c8ee5ba337b9a",
+        "adapters": [
+          {
+            "path": "/ritom/scratch/cscs/zhang/xw/outputs/sft/qwen3.5-9b_en_only_sft_v3_additional",
+            "sha256": "d8d63526a43dab37a1fb41a7d7a3541f6a023c4fa2a19e9409e04da331e419ee"
+          },
+          {
+            "path": "/ritom/scratch/cscs/zhang/xw/outputs/distill/decision_distill_l15_20_seed42",
+            "sha256": "f9525d969c3917b82233fd1d578bd81b5f174ad304f41f0ae01ef81a5b575f7e"
+          }
+        ]
+      },
+      "engine": {
+        "gpu_memory_utilization": 0.55,
+        "max_model_len": 8192,
+        "trust_remote_code": true,
+        "seed": 42,
+        "max_num_seqs": 64,
+        "gdn_prefill_backend": "triton"
+      },
+      "software": {
+        "vllm": "0.31.0",
+        "torch": "2.13.0",
+        "transformers": "5.17.0"
+      },
+      "code": {
+        "commit": "8a0c14ae46029c1437c9fe4a51b3cca68ce3a40d",
+        "uncommitted": []
+      },
+      "wall_seconds": 696.2,
+      "written": "2026-11-01T10:04:03+00:00"
+    },
+    "window_r163": {
+      "standard": "op-margin-v2",
+      "scoring": "log-probabilities of the first token of each decision word after the forced prefix, gathered by vLLM from the full softmax over the raw logits (logprob_token_ids); margin = logprob_hire - logprob_reject",
+      "run": "Qwen3.5-9B--en--sft--adapter--en_only_decision_distill_l15_20_r163_seed42",
+      "which": "adapter",
+      "config": "configs/audit/qwen3.5-9b_en_decision_distill_l15_20_r163_seed42_gh200.yaml",
+      "prompts": {
+        "n": 31050,
+        "sha1": "6ecf987f91e4a15f2992d185b415a4ae4eeb0d51"
+      },
+      "decision": {
+        "prefix": "{\"decision\": \"",
+        "words": [
+          "hire",
+          "reject"
+        ],
+        "token_ids": [
+          33304,
+          45427
+        ],
+        "chat_template_kwargs": {
+          "enable_thinking": false
+        },
+        "sampled_decision_token_share": 1.0
+      },
+      "model": {
+        "served": "/ritom/scratch/cscs/zhang/xw/outputs/merged/decision_distill_l15_20_r163_seed42",
+        "base": "Qwen/Qwen3.5-9B",
+        "base_revision": "c202236235762e1c871ad0ccb60c8ee5ba337b9a",
+        "adapters": [
+          {
+            "path": "/ritom/scratch/cscs/zhang/xw/outputs/sft/qwen3.5-9b_en_only_sft_v3_additional",
+            "sha256": "d8d63526a43dab37a1fb41a7d7a3541f6a023c4fa2a19e9409e04da331e419ee"
+          },
+          {
+            "path": "/ritom/scratch/cscs/zhang/xw/outputs/distill/decision_distill_l15_20_r163_seed42",
+            "sha256": "25fe8479911d2299567fd94d7d70139f8bfbce83faee297eb072251cc6bbb4bd"
+          }
+        ]
+      },
+      "engine": {
+        "gpu_memory_utilization": 0.55,
+        "max_model_len": 8192,
+        "trust_remote_code": true,
+        "seed": 42,
+        "max_num_seqs": 64,
+        "gdn_prefill_backend": "triton"
+      },
+      "software": {
+        "vllm": "0.31.0",
+        "torch": "2.13.0",
+        "transformers": "5.17.0"
+      },
+      "code": {
+        "commit": "a9c0418baa2bc7cadbbe70251c35e95038507cfe",
+        "uncommitted": []
+      },
+      "wall_seconds": 706.1,
+      "written": "2026-11-02T16:52:18+00:00"
+    }
+  },
+  "primary": [
+    {
+      "arm": "window_r32",
+      "hire_rate_pct": 23.027375201288244,
+      "unstable_full_pct": 1.7037037037037037,
+      "unstable_window_pct": 2.1334800146681334,
+      "delta_window_minus_full_pp": 0.4297763109644297,
+      "ci_low": -0.26885771910524375,
+      "ci_high": 1.0965071507150714,
+      "window_threshold": -0.125,
+      "window_tie_weight": 0.5346534653465347,
+      "prompts": 31050,
+      "sets": 2700
+    },
+    {
+      "arm": "window_r163",
+      "hire_rate_pct": 23.027375201288244,
+      "unstable_full_pct": 1.7037037037037037,
+      "unstable_window_pct": 1.7407407407407407,
+      "delta_window_minus_full_pp": 0.03703703703703681,
+      "ci_low": -0.7222222222222222,
+      "ci_high": 0.6851851851851852,
+      "window_threshold": -0.125,
+      "window_tie_weight": 0.5,
+      "prompts": 31050,
+      "sets": 2700
+    }
+  ],
+  "common": [
+    {
+      "arm": "full_r32",
+      "hire_rate_pct": 22.51207729468599,
+      "hire_count": 6990,
+      "unstable_full_pct": 1.695357329160146,
+      "unstable_arm_pct": 1.695357329160146,
+      "delta_arm_minus_full_pp": 0.0,
+      "ci_low": 0.0,
+      "ci_high": 0.0,
+      "arm_threshold": 0.25,
+      "arm_tie_weight": 0.9436619718309859,
+      "full_threshold": 0.25,
+      "full_tie_weight": 0.9436619718309859,
+      "prompts": 31050,
+      "sets": 2700
+    },
+    {
+      "arm": "window_r32",
+      "hire_rate_pct": 22.51207729468599,
+      "hire_count": 6990,
+      "unstable_full_pct": 1.695357329160146,
+      "unstable_arm_pct": 1.9629629629629632,
+      "delta_arm_minus_full_pp": 0.2676056338028168,
+      "ci_low": -0.3124650040918292,
+      "ci_high": 0.8392973539504094,
+      "arm_threshold": 0.125,
+      "arm_tie_weight": 0.8990825688073395,
+      "full_threshold": 0.25,
+      "full_tie_weight": 0.9436619718309859,
+      "prompts": 31050,
+      "sets": 2700
+    },
+    {
+      "arm": "window_r163",
+      "hire_rate_pct": 22.51207729468599,
+      "hire_count": 6990,
+      "unstable_full_pct": 1.695357329160146,
+      "unstable_arm_pct": 1.757861635220126,
+      "delta_arm_minus_full_pp": 0.06250430605997975,
+      "ci_low": -0.39149344002519654,
+      "ci_high": 0.4898719008671174,
+      "arm_threshold": 0.125,
+      "arm_tie_weight": 0.9339622641509434,
+      "full_threshold": 0.25,
+      "full_tie_weight": 0.9436619718309859,
+      "prompts": 31050,
+      "sets": 2700
+    }
+  ]
+}
