@@ -1,0 +1,20 @@
+{
+  "job_id": "5241379",
+  "command": [
+    "sbatch",
+    "--parsable",
+    "--time=02:00:00",
+    "--export=ALL,MERGE_MODE=full,MERGE_SEED=44,MERGE_BATCH=8,MERGE_BATCH_DIAG=0,MERGE_OUT_ROOT=/ritom/scratch/cscs/zhang/xw/hiring_bias_mitigation_at/reports/research_followup/merge_precision/attempts/r2-qwen-text-layout",
+    "scripts/cscs/check_adapter_merge_effect.sbatch"
+  ],
+  "submitted_unix": 1793647435.5561118,
+  "mode": "full",
+  "seed": 44,
+  "batch_size": 8,
+  "time_cap": "02:00:00",
+  "allocated_gpus": 4,
+  "concurrent_workers": 3,
+  "source_root": "/ritom/scratch/cscs/zhang/xw/hiring_bias_mitigation_at/reports/research_followup/merge_precision/attempts/r2-qwen-text-layout",
+  "pilot_job": "5241355",
+  "diagnostic_enabled": false
+}

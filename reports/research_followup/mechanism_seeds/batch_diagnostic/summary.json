@@ -1,0 +1,94 @@
+{
+  "completed": true,
+  "spec": "dpo4880_s43",
+  "pairs": 8,
+  "repeats": 2,
+  "elapsed_seconds_including_model_load": 51.030635016039014,
+  "device": "NVIDIA GH200 120GB",
+  "peak_allocated_gib": 19.193486213684082,
+  "context_results": {
+    "original_full_batch": {
+      "repeat_max_abs_difference": 0.0,
+      "max_abs_error_vs_recorded_full": 0.0,
+      "max_abs_error_vs_recorded_patch": 15.687629222869873
+    },
+    "original_patch_batch": {
+      "repeat_max_abs_difference": 0.0,
+      "max_abs_error_vs_recorded_full": 15.687629222869873,
+      "max_abs_error_vs_recorded_patch": 0.0
+    },
+    "singleton": {
+      "repeat_max_abs_difference": 0.0,
+      "max_abs_error_vs_recorded_full": 4.771772384643555,
+      "max_abs_error_vs_recorded_patch": 10.915856838226318
+    }
+  },
+  "pair_comparisons": [
+    {
+      "repeat": 1,
+      "versus_full": "original_patch_batch",
+      "dm_sign_disagreements": 0,
+      "zero_crossing_disagreements": 1,
+      "max_abs_dm_difference": 14.93253755569458,
+      "abs_dm_spearman_diagnostic_subset": 0.880952380952381
+    },
+    {
+      "repeat": 1,
+      "versus_full": "singleton",
+      "dm_sign_disagreements": 0,
+      "zero_crossing_disagreements": 0,
+      "max_abs_dm_difference": 9.322134017944336,
+      "abs_dm_spearman_diagnostic_subset": 0.9523809523809524
+    },
+    {
+      "repeat": 2,
+      "versus_full": "original_patch_batch",
+      "dm_sign_disagreements": 0,
+      "zero_crossing_disagreements": 1,
+      "max_abs_dm_difference": 14.93253755569458,
+      "abs_dm_spearman_diagnostic_subset": 0.880952380952381
+    },
+    {
+      "repeat": 2,
+      "versus_full": "singleton",
+      "dm_sign_disagreements": 0,
+      "zero_crossing_disagreements": 0,
+      "max_abs_dm_difference": 9.322134017944336,
+      "abs_dm_spearman_diagnostic_subset": 0.9523809523809524
+    }
+  ],
+  "scope": "Half largest and half smallest observed patch/full baseline discrepancy among the fixed 64 SFT-selected pairs; diagnostic selection, not a population estimate",
+  "representation": "Original Qwen Base with SFT-v3 and DPO adapters activated together in HF PEFT; no merge or training",
+  "interpretation_limit": "A completed replay is not a declaration of invariance. Selection is conditioned on observed discrepancies. No numerical difference is automatically classified as harmless noise. These baselines do not rerun intervention effects or establish that their rank order is batch-invariant. Historical artifact metadata lacks exact FLA version/module path and dispatch flags, so failure to reproduce historical values cannot be attributed solely to batching.",
+  "runtime": {
+    "torch": "2.13.0+cu130",
+    "transformers": "5.17.0",
+    "kernels": {
+      "fla": true,
+      "causal_conv1d": false
+    },
+    "cuda_visible_devices": "3",
+    "fla_disable_backend_dispatch": "1",
+    "kernel_modules": {
+      "fla": {
+        "file": "/ritom/scratch/cscs/zhang/xw/pylib-fla/fla/__init__.py",
+        "version": "0.6.0"
+      },
+      "fla.ops.gated_delta_rule": {
+        "file": "/ritom/scratch/cscs/zhang/xw/pylib-fla/fla/ops/gated_delta_rule/__init__.py",
+        "version": null
+      },
+      "causal_conv1d": {
+        "available": false
+      }
+    },
+    "kernel_distributions": {
+      "flash-linear-attention": "0.6.0",
+      "fla-core": "0.6.0",
+      "causal-conv1d": null
+    },
+    "allow_tf32_matmul": false,
+    "float32_matmul_precision": "highest"
+  },
+  "plan_sha256": "eba6f06c9f195e1bbd37b857122b98e4848a4a261fc5e700c90396badc81b98f"
+}

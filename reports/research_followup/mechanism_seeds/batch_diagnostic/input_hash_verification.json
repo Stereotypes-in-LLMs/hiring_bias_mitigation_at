@@ -1,0 +1,136 @@
+{
+  "source_checks": [
+    {
+      "path": "/ritom/scratch/cscs/zhang/xw/hiring_bias_mitigation_at/configs/interp/models.yaml",
+      "sha256": "0c4cf1f82484140badd950d86a6fd824a5cc038326e28f3fddcf96d2c63b5be9",
+      "matches_plan": true
+    },
+    {
+      "path": "/ritom/scratch/cscs/zhang/xw/hiring_bias_mitigation_at/scripts/cscs/env.sh",
+      "sha256": "b07b4319a92252e0ffae76b596e0bb47939dd9198162f8fe92a31af62f2619de",
+      "matches_plan": true
+    },
+    {
+      "path": "/ritom/scratch/cscs/zhang/xw/hiring_bias_mitigation_at/scripts/cscs/poster_mechanism.sbatch",
+      "sha256": "74634e6e235e5f8780bd8f1eb827fe8137c9ccd0173fea611dbd7596a2c40126",
+      "matches_plan": true
+    },
+    {
+      "path": "/ritom/scratch/cscs/zhang/xw/hiring_bias_mitigation_at/scripts/diagnose_mechanism_batch.py",
+      "sha256": "fd4b7aa437eea27130ae44935d6393b11f56500076feaed8b6c6ab3805d2b4a7",
+      "matches_plan": true
+    },
+    {
+      "path": "/ritom/scratch/cscs/zhang/xw/hiring_bias_mitigation_at/scripts/interp/02_margins.py",
+      "sha256": "cc46392660e7aec96af589bdf932a5853b02f380cf812354df6020784d706052",
+      "matches_plan": true
+    },
+    {
+      "path": "/ritom/scratch/cscs/zhang/xw/hiring_bias_mitigation_at/scripts/interp/10_patch.py",
+      "sha256": "e9c987b015871e80b3f8b9ef90666a4be4ecec07143f5fd95faf0080f177477c",
+      "matches_plan": true
+    },
+    {
+      "path": "/ritom/scratch/cscs/zhang/xw/hiring_bias_mitigation_at/scripts/summarize_mechanism_seeds.py",
+      "sha256": "8428161da92d6b6c12e6c882f4fabb73a4c74e133211a10b7de0923e2fc1ad91",
+      "matches_plan": true
+    },
+    {
+      "path": "/ritom/scratch/cscs/zhang/xw/outputs/interp/manifest/contrasts-grid-en.parquet",
+      "sha256": "3ac634dc1dc84598bb3e19926e2b46201be5eb8ebadac38e1041e2bfa69ff561",
+      "matches_plan": true
+    },
+    {
+      "path": "/ritom/scratch/cscs/zhang/xw/outputs/interp/margins/dpo4880_s43/grid-en/part-00000.parquet",
+      "sha256": "d0b856f812cc8ca52559e903c01b1142b5e7d597c473beec9cd8e3708eda3bdb",
+      "matches_plan": true
+    },
+    {
+      "path": "/ritom/scratch/cscs/zhang/xw/outputs/interp/margins/dpo4880_s43/grid-en/part-00001.parquet",
+      "sha256": "221810395ebe49e10ef7e02b724b2a6d0ba14269f967ad9b23582aabb79adc37",
+      "matches_plan": true
+    },
+    {
+      "path": "/ritom/scratch/cscs/zhang/xw/outputs/interp/margins/dpo4880_s43/grid-en/part-00002.parquet",
+      "sha256": "e1c644dd373a72c0137ed7df9653d9ec8592393dc9c294196afd04d1537b6a27",
+      "matches_plan": true
+    },
+    {
+      "path": "/ritom/scratch/cscs/zhang/xw/outputs/interp/margins/dpo4880_s43/grid-en.parquet",
+      "sha256": "20fbf2180ff5adc23ebd294a56dbfd3a6cbfda27c4365457f91c84e140e2c11d",
+      "matches_plan": true
+    },
+    {
+      "path": "/ritom/scratch/cscs/zhang/xw/outputs/interp/margins/dpo4880_s43/grid-en.parquet.meta.json",
+      "sha256": "7330e02cb26cf198550dae83982dffa4c2f984f586c3162fe03ac16485858c98",
+      "matches_plan": true
+    },
+    {
+      "path": "/ritom/scratch/cscs/zhang/xw/outputs/interp/patching/dpo4880_s43/grid/mil_combat_civ_expl-n64-s42-sel_sft_v3/pairs-t00000-00008.parquet",
+      "sha256": "202bc5bcd72e9065eabcf6593bf990136c115b67f3aa7b3eed58703571e02b93",
+      "matches_plan": true
+    },
+    {
+      "path": "/ritom/scratch/cscs/zhang/xw/outputs/interp/patching/dpo4880_s43/grid/mil_combat_civ_expl-n64-s42-sel_sft_v3/pairs-t00009-00016.parquet",
+      "sha256": "1a5934169e8a3daaaadd8ed712cd04dd0cfbc6e155ac2da5dbb0296e6fd1adf2",
+      "matches_plan": true
+    },
+    {
+      "path": "/ritom/scratch/cscs/zhang/xw/outputs/interp/patching/dpo4880_s43/grid/mil_combat_civ_expl-n64-s42-sel_sft_v3/pairs-t00017-00023.parquet",
+      "sha256": "4e9c0695d02b624370fa3b82bd410756d2572ecfd41147c84de63c2031c29ec1",
+      "matches_plan": true
+    },
+    {
+      "path": "/ritom/scratch/cscs/zhang/xw/outputs/interp/patching/dpo4880_s43/grid/mil_combat_civ_expl-n64-s42-sel_sft_v3/pairs-t00024-00029.parquet",
+      "sha256": "34fe5e18eb9197019172df7da87a691aa2af0da561f5b2f417693b557fbd7e48",
+      "matches_plan": true
+    },
+    {
+      "path": "/ritom/scratch/cscs/zhang/xw/outputs/interp/patching/dpo4880_s43/grid/mil_combat_civ_expl-n64-s42-sel_sft_v3/pairs-t00041-00045.parquet",
+      "sha256": "acfa739b98020624681ffd36ea89f4e3479d0f485b10a937d36cb22bc8ed392a",
+      "matches_plan": true
+    },
+    {
+      "path": "/ritom/scratch/cscs/zhang/xw/outputs/interp/patching/dpo4880_s43/grid/mil_combat_civ_expl-n64-s42-sel_sft_v3/pairs-t00046-00050.parquet",
+      "sha256": "2210db59dd873f6083d10cb09f85926ee96f6106d266a3b059ac7c5bb424cfef",
+      "matches_plan": true
+    },
+    {
+      "path": "/ritom/scratch/cscs/zhang/xw/outputs/interp/patching/dpo4880_s43/grid/mil_combat_civ_expl-n64-s42-sel_sft_v3/pairs-t00059-00061.parquet",
+      "sha256": "b5a9d2e30bcffcbcec367dad06b717aa05fdad4dbfdff3deaf89dcb1edacb6d7",
+      "matches_plan": true
+    },
+    {
+      "path": "/ritom/scratch/cscs/zhang/xw/outputs/interp/patching/dpo4880_s43/grid/mil_combat_civ_expl-n64-s42-sel_sft_v3/poster_followup.meta.json",
+      "sha256": "5136f372d02d6e3488c8d5324802728a8f68ee2e43868841372303773289b4a3",
+      "matches_plan": true
+    },
+    {
+      "path": "/ritom/scratch/cscs/zhang/xw/outputs/interp/patching/dpo4880_s43/grid/mil_combat_civ_expl-n64-s42-sel_sft_v3/run.meta.json",
+      "sha256": "4a65f8c1d85804ea6452c4f323372f2104c3d48de8da8dfe7681dca5a3b18260",
+      "matches_plan": true
+    },
+    {
+      "path": "/ritom/scratch/cscs/zhang/xw/outputs/interp/patching/dpo4880_s43/grid/mil_combat_civ_expl-n64-s42-sel_sft_v3/selected_pairs.parquet",
+      "sha256": "abe36a9634882b298e57afdec3c5e1e4673bce760a7d5a5a64774cfa0a13e6f0",
+      "matches_plan": true
+    },
+    {
+      "path": "/ritom/scratch/cscs/zhang/xw/outputs/interp/segments/grid-en.parquet",
+      "sha256": "8042d160bbedd0f342568e67de1cb8ab705906b94e0484d7366fd1c330396f26",
+      "matches_plan": true
+    }
+  ],
+  "adapter_checks": [
+    {
+      "adapter": "sft_v3",
+      "sha256": "d8d63526a43dab37a1fb41a7d7a3541f6a023c4fa2a19e9409e04da331e419ee",
+      "matches_plan": true
+    },
+    {
+      "adapter": "dpo4880_s43",
+      "sha256": "3cd8d9ee804905eacbae13b776e9310de5ca4ab64176fdd6cedfd8a6f6b53ce9",
+      "matches_plan": true
+    }
+  ]
+}

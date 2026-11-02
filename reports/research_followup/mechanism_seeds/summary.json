@@ -1,0 +1,247 @@
+{
+  "generated_utc": "2026-11-02T19:19:19.607861+00:00",
+  "methods": {
+    "DPO": {
+      "seeds": [
+        42,
+        43,
+        44
+      ],
+      "contrast_seed_cells": 12,
+      "real_component_pearson_r_range": [
+        0.6519888522814936,
+        0.88918645847627
+      ],
+      "p50_ratio_range": [
+        0.2759046767460658,
+        0.5308134184768969
+      ],
+      "p99_ratio_range": [
+        4.462153727352138,
+        13.199348064313229
+      ],
+      "p50_down_p99_up_cells": 12,
+      "p50_down_p99_down_cells": 0,
+      "targets": {
+        "L15.H11": {
+          "verified_cells": 12,
+          "rank_one_tested_cells": 5,
+          "tested_rank_range": [
+            1,
+            4
+          ],
+          "real_effect_range": [
+            0.23067817,
+            0.53380656
+          ]
+        },
+        "L23.H1": {
+          "verified_cells": 12,
+          "rank_one_tested_cells": 2,
+          "tested_rank_range": [
+            1,
+            7
+          ],
+          "real_effect_range": [
+            0.10861643,
+            0.49005672
+          ]
+        }
+      }
+    },
+    "GRPO + lr decay": {
+      "seeds": [
+        42,
+        43,
+        44
+      ],
+      "contrast_seed_cells": 12,
+      "real_component_pearson_r_range": [
+        0.8719290709884389,
+        0.9724342669640516
+      ],
+      "p50_ratio_range": [
+        0.4959966090753897,
+        0.8608655642620117
+      ],
+      "p99_ratio_range": [
+        2.2113919238839723,
+        5.6954604270173625
+      ],
+      "p50_down_p99_up_cells": 12,
+      "p50_down_p99_down_cells": 0,
+      "targets": {
+        "L15.H11": {
+          "verified_cells": 12,
+          "rank_one_tested_cells": 12,
+          "tested_rank_range": [
+            1,
+            1
+          ],
+          "real_effect_range": [
+            0.31284574,
+            0.5486488
+          ]
+        },
+        "L23.H1": {
+          "verified_cells": 12,
+          "rank_one_tested_cells": 0,
+          "tested_rank_range": [
+            2,
+            7
+          ],
+          "real_effect_range": [
+            0.15007764,
+            0.4566729
+          ]
+        }
+      }
+    },
+    "Self-distillation": {
+      "seeds": [
+        42,
+        43,
+        44
+      ],
+      "contrast_seed_cells": 12,
+      "real_component_pearson_r_range": [
+        0.908342908543152,
+        0.9794247380989192
+      ],
+      "p50_ratio_range": [
+        0.4256411712678253,
+        0.6676943615627005
+      ],
+      "p99_ratio_range": [
+        0.34364036886993504,
+        0.5906215073959102
+      ],
+      "p50_down_p99_up_cells": 0,
+      "p50_down_p99_down_cells": 12,
+      "targets": {
+        "L15.H11": {
+          "verified_cells": 12,
+          "rank_one_tested_cells": 11,
+          "tested_rank_range": [
+            1,
+            2
+          ],
+          "real_effect_range": [
+            0.07553168,
+            0.1042961
+          ]
+        },
+        "L23.H1": {
+          "verified_cells": 12,
+          "rank_one_tested_cells": 0,
+          "tested_rank_range": [
+            9,
+            19
+          ],
+          "real_effect_range": [
+            0.018829992,
+            0.04180052
+          ]
+        }
+      }
+    }
+  },
+  "validated": {
+    "new_completion_markers": 6,
+    "margins": 10,
+    "fixed_selections": 40,
+    "raw_summary_reconciliations": 120,
+    "real_profiles": 36,
+    "full_grid_tail_cells": 36,
+    "selected_prompt_tokens_decode_to_uid": 474,
+    "selected_prompt_tokens_equal_fresh_grid_render": 474,
+    "patch_caches_bound_before_compute": 22,
+    "patch_caches_historical_identity_unverified": 18
+  },
+  "patch_vs_full_margin_diagnostics": {
+    "maximum_absolute_difference": 15.687629221032715,
+    "max_internal_final_prenorm_swap_control_error": 0.0,
+    "method_ranges": {
+      "DPO": {
+        "max_abs_difference_range": [
+          1.7883282938232412,
+          15.687629221032715
+        ],
+        "median_abs_difference_range": [
+          0.047642062622070824,
+          0.09715321301269597
+        ],
+        "dm_sign_disagreements_sum": 86,
+        "compared_pairs_sum": 711
+      },
+      "GRPO + lr decay": {
+        "max_abs_difference_range": [
+          1.4463075400343628,
+          3.1684584608276367
+        ],
+        "median_abs_difference_range": [
+          0.07238892181396572,
+          0.14123105822753956
+        ],
+        "dm_sign_disagreements_sum": 22,
+        "compared_pairs_sum": 711
+      },
+      "SFT-v3": {
+        "max_abs_difference_range": [
+          0.4142694157714839,
+          0.6983351215209961
+        ],
+        "median_abs_difference_range": [
+          0.06820850567626913,
+          0.10883078717041084
+        ],
+        "dm_sign_disagreements_sum": 2,
+        "compared_pairs_sum": 237
+      },
+      "Self-distillation": {
+        "max_abs_difference_range": [
+          0.14144043109130866,
+          0.325920935180664
+        ],
+        "median_abs_difference_range": [
+          0.0350284196591949,
+          0.05699066369834896
+        ],
+        "dm_sign_disagreements_sum": 29,
+        "compared_pairs_sum": 711
+      }
+    },
+    "interpretation": "Patch baselines are live current-arm forwards, not stored SFT selection values. Matching hashed prompt/token identities and current adapter identities rules out those semantic mismatches for newly bound caches. Patch passes use token-budgeted pair batches; full margins use batches of eight. The observed numerical-context differences also occur in fresh caches. Existing CPU artifacts do not isolate their cause or establish a numerical-noise floor for intervention effects."
+  },
+  "scope": {
+    "reference": "one shared SFT-v3 checkpoint",
+    "selection": "Canonical SFT-v3 |effect| >= 0.5; seed 42; 64 pairs, gender 45; identical across all arms/seeds",
+    "component_profile": "Pearson across 64 real mixer/MLP suffix-patching effects",
+    "head_rank": "Descending signed real effect only among each run's AtP-selected plus control tested heads; not all-model rank",
+    "head_ci": "Existing candidate-bootstrap 95% CI is on share_removed, not logits per pair",
+    "tail": "p50/p99 of absolute logit effects across 450 aligned CV-job pairs per contrast; ratios to shared SFT; descriptive ranges, not CIs",
+    "execution": "HF interpretation loads the original Base and activates [SFT-v3, last-stage] adapters together; behavioral serving uses successively merged weights. Algebraic adapter addition is not evidence of numerical equivalence across these execution paths",
+    "batch_context": "Patch baselines and full-grid margins differ under their different batching contexts; see patch_vs_full_margin_diagnostics. Do not pool their per-pair margins as numerically interchangeable measurements",
+    "inference": "Replicated checkpoints on one development benchmark do not establish causal routes or external generalization. Neither p99 effects nor L23.H1 results identify the cause of high-hire-rate behavioral deterioration"
+  },
+  "warnings": [
+    "sft_v3/mil_combat_civ_impl: legacy_cache_without_adapter_identity_metadata; current fingerprints do not prove historical cache identity",
+    "sft_v3/mil_combat_civ_expl: legacy_cache_without_adapter_identity_metadata; current fingerprints do not prove historical cache identity",
+    "sft_v3/rel_atheist_christian_impl: legacy_cache_without_adapter_identity_metadata; current fingerprints do not prove historical cache identity",
+    "sft_v3/gen_male_female_impl: legacy_cache_without_adapter_identity_metadata; current fingerprints do not prove historical cache identity",
+    "dpo4880/mil_combat_civ_impl: legacy_cache_without_adapter_identity_metadata; current fingerprints do not prove historical cache identity",
+    "dpo4880/mil_combat_civ_expl: legacy_cache_without_adapter_identity_metadata; current fingerprints do not prove historical cache identity",
+    "dpo4880/rel_atheist_christian_impl: legacy_cache_without_adapter_identity_metadata; current fingerprints do not prove historical cache identity",
+    "dpo4880/gen_male_female_impl: legacy_cache_without_adapter_identity_metadata; current fingerprints do not prove historical cache identity",
+    "grpo_r4/mil_combat_civ_impl: legacy_cache_without_adapter_identity_metadata; current fingerprints do not prove historical cache identity",
+    "grpo_r4/mil_combat_civ_expl: legacy_cache_without_adapter_identity_metadata; current fingerprints do not prove historical cache identity",
+    "grpo_r4/rel_atheist_christian_impl: legacy_cache_without_adapter_identity_metadata; current fingerprints do not prove historical cache identity",
+    "grpo_r4/gen_male_female_impl: legacy_cache_without_adapter_identity_metadata; current fingerprints do not prove historical cache identity",
+    "distill42/mil_combat_civ_impl: legacy_cache_adapter_identity_unverified; current fingerprints do not prove historical cache identity",
+    "distill42/rel_atheist_christian_impl: legacy_cache_adapter_identity_unverified; current fingerprints do not prove historical cache identity",
+    "distill43/mil_combat_civ_impl: legacy_cache_without_adapter_identity_metadata; current fingerprints do not prove historical cache identity",
+    "distill43/mil_combat_civ_expl: legacy_cache_without_adapter_identity_metadata; current fingerprints do not prove historical cache identity",
+    "distill43/rel_atheist_christian_impl: legacy_cache_without_adapter_identity_metadata; current fingerprints do not prove historical cache identity",
+    "distill43/gen_male_female_impl: legacy_cache_without_adapter_identity_metadata; current fingerprints do not prove historical cache identity"
+  ]
+}

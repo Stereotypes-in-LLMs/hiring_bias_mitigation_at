@@ -1,0 +1,66 @@
+{
+  "summary_completed": true,
+  "summary_plan_hash_matches": true,
+  "prompt_rows": 96,
+  "pair_rows": 64,
+  "context_statistics_recomputed": {
+    "original_full_batch": {
+      "repeat_max_abs_difference": 0.0,
+      "max_abs_error_vs_recorded_full": 0.0,
+      "max_abs_error_vs_recorded_patch": 15.687629222869873
+    },
+    "original_patch_batch": {
+      "repeat_max_abs_difference": 0.0,
+      "max_abs_error_vs_recorded_full": 15.687629222869873,
+      "max_abs_error_vs_recorded_patch": 0.0
+    },
+    "singleton": {
+      "repeat_max_abs_difference": 0.0,
+      "max_abs_error_vs_recorded_full": 4.771772384643555,
+      "max_abs_error_vs_recorded_patch": 10.915856838226318
+    }
+  },
+  "local_repo_files_match_frozen_plan": [
+    "/Users/xinyangwu/Documents/Codex/2026-11-02/ss/work/revision/configs/interp/models.yaml",
+    "/Users/xinyangwu/Documents/Codex/2026-11-02/ss/work/revision/scripts/cscs/env.sh",
+    "/Users/xinyangwu/Documents/Codex/2026-11-02/ss/work/revision/scripts/cscs/poster_mechanism.sbatch",
+    "/Users/xinyangwu/Documents/Codex/2026-11-02/ss/work/revision/scripts/diagnose_mechanism_batch.py",
+    "/Users/xinyangwu/Documents/Codex/2026-11-02/ss/work/revision/scripts/interp/02_margins.py",
+    "/Users/xinyangwu/Documents/Codex/2026-11-02/ss/work/revision/scripts/interp/10_patch.py",
+    "/Users/xinyangwu/Documents/Codex/2026-11-02/ss/work/revision/scripts/summarize_mechanism_seeds.py"
+  ],
+  "pair_comparisons_recomputed": [
+    {
+      "repeat": 1,
+      "versus_full": "original_patch_batch",
+      "dm_sign_disagreements": 0,
+      "zero_crossing_disagreements": 1,
+      "max_abs_dm_difference": 14.93253755569458,
+      "abs_dm_spearman_diagnostic_subset": 0.8809523809523809
+    },
+    {
+      "repeat": 1,
+      "versus_full": "singleton",
+      "dm_sign_disagreements": 0,
+      "zero_crossing_disagreements": 0,
+      "max_abs_dm_difference": 9.322134017944336,
+      "abs_dm_spearman_diagnostic_subset": 0.9523809523809523
+    },
+    {
+      "repeat": 2,
+      "versus_full": "original_patch_batch",
+      "dm_sign_disagreements": 0,
+      "zero_crossing_disagreements": 1,
+      "max_abs_dm_difference": 14.93253755569458,
+      "abs_dm_spearman_diagnostic_subset": 0.8809523809523809
+    },
+    {
+      "repeat": 2,
+      "versus_full": "singleton",
+      "dm_sign_disagreements": 0,
+      "zero_crossing_disagreements": 0,
+      "max_abs_dm_difference": 9.322134017944336,
+      "abs_dm_spearman_diagnostic_subset": 0.9523809523809523
+    }
+  ]
+}

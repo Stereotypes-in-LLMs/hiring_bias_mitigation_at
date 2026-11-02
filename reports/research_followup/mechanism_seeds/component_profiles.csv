@@ -1,0 +1,37 @@
+spec,method,seed,contrast,pairs,real_component_pearson_r,components,positions,source
+dpo4880,DPO,42,mil_combat_civ_impl,64,0.6519888522814936,64,suffix,real.csv
+dpo4880,DPO,42,mil_combat_civ_expl,64,0.6811534990339492,64,suffix,real.csv
+dpo4880,DPO,42,rel_atheist_christian_impl,64,0.88918645847627,64,suffix,real.csv
+dpo4880,DPO,42,gen_male_female_impl,45,0.7754664966626234,64,suffix,real.csv
+dpo4880_s43,DPO,43,mil_combat_civ_impl,64,0.6783381274805775,64,suffix,real.csv
+dpo4880_s43,DPO,43,mil_combat_civ_expl,64,0.8256302001173753,64,suffix,real.csv
+dpo4880_s43,DPO,43,rel_atheist_christian_impl,64,0.8664263082262328,64,suffix,real.csv
+dpo4880_s43,DPO,43,gen_male_female_impl,45,0.8592566564575529,64,suffix,real.csv
+dpo4880_s44,DPO,44,mil_combat_civ_impl,64,0.6605313979768638,64,suffix,real.csv
+dpo4880_s44,DPO,44,mil_combat_civ_expl,64,0.7246932664861732,64,suffix,real.csv
+dpo4880_s44,DPO,44,rel_atheist_christian_impl,64,0.8863761844954038,64,suffix,real.csv
+dpo4880_s44,DPO,44,gen_male_female_impl,45,0.7162309777742267,64,suffix,real.csv
+grpo_r4,GRPO + lr decay,42,mil_combat_civ_impl,64,0.9149116801361237,64,suffix,real.csv
+grpo_r4,GRPO + lr decay,42,mil_combat_civ_expl,64,0.8997319214223032,64,suffix,real.csv
+grpo_r4,GRPO + lr decay,42,rel_atheist_christian_impl,64,0.9700567126405988,64,suffix,real.csv
+grpo_r4,GRPO + lr decay,42,gen_male_female_impl,45,0.9519204891867856,64,suffix,real.csv
+grpo_r4_s43,GRPO + lr decay,43,mil_combat_civ_impl,64,0.9410232454911794,64,suffix,real.csv
+grpo_r4_s43,GRPO + lr decay,43,mil_combat_civ_expl,64,0.937227952525748,64,suffix,real.csv
+grpo_r4_s43,GRPO + lr decay,43,rel_atheist_christian_impl,64,0.9724342669640516,64,suffix,real.csv
+grpo_r4_s43,GRPO + lr decay,43,gen_male_female_impl,45,0.9394903263585918,64,suffix,real.csv
+grpo_r4_s44,GRPO + lr decay,44,mil_combat_civ_impl,64,0.9123645478929105,64,suffix,real.csv
+grpo_r4_s44,GRPO + lr decay,44,mil_combat_civ_expl,64,0.8719290709884389,64,suffix,real.csv
+grpo_r4_s44,GRPO + lr decay,44,rel_atheist_christian_impl,64,0.9392445366995806,64,suffix,real.csv
+grpo_r4_s44,GRPO + lr decay,44,gen_male_female_impl,45,0.9242604654889532,64,suffix,real.csv
+distill42,Self-distillation,42,mil_combat_civ_impl,64,0.9538431907080921,64,suffix,real.csv
+distill42,Self-distillation,42,mil_combat_civ_expl,64,0.9660696756432239,64,suffix,real.csv
+distill42,Self-distillation,42,rel_atheist_christian_impl,64,0.9727933284421315,64,suffix,real.csv
+distill42,Self-distillation,42,gen_male_female_impl,45,0.9415299678999984,64,suffix,real.csv
+distill43,Self-distillation,43,mil_combat_civ_impl,64,0.908342908543152,64,suffix,real.csv
+distill43,Self-distillation,43,mil_combat_civ_expl,64,0.9573545932006631,64,suffix,real.csv
+distill43,Self-distillation,43,rel_atheist_christian_impl,64,0.9794247380989192,64,suffix,real.csv
+distill43,Self-distillation,43,gen_male_female_impl,45,0.950155027054245,64,suffix,real.csv
+distill44,Self-distillation,44,mil_combat_civ_impl,64,0.9427513257884906,64,suffix,real.csv
+distill44,Self-distillation,44,mil_combat_civ_expl,64,0.9648454767234507,64,suffix,real.csv
+distill44,Self-distillation,44,rel_atheist_christian_impl,64,0.9735793451221189,64,suffix,real.csv
+distill44,Self-distillation,44,gen_male_female_impl,45,0.9586624885612794,64,suffix,real.csv

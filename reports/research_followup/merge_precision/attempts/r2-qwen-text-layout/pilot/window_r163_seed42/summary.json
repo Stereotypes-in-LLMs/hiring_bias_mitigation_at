@@ -1,0 +1,91 @@
+{
+  "arm": "window_r163",
+  "common_sft_weight_parity": {
+    "all_unique_parameters_bit_identical": true,
+    "loaded_parameters": 427,
+    "name_map_sha256": "3b3de553ed6f18505cad48df018bc160f27289486fa9e3f09dd1de91367fe148",
+    "parameter_elements": 8953803264,
+    "qwen_text_prefix_mappings": 426
+  },
+  "last_adapter_merge_projection": {
+    "kept_fraction": 0.9906872468324575,
+    "layers": 26,
+    "unchanged": 0.32420375796615103
+  },
+  "mode": "pilot",
+  "pilot_passed": true,
+  "rebuilt_vs_saved_scores": {
+    "margin_bf16": {
+      "decision_agreement_pct": 100.0,
+      "hire_rate_a_pct": 8.333333333333332,
+      "hire_rate_b_pct": 8.333333333333332,
+      "max_abs": 0.0,
+      "mean_abs": 0.0,
+      "mean_signed_b_minus_a": 0.0,
+      "p99_abs": 0.0,
+      "rows": 828
+    },
+    "margin_fp32": {
+      "decision_agreement_pct": 100.0,
+      "hire_rate_a_pct": 8.333333333333332,
+      "hire_rate_b_pct": 8.333333333333332,
+      "max_abs": 0.0,
+      "mean_abs": 0.0,
+      "mean_signed_b_minus_a": 0.0,
+      "p99_abs": 0.0,
+      "rows": 828
+    }
+  },
+  "rows": 828,
+  "scope": "Same HF backend; common SFT already merged; only final adapter changes serving representation.",
+  "score_artifacts": {
+    "merged_bf16/part-00000.parquet": {
+      "rows": 828,
+      "sha256": "617760496341c2baae2cd0f81603757c9ebc9154ccb71702b32d3bd39fb9d32f"
+    },
+    "saved_served/part-00000.parquet": {
+      "rows": 828,
+      "sha256": "617760496341c2baae2cd0f81603757c9ebc9154ccb71702b32d3bd39fb9d32f"
+    },
+    "unmerged/part-00000.parquet": {
+      "rows": 828,
+      "sha256": "fe46db2f7cc88a556b153a20d33bd5c64be7707e988cd57f0104e6f12896aadb"
+    }
+  },
+  "seed": 42,
+  "served_weight_parity": {
+    "all_unique_parameters_bit_identical": true,
+    "loaded_parameters": 427,
+    "name_map_sha256": "3b3de553ed6f18505cad48df018bc160f27289486fa9e3f09dd1de91367fe148",
+    "parameter_elements": 8953803264,
+    "qwen_text_prefix_mappings": 426
+  },
+  "status": "complete",
+  "torch_peak_allocated_gib": 20.60247039794922,
+  "unmerged_adapter_dtypes": [
+    "torch.float32"
+  ],
+  "unmerged_vs_merged": {
+    "margin_bf16": {
+      "decision_agreement_pct": 100.0,
+      "hire_rate_a_pct": 8.333333333333332,
+      "hire_rate_b_pct": 8.333333333333332,
+      "max_abs": 0.375,
+      "mean_abs": 0.07125604152679443,
+      "mean_signed_b_minus_a": 0.028985507786273956,
+      "p99_abs": 0.375,
+      "rows": 828
+    },
+    "margin_fp32": {
+      "decision_agreement_pct": 100.0,
+      "hire_rate_a_pct": 8.333333333333332,
+      "hire_rate_b_pct": 8.333333333333332,
+      "max_abs": 0.23224830627441406,
+      "mean_abs": 0.04854863882064819,
+      "mean_signed_b_minus_a": 0.031165679916739464,
+      "p99_abs": 0.1562805473804474,
+      "rows": 828
+    }
+  },
+  "wall_seconds": 212.76625887397677
+}

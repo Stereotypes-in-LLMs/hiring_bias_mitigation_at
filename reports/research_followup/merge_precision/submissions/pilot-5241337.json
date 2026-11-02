@@ -1,0 +1,21 @@
+{
+  "job_id": "5241337",
+  "command": [
+    "sbatch",
+    "--parsable",
+    "--export=ALL,MERGE_MODE=pilot,MERGE_SEED=42,MERGE_BATCH=8",
+    "scripts/cscs/check_adapter_merge_effect.sbatch"
+  ],
+  "submitted_unix": 1793646377.920757,
+  "mode": "pilot",
+  "seed": 42,
+  "arms": [
+    "full_r32",
+    "window_r32",
+    "window_r163"
+  ],
+  "batch_size": 8,
+  "time_cap": "00:45:00",
+  "allocated_gpus": 4,
+  "concurrent_workers": 3
+}

@@ -1,0 +1,41 @@
+spec,method,seed,contrast,tested_heads,control_heads,atp_heads,top_real_tested_head,top_real_removed_logits_per_pair,atp_real_spearman_tested_subset
+sft_v3,SFT-v3,,mil_combat_civ_impl,46,8,896,L15.H11,0.2857765,0.9911193339500461
+sft_v3,SFT-v3,,mil_combat_civ_expl,47,8,896,L15.H11,0.22923411,0.9885522664199816
+sft_v3,SFT-v3,,rel_atheist_christian_impl,43,8,896,L15.H11,0.18510851,0.9933554817275748
+sft_v3,SFT-v3,,gen_male_female_impl,48,8,896,L15.H11,0.17789358,0.9671081198436822
+dpo4880,DPO,42.0,mil_combat_civ_impl,46,8,896,L23.H1,0.445385,0.9794017884674683
+dpo4880,DPO,42.0,mil_combat_civ_expl,49,8,896,L15.H11,0.36577645,0.9614285714285714
+dpo4880,DPO,42.0,rel_atheist_christian_impl,44,8,896,L7.H8,0.63322026,0.9890063424947145
+dpo4880,DPO,42.0,gen_male_female_impl,45,8,896,L15.H11,0.23067817,0.9144927536231883
+dpo4880_s43,DPO,43.0,mil_combat_civ_impl,47,8,896,L17.H0,0.46256956,0.9700508788159112
+dpo4880_s43,DPO,43.0,mil_combat_civ_expl,45,8,896,L15.H11,0.3535614,0.9794466403162055
+dpo4880_s43,DPO,43.0,rel_atheist_christian_impl,43,8,896,L19.H11,0.43302354,0.9693446088794926
+dpo4880_s43,DPO,43.0,gen_male_female_impl,46,8,896,L15.H11,0.33420438,0.9703977798334874
+dpo4880_s44,DPO,44.0,mil_combat_civ_impl,44,8,896,L17.H0,0.39735776,0.9572938689217758
+dpo4880_s44,DPO,44.0,mil_combat_civ_expl,44,8,896,L23.H1,0.30235875,0.8926004228329808
+dpo4880_s44,DPO,44.0,rel_atheist_christian_impl,43,8,896,L15.H11,0.53380656,0.9948655995167623
+dpo4880_s44,DPO,44.0,gen_male_female_impl,46,8,896,L2.H9,0.3189165,0.8188097440641382
+grpo_r4,GRPO + lr decay,42.0,mil_combat_civ_impl,49,8,896,L15.H11,0.31284574,0.9574489795918366
+grpo_r4,GRPO + lr decay,42.0,mil_combat_civ_expl,46,8,896,L15.H11,0.45895785,0.9752081406105458
+grpo_r4,GRPO + lr decay,42.0,rel_atheist_christian_impl,43,8,896,L15.H11,0.42234308,0.9817275747508305
+grpo_r4,GRPO + lr decay,42.0,gen_male_female_impl,46,8,896,L15.H11,0.39779624,0.9742213999383287
+grpo_r4_s43,GRPO + lr decay,43.0,mil_combat_civ_impl,47,8,896,L15.H11,0.33164585,0.9868177613320999
+grpo_r4_s43,GRPO + lr decay,43.0,mil_combat_civ_expl,48,8,896,L15.H11,0.4162908,0.9867564046895355
+grpo_r4_s43,GRPO + lr decay,43.0,rel_atheist_christian_impl,43,8,896,L15.H11,0.45729598,0.9974327997583813
+grpo_r4_s43,GRPO + lr decay,43.0,gen_male_female_impl,47,8,896,L15.H11,0.4147199,0.9764107308048104
+grpo_r4_s44,GRPO + lr decay,44.0,mil_combat_civ_impl,45,8,896,L15.H11,0.34588295,0.9895915678524374
+grpo_r4_s44,GRPO + lr decay,44.0,mil_combat_civ_expl,46,8,896,L15.H11,0.4223776,0.977304964539007
+grpo_r4_s44,GRPO + lr decay,44.0,rel_atheist_christian_impl,43,8,896,L15.H11,0.51370275,0.9953186348535185
+grpo_r4_s44,GRPO + lr decay,44.0,gen_male_female_impl,45,8,896,L15.H11,0.5486488,0.9836627140974966
+distill42,Self-distillation,42.0,mil_combat_civ_impl,45,8,896,L15.H11,0.091060124,0.9831357048748353
+distill42,Self-distillation,42.0,mil_combat_civ_expl,46,8,896,L15.H11,0.09339124,0.989885908109775
+distill42,Self-distillation,42.0,rel_atheist_christian_impl,44,8,896,L15.H11,0.084078155,0.9854827343199436
+distill42,Self-distillation,42.0,gen_male_female_impl,45,8,896,L15.H11,0.08683569,0.9744400527009222
+distill43,Self-distillation,43.0,mil_combat_civ_impl,46,8,896,L15.H11,0.098545104,0.9818686401480111
+distill43,Self-distillation,43.0,mil_combat_civ_expl,46,8,896,L15.H11,0.10415846,0.9821153253160654
+distill43,Self-distillation,43.0,rel_atheist_christian_impl,45,8,896,L7.H8,0.0783117,0.9861660079051383
+distill43,Self-distillation,43.0,gen_male_female_impl,44,8,896,L15.H11,0.07966275,0.9774489076814656
+distill44,Self-distillation,44.0,mil_combat_civ_impl,45,8,896,L15.H11,0.10169093,0.9824769433465085
+distill44,Self-distillation,44.0,mil_combat_civ_expl,46,8,896,L15.H11,0.1042961,0.991859389454209
+distill44,Self-distillation,44.0,rel_atheist_christian_impl,44,8,896,L15.H11,0.084211536,0.9939393939393939
+distill44,Self-distillation,44.0,gen_male_female_impl,46,8,896,L15.H11,0.09053757,0.9787850755473327

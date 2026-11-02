@@ -1,0 +1,1346 @@
+{
+  "analysis": "decision-geometry-v1",
+  "complete": true,
+  "backend_policy": "Separate per-model cuts; vLLM snapped to canonical 1/1024 grid; HF margin_fp32 unsnapped. No cross-backend numeric comparisons.",
+  "representation_policy": "The backend labels name complete numerical paths, not a controlled backend-only comparison. Legacy HF interp.spec simultaneously activates [SFT,last] PEFT adapters on the original base. vLLM serves sequentially bf16-merged checkpoints. Differences therefore include representation/rounding as well as backend; newer experiments fixing a merged-SFT base are a different condition.",
+  "common_hire_count": 6990,
+  "common_hire_rate_pct": 22.51207729468599,
+  "grid_prompts": 31050,
+  "pairs": 450,
+  "cvs": 150,
+  "jobs": 171,
+  "canonical_borderline_pairs": 35,
+  "canonical_borderline_cvs": 33,
+  "canonical_borderline_jobs": 33,
+  "canonical_borderline_definition": "SFT-v3 vLLM attribute-free absolute margin < 2; same fixed pair membership used for both backends",
+  "rate_grid": "Exact final_table.py grid: np.round(np.arange(.10,.3501,.005),3), count=round(h*31050), plus canonical SFT greedy count. Each global cut uses all 31,050 rows including 450 attribute-free prompts, as in canonical scoring.",
+  "effect_definition": "Absolute difference of the two contrast margins. Rank effect is absolute difference of full-grid midrank/N; invariant to strictly increasing transforms preserving ties.",
+  "tails": "p50/p95/p99 use pandas linear quantile on 450 pairs per contrast; top1% includes all pairs tied at or above empirical p99; descriptive, no CI",
+  "tie_policy": "Single strict/inclusive global cut mixture; unit unions aggregated within each branch before interpolation. Seed overlap uses min/max fuzzy Jaccard, not a joint probability.",
+  "crossing_difference": "Added/removed crossing weights are positive/negative membership differences, not causal transitions or probabilities under independent tie draws.",
+  "scope_of_geometry": "Four binary contrasts are not the whole 2,700-set curve. family_cue_curve covers all six family/cue cells and its contributions sum to the full curve; high_rate_pair_contributions similarly closes by pair at 31-35%.",
+  "leave_one_out": "Delete every set of one CV or job; keep original global cuts and ties fixed. Descriptive influence, no recalibration, bootstrap, CI, or held-out evaluation.",
+  "privacy": "No CV/JD/prompt text; output unit identifiers are domain-separated SHA256 prefixes, not anonymization guarantees",
+  "limitations": "Exploratory development benchmark; three fixed seeds. Rank normalization is within this grid, not a population calibration. Borderline concentration is conditioned on SFT's zero cut, especially limited at 31-35%.",
+  "source_files": [
+    {
+      "backend": "vllm",
+      "recipe": "SFT-v3",
+      "seed": 0,
+      "run": "Qwen3.5-9B--en--sft--adapter--en_only_sft_v3_additional",
+      "spec": "sft_v3",
+      "path": "/ritom/scratch/cscs/zhang/xw/outputs/operating_point/v2/Qwen3.5-9B--en--sft--adapter--en_only_sft_v3_additional--adapter.parquet",
+      "sha256": "ab9c84c76a0b3394483df1e18782cb61375a8a5c398374b95a5f5f519068fc48",
+      "metadata_path": "/ritom/scratch/cscs/zhang/xw/outputs/operating_point/v2/Qwen3.5-9B--en--sft--adapter--en_only_sft_v3_additional--adapter.meta.json",
+      "metadata_sha256": "8b88bc922077d8bc80d88045489500d2b4fed4bf9636f33b0a54dfd17f71d5c2",
+      "metadata": {
+        "standard": "op-margin-v2",
+        "scoring": "log-probabilities of the first token of each decision word after the forced prefix, gathered by vLLM from the full softmax over the raw logits (logprob_token_ids); margin = logprob_hire - logprob_reject",
+        "run": "Qwen3.5-9B--en--sft--adapter--en_only_sft_v3_additional",
+        "which": "adapter",
+        "config": "configs/audit/qwen3.5-9b_en_sft_v3_additional_gh200.yaml",
+        "prompts": {
+          "n": 31050,
+          "sha1": "6ecf987f91e4a15f2992d185b415a4ae4eeb0d51"
+        },
+        "decision": {
+          "prefix": "{\"decision\": \"",
+          "words": [
+            "hire",
+            "reject"
+          ],
+          "token_ids": [
+            33304,
+            45427
+          ],
+          "chat_template_kwargs": {
+            "enable_thinking": false
+          },
+          "sampled_decision_token_share": 1.0
+        },
+        "model": {
+          "served": "/ritom/scratch/cscs/zhang/xw/outputs/merged/qwen3.5-9b_en_only_sft_v3_additional",
+          "base": "Qwen/Qwen3.5-9B",
+          "base_revision": "c202236235762e1c871ad0ccb60c8ee5ba337b9a",
+          "adapters": [
+            {
+              "path": "/ritom/scratch/cscs/zhang/xw/outputs/sft/qwen3.5-9b_en_only_sft_v3_additional",
+              "sha256": "d8d63526a43dab37a1fb41a7d7a3541f6a023c4fa2a19e9409e04da331e419ee"
+            }
+          ]
+        },
+        "engine": {
+          "gpu_memory_utilization": 0.55,
+          "max_model_len": 8192,
+          "trust_remote_code": true,
+          "seed": 42,
+          "max_num_seqs": 64,
+          "gdn_prefill_backend": "triton"
+        },
+        "software": {
+          "vllm": "0.31.0",
+          "torch": "2.13.0",
+          "transformers": "5.17.0"
+        },
+        "code": {
+          "commit": "b1cc95fec51a122abdcac9ab8297da88779ec8e9",
+          "uncommitted": []
+        },
+        "wall_seconds": 697.4,
+        "written": "2026-10-20T20:57:59+00:00"
+      }
+    },
+    {
+      "backend": "vllm",
+      "recipe": "DPO",
+      "seed": 42,
+      "run": "Qwen3.5-9B--en--dpo--adapter--en_only_dpo_v3_4880_step305",
+      "spec": "dpo4880",
+      "path": "/ritom/scratch/cscs/zhang/xw/outputs/operating_point/v2/Qwen3.5-9B--en--dpo--adapter--en_only_dpo_v3_4880_step305--adapter.parquet",
+      "sha256": "576dcbdd8d1a68eb191fdd2c9338d661c906aad755ee4a8738bd4b7e0f5cfb80",
+      "metadata_path": "/ritom/scratch/cscs/zhang/xw/outputs/operating_point/v2/Qwen3.5-9B--en--dpo--adapter--en_only_dpo_v3_4880_step305--adapter.meta.json",
+      "metadata_sha256": "a163ca93a66e6c1f9d95ff5b6410db3b6e29ace33fb0f5fd2d7cc23ffe245c4d",
+      "metadata": {
+        "standard": "op-margin-v2",
+        "scoring": "log-probabilities of the first token of each decision word after the forced prefix, gathered by vLLM from the full softmax over the raw logits (logprob_token_ids); margin = logprob_hire - logprob_reject",
+        "run": "Qwen3.5-9B--en--dpo--adapter--en_only_dpo_v3_4880_step305",
+        "which": "adapter",
+        "config": "configs/audit/qwen3.5-9b_en_dpo_v3_4880_step305_gh200.yaml",
+        "prompts": {
+          "n": 31050,
+          "sha1": "6ecf987f91e4a15f2992d185b415a4ae4eeb0d51"
+        },
+        "decision": {
+          "prefix": "{\"decision\": \"",
+          "words": [
+            "hire",
+            "reject"
+          ],
+          "token_ids": [
+            33304,
+            45427
+          ],
+          "chat_template_kwargs": {
+            "enable_thinking": false
+          },
+          "sampled_decision_token_share": 1.0
+        },
+        "model": {
+          "served": "/ritom/scratch/cscs/zhang/xw/outputs/merged/qwen3.5-9b_en_only_dpo_v3_4880--checkpoint-305",
+          "base": "Qwen/Qwen3.5-9B",
+          "base_revision": "c202236235762e1c871ad0ccb60c8ee5ba337b9a",
+          "adapters": [
+            {
+              "path": "/ritom/scratch/cscs/zhang/xw/outputs/sft/qwen3.5-9b_en_only_sft_v3_additional",
+              "sha256": "d8d63526a43dab37a1fb41a7d7a3541f6a023c4fa2a19e9409e04da331e419ee"
+            },
+            {
+              "path": "/ritom/scratch/cscs/zhang/xw/outputs/dpo/qwen3.5-9b_en_only_dpo_v3_4880/checkpoint-305",
+              "sha256": "1b8995b48fde60fff62b7f0f3945c2c4aa84a716cb1dde49b16b15923c6f440e"
+            }
+          ]
+        },
+        "engine": {
+          "gpu_memory_utilization": 0.55,
+          "max_model_len": 8192,
+          "trust_remote_code": true,
+          "seed": 42,
+          "max_num_seqs": 64,
+          "gdn_prefill_backend": "triton"
+        },
+        "software": {
+          "vllm": "0.31.0",
+          "torch": "2.13.0",
+          "transformers": "5.17.0"
+        },
+        "code": {
+          "commit": "7199a7c25ae985b67469a0e44c5f000af605c43a",
+          "uncommitted": []
+        },
+        "wall_seconds": 692.0,
+        "written": "2026-10-22T08:24:19+00:00"
+      }
+    },
+    {
+      "backend": "vllm",
+      "recipe": "DPO",
+      "seed": 43,
+      "run": "Qwen3.5-9B--en--dpo--adapter--en_only_dpo_v3_4880_seed43_step305",
+      "spec": "dpo4880_s43",
+      "path": "/ritom/scratch/cscs/zhang/xw/outputs/operating_point/v2/Qwen3.5-9B--en--dpo--adapter--en_only_dpo_v3_4880_seed43_step305--adapter.parquet",
+      "sha256": "0eb4c0c05920b512346a017fa6b5dcb0e5f9d1b0d84e80ddb40f633265cdb793",
+      "metadata_path": "/ritom/scratch/cscs/zhang/xw/outputs/operating_point/v2/Qwen3.5-9B--en--dpo--adapter--en_only_dpo_v3_4880_seed43_step305--adapter.meta.json",
+      "metadata_sha256": "c3fbe3cc8b4dde8e6e36c2c4f074b3f45873b63ae2b8ae960988ec374de4704e",
+      "metadata": {
+        "standard": "op-margin-v2",
+        "scoring": "log-probabilities of the first token of each decision word after the forced prefix, gathered by vLLM from the full softmax over the raw logits (logprob_token_ids); margin = logprob_hire - logprob_reject",
+        "run": "Qwen3.5-9B--en--dpo--adapter--en_only_dpo_v3_4880_seed43_step305",
+        "which": "adapter",
+        "config": "configs/audit/qwen3.5-9b_en_dpo_v3_4880_seed43_step305_gh200.yaml",
+        "prompts": {
+          "n": 31050,
+          "sha1": "6ecf987f91e4a15f2992d185b415a4ae4eeb0d51"
+        },
+        "decision": {
+          "prefix": "{\"decision\": \"",
+          "words": [
+            "hire",
+            "reject"
+          ],
+          "token_ids": [
+            33304,
+            45427
+          ],
+          "chat_template_kwargs": {
+            "enable_thinking": false
+          },
+          "sampled_decision_token_share": 1.0
+        },
+        "model": {
+          "served": "/ritom/scratch/cscs/zhang/xw/outputs/merged/qwen3.5-9b_en_only_dpo_v3_4880_seed43--checkpoint-305",
+          "base": "Qwen/Qwen3.5-9B",
+          "base_revision": "c202236235762e1c871ad0ccb60c8ee5ba337b9a",
+          "adapters": [
+            {
+              "path": "/ritom/scratch/cscs/zhang/xw/outputs/sft/qwen3.5-9b_en_only_sft_v3_additional",
+              "sha256": "d8d63526a43dab37a1fb41a7d7a3541f6a023c4fa2a19e9409e04da331e419ee"
+            },
+            {
+              "path": "/ritom/scratch/cscs/zhang/xw/outputs/dpo/qwen3.5-9b_en_only_dpo_v3_4880_seed43/checkpoint-305",
+              "sha256": "3cd8d9ee804905eacbae13b776e9310de5ca4ab64176fdd6cedfd8a6f6b53ce9"
+            }
+          ]
+        },
+        "engine": {
+          "gpu_memory_utilization": 0.55,
+          "max_model_len": 8192,
+          "trust_remote_code": true,
+          "seed": 42,
+          "max_num_seqs": 64,
+          "gdn_prefill_backend": "triton"
+        },
+        "software": {
+          "vllm": "0.31.0",
+          "torch": "2.13.0",
+          "transformers": "5.17.0"
+        },
+        "code": {
+          "commit": "1912a3de7d6524a7bbf8eaacd1d9b605459e2596",
+          "uncommitted": []
+        },
+        "wall_seconds": 705.4,
+        "written": "2026-10-29T11:11:22+00:00"
+      }
+    },
+    {
+      "backend": "vllm",
+      "recipe": "DPO",
+      "seed": 44,
+      "run": "Qwen3.5-9B--en--dpo--adapter--en_only_dpo_v3_4880_seed44_step305",
+      "spec": "dpo4880_s44",
+      "path": "/ritom/scratch/cscs/zhang/xw/outputs/operating_point/v2/Qwen3.5-9B--en--dpo--adapter--en_only_dpo_v3_4880_seed44_step305--adapter.parquet",
+      "sha256": "0d1d5f2fd3d4b2d13de2c4cf76de2f3b2292173d5dcb712c421968ab350a38be",
+      "metadata_path": "/ritom/scratch/cscs/zhang/xw/outputs/operating_point/v2/Qwen3.5-9B--en--dpo--adapter--en_only_dpo_v3_4880_seed44_step305--adapter.meta.json",
+      "metadata_sha256": "aa1a08f4c2cac6dc5f25dd643d2c0ce65eea597cd16a1f3eb8b1f02326b88576",
+      "metadata": {
+        "standard": "op-margin-v2",
+        "scoring": "log-probabilities of the first token of each decision word after the forced prefix, gathered by vLLM from the full softmax over the raw logits (logprob_token_ids); margin = logprob_hire - logprob_reject",
+        "run": "Qwen3.5-9B--en--dpo--adapter--en_only_dpo_v3_4880_seed44_step305",
+        "which": "adapter",
+        "config": "configs/audit/qwen3.5-9b_en_dpo_v3_4880_seed44_step305_gh200.yaml",
+        "prompts": {
+          "n": 31050,
+          "sha1": "6ecf987f91e4a15f2992d185b415a4ae4eeb0d51"
+        },
+        "decision": {
+          "prefix": "{\"decision\": \"",
+          "words": [
+            "hire",
+            "reject"
+          ],
+          "token_ids": [
+            33304,
+            45427
+          ],
+          "chat_template_kwargs": {
+            "enable_thinking": false
+          },
+          "sampled_decision_token_share": 1.0
+        },
+        "model": {
+          "served": "/ritom/scratch/cscs/zhang/xw/outputs/merged/qwen3.5-9b_en_only_dpo_v3_4880_seed44--checkpoint-305",
+          "base": "Qwen/Qwen3.5-9B",
+          "base_revision": "c202236235762e1c871ad0ccb60c8ee5ba337b9a",
+          "adapters": [
+            {
+              "path": "/ritom/scratch/cscs/zhang/xw/outputs/sft/qwen3.5-9b_en_only_sft_v3_additional",
+              "sha256": "d8d63526a43dab37a1fb41a7d7a3541f6a023c4fa2a19e9409e04da331e419ee"
+            },
+            {
+              "path": "/ritom/scratch/cscs/zhang/xw/outputs/dpo/qwen3.5-9b_en_only_dpo_v3_4880_seed44/checkpoint-305",
+              "sha256": "fcff5be779defc917b84686b2a1afd0ad7a905f3995e142b819a9e420c103ee2"
+            }
+          ]
+        },
+        "engine": {
+          "gpu_memory_utilization": 0.55,
+          "max_model_len": 8192,
+          "trust_remote_code": true,
+          "seed": 42,
+          "max_num_seqs": 64,
+          "gdn_prefill_backend": "triton"
+        },
+        "software": {
+          "vllm": "0.31.0",
+          "torch": "2.13.0",
+          "transformers": "5.17.0"
+        },
+        "code": {
+          "commit": "d047eaafafd1138dc0c25d2d99f1ee7b84c10373",
+          "uncommitted": []
+        },
+        "wall_seconds": 686.1,
+        "written": "2026-10-29T13:07:09+00:00"
+      }
+    },
+    {
+      "backend": "vllm",
+      "recipe": "GRPO + lr decay",
+      "seed": 42,
+      "run": "Qwen3.5-9B--en--grpo--adapter--en_only_grpo_improve_r4_tipped_v2",
+      "spec": "grpo_r4",
+      "path": "/ritom/scratch/cscs/zhang/xw/outputs/operating_point/v2/Qwen3.5-9B--en--grpo--adapter--en_only_grpo_improve_r4_tipped_v2--adapter.parquet",
+      "sha256": "6ec9d11ed17613f5ae91484806b8c425a9333acd8edfba68d80aba560918fd5c",
+      "metadata_path": "/ritom/scratch/cscs/zhang/xw/outputs/operating_point/v2/Qwen3.5-9B--en--grpo--adapter--en_only_grpo_improve_r4_tipped_v2--adapter.meta.json",
+      "metadata_sha256": "f6c53a6b2651d6e951f452467c1edc1be621fb9b49212038a16c9c910a2145e4",
+      "metadata": {
+        "standard": "op-margin-v2",
+        "scoring": "log-probabilities of the first token of each decision word after the forced prefix, gathered by vLLM from the full softmax over the raw logits (logprob_token_ids); margin = logprob_hire - logprob_reject",
+        "run": "Qwen3.5-9B--en--grpo--adapter--en_only_grpo_improve_r4_tipped_v2",
+        "which": "adapter",
+        "config": "configs/audit/qwen3.5-9b_en_grpo_improve_r4_tipped_gh200.yaml",
+        "prompts": {
+          "n": 31050,
+          "sha1": "6ecf987f91e4a15f2992d185b415a4ae4eeb0d51"
+        },
+        "decision": {
+          "prefix": "{\"decision\": \"",
+          "words": [
+            "hire",
+            "reject"
+          ],
+          "token_ids": [
+            33304,
+            45427
+          ],
+          "chat_template_kwargs": {
+            "enable_thinking": false
+          },
+          "sampled_decision_token_share": 1.0
+        },
+        "model": {
+          "served": "/ritom/scratch/cscs/zhang/xw/outputs/merged/grpo_improve_r4_tipped_v2",
+          "base": "Qwen/Qwen3.5-9B",
+          "base_revision": "c202236235762e1c871ad0ccb60c8ee5ba337b9a",
+          "adapters": [
+            {
+              "path": "/ritom/scratch/cscs/zhang/xw/outputs/sft/qwen3.5-9b_en_only_sft_v3_additional",
+              "sha256": "d8d63526a43dab37a1fb41a7d7a3541f6a023c4fa2a19e9409e04da331e419ee"
+            },
+            {
+              "path": "/ritom/scratch/cscs/zhang/xw/outputs/grpo/grpo_improve_r4_tipped_v2",
+              "sha256": "f63bffdae55ad5cc5a7af717188050540a37265bbf4cf1c223287a2f63ec8f1e"
+            }
+          ]
+        },
+        "engine": {
+          "gpu_memory_utilization": 0.55,
+          "max_model_len": 8192,
+          "trust_remote_code": true,
+          "seed": 42,
+          "max_num_seqs": 64,
+          "gdn_prefill_backend": "triton"
+        },
+        "software": {
+          "vllm": "0.31.0",
+          "torch": "2.13.0",
+          "transformers": "5.17.0"
+        },
+        "code": {
+          "commit": "208a9ad2f9fb7aa398e7156d0a1f1a0835b05e7d",
+          "uncommitted": []
+        },
+        "wall_seconds": 705.2,
+        "written": "2026-10-26T14:51:33+00:00"
+      }
+    },
+    {
+      "backend": "vllm",
+      "recipe": "GRPO + lr decay",
+      "seed": 43,
+      "run": "Qwen3.5-9B--en--grpo--adapter--en_only_grpo_improve_r4_tipped_seed43",
+      "spec": "grpo_r4_s43",
+      "path": "/ritom/scratch/cscs/zhang/xw/outputs/operating_point/v2/Qwen3.5-9B--en--grpo--adapter--en_only_grpo_improve_r4_tipped_seed43--adapter.parquet",
+      "sha256": "ddef410ccd5068c680a849fccc486f4dad0011e0a957ad2459197fb6ee396e7f",
+      "metadata_path": "/ritom/scratch/cscs/zhang/xw/outputs/operating_point/v2/Qwen3.5-9B--en--grpo--adapter--en_only_grpo_improve_r4_tipped_seed43--adapter.meta.json",
+      "metadata_sha256": "ecd881e765b181b5d4211fc17b73d45ad044969dc5291dc49d2add63cc5c464b",
+      "metadata": {
+        "standard": "op-margin-v2",
+        "scoring": "log-probabilities of the first token of each decision word after the forced prefix, gathered by vLLM from the full softmax over the raw logits (logprob_token_ids); margin = logprob_hire - logprob_reject",
+        "run": "Qwen3.5-9B--en--grpo--adapter--en_only_grpo_improve_r4_tipped_seed43",
+        "which": "adapter",
+        "config": "configs/audit/qwen3.5-9b_en_grpo_improve_r4_tipped_seed43_gh200.yaml",
+        "prompts": {
+          "n": 31050,
+          "sha1": "6ecf987f91e4a15f2992d185b415a4ae4eeb0d51"
+        },
+        "decision": {
+          "prefix": "{\"decision\": \"",
+          "words": [
+            "hire",
+            "reject"
+          ],
+          "token_ids": [
+            33304,
+            45427
+          ],
+          "chat_template_kwargs": {
+            "enable_thinking": false
+          },
+          "sampled_decision_token_share": 1.0
+        },
+        "model": {
+          "served": "/ritom/scratch/cscs/zhang/xw/outputs/merged/grpo_improve_r4_tipped_seed43",
+          "base": "Qwen/Qwen3.5-9B",
+          "base_revision": "c202236235762e1c871ad0ccb60c8ee5ba337b9a",
+          "adapters": [
+            {
+              "path": "/ritom/scratch/cscs/zhang/xw/outputs/sft/qwen3.5-9b_en_only_sft_v3_additional",
+              "sha256": "d8d63526a43dab37a1fb41a7d7a3541f6a023c4fa2a19e9409e04da331e419ee"
+            },
+            {
+              "path": "/ritom/scratch/cscs/zhang/xw/outputs/grpo/grpo_improve_r4_tipped_seed43",
+              "sha256": "060d56ac00c45cf4b6956f9f4b4123140033cb3b561d1370e84c33d5f63523b7"
+            }
+          ]
+        },
+        "engine": {
+          "gpu_memory_utilization": 0.55,
+          "max_model_len": 8192,
+          "trust_remote_code": true,
+          "seed": 42,
+          "max_num_seqs": 64,
+          "gdn_prefill_backend": "triton"
+        },
+        "software": {
+          "vllm": "0.31.0",
+          "torch": "2.13.0",
+          "transformers": "5.17.0"
+        },
+        "code": {
+          "commit": "c4a2dcbbd756db68dad6e42ad35ed4258a46df14",
+          "uncommitted": []
+        },
+        "wall_seconds": 701.5,
+        "written": "2026-10-27T09:15:56+00:00"
+      }
+    },
+    {
+      "backend": "vllm",
+      "recipe": "GRPO + lr decay",
+      "seed": 44,
+      "run": "Qwen3.5-9B--en--grpo--adapter--en_only_grpo_improve_r4_tipped_seed44",
+      "spec": "grpo_r4_s44",
+      "path": "/ritom/scratch/cscs/zhang/xw/outputs/operating_point/v2/Qwen3.5-9B--en--grpo--adapter--en_only_grpo_improve_r4_tipped_seed44--adapter.parquet",
+      "sha256": "e5ee74a1a191e26397a3f736e8752246f894e8d5a0820ee9d32b2b772bf0b0d2",
+      "metadata_path": "/ritom/scratch/cscs/zhang/xw/outputs/operating_point/v2/Qwen3.5-9B--en--grpo--adapter--en_only_grpo_improve_r4_tipped_seed44--adapter.meta.json",
+      "metadata_sha256": "f3213a77653166817fd22e05ad21e6a0d06d02614a98bdf8c9170c7f1a96016b",
+      "metadata": {
+        "standard": "op-margin-v2",
+        "scoring": "log-probabilities of the first token of each decision word after the forced prefix, gathered by vLLM from the full softmax over the raw logits (logprob_token_ids); margin = logprob_hire - logprob_reject",
+        "run": "Qwen3.5-9B--en--grpo--adapter--en_only_grpo_improve_r4_tipped_seed44",
+        "which": "adapter",
+        "config": "configs/audit/qwen3.5-9b_en_grpo_improve_r4_tipped_seed44_gh200.yaml",
+        "prompts": {
+          "n": 31050,
+          "sha1": "6ecf987f91e4a15f2992d185b415a4ae4eeb0d51"
+        },
+        "decision": {
+          "prefix": "{\"decision\": \"",
+          "words": [
+            "hire",
+            "reject"
+          ],
+          "token_ids": [
+            33304,
+            45427
+          ],
+          "chat_template_kwargs": {
+            "enable_thinking": false
+          },
+          "sampled_decision_token_share": 1.0
+        },
+        "model": {
+          "served": "/ritom/scratch/cscs/zhang/xw/outputs/merged/grpo_improve_r4_tipped_seed44",
+          "base": "Qwen/Qwen3.5-9B",
+          "base_revision": "c202236235762e1c871ad0ccb60c8ee5ba337b9a",
+          "adapters": [
+            {
+              "path": "/ritom/scratch/cscs/zhang/xw/outputs/sft/qwen3.5-9b_en_only_sft_v3_additional",
+              "sha256": "d8d63526a43dab37a1fb41a7d7a3541f6a023c4fa2a19e9409e04da331e419ee"
+            },
+            {
+              "path": "/ritom/scratch/cscs/zhang/xw/outputs/grpo/grpo_improve_r4_tipped_seed44",
+              "sha256": "306579de5f0859ddfef84f4184d7add111adc7ac58fca94573305ac70fb419b1"
+            }
+          ]
+        },
+        "engine": {
+          "gpu_memory_utilization": 0.55,
+          "max_model_len": 8192,
+          "trust_remote_code": true,
+          "seed": 42,
+          "max_num_seqs": 64,
+          "gdn_prefill_backend": "triton"
+        },
+        "software": {
+          "vllm": "0.31.0",
+          "torch": "2.13.0",
+          "transformers": "5.17.0"
+        },
+        "code": {
+          "commit": "c4a2dcbbd756db68dad6e42ad35ed4258a46df14",
+          "uncommitted": []
+        },
+        "wall_seconds": 691.9,
+        "written": "2026-10-27T09:15:45+00:00"
+      }
+    },
+    {
+      "backend": "vllm",
+      "recipe": "Self-distillation",
+      "seed": 42,
+      "run": "Qwen3.5-9B--en--sft--adapter--en_only_decision_distill_seed42",
+      "spec": "distill42",
+      "path": "/ritom/scratch/cscs/zhang/xw/outputs/operating_point/v2/Qwen3.5-9B--en--sft--adapter--en_only_decision_distill_seed42--adapter.parquet",
+      "sha256": "1a65c8d63d8c9d9e61f365ec47996f451d50749e1b6bcec881321aa0e22b679e",
+      "metadata_path": "/ritom/scratch/cscs/zhang/xw/outputs/operating_point/v2/Qwen3.5-9B--en--sft--adapter--en_only_decision_distill_seed42--adapter.meta.json",
+      "metadata_sha256": "d8a203f5ce7ecf7c24e8e6bc07b8e5ad81f01f335b36a98bd9f5f72010435d01",
+      "metadata": {
+        "standard": "op-margin-v2",
+        "scoring": "log-probabilities of the first token of each decision word after the forced prefix, gathered by vLLM from the full softmax over the raw logits (logprob_token_ids); margin = logprob_hire - logprob_reject",
+        "run": "Qwen3.5-9B--en--sft--adapter--en_only_decision_distill_seed42",
+        "which": "adapter",
+        "config": "configs/audit/qwen3.5-9b_en_decision_distill_seed42_gh200.yaml",
+        "prompts": {
+          "n": 31050,
+          "sha1": "6ecf987f91e4a15f2992d185b415a4ae4eeb0d51"
+        },
+        "decision": {
+          "prefix": "{\"decision\": \"",
+          "words": [
+            "hire",
+            "reject"
+          ],
+          "token_ids": [
+            33304,
+            45427
+          ],
+          "chat_template_kwargs": {
+            "enable_thinking": false
+          },
+          "sampled_decision_token_share": 1.0
+        },
+        "model": {
+          "served": "/ritom/scratch/cscs/zhang/xw/outputs/merged/decision_distill_seed42",
+          "base": "Qwen/Qwen3.5-9B",
+          "base_revision": "c202236235762e1c871ad0ccb60c8ee5ba337b9a",
+          "adapters": [
+            {
+              "path": "/ritom/scratch/cscs/zhang/xw/outputs/sft/qwen3.5-9b_en_only_sft_v3_additional",
+              "sha256": "d8d63526a43dab37a1fb41a7d7a3541f6a023c4fa2a19e9409e04da331e419ee"
+            },
+            {
+              "path": "/ritom/scratch/cscs/zhang/xw/outputs/distill/decision_distill_seed42",
+              "sha256": "c504c69107f38da77c7858e50353cb5fb770a96cca56e59be8db2af60472b945"
+            }
+          ]
+        },
+        "engine": {
+          "gpu_memory_utilization": 0.55,
+          "max_model_len": 8192,
+          "trust_remote_code": true,
+          "seed": 42,
+          "max_num_seqs": 64,
+          "gdn_prefill_backend": "triton"
+        },
+        "software": {
+          "vllm": "0.31.0",
+          "torch": "2.13.0",
+          "transformers": "5.17.0"
+        },
+        "code": {
+          "commit": "0e2833c45a802953d47ccd78134e223a2acd4b62",
+          "uncommitted": []
+        },
+        "wall_seconds": 693.2,
+        "written": "2026-10-27T11:31:33+00:00"
+      }
+    },
+    {
+      "backend": "vllm",
+      "recipe": "Self-distillation",
+      "seed": 43,
+      "run": "Qwen3.5-9B--en--sft--adapter--en_only_decision_distill_seed43",
+      "spec": "distill43",
+      "path": "/ritom/scratch/cscs/zhang/xw/outputs/operating_point/v2/Qwen3.5-9B--en--sft--adapter--en_only_decision_distill_seed43--adapter.parquet",
+      "sha256": "7f22b2506a1aa7e2b1433021f58ca35007946b6f4c104955901f91394f1601a3",
+      "metadata_path": "/ritom/scratch/cscs/zhang/xw/outputs/operating_point/v2/Qwen3.5-9B--en--sft--adapter--en_only_decision_distill_seed43--adapter.meta.json",
+      "metadata_sha256": "b0a2a9d5e0c147aea11f98974d2fc16fd72457a22302e7fca3b157b818661702",
+      "metadata": {
+        "standard": "op-margin-v2",
+        "scoring": "log-probabilities of the first token of each decision word after the forced prefix, gathered by vLLM from the full softmax over the raw logits (logprob_token_ids); margin = logprob_hire - logprob_reject",
+        "run": "Qwen3.5-9B--en--sft--adapter--en_only_decision_distill_seed43",
+        "which": "adapter",
+        "config": "configs/audit/qwen3.5-9b_en_decision_distill_seed43_gh200.yaml",
+        "prompts": {
+          "n": 31050,
+          "sha1": "6ecf987f91e4a15f2992d185b415a4ae4eeb0d51"
+        },
+        "decision": {
+          "prefix": "{\"decision\": \"",
+          "words": [
+            "hire",
+            "reject"
+          ],
+          "token_ids": [
+            33304,
+            45427
+          ],
+          "chat_template_kwargs": {
+            "enable_thinking": false
+          },
+          "sampled_decision_token_share": 1.0
+        },
+        "model": {
+          "served": "/ritom/scratch/cscs/zhang/xw/outputs/merged/decision_distill_seed43",
+          "base": "Qwen/Qwen3.5-9B",
+          "base_revision": "c202236235762e1c871ad0ccb60c8ee5ba337b9a",
+          "adapters": [
+            {
+              "path": "/ritom/scratch/cscs/zhang/xw/outputs/sft/qwen3.5-9b_en_only_sft_v3_additional",
+              "sha256": "d8d63526a43dab37a1fb41a7d7a3541f6a023c4fa2a19e9409e04da331e419ee"
+            },
+            {
+              "path": "/ritom/scratch/cscs/zhang/xw/outputs/distill/decision_distill_seed43",
+              "sha256": "d9e9953e465720b6d285f0c53fca77438e100245e091c696652f6bcfacc92933"
+            }
+          ]
+        },
+        "engine": {
+          "gpu_memory_utilization": 0.55,
+          "max_model_len": 8192,
+          "trust_remote_code": true,
+          "seed": 42,
+          "max_num_seqs": 64,
+          "gdn_prefill_backend": "triton"
+        },
+        "software": {
+          "vllm": "0.31.0",
+          "torch": "2.13.0",
+          "transformers": "5.17.0"
+        },
+        "code": {
+          "commit": "0e2833c45a802953d47ccd78134e223a2acd4b62",
+          "uncommitted": []
+        },
+        "wall_seconds": 685.4,
+        "written": "2026-10-27T11:34:48+00:00"
+      }
+    },
+    {
+      "backend": "vllm",
+      "recipe": "Self-distillation",
+      "seed": 44,
+      "run": "Qwen3.5-9B--en--sft--adapter--en_only_decision_distill_seed44",
+      "spec": "distill44",
+      "path": "/ritom/scratch/cscs/zhang/xw/outputs/operating_point/v2/Qwen3.5-9B--en--sft--adapter--en_only_decision_distill_seed44--adapter.parquet",
+      "sha256": "584220fb15f40d1158fdb822c48d4e27d6f01809ce50814a00b7c183fa61b281",
+      "metadata_path": "/ritom/scratch/cscs/zhang/xw/outputs/operating_point/v2/Qwen3.5-9B--en--sft--adapter--en_only_decision_distill_seed44--adapter.meta.json",
+      "metadata_sha256": "f6917226034b1e99391eccb63c6d484cc5f9b2c8d5a5261a4bc7bf0eccb980c5",
+      "metadata": {
+        "standard": "op-margin-v2",
+        "scoring": "log-probabilities of the first token of each decision word after the forced prefix, gathered by vLLM from the full softmax over the raw logits (logprob_token_ids); margin = logprob_hire - logprob_reject",
+        "run": "Qwen3.5-9B--en--sft--adapter--en_only_decision_distill_seed44",
+        "which": "adapter",
+        "config": "configs/audit/qwen3.5-9b_en_decision_distill_seed44_gh200.yaml",
+        "prompts": {
+          "n": 31050,
+          "sha1": "6ecf987f91e4a15f2992d185b415a4ae4eeb0d51"
+        },
+        "decision": {
+          "prefix": "{\"decision\": \"",
+          "words": [
+            "hire",
+            "reject"
+          ],
+          "token_ids": [
+            33304,
+            45427
+          ],
+          "chat_template_kwargs": {
+            "enable_thinking": false
+          },
+          "sampled_decision_token_share": 1.0
+        },
+        "model": {
+          "served": "/ritom/scratch/cscs/zhang/xw/outputs/merged/decision_distill_seed44",
+          "base": "Qwen/Qwen3.5-9B",
+          "base_revision": "c202236235762e1c871ad0ccb60c8ee5ba337b9a",
+          "adapters": [
+            {
+              "path": "/ritom/scratch/cscs/zhang/xw/outputs/sft/qwen3.5-9b_en_only_sft_v3_additional",
+              "sha256": "d8d63526a43dab37a1fb41a7d7a3541f6a023c4fa2a19e9409e04da331e419ee"
+            },
+            {
+              "path": "/ritom/scratch/cscs/zhang/xw/outputs/distill/decision_distill_seed44",
+              "sha256": "dd497d6d1bbbb499e8b2b7eaa02ff2832fbd3acd19339767d2b01b8d4821b499"
+            }
+          ]
+        },
+        "engine": {
+          "gpu_memory_utilization": 0.55,
+          "max_model_len": 8192,
+          "trust_remote_code": true,
+          "seed": 42,
+          "max_num_seqs": 64,
+          "gdn_prefill_backend": "triton"
+        },
+        "software": {
+          "vllm": "0.31.0",
+          "torch": "2.13.0",
+          "transformers": "5.17.0"
+        },
+        "code": {
+          "commit": "0e2833c45a802953d47ccd78134e223a2acd4b62",
+          "uncommitted": []
+        },
+        "wall_seconds": 680.9,
+        "written": "2026-10-27T11:37:25+00:00"
+      }
+    },
+    {
+      "backend": "hf",
+      "recipe": "SFT-v3",
+      "seed": 0,
+      "run": "Qwen3.5-9B--en--sft--adapter--en_only_sft_v3_additional",
+      "spec": "sft_v3",
+      "path": "/ritom/scratch/cscs/zhang/xw/outputs/interp/margins/sft_v3/grid-en.parquet",
+      "sha256": "03f7dad227d03deeffc7ea5ddf504ff89e48dca4504c805fa349fabd7fc382a9",
+      "metadata_path": "/ritom/scratch/cscs/zhang/xw/outputs/interp/margins/sft_v3/grid-en.parquet.meta.json",
+      "metadata_sha256": "865dbae3800cb03057ab2f6cb77a77724009153943a4b67621f554cfd9190a88",
+      "metadata": {
+        "artifact": "/ritom/scratch/cscs/zhang/xw/outputs/interp/margins/sft_v3/grid-en.parquet",
+        "written": "2026-10-28T09:49:37",
+        "git_sha": "8979d5b00156da4a1a70d4e6d7fdec56ff75d02b",
+        "torch": "2.13.0+cu130",
+        "transformers": "5.17.0",
+        "kernels": {
+          "fla": true,
+          "causal_conv1d": false
+        },
+        "spec": "sft_v3",
+        "adapters": {
+          "sft_v3": "d8d63526a43dab37"
+        },
+        "base_model": "Qwen/Qwen3.5-9B",
+        "dataset": "grid",
+        "rows": 31050,
+        "batch_size": 16,
+        "dtype": "bfloat16 weights, fp32 readout",
+        "data_config": {
+          "lang": "en",
+          "protected_groups": [
+            "military_status",
+            "gender",
+            "religion"
+          ],
+          "conditions": [
+            "explicit",
+            "implicit",
+            "attr_free"
+          ],
+          "chat_template_kwargs": {
+            "enable_thinking": false
+          },
+          "limit_pairs": null,
+          "pool_pairs": 300,
+          "seed": 42,
+          "selection": {
+            "min_abs_effect": 0.5,
+            "random_share": 0.3
+          },
+          "max_violation_share": 0.005
+        }
+      }
+    },
+    {
+      "backend": "hf",
+      "recipe": "DPO",
+      "seed": 42,
+      "run": "Qwen3.5-9B--en--dpo--adapter--en_only_dpo_v3_4880_step305",
+      "spec": "dpo4880",
+      "path": "/ritom/scratch/cscs/zhang/xw/outputs/interp/margins/dpo4880/grid-en.parquet",
+      "sha256": "9edcd542329d30557c1c012d3ff7292756feb56d46991052e66e6741366959f0",
+      "metadata_path": "/ritom/scratch/cscs/zhang/xw/outputs/interp/margins/dpo4880/grid-en.parquet.meta.json",
+      "metadata_sha256": "49eb173a190a27ac5c74ce6190c7ee37e2ad739e731eafd2c6728befffedbc79",
+      "metadata": {
+        "artifact": "/ritom/scratch/cscs/zhang/xw/outputs/interp/margins/dpo4880/grid-en.parquet",
+        "written": "2026-10-28T17:29:48",
+        "git_sha": "296982bd7b94117002a87febdb158f39f64ac084",
+        "torch": "2.13.0+cu130",
+        "transformers": "5.17.0",
+        "kernels": {
+          "fla": true,
+          "causal_conv1d": false
+        },
+        "spec": "dpo4880",
+        "adapters": {
+          "sft_v3": "d8d63526a43dab37",
+          "dpo4880": "1b8995b48fde60ff"
+        },
+        "base_model": "Qwen/Qwen3.5-9B",
+        "dataset": "grid",
+        "rows": 31050,
+        "batch_size": 16,
+        "dtype": "bfloat16 weights, fp32 readout",
+        "data_config": {
+          "lang": "en",
+          "protected_groups": [
+            "military_status",
+            "gender",
+            "religion"
+          ],
+          "conditions": [
+            "explicit",
+            "implicit",
+            "attr_free"
+          ],
+          "chat_template_kwargs": {
+            "enable_thinking": false
+          },
+          "limit_pairs": null,
+          "pool_pairs": 300,
+          "seed": 42,
+          "selection": {
+            "min_abs_effect": 0.5,
+            "random_share": 0.3
+          },
+          "max_violation_share": 0.005
+        }
+      }
+    },
+    {
+      "backend": "hf",
+      "recipe": "DPO",
+      "seed": 43,
+      "run": "Qwen3.5-9B--en--dpo--adapter--en_only_dpo_v3_4880_seed43_step305",
+      "spec": "dpo4880_s43",
+      "path": "/ritom/scratch/cscs/zhang/xw/outputs/interp/margins/dpo4880_s43/grid-en.parquet",
+      "sha256": "20fbf2180ff5adc23ebd294a56dbfd3a6cbfda27c4365457f91c84e140e2c11d",
+      "metadata_path": "/ritom/scratch/cscs/zhang/xw/outputs/interp/margins/dpo4880_s43/grid-en.parquet.meta.json",
+      "metadata_sha256": "7330e02cb26cf198550dae83982dffa4c2f984f586c3162fe03ac16485858c98",
+      "metadata": {
+        "artifact": "/ritom/scratch/cscs/zhang/xw/outputs/interp/margins/dpo4880_s43/grid-en.parquet",
+        "written": "2026-11-02T16:52:49",
+        "git_sha": "5f095fabd3d67ecd5af2b844ebeb94a3147e5f29",
+        "torch": "2.13.0+cu130",
+        "transformers": "5.17.0",
+        "kernels": {
+          "fla": true,
+          "causal_conv1d": false
+        },
+        "spec": "dpo4880_s43",
+        "adapters": {
+          "sft_v3": "d8d63526a43dab37",
+          "dpo4880_s43": "3cd8d9ee804905ea"
+        },
+        "base_model": "Qwen/Qwen3.5-9B",
+        "dataset": "grid",
+        "rows": 31050,
+        "batch_size": 8,
+        "dtype": "bfloat16 weights, fp32 readout",
+        "data_config": {
+          "lang": "en",
+          "protected_groups": [
+            "military_status",
+            "gender",
+            "religion"
+          ],
+          "conditions": [
+            "explicit",
+            "implicit",
+            "attr_free"
+          ],
+          "chat_template_kwargs": {
+            "enable_thinking": false
+          },
+          "limit_pairs": null,
+          "pool_pairs": 300,
+          "seed": 42,
+          "selection": {
+            "min_abs_effect": 0.5,
+            "random_share": 0.3
+          },
+          "max_violation_share": 0.005
+        }
+      }
+    },
+    {
+      "backend": "hf",
+      "recipe": "DPO",
+      "seed": 44,
+      "run": "Qwen3.5-9B--en--dpo--adapter--en_only_dpo_v3_4880_seed44_step305",
+      "spec": "dpo4880_s44",
+      "path": "/ritom/scratch/cscs/zhang/xw/outputs/interp/margins/dpo4880_s44/grid-en.parquet",
+      "sha256": "3440ee57827a791618ebf79bc5e3032ada4fe0df14b3809e549832ee0f60766a",
+      "metadata_path": "/ritom/scratch/cscs/zhang/xw/outputs/interp/margins/dpo4880_s44/grid-en.parquet.meta.json",
+      "metadata_sha256": "b9455ab2e93955d6379a111ea405dcb8ec2ca25260baa044b114a9d7f4e85748",
+      "metadata": {
+        "artifact": "/ritom/scratch/cscs/zhang/xw/outputs/interp/margins/dpo4880_s44/grid-en.parquet",
+        "written": "2026-11-02T16:53:14",
+        "git_sha": "5f095fabd3d67ecd5af2b844ebeb94a3147e5f29",
+        "torch": "2.13.0+cu130",
+        "transformers": "5.17.0",
+        "kernels": {
+          "fla": true,
+          "causal_conv1d": false
+        },
+        "spec": "dpo4880_s44",
+        "adapters": {
+          "sft_v3": "d8d63526a43dab37",
+          "dpo4880_s44": "fcff5be779defc91"
+        },
+        "base_model": "Qwen/Qwen3.5-9B",
+        "dataset": "grid",
+        "rows": 31050,
+        "batch_size": 8,
+        "dtype": "bfloat16 weights, fp32 readout",
+        "data_config": {
+          "lang": "en",
+          "protected_groups": [
+            "military_status",
+            "gender",
+            "religion"
+          ],
+          "conditions": [
+            "explicit",
+            "implicit",
+            "attr_free"
+          ],
+          "chat_template_kwargs": {
+            "enable_thinking": false
+          },
+          "limit_pairs": null,
+          "pool_pairs": 300,
+          "seed": 42,
+          "selection": {
+            "min_abs_effect": 0.5,
+            "random_share": 0.3
+          },
+          "max_violation_share": 0.005
+        }
+      }
+    },
+    {
+      "backend": "hf",
+      "recipe": "GRPO + lr decay",
+      "seed": 42,
+      "run": "Qwen3.5-9B--en--grpo--adapter--en_only_grpo_improve_r4_tipped_v2",
+      "spec": "grpo_r4",
+      "path": "/ritom/scratch/cscs/zhang/xw/outputs/interp/margins/grpo_r4/grid-en.parquet",
+      "sha256": "47a3edf7084c9302f752f122634411f0b097eeb2306befe645521da11c65df69",
+      "metadata_path": "/ritom/scratch/cscs/zhang/xw/outputs/interp/margins/grpo_r4/grid-en.parquet.meta.json",
+      "metadata_sha256": "6ce93b73ca09b75314c102287c7a67dcb39581de3784c101775b6a55e5d25f58",
+      "metadata": {
+        "artifact": "/ritom/scratch/cscs/zhang/xw/outputs/interp/margins/grpo_r4/grid-en.parquet",
+        "written": "2026-11-01T11:41:50",
+        "git_sha": "dfb4af46a291122781948e31a0005d833e31cc0c",
+        "torch": "2.13.0+cu130",
+        "transformers": "5.17.0",
+        "kernels": {
+          "fla": true,
+          "causal_conv1d": false
+        },
+        "spec": "grpo_r4",
+        "adapters": {
+          "sft_v3": "d8d63526a43dab37",
+          "grpo_r4": "f63bffdae55ad5cc"
+        },
+        "base_model": "Qwen/Qwen3.5-9B",
+        "dataset": "grid",
+        "rows": 31050,
+        "batch_size": 16,
+        "dtype": "bfloat16 weights, fp32 readout",
+        "data_config": {
+          "lang": "en",
+          "protected_groups": [
+            "military_status",
+            "gender",
+            "religion"
+          ],
+          "conditions": [
+            "explicit",
+            "implicit",
+            "attr_free"
+          ],
+          "chat_template_kwargs": {
+            "enable_thinking": false
+          },
+          "limit_pairs": null,
+          "pool_pairs": 300,
+          "seed": 42,
+          "selection": {
+            "min_abs_effect": 0.5,
+            "random_share": 0.3
+          },
+          "max_violation_share": 0.005
+        }
+      }
+    },
+    {
+      "backend": "hf",
+      "recipe": "GRPO + lr decay",
+      "seed": 43,
+      "run": "Qwen3.5-9B--en--grpo--adapter--en_only_grpo_improve_r4_tipped_seed43",
+      "spec": "grpo_r4_s43",
+      "path": "/ritom/scratch/cscs/zhang/xw/outputs/interp/margins/grpo_r4_s43/grid-en.parquet",
+      "sha256": "9913dc4f4826dff36ab5c8253c59c5e632a6ad8eb7f69b18b5d7bfddce7eec4d",
+      "metadata_path": "/ritom/scratch/cscs/zhang/xw/outputs/interp/margins/grpo_r4_s43/grid-en.parquet.meta.json",
+      "metadata_sha256": "d0120eba0d5a566baafa2d625380f40d553ae232bf7017edd9a801bd9d23efc3",
+      "metadata": {
+        "artifact": "/ritom/scratch/cscs/zhang/xw/outputs/interp/margins/grpo_r4_s43/grid-en.parquet",
+        "written": "2026-11-02T16:53:56",
+        "git_sha": "5f095fabd3d67ecd5af2b844ebeb94a3147e5f29",
+        "torch": "2.13.0+cu130",
+        "transformers": "5.17.0",
+        "kernels": {
+          "fla": true,
+          "causal_conv1d": false
+        },
+        "spec": "grpo_r4_s43",
+        "adapters": {
+          "sft_v3": "d8d63526a43dab37",
+          "grpo_r4_s43": "060d56ac00c45cf4"
+        },
+        "base_model": "Qwen/Qwen3.5-9B",
+        "dataset": "grid",
+        "rows": 31050,
+        "batch_size": 8,
+        "dtype": "bfloat16 weights, fp32 readout",
+        "data_config": {
+          "lang": "en",
+          "protected_groups": [
+            "military_status",
+            "gender",
+            "religion"
+          ],
+          "conditions": [
+            "explicit",
+            "implicit",
+            "attr_free"
+          ],
+          "chat_template_kwargs": {
+            "enable_thinking": false
+          },
+          "limit_pairs": null,
+          "pool_pairs": 300,
+          "seed": 42,
+          "selection": {
+            "min_abs_effect": 0.5,
+            "random_share": 0.3
+          },
+          "max_violation_share": 0.005
+        }
+      }
+    },
+    {
+      "backend": "hf",
+      "recipe": "GRPO + lr decay",
+      "seed": 44,
+      "run": "Qwen3.5-9B--en--grpo--adapter--en_only_grpo_improve_r4_tipped_seed44",
+      "spec": "grpo_r4_s44",
+      "path": "/ritom/scratch/cscs/zhang/xw/outputs/interp/margins/grpo_r4_s44/grid-en.parquet",
+      "sha256": "8680f669307565b86c091fc8748ef6b91744de3a43d32a944a0e04fb76a8b4c7",
+      "metadata_path": "/ritom/scratch/cscs/zhang/xw/outputs/interp/margins/grpo_r4_s44/grid-en.parquet.meta.json",
+      "metadata_sha256": "37de26df018ef48b75368c14626d481512fa714dc82df68a9f1c25618a1f8fff",
+      "metadata": {
+        "artifact": "/ritom/scratch/cscs/zhang/xw/outputs/interp/margins/grpo_r4_s44/grid-en.parquet",
+        "written": "2026-11-02T16:53:25",
+        "git_sha": "5f095fabd3d67ecd5af2b844ebeb94a3147e5f29",
+        "torch": "2.13.0+cu130",
+        "transformers": "5.17.0",
+        "kernels": {
+          "fla": true,
+          "causal_conv1d": false
+        },
+        "spec": "grpo_r4_s44",
+        "adapters": {
+          "sft_v3": "d8d63526a43dab37",
+          "grpo_r4_s44": "306579de5f0859dd"
+        },
+        "base_model": "Qwen/Qwen3.5-9B",
+        "dataset": "grid",
+        "rows": 31050,
+        "batch_size": 8,
+        "dtype": "bfloat16 weights, fp32 readout",
+        "data_config": {
+          "lang": "en",
+          "protected_groups": [
+            "military_status",
+            "gender",
+            "religion"
+          ],
+          "conditions": [
+            "explicit",
+            "implicit",
+            "attr_free"
+          ],
+          "chat_template_kwargs": {
+            "enable_thinking": false
+          },
+          "limit_pairs": null,
+          "pool_pairs": 300,
+          "seed": 42,
+          "selection": {
+            "min_abs_effect": 0.5,
+            "random_share": 0.3
+          },
+          "max_violation_share": 0.005
+        }
+      }
+    },
+    {
+      "backend": "hf",
+      "recipe": "Self-distillation",
+      "seed": 42,
+      "run": "Qwen3.5-9B--en--sft--adapter--en_only_decision_distill_seed42",
+      "spec": "distill42",
+      "path": "/ritom/scratch/cscs/zhang/xw/outputs/interp/margins/distill42/grid-en.parquet",
+      "sha256": "1899e3a2b587473fe9d920c34db09fa530e0365169f85461f041f65633c722e9",
+      "metadata_path": "/ritom/scratch/cscs/zhang/xw/outputs/interp/margins/distill42/grid-en.parquet.meta.json",
+      "metadata_sha256": "73b37e0a3eb045487362ea543c8fdfdab0f069033a0a8f01761f84bb4e5a2a96",
+      "metadata": {
+        "artifact": "/ritom/scratch/cscs/zhang/xw/outputs/interp/margins/distill42/grid-en.parquet",
+        "written": "2026-10-28T09:53:06",
+        "git_sha": "8979d5b00156da4a1a70d4e6d7fdec56ff75d02b",
+        "torch": "2.13.0+cu130",
+        "transformers": "5.17.0",
+        "kernels": {
+          "fla": true,
+          "causal_conv1d": false
+        },
+        "spec": "distill42",
+        "adapters": {
+          "sft_v3": "d8d63526a43dab37",
+          "distill42": "c504c69107f38da7"
+        },
+        "base_model": "Qwen/Qwen3.5-9B",
+        "dataset": "grid",
+        "rows": 31050,
+        "batch_size": 16,
+        "dtype": "bfloat16 weights, fp32 readout",
+        "data_config": {
+          "lang": "en",
+          "protected_groups": [
+            "military_status",
+            "gender",
+            "religion"
+          ],
+          "conditions": [
+            "explicit",
+            "implicit",
+            "attr_free"
+          ],
+          "chat_template_kwargs": {
+            "enable_thinking": false
+          },
+          "limit_pairs": null,
+          "pool_pairs": 300,
+          "seed": 42,
+          "selection": {
+            "min_abs_effect": 0.5,
+            "random_share": 0.3
+          },
+          "max_violation_share": 0.005
+        }
+      }
+    },
+    {
+      "backend": "hf",
+      "recipe": "Self-distillation",
+      "seed": 43,
+      "run": "Qwen3.5-9B--en--sft--adapter--en_only_decision_distill_seed43",
+      "spec": "distill43",
+      "path": "/ritom/scratch/cscs/zhang/xw/outputs/interp/margins/distill43/grid-en.parquet",
+      "sha256": "28a4465ea84192f0fc523b2439440dd66418bf90ec76f3b05f21c15fdcedcd60",
+      "metadata_path": "/ritom/scratch/cscs/zhang/xw/outputs/interp/margins/distill43/grid-en.parquet.meta.json",
+      "metadata_sha256": "600c836d2610976f23cea865d1f6dbfe49d94840aa1599f55b4a96cb3fb9934a",
+      "metadata": {
+        "artifact": "/ritom/scratch/cscs/zhang/xw/outputs/interp/margins/distill43/grid-en.parquet",
+        "written": "2026-10-28T09:53:24",
+        "git_sha": "8979d5b00156da4a1a70d4e6d7fdec56ff75d02b",
+        "torch": "2.13.0+cu130",
+        "transformers": "5.17.0",
+        "kernels": {
+          "fla": true,
+          "causal_conv1d": false
+        },
+        "spec": "distill43",
+        "adapters": {
+          "sft_v3": "d8d63526a43dab37",
+          "distill43": "d9e9953e465720b6"
+        },
+        "base_model": "Qwen/Qwen3.5-9B",
+        "dataset": "grid",
+        "rows": 31050,
+        "batch_size": 16,
+        "dtype": "bfloat16 weights, fp32 readout",
+        "data_config": {
+          "lang": "en",
+          "protected_groups": [
+            "military_status",
+            "gender",
+            "religion"
+          ],
+          "conditions": [
+            "explicit",
+            "implicit",
+            "attr_free"
+          ],
+          "chat_template_kwargs": {
+            "enable_thinking": false
+          },
+          "limit_pairs": null,
+          "pool_pairs": 300,
+          "seed": 42,
+          "selection": {
+            "min_abs_effect": 0.5,
+            "random_share": 0.3
+          },
+          "max_violation_share": 0.005
+        }
+      }
+    },
+    {
+      "backend": "hf",
+      "recipe": "Self-distillation",
+      "seed": 44,
+      "run": "Qwen3.5-9B--en--sft--adapter--en_only_decision_distill_seed44",
+      "spec": "distill44",
+      "path": "/ritom/scratch/cscs/zhang/xw/outputs/interp/margins/distill44/grid-en.parquet",
+      "sha256": "ed121c4a8bc2e9b9b956dd609d3a08f7b75493e4c6def74c0b2e148f0e5fe74a",
+      "metadata_path": "/ritom/scratch/cscs/zhang/xw/outputs/interp/margins/distill44/grid-en.parquet.meta.json",
+      "metadata_sha256": "89940373088f3c1c30c4856d964e65f074fa96495a72fa0f83f128cdc68a843a",
+      "metadata": {
+        "artifact": "/ritom/scratch/cscs/zhang/xw/outputs/interp/margins/distill44/grid-en.parquet",
+        "written": "2026-11-02T16:52:31",
+        "git_sha": "5f095fabd3d67ecd5af2b844ebeb94a3147e5f29",
+        "torch": "2.13.0+cu130",
+        "transformers": "5.17.0",
+        "kernels": {
+          "fla": true,
+          "causal_conv1d": false
+        },
+        "spec": "distill44",
+        "adapters": {
+          "sft_v3": "d8d63526a43dab37",
+          "distill44": "dd497d6d1bbbb499"
+        },
+        "base_model": "Qwen/Qwen3.5-9B",
+        "dataset": "grid",
+        "rows": 31050,
+        "batch_size": 8,
+        "dtype": "bfloat16 weights, fp32 readout",
+        "data_config": {
+          "lang": "en",
+          "protected_groups": [
+            "military_status",
+            "gender",
+            "religion"
+          ],
+          "conditions": [
+            "explicit",
+            "implicit",
+            "attr_free"
+          ],
+          "chat_template_kwargs": {
+            "enable_thinking": false
+          },
+          "limit_pairs": null,
+          "pool_pairs": 300,
+          "seed": 42,
+          "selection": {
+            "min_abs_effect": 0.5,
+            "random_share": 0.3
+          },
+          "max_violation_share": 0.005
+        }
+      }
+    }
+  ],
+  "code": {
+    "scripts/analyze_tail_decisions.py": "3131d5209987f351d2bea99ba2fcf4cf57fbd57c1797c5c58683a2a63cb13625",
+    "scripts/poster_audit_followup.py": "600a44b89271721cb34c7666d3c59ab5dfaf6bdbbcc073ef7a82477547ba1505",
+    "scripts/operating_point_control.py": "5f9f57fc8b814fed9530f8aac26ac62e33023265ff96d416ea9abf0a58746456",
+    "scripts/final_table.py": "fa099e580a16d49209a99217000c6d5848b4eae5d688b98b7c36cf0e106cdd70",
+    "src/hiring_bias_mitigation/interp/spec.py": "fcdfe7ad0ddc194c4d9a26e343443eab7230d7f34cfc849067026ef075f40c71",
+    "configs/interp/models.yaml": "0c4cf1f82484140badd950d86a6fd824a5cc038326e28f3fddcf96d2c63b5be9"
+  },
+  "outputs": {
+    "cuts.csv": {
+      "rows": 1040,
+      "sha256": "9768d0fa219024304a03edebf5e00f8a193391cbb67921a4bf3e53de61a6f879"
+    },
+    "effect_summary.csv": {
+      "rows": 80,
+      "sha256": "0daa3d6c37a7d88791b29afcb4c334194e3a8c2bad9c4d033a7e711d0a3bb2cf"
+    },
+    "threshold_geometry.csv": {
+      "rows": 4160,
+      "sha256": "a8e376979440d336d1e371d0c39ce5b887a3166ec224361c6b5a6ce8012b12f3"
+    },
+    "global_curve.csv": {
+      "rows": 1040,
+      "sha256": "5f061bb5b76df556ec67bccaeaadc731354c18290a98602d03c2182134be0cf3"
+    },
+    "common_rate_pair_features.csv": {
+      "rows": 36000,
+      "sha256": "c8e352aaf3e13778c646fccc2641cc78e4c8518157e02b6859b3fed250876035"
+    },
+    "common_rate_overlap.csv": {
+      "rows": 54,
+      "sha256": "11f6ad4ee3893cfd6ab2d32c931fe657e21d354c46dd97e33f06c3b5ef1ce999"
+    },
+    "common_rate_burden.csv": {
+      "rows": 12000,
+      "sha256": "ddc2c0e01eb71a983722521be27c9eca26f41d9f6618a80b8b41641e921d1502"
+    },
+    "family_cue_curve.csv": {
+      "rows": 6240,
+      "sha256": "06f4add040b696438777668f0326a0160add6ae01ca36fef8731c0af9a04fdd6"
+    },
+    "high_rate_pair_contributions.csv": {
+      "rows": 72900,
+      "sha256": "cebd4f2263b8491671352cdf29512b0f936cc8612f07cccc320b49449ccea844"
+    },
+    "leave_one_out.csv": {
+      "rows": 57780,
+      "sha256": "34b2f561b2877b3c5a7b472a5458525fba20230ee7f89aebc640a20f8d9a1c93"
+    },
+    "leave_one_out_summary.csv": {
+      "rows": 360,
+      "sha256": "5fee1e5645571af0c1af6d831677155399ef95d61c2e62ec1673805574957ea5"
+    }
+  }
+}

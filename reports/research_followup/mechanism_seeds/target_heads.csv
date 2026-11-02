@@ -1,0 +1,81 @@
+spec,method,seed,contrast,target,positions,verified,tested_heads,atp_heads,rank_scope,atp_rank_all,atp_removed_logits_per_pair,real_rank_tested,real_removed_logits_per_pair,real_share_removed,real_share_ci_low,real_share_ci_high,is_control
+sft_v3,SFT-v3,,mil_combat_civ_impl,L15.H11,suffix,True,46,896,descending signed effect among this run's tested heads only,1,0.2908993,1,0.2857765,0.29509875,0.25206885,0.34023508,False
+sft_v3,SFT-v3,,mil_combat_civ_impl,L23.H1,suffix,True,46,896,descending signed effect among this run's tested heads only,17,0.07037035,15,0.06703716,0.06922398,0.04650779,0.090463564,False
+sft_v3,SFT-v3,,mil_combat_civ_expl,L15.H11,suffix,True,47,896,descending signed effect among this run's tested heads only,1,0.23279238,1,0.22923411,0.25683776,0.18517685,0.31383842,False
+sft_v3,SFT-v3,,mil_combat_civ_expl,L23.H1,suffix,True,47,896,descending signed effect among this run's tested heads only,13,0.08238558,13,0.07719803,0.086493954,0.0645103,0.104514174,False
+sft_v3,SFT-v3,,rel_atheist_christian_impl,L15.H11,suffix,True,43,896,descending signed effect among this run's tested heads only,1,0.17555296,1,0.18510851,0.2013521,0.15039583,0.25190917,False
+sft_v3,SFT-v3,,rel_atheist_christian_impl,L23.H1,suffix,True,43,896,descending signed effect among this run's tested heads only,7,0.104886286,8,0.10568512,0.11495916,0.09302757,0.13774973,False
+sft_v3,SFT-v3,,gen_male_female_impl,L15.H11,suffix,True,48,896,descending signed effect among this run's tested heads only,1,0.18794607,1,0.17789358,0.2933813,0.18517433,0.39963695,False
+sft_v3,SFT-v3,,gen_male_female_impl,L23.H1,suffix,True,48,896,descending signed effect among this run's tested heads only,15,0.06034926,8,0.06758602,0.11146257,0.081702925,0.14049251,False
+dpo4880,DPO,42.0,mil_combat_civ_impl,L15.H11,suffix,True,46,896,descending signed effect among this run's tested heads only,6,0.3036912,4,0.2962333,0.16912746,0.059321973,0.29081348,False
+dpo4880,DPO,42.0,mil_combat_civ_impl,L23.H1,suffix,True,46,896,descending signed effect among this run's tested heads only,1,0.48091257,1,0.445385,0.25428215,0.18626012,0.31913537,False
+dpo4880,DPO,42.0,mil_combat_civ_expl,L15.H11,suffix,True,49,896,descending signed effect among this run's tested heads only,3,0.28956538,1,0.36577645,0.31462425,0.111827455,0.5466738,False
+dpo4880,DPO,42.0,mil_combat_civ_expl,L23.H1,suffix,True,49,896,descending signed effect among this run's tested heads only,11,0.15160239,6,0.19109422,0.16437054,0.11265326,0.20324028,False
+dpo4880,DPO,42.0,rel_atheist_christian_impl,L15.H11,suffix,True,44,896,descending signed effect among this run's tested heads only,2,0.5215653,3,0.53141975,0.2528011,0.1658927,0.33204377,False
+dpo4880,DPO,42.0,rel_atheist_christian_impl,L23.H1,suffix,True,44,896,descending signed effect among this run's tested heads only,4,0.40522242,4,0.43906385,0.20886655,0.1439977,0.2773048,False
+dpo4880,DPO,42.0,gen_male_female_impl,L15.H11,suffix,True,45,896,descending signed effect among this run's tested heads only,1,0.4847406,1,0.23067817,0.32400456,-0.08406975,0.514536,False
+dpo4880,DPO,42.0,gen_male_female_impl,L23.H1,suffix,True,45,896,descending signed effect among this run's tested heads only,4,0.21221805,7,0.10861643,0.1525598,0.097729996,0.19389838,False
+dpo4880_s43,DPO,43.0,mil_combat_civ_impl,L15.H11,suffix,True,47,896,descending signed effect among this run's tested heads only,2,0.40685248,3,0.34971377,0.20978038,0.06366808,0.36308903,False
+dpo4880_s43,DPO,43.0,mil_combat_civ_impl,L23.H1,suffix,True,47,896,descending signed effect among this run's tested heads only,3,0.3939948,2,0.38818333,0.23285684,0.17600362,0.29911742,False
+dpo4880_s43,DPO,43.0,mil_combat_civ_expl,L15.H11,suffix,True,45,896,descending signed effect among this run's tested heads only,1,0.38809687,1,0.3535614,0.19252448,-0.00019832133,0.37258443,False
+dpo4880_s43,DPO,43.0,mil_combat_civ_expl,L23.H1,suffix,True,45,896,descending signed effect among this run's tested heads only,2,0.38197196,2,0.3499302,0.19054718,0.14553115,0.23343594,False
+dpo4880_s43,DPO,43.0,rel_atheist_christian_impl,L15.H11,suffix,True,43,896,descending signed effect among this run's tested heads only,2,0.38421053,2,0.4094423,0.20445324,0.11008847,0.406924,False
+dpo4880_s43,DPO,43.0,rel_atheist_christian_impl,L23.H1,suffix,True,43,896,descending signed effect among this run's tested heads only,5,0.35425696,3,0.39466962,0.19707656,0.15639466,0.2502294,False
+dpo4880_s43,DPO,43.0,gen_male_female_impl,L15.H11,suffix,True,46,896,descending signed effect among this run's tested heads only,1,0.3685607,1,0.33420438,0.31839368,0.14060432,0.49479264,False
+dpo4880_s43,DPO,43.0,gen_male_female_impl,L23.H1,suffix,True,46,896,descending signed effect among this run's tested heads only,3,0.19297187,3,0.19751833,0.18817404,0.14415924,0.21255362,False
+dpo4880_s44,DPO,44.0,mil_combat_civ_impl,L15.H11,suffix,True,44,896,descending signed effect among this run's tested heads only,3,0.29684573,3,0.33195376,0.2022434,0.14680041,0.2854329,False
+dpo4880_s44,DPO,44.0,mil_combat_civ_impl,L23.H1,suffix,True,44,896,descending signed effect among this run's tested heads only,2,0.36037397,2,0.36992195,0.2253756,0.15116087,0.2601545,False
+dpo4880_s44,DPO,44.0,mil_combat_civ_expl,L15.H11,suffix,True,44,896,descending signed effect among this run's tested heads only,1,0.30293477,2,0.28743082,0.16019131,0.042130217,0.29311496,False
+dpo4880_s44,DPO,44.0,mil_combat_civ_expl,L23.H1,suffix,True,44,896,descending signed effect among this run's tested heads only,4,0.21583563,1,0.30235875,0.16851096,0.12458801,0.21731126,False
+dpo4880_s44,DPO,44.0,rel_atheist_christian_impl,L15.H11,suffix,True,43,896,descending signed effect among this run's tested heads only,1,0.4611786,1,0.53380656,0.18637948,0.107766174,0.2904576,False
+dpo4880_s44,DPO,44.0,rel_atheist_christian_impl,L23.H1,suffix,True,43,896,descending signed effect among this run's tested heads only,3,0.42925787,3,0.49005672,0.17110415,0.13561305,0.2108094,False
+dpo4880_s44,DPO,44.0,gen_male_female_impl,L15.H11,suffix,True,46,896,descending signed effect among this run's tested heads only,1,0.23236948,2,0.309386,0.33600932,0.208707,0.47547132,False
+dpo4880_s44,DPO,44.0,gen_male_female_impl,L23.H1,suffix,True,46,896,descending signed effect among this run's tested heads only,5,0.14844976,7,0.18788856,0.2040568,0.13652003,0.251031,False
+grpo_r4,GRPO + lr decay,42.0,mil_combat_civ_impl,L15.H11,suffix,True,49,896,descending signed effect among this run's tested heads only,1,0.30654976,1,0.31284574,0.26927838,0.18441476,0.38254026,False
+grpo_r4,GRPO + lr decay,42.0,mil_combat_civ_impl,L23.H1,suffix,True,49,896,descending signed effect among this run's tested heads only,4,0.1694773,4,0.178815,0.15391299,0.109456666,0.19201994,False
+grpo_r4,GRPO + lr decay,42.0,mil_combat_civ_expl,L15.H11,suffix,True,46,896,descending signed effect among this run's tested heads only,1,0.43777278,1,0.45895785,0.3302806,0.26038358,0.40810764,False
+grpo_r4,GRPO + lr decay,42.0,mil_combat_civ_expl,L23.H1,suffix,True,46,896,descending signed effect among this run's tested heads only,5,0.16989774,5,0.18027471,0.12973139,0.1042664,0.15277559,False
+grpo_r4,GRPO + lr decay,42.0,rel_atheist_christian_impl,L15.H11,suffix,True,43,896,descending signed effect among this run's tested heads only,1,0.3851189,1,0.42234308,0.20834203,0.14649625,0.2710124,False
+grpo_r4,GRPO + lr decay,42.0,rel_atheist_christian_impl,L23.H1,suffix,True,43,896,descending signed effect among this run's tested heads only,4,0.32921866,4,0.3506465,0.17297408,0.14766094,0.1921367,False
+grpo_r4,GRPO + lr decay,42.0,gen_male_female_impl,L15.H11,suffix,True,46,896,descending signed effect among this run's tested heads only,1,0.4156486,1,0.39779624,0.36053103,0.21895976,0.46581724,False
+grpo_r4,GRPO + lr decay,42.0,gen_male_female_impl,L23.H1,suffix,True,46,896,descending signed effect among this run's tested heads only,5,0.1830319,7,0.1725346,0.15637171,0.12643203,0.18235712,False
+grpo_r4_s43,GRPO + lr decay,43.0,mil_combat_civ_impl,L15.H11,suffix,True,47,896,descending signed effect among this run's tested heads only,1,0.30220515,1,0.33164585,0.26539886,0.1994829,0.35011056,False
+grpo_r4_s43,GRPO + lr decay,43.0,mil_combat_civ_impl,L23.H1,suffix,True,47,896,descending signed effect among this run's tested heads only,6,0.16827121,5,0.18818879,0.15059765,0.103491545,0.19441862,False
+grpo_r4_s43,GRPO + lr decay,43.0,mil_combat_civ_expl,L15.H11,suffix,True,48,896,descending signed effect among this run's tested heads only,1,0.43866545,1,0.4162908,0.29051158,0.21041664,0.37133345,False
+grpo_r4_s43,GRPO + lr decay,43.0,mil_combat_civ_expl,L23.H1,suffix,True,48,896,descending signed effect among this run's tested heads only,4,0.1995641,6,0.18749693,0.13084611,0.10427277,0.15713248,False
+grpo_r4_s43,GRPO + lr decay,43.0,rel_atheist_christian_impl,L15.H11,suffix,True,43,896,descending signed effect among this run's tested heads only,1,0.43798175,1,0.45729598,0.21032777,0.15311496,0.2670434,False
+grpo_r4_s43,GRPO + lr decay,43.0,rel_atheist_christian_impl,L23.H1,suffix,True,43,896,descending signed effect among this run's tested heads only,4,0.36373085,4,0.38212729,0.17575483,0.15368527,0.19326708,False
+grpo_r4_s43,GRPO + lr decay,43.0,gen_male_female_impl,L15.H11,suffix,True,47,896,descending signed effect among this run's tested heads only,1,0.43475354,1,0.4147199,0.3845219,0.22504233,0.5042365,False
+grpo_r4_s43,GRPO + lr decay,43.0,gen_male_female_impl,L23.H1,suffix,True,47,896,descending signed effect among this run's tested heads only,6,0.16237026,6,0.15007764,0.1391497,0.10322753,0.1657188,False
+grpo_r4_s44,GRPO + lr decay,44.0,mil_combat_civ_impl,L15.H11,suffix,True,45,896,descending signed effect among this run's tested heads only,1,0.34455404,1,0.34588295,0.26644608,0.15940844,0.38035923,False
+grpo_r4_s44,GRPO + lr decay,44.0,mil_combat_civ_impl,L23.H1,suffix,True,45,896,descending signed effect among this run's tested heads only,3,0.2533245,3,0.23614806,0.18191333,0.124939285,0.22563381,False
+grpo_r4_s44,GRPO + lr decay,44.0,mil_combat_civ_expl,L15.H11,suffix,True,46,896,descending signed effect among this run's tested heads only,1,0.39539227,1,0.4223776,0.28702682,0.19704944,0.37411675,False
+grpo_r4_s44,GRPO + lr decay,44.0,mil_combat_civ_expl,L23.H1,suffix,True,46,896,descending signed effect among this run's tested heads only,4,0.20997235,4,0.2361978,0.16050829,0.12894474,0.19567922,False
+grpo_r4_s44,GRPO + lr decay,44.0,rel_atheist_christian_impl,L15.H11,suffix,True,43,896,descending signed effect among this run's tested heads only,1,0.50583816,1,0.51370275,0.22252698,0.14424726,0.30293164,False
+grpo_r4_s44,GRPO + lr decay,44.0,rel_atheist_christian_impl,L23.H1,suffix,True,43,896,descending signed effect among this run's tested heads only,2,0.46484816,2,0.4566729,0.19782266,0.17256282,0.21912664,False
+grpo_r4_s44,GRPO + lr decay,44.0,gen_male_female_impl,L15.H11,suffix,True,45,896,descending signed effect among this run's tested heads only,1,0.48854998,1,0.5486488,0.39861715,0.2057256,0.509641,False
+grpo_r4_s44,GRPO + lr decay,44.0,gen_male_female_impl,L23.H1,suffix,True,45,896,descending signed effect among this run's tested heads only,4,0.22525558,5,0.25698262,0.18670905,0.1307895,0.22414048,False
+distill42,Self-distillation,42.0,mil_combat_civ_impl,L15.H11,suffix,True,45,896,descending signed effect among this run's tested heads only,1,0.09476815,1,0.091060124,0.3024048,0.23380584,0.37411097,False
+distill42,Self-distillation,42.0,mil_combat_civ_impl,L23.H1,suffix,True,45,896,descending signed effect among this run's tested heads only,12,0.02729137,13,0.02495633,0.08287836,0.05525856,0.11045038,False
+distill42,Self-distillation,42.0,mil_combat_civ_expl,L15.H11,suffix,True,46,896,descending signed effect among this run's tested heads only,1,0.09678787,1,0.09339124,0.25964487,0.18178357,0.32047766,False
+distill42,Self-distillation,42.0,mil_combat_civ_expl,L23.H1,suffix,True,46,896,descending signed effect among this run's tested heads only,13,0.035150625,12,0.03418135,0.095030434,0.07455406,0.11808421,False
+distill42,Self-distillation,42.0,rel_atheist_christian_impl,L15.H11,suffix,True,44,896,descending signed effect among this run's tested heads only,1,0.07667287,1,0.084078155,0.22744314,0.17817913,0.28638485,False
+distill42,Self-distillation,42.0,rel_atheist_christian_impl,L23.H1,suffix,True,44,896,descending signed effect among this run's tested heads only,10,0.038510196,9,0.04180052,0.11307623,0.087269865,0.13808484,False
+distill42,Self-distillation,42.0,gen_male_female_impl,L15.H11,suffix,True,45,896,descending signed effect among this run's tested heads only,1,0.07685823,1,0.08683569,0.323889,0.21589087,0.41548818,False
+distill42,Self-distillation,42.0,gen_male_female_impl,L23.H1,suffix,True,45,896,descending signed effect among this run's tested heads only,9,0.024406655,12,0.029294172,0.10926455,0.080873705,0.13351235,False
+distill43,Self-distillation,43.0,mil_combat_civ_impl,L15.H11,suffix,True,46,896,descending signed effect among this run's tested heads only,1,0.09745449,1,0.098545104,0.2909998,0.22275296,0.3690296,False
+distill43,Self-distillation,43.0,mil_combat_civ_impl,L23.H1,suffix,True,46,896,descending signed effect among this run's tested heads only,12,0.027132036,11,0.026855532,0.07930333,0.048325665,0.10509776,False
+distill43,Self-distillation,43.0,mil_combat_civ_expl,L15.H11,suffix,True,46,896,descending signed effect among this run's tested heads only,1,0.09491861,1,0.10415846,0.29847655,0.22507101,0.35537374,False
+distill43,Self-distillation,43.0,mil_combat_civ_expl,L23.H1,suffix,True,46,896,descending signed effect among this run's tested heads only,14,0.031005766,14,0.034291036,0.098264396,0.0765048,0.121492416,False
+distill43,Self-distillation,43.0,rel_atheist_christian_impl,L15.H11,suffix,True,45,896,descending signed effect among this run's tested heads only,1,0.080308706,2,0.07553168,0.20223555,0.15036148,0.25285393,False
+distill43,Self-distillation,43.0,rel_atheist_christian_impl,L23.H1,suffix,True,45,896,descending signed effect among this run's tested heads only,10,0.037917938,10,0.040975507,0.10971161,0.08388902,0.13172516,False
+distill43,Self-distillation,43.0,gen_male_female_impl,L15.H11,suffix,True,44,896,descending signed effect among this run's tested heads only,1,0.08328416,1,0.07966275,0.27784753,0.16225272,0.38150758,False
+distill43,Self-distillation,43.0,gen_male_female_impl,L23.H1,suffix,True,44,896,descending signed effect among this run's tested heads only,8,0.028208574,10,0.027252467,0.09505108,0.057397097,0.13191567,False
+distill44,Self-distillation,44.0,mil_combat_civ_impl,L15.H11,suffix,True,45,896,descending signed effect among this run's tested heads only,1,0.097458124,1,0.10169093,0.31210548,0.23959474,0.38605723,False
+distill44,Self-distillation,44.0,mil_combat_civ_impl,L23.H1,suffix,True,45,896,descending signed effect among this run's tested heads only,14,0.024089776,19,0.018829992,0.05779221,0.027001735,0.08706256,False
+distill44,Self-distillation,44.0,mil_combat_civ_expl,L15.H11,suffix,True,46,896,descending signed effect among this run's tested heads only,1,0.10091009,1,0.1042961,0.27645433,0.19531769,0.34314877,False
+distill44,Self-distillation,44.0,mil_combat_civ_expl,L23.H1,suffix,True,46,896,descending signed effect among this run's tested heads only,14,0.032728527,15,0.029611282,0.07848966,0.057206158,0.10052749,False
+distill44,Self-distillation,44.0,rel_atheist_christian_impl,L15.H11,suffix,True,44,896,descending signed effect among this run's tested heads only,1,0.08193803,1,0.084211536,0.21060233,0.15637478,0.26504138,False
+distill44,Self-distillation,44.0,rel_atheist_christian_impl,L23.H1,suffix,True,44,896,descending signed effect among this run's tested heads only,10,0.03902495,11,0.039064303,0.09769485,0.07416448,0.121452585,False
+distill44,Self-distillation,44.0,gen_male_female_impl,L15.H11,suffix,True,46,896,descending signed effect among this run's tested heads only,1,0.08887427,1,0.09053757,0.3016392,0.19792458,0.39548582,False
+distill44,Self-distillation,44.0,gen_male_female_impl,L23.H1,suffix,True,46,896,descending signed effect among this run's tested heads only,8,0.02854336,13,0.027917618,0.09301164,0.06133568,0.12219935,False

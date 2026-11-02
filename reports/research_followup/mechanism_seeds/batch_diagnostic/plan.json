@@ -1,0 +1,135 @@
+{
+  "spec": "dpo4880_s43",
+  "contrast": "mil_combat_civ_expl",
+  "pairs": 8,
+  "repeats": 2,
+  "selection": "Half largest and half smallest observed patch/full baseline discrepancy among the fixed 64 SFT-selected pairs; diagnostic selection, not a population estimate",
+  "representation": "Original Qwen Base with SFT-v3 and DPO adapters activated together in HF PEFT; no merge or training",
+  "context_order": [
+    [
+      "original_full_batch",
+      "original_patch_batch",
+      "singleton"
+    ],
+    [
+      "singleton",
+      "original_patch_batch",
+      "original_full_batch"
+    ]
+  ],
+  "counts": {
+    "original_full_batch": {
+      "batches_per_repeat": 15,
+      "rows_per_repeat": 120
+    },
+    "original_patch_batch": {
+      "batches_per_repeat": 14,
+      "rows_per_repeat": 86
+    },
+    "singleton": {
+      "batches_per_repeat": 16,
+      "rows_per_repeat": 16
+    }
+  },
+  "total_forwards": 90,
+  "adapter_sha256": {
+    "sft_v3": "d8d63526a43dab37a1fb41a7d7a3541f6a023c4fa2a19e9409e04da331e419ee",
+    "dpo4880_s43": "3cd8d9ee804905eacbae13b776e9310de5ca4ab64176fdd6cedfd8a6f6b53ce9"
+  },
+  "source_sha256": {
+    "/ritom/scratch/cscs/zhang/xw/hiring_bias_mitigation_at/configs/interp/models.yaml": "0c4cf1f82484140badd950d86a6fd824a5cc038326e28f3fddcf96d2c63b5be9",
+    "/ritom/scratch/cscs/zhang/xw/hiring_bias_mitigation_at/scripts/cscs/env.sh": "b07b4319a92252e0ffae76b596e0bb47939dd9198162f8fe92a31af62f2619de",
+    "/ritom/scratch/cscs/zhang/xw/hiring_bias_mitigation_at/scripts/cscs/poster_mechanism.sbatch": "74634e6e235e5f8780bd8f1eb827fe8137c9ccd0173fea611dbd7596a2c40126",
+    "/ritom/scratch/cscs/zhang/xw/hiring_bias_mitigation_at/scripts/diagnose_mechanism_batch.py": "fd4b7aa437eea27130ae44935d6393b11f56500076feaed8b6c6ab3805d2b4a7",
+    "/ritom/scratch/cscs/zhang/xw/hiring_bias_mitigation_at/scripts/interp/02_margins.py": "cc46392660e7aec96af589bdf932a5853b02f380cf812354df6020784d706052",
+    "/ritom/scratch/cscs/zhang/xw/hiring_bias_mitigation_at/scripts/interp/10_patch.py": "e9c987b015871e80b3f8b9ef90666a4be4ecec07143f5fd95faf0080f177477c",
+    "/ritom/scratch/cscs/zhang/xw/hiring_bias_mitigation_at/scripts/summarize_mechanism_seeds.py": "8428161da92d6b6c12e6c882f4fabb73a4c74e133211a10b7de0923e2fc1ad91",
+    "/ritom/scratch/cscs/zhang/xw/outputs/interp/manifest/contrasts-grid-en.parquet": "3ac634dc1dc84598bb3e19926e2b46201be5eb8ebadac38e1041e2bfa69ff561",
+    "/ritom/scratch/cscs/zhang/xw/outputs/interp/margins/dpo4880_s43/grid-en/part-00000.parquet": "d0b856f812cc8ca52559e903c01b1142b5e7d597c473beec9cd8e3708eda3bdb",
+    "/ritom/scratch/cscs/zhang/xw/outputs/interp/margins/dpo4880_s43/grid-en/part-00001.parquet": "221810395ebe49e10ef7e02b724b2a6d0ba14269f967ad9b23582aabb79adc37",
+    "/ritom/scratch/cscs/zhang/xw/outputs/interp/margins/dpo4880_s43/grid-en/part-00002.parquet": "e1c644dd373a72c0137ed7df9653d9ec8592393dc9c294196afd04d1537b6a27",
+    "/ritom/scratch/cscs/zhang/xw/outputs/interp/margins/dpo4880_s43/grid-en.parquet": "20fbf2180ff5adc23ebd294a56dbfd3a6cbfda27c4365457f91c84e140e2c11d",
+    "/ritom/scratch/cscs/zhang/xw/outputs/interp/margins/dpo4880_s43/grid-en.parquet.meta.json": "7330e02cb26cf198550dae83982dffa4c2f984f586c3162fe03ac16485858c98",
+    "/ritom/scratch/cscs/zhang/xw/outputs/interp/patching/dpo4880_s43/grid/mil_combat_civ_expl-n64-s42-sel_sft_v3/pairs-t00000-00008.parquet": "202bc5bcd72e9065eabcf6593bf990136c115b67f3aa7b3eed58703571e02b93",
+    "/ritom/scratch/cscs/zhang/xw/outputs/interp/patching/dpo4880_s43/grid/mil_combat_civ_expl-n64-s42-sel_sft_v3/pairs-t00009-00016.parquet": "1a5934169e8a3daaaadd8ed712cd04dd0cfbc6e155ac2da5dbb0296e6fd1adf2",
+    "/ritom/scratch/cscs/zhang/xw/outputs/interp/patching/dpo4880_s43/grid/mil_combat_civ_expl-n64-s42-sel_sft_v3/pairs-t00017-00023.parquet": "4e9c0695d02b624370fa3b82bd410756d2572ecfd41147c84de63c2031c29ec1",
+    "/ritom/scratch/cscs/zhang/xw/outputs/interp/patching/dpo4880_s43/grid/mil_combat_civ_expl-n64-s42-sel_sft_v3/pairs-t00024-00029.parquet": "34fe5e18eb9197019172df7da87a691aa2af0da561f5b2f417693b557fbd7e48",
+    "/ritom/scratch/cscs/zhang/xw/outputs/interp/patching/dpo4880_s43/grid/mil_combat_civ_expl-n64-s42-sel_sft_v3/pairs-t00041-00045.parquet": "acfa739b98020624681ffd36ea89f4e3479d0f485b10a937d36cb22bc8ed392a",
+    "/ritom/scratch/cscs/zhang/xw/outputs/interp/patching/dpo4880_s43/grid/mil_combat_civ_expl-n64-s42-sel_sft_v3/pairs-t00046-00050.parquet": "2210db59dd873f6083d10cb09f85926ee96f6106d266a3b059ac7c5bb424cfef",
+    "/ritom/scratch/cscs/zhang/xw/outputs/interp/patching/dpo4880_s43/grid/mil_combat_civ_expl-n64-s42-sel_sft_v3/pairs-t00059-00061.parquet": "b5a9d2e30bcffcbcec367dad06b717aa05fdad4dbfdff3deaf89dcb1edacb6d7",
+    "/ritom/scratch/cscs/zhang/xw/outputs/interp/patching/dpo4880_s43/grid/mil_combat_civ_expl-n64-s42-sel_sft_v3/poster_followup.meta.json": "5136f372d02d6e3488c8d5324802728a8f68ee2e43868841372303773289b4a3",
+    "/ritom/scratch/cscs/zhang/xw/outputs/interp/patching/dpo4880_s43/grid/mil_combat_civ_expl-n64-s42-sel_sft_v3/run.meta.json": "4a65f8c1d85804ea6452c4f323372f2104c3d48de8da8dfe7681dca5a3b18260",
+    "/ritom/scratch/cscs/zhang/xw/outputs/interp/patching/dpo4880_s43/grid/mil_combat_civ_expl-n64-s42-sel_sft_v3/selected_pairs.parquet": "abe36a9634882b298e57afdec3c5e1e4673bce760a7d5a5a64774cfa0a13e6f0",
+    "/ritom/scratch/cscs/zhang/xw/outputs/interp/segments/grid-en.parquet": "8042d160bbedd0f342568e67de1cb8ab705906b94e0484d7366fd1c330396f26"
+  },
+  "historical_environment": {
+    "torch": "2.13.0+cu130",
+    "transformers": "5.17.0",
+    "kernels": {
+      "fla": true,
+      "causal_conv1d": false
+    },
+    "fla_version_and_module_path": "not recorded in per-artifact metadata",
+    "backend_dispatch_flag": "launcher source configures FLA_DISABLE_BACKEND_DISPATCH=1; per-artifact runtime value not recorded",
+    "causal_conv_module_path": "not recorded; availability flag only"
+  },
+  "selected_pair_hash": "abe36a9634882b298e57afdec3c5e1e4673bce760a7d5a5a64774cfa0a13e6f0",
+  "selected_token_hash": "5b8846db185f028e9f23c884c172f17fa544fc5edb85ea79e077c67ca2769396",
+  "selected_tokens_match_fresh_render": 16,
+  "context_tokens_match_fresh_render": 188,
+  "batch_context_hashes": {
+    "original_full_batch": [
+      "b51c5a0175bff2126c66a44ec1a7b56c1502052f5f046683f92b7272691756bb",
+      "eff85e44899e528434878b80aa736b1bfab1120181cf0bb5f1073ee9317de86f",
+      "a0cb150d01719ee0c74e14f2603f7bcca6582b611ea967e00c263950a20c4c15",
+      "d2c30662331c25f9ebdb845a1aa7a46cff83b79209f423110f029323bf0d5955",
+      "49481f930b839cdc9f5ab9965f76d79db08ecd756441f931063c7c3c9fe88e36",
+      "27f98277a531d3adf81f25424ba2d5956479e38b12bdabecfeaeea965824361d",
+      "91bc5317098836755438f3fa774b708b062944fde48a7e9cf655a7dae38d1195",
+      "6308383b5b5c83a9091b0ac2f64da60cd67ed8b4346a22d6557cf12ffb184077",
+      "eb644318d0fbd70227fc0d0b602af280c628914191241fad17fb54f9baef5235",
+      "6d252ac78cc1f390c0fd13de97ab42e5a4745df0aabe5cb72a72935898a3ec3a",
+      "8f752758ecd2bd6a839daa9bc3fa5d55769b15b9c8d27f6d6b41406e61348224",
+      "2d83304437817b4696853ab5d4febd82c6a359548d19fd6323d38394defa9268",
+      "f233578285aef42aa56e04c032972c4e879ff05e9abe4ea780c2175312d0f718",
+      "851ce25a117be787fc981adee723c47d2c3a6b64e37a87d41d631be4ab8d9f8b",
+      "45b36bed27307d408ca745e1616f638c5431795dcfb91ecf4141650df2c92250"
+    ],
+    "original_patch_batch": [
+      "cb16feecf74afee8f0c743f3ef2f82b07bdd26ee6ac69549775b87cd41c8c48f",
+      "95f421823b11dc5c729f47b9126bfe152109ba19dd8c5a759cafbfe5b537b563",
+      "4c457cd7205236e07fedcaa9bcbde41a2725dad51b5a705b84a8d74a0e744663",
+      "fc8b7de0c623b859f76df7ee14d928ba8b2281973a1ce2e53ad201b7a583a6d9",
+      "1b91d7b53d2839bd402eb18959dfb8995a85c08f3b1089f86acdbc952d392a40",
+      "04d10d7f2202355a305a181928ae1fd342d21dc12df9ec351451602dbf8cb54c",
+      "e158dc248f1857971e231cc0d5d8ec466768ddfb1745d35efeca3146269ee754",
+      "917ed95c859460959c8af7e1ec02ac80c4fdd2022191d99bd30bbd042bbd05c3",
+      "8a606811723dd1586f8828c8758896cf61db5922f52012257e189aa3c59830af",
+      "efcf3de49a4f397ad5d0c94278cd1db43c6addec4d269a85474b0d204fc19dda",
+      "c70ed28bc9b1a3d8b5e733f8367f08ca2ca5e3d315de5e2d6d2e614160217640",
+      "aba5960908e34df1aaac28dca80d1a465f05ad1376064645bcdb660403882f83",
+      "c665b93353add7de54d1f7636ea653b9c87979ddb61837cea87d8acb34e8466d",
+      "5afb48c76abdff4f12c8d5702ada8686be1b53e272e7f8ea42460add1c7839c0"
+    ],
+    "singleton": [
+      "dc1fc3164ef4066d4b6821ecafd8a90b451e455167f2b3fae200dad7b0731a5f",
+      "59cbf66c8361eb6b4d627fb253ff4e03d4759759f05b848a82c2438fcb4be1f2",
+      "de14413b2d0ee9be5b19435414200956a1c74255996c04b9733a0dd31e4f661d",
+      "847b198dcc7523d0f60ec3a44ae173eebd1f649f5eb5d42fa61efd48723c5867",
+      "2085f598b76f31a10beeeb0b2516fd11fc4a71081810112e2fa81bef222c22ba",
+      "930e4d6c9324b7189ae5fcf20558d88f13382636d64baba494b8dffa84d4703e",
+      "c1ed518e85f6ef50acb43f9e04e8e7e0b1982d334fa972a136d34fa6b4bf4463",
+      "940bc3b220c9d7740dc8ed69656630949dd89823ed67c2df9e3bd0ea1c0de60c",
+      "f25fbf97110a494d2f35c1856c9dd68deca5c000a351b55210cd1e54278e8ad6",
+      "fc78f3c3ec2727918a2454b9b40441de539de93ed4b394460826b552700bfed8",
+      "d3d1fb8e3fe1a0bf50f80ac016a51cf253fd644002abcd209df5b96fd0fa70a9",
+      "54dfbb2d9bc16aba46df1a4fb8860747e152b2c749053f3700f54f162f0a6101",
+      "018426382b11bfb54f0cc389610c902d254effc0bbfe3594f1ed95a964fe6b79",
+      "eb6f53b418c7159aac108501567e1443339fe99ba2aa11480d2ee44fc8461142",
+      "98bb9575c75686b6d6b2de5165e184b263379c10ca38b6f7177af948bc31ce29",
+      "5bb00ada60f5d7e667fd0592c6ebcf2a4aa03d26dfc00c331c79363506068245"
+    ]
+  },
+  "baseline_replay_scope": "No activation swaps, no source-activation capture; use original baseline readout functions and exact original batch token composition",
+  "crossing": "Hire iff margin > 0. Pair interval is [minimum margin, maximum margin), with strict greater-than decision; arbitrary operating-point thresholds require separate calibration"
+}

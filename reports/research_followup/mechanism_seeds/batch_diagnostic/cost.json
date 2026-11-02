@@ -1,0 +1,61 @@
+{
+ "schema": 1,
+ "stage": "patching",
+ "label": "mechanism-batch-diagnostic",
+ "arm": "mechanism_batch_diagnostic",
+ "config": null,
+ "command": "timeout 900 /ritom/scratch/cscs/zhang/xw/venv/bin/python scripts/diagnose_mechanism_batch.py --spec dpo4880_s43 --contrast mil_combat_civ_expl --pairs 8 --repeats 2 --device cuda:0 --out reports/research_followup/mechanism_seeds/batch_diagnostic",
+ "cwd": "/ritom/scratch/cscs/zhang/xw/hiring_bias_mitigation_at",
+ "host": "nid005331",
+ "start": "2026-11-02T20:26:29+01:00",
+ "end": "2026-11-02T20:28:13+01:00",
+ "wall_s": 103.2,
+ "status": "ok",
+ "exit_code": 0,
+ "gpu_h": 0.0287,
+ "gpu": {
+  "count": 1,
+  "basis": "nvml-processes",
+  "model": "NVIDIA GH200 120GB",
+  "driver": "595.91.07",
+  "cuda_driver": "13.2",
+  "visible": [
+   3
+  ],
+  "used": [
+   3
+  ],
+  "energy_j": 21392.8,
+  "util_mean_pct": 44.4,
+  "mem_peak_gib": 20.84,
+  "samples": 10
+ },
+ "slurm": {
+  "job_id": "5241383",
+  "job_name": "xw-merge-effect",
+  "partition": "normal",
+  "node": "nid005331",
+  "nodes": "1",
+  "gpus_on_node": "4"
+ },
+ "code": {
+  "repo": "/ritom/scratch/cscs/zhang/xw/hiring_bias_mitigation_at",
+  "commit": "0373f1a",
+  "branch": "main",
+  "dirty": true
+ },
+ "software": {
+  "python": "3.12.13",
+  "torch": "2.13.0",
+  "vllm": "0.31.0",
+  "transformers": "5.17.0",
+  "trl": "1.15.0",
+  "peft": "0.21.2",
+  "accelerate": "1.15.0"
+ },
+ "notes": {
+  "counters": {},
+  "facts": {},
+  "phases": {}
+ }
+}

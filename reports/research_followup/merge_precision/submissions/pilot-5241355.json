@@ -1,0 +1,19 @@
+{
+  "job_id": "5241355",
+  "command": [
+    "sbatch",
+    "--parsable",
+    "--export=ALL,MERGE_MODE=pilot,MERGE_SEED=42,MERGE_BATCH=8,MERGE_OUT_ROOT=/ritom/scratch/cscs/zhang/xw/hiring_bias_mitigation_at/reports/research_followup/merge_precision/attempts/r2-qwen-text-layout",
+    "scripts/cscs/check_adapter_merge_effect.sbatch"
+  ],
+  "submitted_unix": 1793646704.6042812,
+  "mode": "pilot",
+  "seed": 42,
+  "batch_size": 8,
+  "time_cap": "00:45:00",
+  "allocated_gpus": 4,
+  "concurrent_workers": 3,
+  "source_root": "/ritom/scratch/cscs/zhang/xw/hiring_bias_mitigation_at/reports/research_followup/merge_precision/attempts/r2-qwen-text-layout",
+  "previous_job": "5241337",
+  "reason": "Qwen text/multimodal parameter namespace mapping; numerical parity remains bitwise"
+}

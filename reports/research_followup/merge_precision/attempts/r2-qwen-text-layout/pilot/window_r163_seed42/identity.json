@@ -1,0 +1,124 @@
+{
+  "adapter": {
+    "files": {
+      "adapter_config.json": "8116b1687f83ce2f848f80a5666fcbf13d22eb9fbfa09c80556d83b644505f08",
+      "adapter_model.safetensors": "25fe8479911d2299567fd94d7d70139f8bfbce83faee297eb072251cc6bbb4bd",
+      "chat_template.jinja": "a4aee8afcf2e0711942cf848899be66016f8d14a889ff9ede07bca099c28f715",
+      "run_config.json": "6ce7431b7bdcc92b467fa7d18ef13aca59ffd5e83b818d903d285f6996140cca",
+      "tokenizer.json": "06b9509352d2af50381ab2247e083b80d32d5c0aba91c272ca9ff729b6a0e523",
+      "tokenizer_config.json": "bc4f664a0406bf4013134a87a98783805be64ce7f02c65ef70fcf19ae39f763f"
+    },
+    "path": "/ritom/scratch/cscs/zhang/xw/outputs/distill/decision_distill_l15_20_r163_seed42"
+  },
+  "arm": "window_r163",
+  "chain": [
+    "/ritom/scratch/cscs/zhang/xw/outputs/sft/qwen3.5-9b_en_only_sft_v3_additional",
+    "/ritom/scratch/cscs/zhang/xw/outputs/distill/decision_distill_l15_20_r163_seed42"
+  ],
+  "common": {
+    "adapter_autocast_dtype": true,
+    "attention": "sdpa",
+    "base": "Qwen/Qwen3.5-9B",
+    "base_dtype": "bfloat16",
+    "batch_size": 8,
+    "chunk": 1024,
+    "code": {
+      "scripts/check_adapter_merge_effect.py": "5b22a5c99a344ae00c0475bc2f9b036d226e8ae49544df768170923b59e20b90",
+      "src/hiring_bias_mitigation/interp/margins.py": "da7c3c15a4ab63bc407fef0c8eff241e82eb97d3a414343556e8af59bd02c793",
+      "src/hiring_bias_mitigation/interp/render.py": "26c3c4f67116c61e0acaad94d4f743c668263fe52fe8c7725bf01e6e7c33d166",
+      "src/hiring_bias_mitigation/mitigation/merge.py": "5d7dadf9c656c2c66d409e4b607b301532168942daf7e693d3bf4bfbe3872840"
+    },
+    "data_config": {
+      "chat_template_kwargs": {
+        "enable_thinking": false
+      },
+      "conditions": [
+        "explicit",
+        "implicit",
+        "attr_free"
+      ],
+      "lang": "en",
+      "limit_pairs": null,
+      "max_violation_share": 0.005,
+      "pool_pairs": 300,
+      "protected_groups": [
+        "military_status",
+        "gender",
+        "religion"
+      ],
+      "seed": 42,
+      "selection": {
+        "min_abs_effect": 0.5,
+        "random_share": 0.3
+      }
+    },
+    "device_type": "cuda",
+    "padding_side": "left",
+    "readouts": [
+      "margin_fp32",
+      "margin_bf16",
+      "logprob_hire",
+      "logprob_reject",
+      "top1"
+    ],
+    "schema": 1,
+    "served_sft": {
+      "files": {
+        "base-untouched.safetensors": "16454c7d887d5e96ef60315895530f5272ef4fd6fee1a6da4f1514a90f20df1b",
+        "chat_template.jinja": "a4aee8afcf2e0711942cf848899be66016f8d14a889ff9ede07bca099c28f715",
+        "config.json": "d0883072e01861ed0b2d47be3c16c36a8e81c224c7ffaa310c6558fb3f932b05",
+        "generation_config.json": "62153eb6c69f2e1f426beaa8002b7186437e949c7588167085df14e10e9c0a73",
+        "merged_from.json": "64ff299c536b376897bfcf878ddaf17948ed2778e6f2cbe24d5b2a76c1389f65",
+        "model.safetensors": "131e4196798c94eabb31aa61f5bff650c3f5fd35354e843816fbe9216de4bfbe",
+        "model.safetensors.index.json": "1a064832324e47a7f1cf3e29225c1b7c232259dd9873fc504b3ee98ebc3b09d8",
+        "preprocessor_config.json": "27225450ac9c6529872ee1924fcb0962ff5634834f817040f444118116f4e516",
+        "tokenizer.json": "06b9509352d2af50381ab2247e083b80d32d5c0aba91c272ca9ff729b6a0e523",
+        "tokenizer_config.json": "f842671db16546726c2818d71390d4b7cd2f7761b208818476473499e03e9883",
+        "video_preprocessor_config.json": "7768af27c1fafa9cc9011c1dc20067e03f8915e03b63504550e11d5066986d13",
+        "vocab.json": "ce99b4cb2983d118806ce0a8b777a35b093e2000a503ebde25853284c9dfa003"
+      },
+      "path": "/ritom/scratch/cscs/zhang/xw/outputs/merged/qwen3.5-9b_en_only_sft_v3_additional"
+    },
+    "sft": {
+      "files": {
+        "adapter_config.json": "3e84f177ac2d06fdb1ec932a2180f52d01dddc2813db8153e78bf6ef51845f7c",
+        "adapter_model.safetensors": "d8d63526a43dab37a1fb41a7d7a3541f6a023c4fa2a19e9409e04da331e419ee",
+        "chat_template.jinja": "a4aee8afcf2e0711942cf848899be66016f8d14a889ff9ede07bca099c28f715",
+        "run_config.json": "263cdfdaa109411cfe4a15000d31b09e8b2ee49eb16da2eee31d6d8e9a718126",
+        "tokenizer.json": "6f32ce20dc35f57a7f9ad1eac03525bd7d30f9df8cea6507e958279cc3657706",
+        "tokenizer_config.json": "f842671db16546726c2818d71390d4b7cd2f7761b208818476473499e03e9883"
+      },
+      "path": "/ritom/scratch/cscs/zhang/xw/outputs/sft/qwen3.5-9b_en_only_sft_v3_additional"
+    },
+    "tf32": false,
+    "use_cache": false,
+    "versions": {
+      "numpy": "2.3.5",
+      "pandas": "3.0.6",
+      "peft": "0.21.2",
+      "safetensors": "0.8.0",
+      "torch": "2.13.0",
+      "transformers": "5.17.0"
+    }
+  },
+  "mode": "pilot",
+  "pilot_pairs": 12,
+  "seed": 42,
+  "served": {
+    "files": {
+      "base-untouched.safetensors": "16454c7d887d5e96ef60315895530f5272ef4fd6fee1a6da4f1514a90f20df1b",
+      "chat_template.jinja": "a4aee8afcf2e0711942cf848899be66016f8d14a889ff9ede07bca099c28f715",
+      "config.json": "d0883072e01861ed0b2d47be3c16c36a8e81c224c7ffaa310c6558fb3f932b05",
+      "generation_config.json": "62153eb6c69f2e1f426beaa8002b7186437e949c7588167085df14e10e9c0a73",
+      "merged_from.json": "7a371315cb99dec50a923c0560bbea9dee467ac394174ea8e518aca55f7e366c",
+      "model.safetensors": "fd960dd18dc036ce4ff8e41c31e7030a98d0264f5a3e35a2ffcd43c88b296fe2",
+      "model.safetensors.index.json": "1a064832324e47a7f1cf3e29225c1b7c232259dd9873fc504b3ee98ebc3b09d8",
+      "preprocessor_config.json": "27225450ac9c6529872ee1924fcb0962ff5634834f817040f444118116f4e516",
+      "tokenizer.json": "06b9509352d2af50381ab2247e083b80d32d5c0aba91c272ca9ff729b6a0e523",
+      "tokenizer_config.json": "f842671db16546726c2818d71390d4b7cd2f7761b208818476473499e03e9883",
+      "video_preprocessor_config.json": "7768af27c1fafa9cc9011c1dc20067e03f8915e03b63504550e11d5066986d13",
+      "vocab.json": "ce99b4cb2983d118806ce0a8b777a35b093e2000a503ebde25853284c9dfa003"
+    },
+    "path": "/ritom/scratch/cscs/zhang/xw/outputs/merged/decision_distill_l15_20_r163_seed42"
+  }
+}
