@@ -425,7 +425,8 @@ def main() -> None:
     margins_ok = ok[ok["label"].str.startswith("margins-") & (ok["wall_s"] > 600)]
     assert len(patch_ok) >= 10 and len(margins_ok) >= 5, (len(patch_ok), len(margins_ok))
     audits = [json.loads((ROOT / f"reports/interp/margins_summary-{spec}-grid-en.json")
-                         .read_text())["audit"] for spec in ("sft_v3", "dpo4880", "grpo_r4", "distill43")]
+                         .read_text())["audit"]
+              for spec in ("sft_v3", "dpo4880", "grpo_r4", "distill43")]
     backend_gap = max(abs(a["unstable_sets_hf_pct"] - a["unstable_sets_audit_pct"]) for a in audits)
     findings.update({
         "PatchForwardsPerPair": str(33 * 2 + 64 * 2 + (24 * 2 + 8)),
