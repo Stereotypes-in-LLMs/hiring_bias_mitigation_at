@@ -46,11 +46,13 @@ SLOTS = [
     ("Best DPO", "DPO_V3_4880", "ink", 0, "DPO"),
     ("Best GRPO", "GRPO+decay R4", "ink", 0, "GRPO"),
     ("Distilled SFT", "Distill", "greenDark", 1, "dSFT"),
-    ("Distilled DPO (n=1)", "Distill on DPO", "greenDark", 1, "dDPO"),
-    ("Distilled GRPO (n=1)", "Distill on GRPO R4", "greenDark", 1, "dGRPO"),
+    ("Distilled DPO (n=2)", "Distill on DPO", "greenDark", 1, "dDPO"),
+    ("Distilled GRPO (n=2)", "Distill on GRPO R4", "greenDark", 1, "dGRPO"),
 ]
-# The students (docs/PATCHING_DISTILL.md, B): one seed each, distilled from this parent arm.
-STUDENT_PARENT = {"Distill on DPO": "DPO_V3_4880 s42", "Distill on GRPO R4": "GRPO+decay R4 s42"}
+# The students (docs/PATCHING_DISTILL.md, B; docs/DISTILL_FOLLOWUP.md, G): two seeds each, each
+# distilled from the parent arm of its own seed, in the order of reports/final/arms.csv.
+STUDENT_PARENT = {"Distill on DPO": ["DPO_V3_4880 s42", "DPO_V3_4880 s43"],
+                  "Distill on GRPO R4": ["GRPO+decay R4 s42", "GRPO+decay R4 s43"]}
 # The reports/cost/params.csv row that counts each trained slot's LoRA (one stage).
 PARAMS_ROW = {SFT_V3: "qwen3.5-9b_en_only_sft_v3_additional",
               "DPO_V3_4880": "qwen3.5-9b_en_only_dpo_v3_4880",
@@ -143,6 +145,13 @@ def main() -> None:
             raise SystemExit(f"{run}: {u:.3f}/{a:.3f} differ from reference_metrics")
         return f.reindex(index, fill_value=0.0)
 
+    def parents_counts(name: str) -> pd.DataFrame:
+        """A student's parents, seed for seed with the student's own runs, averaged like per."""
+        labels = STUDENT_PARENT[name]
+        if len(labels) != len(labels_of(name)):
+            raise SystemExit(f"{name}: {len(labels_of(name))} student seeds, {len(labels)} parents")
+        return sum(parent_counts(lab) for lab in labels) / len(labels)
+
     def mean_of(name: str, col: str) -> float:
         labs = labels_of(name)
         return sum(float(table[lab][col]) for lab in labs) / len(labs)
@@ -168,21 +177,22 @@ def main() -> None:
             elif name in STUDENT_PARENT:
                 # final_table's train adds the parent's training: split it back out. The
                 # student's data_jobs list its parent's too (reports/final/arms.csv).
-                parent = table[STUDENT_PARENT[name]]
+                parent_train = np.mean([float(table[lab]["train_gpu_h"])
+                                        for lab in STUDENT_PARENT[name]])
                 data = sft_data + mean_of(name, "data_gpu_h")
-                train = sft_train + float(parent["train_gpu_h"])
-                dist = mean_of(name, "train_gpu_h") - float(parent["train_gpu_h"])
+                train = sft_train + parent_train
+                dist = mean_of(name, "train_gpu_h") - parent_train
             elif recipes[name]["family"] == "distill":
                 data = sft_data + mean_of(name, "data_gpu_h")
                 train, dist = sft_train, mean_of(name, "train_gpu_h")
             else:
                 data = sft_data + mean_of(name, "data_gpu_h")
                 train, dist = sft_train + mean_of(name, "train_gpu_h"), 0.0
-        # A student's own parent (one seed, the best of three), drawn open on the student's row:
-        # the Best DPO / Best GRPO rows are three-seed means, not what the student started from.
+        # A student's own parents (seeds 42 and 43), drawn open on the student's row: the Best
+        # DPO / Best GRPO rows are three-seed means, not what the students started from.
         pu = pq = 0.0
         if name in STUDENT_PARENT:
-            parent_per = parent_counts(STUDENT_PARENT[name])
+            parent_per = parents_counts(name)
             pu = ratio(parent_per, "unstable", "sets", w)[0]
             pq = ratio(parent_per, "agree", "decided", w)[0]
         model_rows.append(dict(
@@ -194,14 +204,14 @@ def main() -> None:
             hasparent=int(name in STUDENT_PARENT), pu=round(pu, 2), pq=round(pq, 2)))
 
     # Paired change in agreement, distilled minus parent: SFT-v3 for the distilled SFT, and each
-    # student's own seed-42 parent, not its method's three-seed mean.
+    # student seed's own parent seed, not its method's three-seed mean.
     delta_rows = []
     for method, student, parent in (
             ("SFT", "Distilled SFT", "Best SFT (SFT-v3)"),
-            ("DPO", "Distilled DPO (n=1)", STUDENT_PARENT["Distill on DPO"]),
-            ("GRPO", "Distilled GRPO (n=1)", STUDENT_PARENT["Distill on GRPO R4"])):
+            ("DPO", "Distilled DPO (n=2)", "Distill on DPO"),
+            ("GRPO", "Distilled GRPO (n=2)", "Distill on GRPO R4")):
         a = per[student]
-        b = per[parent] if parent in per else parent_counts(parent)
+        b = per[parent] if parent in per else parents_counts(parent)
         point = 100 * (a.agree.sum() / a.decided.sum() - b.agree.sum() / b.decided.sum())
         draws = 100 * ((w @ a.agree.to_numpy()) / (w @ a.decided.to_numpy())
                        - (w @ b.agree.to_numpy()) / (w @ b.decided.to_numpy()))
@@ -221,6 +231,12 @@ def main() -> None:
     def interval(run: str, against: str) -> str:
         c = comp[(run, against)]
         return f"{tm(c['delta_pp'])} [{tm(c['ci_low_pp'])}, {tm(c['ci_high_pp'])}]"
+
+    def student_vs_parents(name: str) -> str:
+        """Seed mean of each student seed against its own parent seed (compare-arms), with seeds."""
+        vals = [float(comp[(arms[st], arms[pa])]["delta_pp"])
+                for st, pa in zip(labels_of(name), STUDENT_PARENT[name], strict=True)]
+        return f"{tm(sum(vals) / len(vals))} ({' / '.join(tm(v) for v in vals)})"
 
     def per_seed(run_of, against_of) -> list[float]:
         return [float(comp[(run_of(s), against_of(s))]["delta_pp"]) for s in (42, 43, 44)]
@@ -282,8 +298,8 @@ def main() -> None:
         "WindowRemoved": tm(sum(window_removed) / 3),
         "WindowRemovedSeeds": " / ".join(tm(v) for v in window_removed),
         "WidenRange": f"{widen['a_median'].min():.1f}--{widen['a_median'].max():.1f}",
-        "StudentDPO": interval(arms["Distill on DPO s42"], arms["DPO_V3_4880 s42"]),
-        "StudentGRPO": interval(arms["Distill on GRPO R4 s42"], arms["GRPO+decay R4 s42"]),
+        "StudentDPO": student_vs_parents("Distill on DPO"),
+        "StudentGRPO": student_vs_parents("Distill on GRPO R4"),
         "DistillAgreeDelta": tm(delta_rows[0]["delta"]),
         "DistillAgreeCI": f"[{tm(delta_rows[0]['lo'])}, {tm(delta_rows[0]['hi'])}]",
     }

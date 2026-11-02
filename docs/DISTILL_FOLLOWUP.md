@@ -142,10 +142,10 @@ own point, on the margin files already written. It is descriptive and decides no
 Head to head against the parent at the student's hire rate (`compare-arms`); seed 42 from
 `PATCHING_DISTILL.md`, section 3B. Every audit conforms and passes every guardrail.
 
-| student | seed 42 vs parent | seed 43 vs parent | mean | seed 43 vs SFT-v3 (seed 42) |
+| student | seed 42 vs parent | seed 43 vs parent | mean (of the unrounded values) | seed 43 vs SFT-v3 (seed 42) |
 |---|---|---|---|---|
-| on DPO_V3_4880 | −0.07 [−0.44, +0.33] | +0.58 [−0.22, +1.37] | +0.26 | +0.04 [−1.00, +1.08] (−1.50) |
-| on GRPO + decay R4 | +0.02 [−0.77, +0.82] | −0.49 [−1.19, +0.21] | −0.24 | −0.91 [−1.72, −0.13] (−0.16) |
+| on DPO_V3_4880 | −0.07 [−0.44, +0.33] | +0.58 [−0.22, +1.37] | +0.25 | +0.04 [−1.00, +1.08] (−1.50) |
+| on GRPO + decay R4 | +0.02 [−0.77, +0.82] | −0.49 [−1.19, +0.21] | −0.23 | −0.91 [−1.72, −0.13] (−0.16) |
 
 - **Calls (section 1G).**
   - DPO student: **against**, the two-seed mean is ≥ 0.

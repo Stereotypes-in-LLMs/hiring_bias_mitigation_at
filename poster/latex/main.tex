@@ -43,15 +43,15 @@ Best SFT (SFT-v3),58.2*,ink,0,0,1.85,1.0,2.78,82.4,78.56,85.79,15.4,0,21.64,0.0,
 Best DPO,58.2*,ink,0,0,1.56,0.9,2.32,82.24,78.26,85.72,29.31,0,25.68,0.0,0.5,DPO,3,0,0.0,0.0
 Best GRPO,58.2*,ink,0,0,1.62,0.96,2.37,82.15,78.09,85.56,31.59,0,32.47,0.0,0.5,GRPO,3,0,0.0,0.0
 Distilled SFT,58.2*,greenDark,1,0,1.53,0.81,2.36,82.6,78.49,86.12,31.59,0,21.64,5.18,0.5,dSFT,3,0,0.0,0.0
-Distilled DPO (n=1),58.2*,greenDark,1,0,0.59,0.22,1.11,82.64,78.66,86.17,32.86,0,25.67,5.44,0.5,dDPO,1,1,0.89,82.82
-Distilled GRPO (n=1),58.2*,greenDark,1,0,1.59,0.7,2.67,82.13,78.26,85.48,31.59,0,32.47,5.06,0.5,dGRPO,1,1,1.37,81.09
+Distilled DPO (n=2),58.2*,greenDark,1,0,1.5,0.93,2.09,82.07,78.18,85.54,32.86,0,25.67,5.34,0.5,dDPO,2,1,1.28,82.48
+Distilled GRPO (n=2),58.2*,greenDark,1,0,1.39,0.76,2.07,82.28,78.29,85.75,31.59,0,32.52,5.18,0.5,dGRPO,2,1,1.52,81.94
 }\ModelData
 
 \pgfplotstableread[col sep=comma]{
 method,colour,pending,delta,lo,hi
 SFT,greenDark,0,0.2,-0.53,0.89
-DPO,greenDark,0,-0.18,-0.91,0.37
-GRPO,greenDark,0,1.03,0.29,1.96
+DPO,greenDark,0,-0.41,-0.94,0.06
+GRPO,greenDark,0,0.34,-0.23,0.9
 }\DeltaData
 
 \newcommand{\NPairs}{450}
@@ -86,8 +86,8 @@ GRPO,greenDark,0,1.03,0.29,1.96
 \newcommand{\WindowRemoved}{+0.11}
 \newcommand{\WindowRemovedSeeds}{+0.07 / +0.11 / +0.16}
 \newcommand{\WidenRange}{2.0--2.7}
-\newcommand{\StudentDPO}{\textminus{}0.07 [\textminus{}0.44, +0.33]}
-\newcommand{\StudentGRPO}{+0.02 [\textminus{}0.77, +0.82]}
+\newcommand{\StudentDPO}{+0.25 (\textminus{}0.07 / +0.58)}
+\newcommand{\StudentGRPO}{\textminus{}0.23 (+0.02 / \textminus{}0.49)}
 \newcommand{\DistillAgreeDelta}{+0.20}
 \newcommand{\DistillAgreeCI}{[\textminus{}0.53, +0.89]}
 % END GENERATED DATA
@@ -126,10 +126,11 @@ Religion / implicit,1.32,0.52,\textminus{}61\%
 \newcommand{\DistilledDPOTrainable}{\StandardParams}
 \newcommand{\DistilledGRPOTrainable}{\StandardParams}
 \newcommand{\DistilledFractions}{each \StandardPct\% of the \BackboneB B backbone; the served model stays 9B}
-% docs/PATCHING_DISTILL.md, B: each student against its own seed-42 parent (compare-arms).
+% docs/PATCHING_DISTILL.md, B and docs/DISTILL_FOLLOWUP.md, G: each student seed against its own
+% parent seed (compare-arms), seed mean (seeds 42 / 43).
 % dSFT at the common point, every arm moved to SFT-v3's own hire rate (the user, 2026-11-01).
 \newcommand{\BehaviourFinding}{dSFT: \DistillMatched{} pp vs SFT-v3 at \CommonHire\% (\DistillSeeds)\\
-  dDPO / dGRPO vs parent (n=1): \StudentDPO{} / \StudentGRPO{}\\
+  dDPO / dGRPO vs parent (n=2): \StudentDPO{} / \StudentGRPO{}\\
   Agreement, dSFT $-$ SFT-v3: \DistillAgreeDelta{} pp \DistillAgreeCI}
 \newcommand{\ComputeFinding}{SFT student: +\DistillTrainGPUh{} GPU-h of training over SFT-v3 (+\DistillExtraGPUh{} with its data)}
 
@@ -425,7 +426,7 @@ Religion / implicit,1.32,0.52,\textminus{}61\%
   \else
     \CI{1495}{215}{0}{12}{\yy}{\U}{\UL}{\UH}{\RowColour}
     \CI{1764}{222}{70}{90}{\yy}{\Q}{\QL}{\QH}{\RowColour}
-    % A student's own seed-42 parent, open and in the parents' ink, just above its bar
+    % A student's own parents (seed mean), open and in the parents' ink, just above its bar
     % (latex_data.py: pu, pq).
     \ModelValue{\r}{hasparent}{\HasParent}
     \ifnum\HasParent=1
@@ -442,7 +443,7 @@ Religion / implicit,1.32,0.52,\textminus{}61\%
 \Txt[text=muted,align=center]{1495}{699}{215}{12.5}{lower is better}
 \Txt[text=muted,align=center]{1764}{699}{222}{12.5}{higher is better}
 \Txt[text=muted]{1192}{691}{290}{12.5}{At SFT-v3's \CommonHire\% hire rate, 3-seed means:\\dSFT \DistillMatched, DPO \DPOMatched, GRPO \GRPOMatched{} pp [4]}
-\Txt[text=muted]{1192}{728}{808}{12.5}{Open: before distillation (dDPO, dGRPO: their seed-42 parent, best of three seeds, the open point above the bar) / Filled, green: after / Dashed: Base / Bars: 95\% CI / Best: lowest 3-seed mean vs SFT-v3, after the audits}
+\Txt[text=muted]{1192}{728}{808}{12.5}{Open: before distillation (dDPO, dGRPO: their own parents, seeds 42 and 43, the open point above the bar) / Filled, green: after / Dashed: Base / Bars: 95\% CI / Best: lowest 3-seed mean vs SFT-v3, after the audits}
 \Txt[text=muted]{1192}{757}{808}{12.5}{*LoRA r32, \StandardParams M per stage (\StandardPct\% of the \BackboneB B backbone); one stage on SFT-v3, a second for dDPO and dGRPO.}
 \draw[rule,line width=1bp] (1192,777) -- (2000,777);
 
@@ -467,7 +468,7 @@ Religion / implicit,1.32,0.52,\textminus{}61\%
     \CI{1270}{290}{-4}{4}{\yy}{\D}{\DL}{\DH}{\RowColour}
   \fi
 }
-\Txt[text=muted]{1192}{975}{378}{11.5}{Distilled $-$ parent (DPO, GRPO: seed-42 parent, n=1) / paired 95\% CI}
+\Txt[text=muted]{1192}{975}{378}{11.5}{Distilled $-$ parent (DPO, GRPO: each seed's own parent, n=2) / paired 95\% CI}
 
 % RIGHT / C: cost stack, inclusive of SFT-v3, to the audited checkpoint.
 \Txt[text=greenDark]{1604}{794}{396}{19}{\bfseries C\quad GPU time}

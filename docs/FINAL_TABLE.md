@@ -182,6 +182,26 @@ GRPO student −0.16 against −0.73 and −0.51 against −0.31. Their head-to-
 the parent at the student's hire rate, −0.07 [−0.44, +0.33] and +0.02 [−0.77, +0.82], are the
 readings that card registered.
 
+## Added 2026-11-02: the distillation follow-ups
+
+[`DISTILL_FOLLOWUP.md`](DISTILL_FOLLOWUP.md) adds five arms to `arms.csv`:
+- the seed-43 students, decision distillation on DPO_V3_4880 s43 and on GRPO+decay R4 s43,
+  `headline = yes` like their seed-42 counterparts, so each student recipe now has two seeds;
+- two epochs of decision distillation for seeds 42-44 (`decision_distill_e2`), `headline = no`
+  as a sensitivity check. Whether it replaces one epoch as the recorded arm is the user's
+  decision; the card recommends against it.
+
+The window-kept-alone adapters (section H there) are ablations, not trained arms, and are not
+listed. The cost tables were regenerated on 2026-11-02 with no job running (217 jobs, 394
+records, 612 steps), and the Decision distillation family's exploration now includes the
+round's cost arm, `distill_followup` (`families.csv`).
+
+With two seeds the students read, against SFT-v3 at the common point, −0.43 (DPO) and −0.40
+(GRPO), and at their own points −0.73 and −0.53 (`recipes.csv`). Head to head against their own
+parent seeds they are +0.25 and −0.23 (seeds 42 / 43: −0.07 / +0.58 and +0.02 / −0.49). Neither
+is better than its parent by the card's rule, and neither is reported as distilled DPO or GRPO
+beating SFT-v3.
+
 ## Decided 2026-11-01 (the user)
 
 - Decision distillation stays recorded as better than SFT-v3 (the 2026-10-27 reading of rule 4,
@@ -190,7 +210,7 @@ readings that card registered.
 - The poster quotes the common point, 22.51%, instead of each arm's own point: decision
   distillation −0.28 pp (seeds −0.12 / −0.41 / −0.33), DPO_V3_4880 −0.22, GRPO + decay R4 −0.16
   (three-seed means, `recipes.csv`). The follow-up runs are registered in
-  `DISTILL_FOLLOWUP.md` (branch `xinyang/distill-followup`).
+  `DISTILL_FOLLOWUP.md`, merged into main on 2026-11-02.
 
 ## Caveats
 

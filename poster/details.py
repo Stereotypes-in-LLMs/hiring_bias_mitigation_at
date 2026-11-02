@@ -164,9 +164,13 @@ at a quarter of the trainable parameters, on the window with its GDN mixers
 ({n['quarter_window_params']}, {n['quarter_window']} pp) or at rank 8 over every layer
 ({n['quarter_rank8_params']}, {n['quarter_rank8']} pp), failed their gates at the same learning
 rate and were not continued.{floor}
-Decision distillation on top of DPO and of GRPO, each against its own seed-42 parent:
-{n['student_dpo']} and {n['student_grpo']} pp (one seed each). Every arm serves the same 9B
-model; LoRA sizes count trainable parameters.
+Decision distillation on top of DPO and of GRPO, each seed against its own parent seed:
+{n['student_dpo']} and {n['student_grpo']} pp, two seeds each; neither student is better than
+its parent ({_doc("docs/DISTILL_FOLLOWUP.md")}, G). Keeping only layers 15–20 of the trained
+adapters loses most of the gain: {n['window_kept'][0]} pp ({n['window_kept'][1]}) against the
+full adapter. A second epoch moves the metric a little further: {n['two_epochs'][0]} pp
+({n['two_epochs'][1]}) against one epoch, every interval holding 0, at twice the training cost.
+Every arm serves the same 9B model; LoRA sizes count trainable parameters.
 
 **The audit as an inference load.** Against cache off and shuffled order, the audits' own setup
 saves {n['b_saved']} of generation time ({n['b_speedup']}); sorting by prefix saves a further
@@ -180,9 +184,8 @@ of {n['b_block_bound']} ({_doc("docs/THROUGHPUT_B.md")}). A null result over
 
 English only; one 9B model; {n['audit_candidates']} benchmark candidates. Patching on 64 pairs
 per contrast and one pair selection. GRPO checkpoint 525 was picked with audit numbers in view.
-The students, the quarter-size pilots and the margin floor have one seed each. The students'
-parents are the best of their method's three seeds; the pilots and the margin floor are
-compared with distillation's seed 42, the weakest of its three.
+The students have two seeds each; the quarter-size pilots and the margin floor have one. The
+pilots and the margin floor are compared with distillation's seed 42, the weakest of its three.
 
 ## Sources
 

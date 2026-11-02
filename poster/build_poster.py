@@ -231,8 +231,18 @@ def numbers() -> dict:
     put("window_removed", three(lambda s: arm_run[f"Distill s{s}"] + "_xw15_20"), comp)
     put("quarter_window", with_ci(vs("Distill window + GDN s42", "Distill s42")), comp)
     put("quarter_rank8", with_ci(vs("Distill rank 8 s42", "Distill s42")), comp)
-    put("student_dpo", with_ci(vs("Distill on DPO s42", "DPO_V3_4880 s42")), comp)
-    put("student_grpo", with_ci(vs("Distill on GRPO R4 s42", "GRPO+decay R4 s42")), comp)
+    def students(student: str, parent: str) -> str:
+        """Seeds 42 and 43, each against its own parent seed (docs/DISTILL_FOLLOWUP.md, G)."""
+        rs = [vs(f"{student} s{s}", f"{parent} s{s}") for s in (42, 43)]
+        mean = sum(float(r["delta_pp"]) for r in rs) / 2
+        return f"{pp(mean)} (" + "; ".join(f"s{s} {with_ci(r)}" for s, r in zip((42, 43), rs)) + ")"
+
+    put("student_dpo", students("Distill on DPO", "DPO_V3_4880"), comp)
+    put("student_grpo", students("Distill on GRPO R4", "GRPO+decay R4"), comp)
+    # docs/DISTILL_FOLLOWUP.md: H, the window kept alone, and I, two epochs, each against the
+    # one-epoch all-layer adapter of the same seed.
+    put("window_kept", three(lambda s: arm_run[f"Distill s{s}"] + "_xk15_20"), comp)
+    put("two_epochs", three(lambda s: f"Distill two epochs s{s}"), comp)
     floor = [r for r in rows(comp) if r["run"].endswith("decision_distill_floor4_seed42")
              and r["against"] == arm_run["Distill s42"]]
     put("floor_pilot", with_ci(floor[0]) if floor else "", comp)

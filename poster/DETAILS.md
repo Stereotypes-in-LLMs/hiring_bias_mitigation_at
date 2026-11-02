@@ -111,9 +111,9 @@ decay ([`reports/final/curves.csv`](https://github.com/Stereotypes-in-LLMs/hirin
 ![Across hire rates](figures/curves.svg)
 
 **Cost.** Exploring GRPO and DAPO took 239 GPU-h, DPO 43 and
-distillation 69 (5.5×;
+distillation 114 (5.5×;
 [`reports/final/family_cost.csv`](https://github.com/Stereotypes-in-LLMs/hiring_bias_mitigation_at/blob/main/reports/final/family_cost.csv)). One evaluation uses 0.50 GPU-h; the
-project allocated 488 GPU-h in total ([`reports/cost/by_stage.csv`](https://github.com/Stereotypes-in-LLMs/hiring_bias_mitigation_at/blob/main/reports/cost/by_stage.csv);
+project allocated 540 GPU-h in total ([`reports/cost/by_stage.csv`](https://github.com/Stereotypes-in-LLMs/hiring_bias_mitigation_at/blob/main/reports/cost/by_stage.csv);
 [`docs/FINAL_TABLE.md`](https://github.com/Stereotypes-in-LLMs/hiring_bias_mitigation_at/blob/main/docs/FINAL_TABLE.md), [`docs/COST.md`](https://github.com/Stereotypes-in-LLMs/hiring_bias_mitigation_at/blob/main/docs/COST.md)).
 
 **Inside the model** (Marta Samoilenko's activation patching). In the base model the attribute
@@ -145,9 +145,13 @@ at a quarter of the trainable parameters, on the window with its GDN mixers
 (15.1M, +0.26 [−0.37, +0.89] pp) or at rank 8 over every layer
 (14.5M, +0.22 [−0.35, +0.84] pp), failed their gates at the same learning
 rate and were not continued. A different change, the teacher's margin floored at 4 logits (one seed, exploratory): +0.09 [−0.97, +1.08] pp; undecided, no seed added.
-Decision distillation on top of DPO and of GRPO, each against its own seed-42 parent:
-−0.07 [−0.44, +0.33] and +0.02 [−0.77, +0.82] pp (one seed each). Every arm serves the same 9B
-model; LoRA sizes count trainable parameters.
+Decision distillation on top of DPO and of GRPO, each seed against its own parent seed:
++0.25 (s42 −0.07 [−0.44, +0.33]; s43 +0.58 [−0.22, +1.37]) and −0.23 (s42 +0.02 [−0.77, +0.82]; s43 −0.49 [−1.20, +0.21]) pp, two seeds each; neither student is better than
+its parent ([`docs/DISTILL_FOLLOWUP.md`](https://github.com/Stereotypes-in-LLMs/hiring_bias_mitigation_at/blob/main/docs/DISTILL_FOLLOWUP.md), G). Keeping only layers 15–20 of the trained
+adapters loses most of the gain: +0.41 pp (+0.22 / +0.33 / +0.67) against the
+full adapter. A second epoch moves the metric a little further: −0.18 pp
+(−0.21 / −0.30 / −0.04) against one epoch, every interval holding 0, at twice the training cost.
+Every arm serves the same 9B model; LoRA sizes count trainable parameters.
 
 **The audit as an inference load.** Against cache off and shuffled order, the audits' own setup
 saves 9.3% of generation time (1.10×); sorting by prefix saves a further
@@ -161,9 +165,8 @@ seven adapters, four objectives came from vLLM's LoRA path, which is why adapter
 
 English only; one 9B model; 150 benchmark candidates. Patching on 64 pairs
 per contrast and one pair selection. GRPO checkpoint 525 was picked with audit numbers in view.
-The students, the quarter-size pilots and the margin floor have one seed each. The students'
-parents are the best of their method's three seeds; the pilots and the margin floor are
-compared with distillation's seed 42, the weakest of its three.
+The students have two seeds each; the quarter-size pilots and the margin floor have one. The
+pilots and the margin floor are compared with distillation's seed 42, the weakest of its three.
 
 ## Sources
 
@@ -232,10 +235,12 @@ compared with distillation's seed 42, the weakest of its three.
 | `student_dpo` | reports/comparisons.csv |
 | `student_grpo` | reports/comparisons.csv |
 | `teacher` | docs/SYSTEM_OVERVIEW.md, Teacher (typed from the card) |
+| `two_epochs` | reports/comparisons.csv |
 | `vllm_version` | docs/SYSTEM_OVERVIEW.md, Audit (typed from the card) |
 | `vote_draws` | docs/SYSTEM_OVERVIEW.md, Teacher (typed from the card) |
 | `vs_base` | poster/base_compare.json; reports/final/final_table.csv (GPU-h) |
 | `widen_range` | reports/margin_readout/readout.csv |
+| `window_kept` | reports/comparisons.csv |
 | `window_only` | reports/comparisons.csv |
 | `window_params` | reports/cost/params.csv |
 | `window_removed` | reports/comparisons.csv |
