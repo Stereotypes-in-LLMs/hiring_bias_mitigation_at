@@ -232,13 +232,81 @@ hire rates (weighted where its cut ties), the overlap the operating points alone
 
 ## 4. Reading
 
+The round closed on 2026-11-02 at the user's request ("收尾"), at 51.61 of 100 GPU-h allocated
+(ledger, row 15). No seed-44 student was trained.
+
+**What this round's evidence supports.**
+- Distilling a DPO or GRPO model does not make it better than its parent (G). Against SFT-v3
+  each student follows its parent's seed draw. There is no evidence for "distilled DPO / GRPO
+  beats SFT-v3".
+- Layers 15-20 alone do not carry distillation's gain (H). With section F of
+  [`PATCHING_DISTILL.md`](PATCHING_DISTILL.md) (the window removed keeps the gain), the change
+  that matters lies mostly outside the window that patching locates. Patching describes where
+  the attribute travels; it has not yet told distillation where to act.
+- A second epoch moves the matched metric a little further in the direction of the first
+  (I, "helps" by the registered rule), at twice the training cost, and two epochs are still
+  not clearly better than SFT-v3.
+- Distillation's remaining instability is largely the same borderline sets on every seed (J);
+  DPO's and GRPO's is a different draw per seed.
+
+**What it does not support.**
+- Two epochs as the new default. The registered call is "helps", but by 0.035 pp past the bar,
+  with every head-to-head interval holding 0 and seed 44 unchanged. My recommendation is to
+  keep one epoch as the recorded arm and report two epochs as a sensitivity check. The user
+  decides.
+- Any patching-guided distillation claim, so the poster subtitle stays as it is.
+
+**Explanations for I, and the cheapest check that separates them.**
+- The second epoch compresses margins further on the borderline pairs, as the first epoch did
+  (`PATCHING_DISTILL.md`, scale-only control). If so, the fixed sets are on the 35 borderline
+  pairs and the margin spread there is narrower than after one epoch.
+- Seed noise: three draws within ±0.3 pp of one epoch, each interval holding 0.
+- Check: `seed_overlap.py`'s share-on-borderline and the margin spread, for the two-epoch
+  adapters against one epoch. CPU, minutes, on margin files already written. Not run.
+
+**An alternative to more training.** Distillation's remaining unstable sets sit almost entirely
+on 35 pairs close to SFT-v3's cut (J). Reading those pairs, and GPT-4o's labels on them, may say
+more about what is left than another training arm: some may be cases where hire and reject are
+both defensible.
+
 ## 5. Caveats
+
+- Every verdict is exploratory: the 450-pair benchmark has been read many times (section 1).
+- I's "helps" rests on the three-seed mean. Without seed 43 the mean is −0.13, "undecided".
+- G's GRPO student has two seeds, and the second-seed rule did not trigger. Its seed-43
+  "better, pending a second seed" against SFT-v3 is one draw.
+- H ablates adapters trained with every layer present. It does not show what a model trained
+  without those layers would do; section A of `PATCHING_DISTILL.md` covers that case.
+- GPU-h in the ledger are allocated (wall time × 4 GPUs). Measured training figures come from
+  the `cost` records named in each row. Rows 1-2 are jobs that failed on faulty nodes
+  (nid005679, nid006377) and are charged in full. Later jobs exclude both nodes.
+- Code versions: training ran from dce86f0, dda1c38, 4a17318, 5f40053 and 545cc51. The audits
+  ran from dda1c38 to 399a1f8 (the first line of each job log under `logs/`). Between
+  dce86f0 and 399a1f8 the only change under `scripts/`, `src/` or `configs/` is the new
+  `scripts/seed_overlap.py` (dda1c38). `compare-arms` JSONs record `code.commit` and
+  `code.uncommitted: []`.
 
 ## 6. Reproducing
 
+Students (G), on a parent's merged checkpoint, then two epochs (I):
+
 ```bash
-HBM_COST_ARM=distill_followup REPO=$PWD CONFIG=configs/mitigation/distill/decision_distill_e2_seed42.yaml \
-  scripts/cscs/submit.sh -p normal -t 04:00:00 scripts/cscs/train_distill.sbatch
+HBM_COST_ARM=distill_followup REPO=$PWD CONFIG=configs/mitigation/distill/decision_distill_grpo_r4_seed43.yaml \
+  scripts/cscs/submit.sh -p normal -t 04:00:00 --exclude=nid005679,nid006377 scripts/cscs/train_distill.sbatch
+HBM_COST_ARM=distill_followup REPO=$PWD \
+  AUDIT=configs/audit/qwen3.5-9b_en_decision_distill_e2_seed43_gh200.yaml \
+  AGAINST=configs/audit/qwen3.5-9b_en_sft_v3_additional_gh200.yaml \
+  scripts/cscs/submit.sh -t 00:30:00 --exclude=nid005679,nid006377 scripts/cscs/evaluate_arm.sbatch
+HBM_OUTPUT_ROOT=/ritom/scratch/cscs/zhang/xw OPENBLAS_NUM_THREADS=1 \
+  ../venv/bin/python scripts/operating_point_control.py compare-arms \
+  --config configs/audit/qwen3.5-9b_en_decision_distill_e2_seed43_gh200.yaml \
+  --against configs/audit/qwen3.5-9b_en_decision_distill_seed43_gh200.yaml
+OPENBLAS_NUM_THREADS=1 ../venv/bin/python scripts/seed_overlap.py     # J, CPU
+```
+
+The window kept alone (H):
+
+```bash
 HBM_OUTPUT_ROOT=/ritom/scratch/cscs/zhang/xw ../venv/bin/python scripts/ablate_adapter_layers.py \
   --adapter outputs/distill/decision_distill_seed42 --layers 15 20 --keep \
   --out outputs/distill/decision_distill_seed42_xk15_20

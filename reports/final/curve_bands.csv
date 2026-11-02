@@ -30,3 +30,8 @@ Distill rank 8 s42,Qwen3.5-9B--en--sft--adapter--en_only_decision_distill_r8_see
 Distill on DPO s42,Qwen3.5-9B--en--sft--adapter--en_only_decision_distill_dpo4880_seed42,0.699,0.039,-0.594,0.466,2.747,33.333
 Distill on GRPO R4 s42,Qwen3.5-9B--en--sft--adapter--en_only_decision_distill_grpo_r4_seed42,0.116,-0.135,-0.596,-0.187,0.102,62.745
 Distill floor 4 s42,Qwen3.5-9B--en--sft--adapter--en_only_decision_distill_floor4_seed42,1.64,1.507,-0.257,0.434,1.91,17.647
+Distill on DPO s43,Qwen3.5-9B--en--sft--adapter--en_only_decision_distill_dpo4880_seed43,1.716,0.157,-0.258,0.378,2.892,23.529
+Distill on GRPO R4 s43,Qwen3.5-9B--en--sft--adapter--en_only_decision_distill_grpo_r4_seed43,-0.116,-0.284,-0.766,0.086,0.117,58.824
+Distill two epochs s42,Qwen3.5-9B--en--sft--adapter--en_only_decision_distill_e2_seed42,-0.117,-0.43,-0.376,-0.181,-0.125,72.549
+Distill two epochs s43,Qwen3.5-9B--en--sft--adapter--en_only_decision_distill_e2_seed43,-0.241,-0.322,-0.44,-0.262,-0.247,92.157
+Distill two epochs s44,Qwen3.5-9B--en--sft--adapter--en_only_decision_distill_e2_seed44,-0.14,-0.373,-0.503,-0.278,-0.094,78.431
