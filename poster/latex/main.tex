@@ -32,6 +32,8 @@
   pdfsubject={GTC 2027 research poster, editable LaTeX}}
 \pagestyle{empty}
 \setlength{\parindent}{0pt}
+\hyphenpenalty=10000
+\exhyphenpenalty=10000
 
 % Measured values: \ModelData, \DeltaData and the finding macros.
 % BEGIN GENERATED DATA
@@ -73,10 +75,10 @@ Self-distillation,dSFT,44,-0.328,-1.038,0.339,-0.285,\textminus{}0.285
 }\SeedData
 
 \pgfplotstableread[col sep=comma]{
-key,label,sub,speedup,pending,text,times
-audit,Audit generation,HF generate \textrightarrow{} vLLM,16.87,0,\texttimes16.9,1\thinspace{}091 \textrightarrow{} 65 s
-train,Training,1 \textrightarrow{} 4 GH200 GPUs,4.4,0,\texttimes4.4,2\thinspace{}420 \textrightarrow{} 550 s
-grpo,GRPO rollouts,HF \textrightarrow{} colocated vLLM,1.09,0,\texttimes1.1,200 \textrightarrow{} 183 s
+key,label,speedup,pending
+audit,Audit generation,16.87,0
+train,Training,4.4,0
+grpo,GRPO rollouts,1.09,0
 }\AccelData
 
 \newcommand{\NPairs}{450}
@@ -335,7 +337,6 @@ Gender / implicit,0.72,0.20,\textminus{}72\%
 }
 
 \begin{document}
-\hyphenpenalty=10000\exhyphenpenalty=10000
 \null
 \begin{tikzpicture}[remember picture,overlay,x=1.5bp,y=-1.5bp]
 \begin{scope}[shift={(current page.north west)}]
@@ -611,7 +612,6 @@ Gender / implicit,0.72,0.20,\textminus{}72\%
   \pgfplotstablegetelem{#1}{label}\of\AccelData\let\ALabel\pgfplotsretval
   \pgfplotstablegetelem{#1}{speedup}\of\AccelData\let\ASpeed\pgfplotsretval
   \pgfplotstablegetelem{#1}{pending}\of\AccelData\let\APending\pgfplotsretval
-  \pgfplotstablegetelem{#1}{text}\of\AccelData\let\AText\pgfplotsretval
   \Txt[text=ink]{1730}{#2}{132}{11}{\bfseries\ALabel}
   \ifnum\APending=1
     \Txt[text=body]{1866}{#2}{130}{11}{to run}
@@ -619,7 +619,7 @@ Gender / implicit,0.72,0.20,\textminus{}72\%
     \pgfmathsetmacro{\bw}{\ASpeed/20*92}
     \Rect{1866}{#2+1}{\bw}{11}{green}
     \draw[ink,line width=1.2bp] (1866+92/20,#2-1) -- (1866+92/20,#2+13);
-    \Txt[text=ink]{1866+\bw+5}{#2}{44}{11.5}{\bfseries\AText}
+    \Txt[text=ink]{1866+\bw+5}{#2}{44}{11.5}{\bfseries\texttimes\pgfmathprintnumber[fixed,precision=1]{\ASpeed}}
   \fi
   \Txt[text=body]{1730}{#2+14}{270}{10}{#3}}
 \Txt[text=ink]{1730}{820}{270}{13}{\bfseries Speed-up = time before / time after}

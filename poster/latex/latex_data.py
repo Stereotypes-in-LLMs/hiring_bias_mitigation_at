@@ -525,11 +525,7 @@ def main() -> None:
         return a / b if a and b else None
 
     def secs(x: float) -> str:
-        return f"{x:,.0f}".replace(",", "\\thinspace{}")  # the table is comma-separated
-
-    def times(before: float | None, after: float | None) -> str:
-        return (f"{secs(before)} \\textrightarrow{{}} {secs(after)} s"
-                if before and after else "")
+        return f"{x:,.0f}".replace(",", "\\thinspace{}")  # for the detail macros, not tables
 
     tp = pd.read_csv(ROOT / "reports/cost/throughput.csv")
     tp = tp[tp["label"] == "throughput-accel-vllm"]
@@ -552,20 +548,15 @@ def main() -> None:
         f"{secs(runtime('bench-grpo-rollout-vllm'))} s; "
         f"{st_b3['completion_tokens_mean'].mean():.0f}-token outputs, so only "
         f"{hf_s - vl_s:.1f} of {hf_s:.1f} s a step is saved")
-    for key, label, sub, value, (before, after) in (
-            ("audit", "Audit generation", "HF generate \\textrightarrow{} vLLM", b1,
-             b1_times or (None, None)),
-            ("train", "Training", "1 \\textrightarrow{} 4 GH200 GPUs",
-             speedup_ratio("bench-distill-ddp1", "bench-distill-ddp4"),
-             (runtime("bench-distill-ddp1"), runtime("bench-distill-ddp4"))),
-            ("grpo", "GRPO rollouts", "HF \\textrightarrow{} colocated vLLM",
-             speedup_ratio("bench-grpo-rollout-hf", "bench-grpo-rollout-vllm"),
-             (runtime("bench-grpo-rollout-hf"), runtime("bench-grpo-rollout-vllm")))):
-        accel_rows.append(dict(key=key, label=label, sub=sub,
+    for key, label, value in (
+            ("audit", "Audit generation", b1),
+            ("train", "Training", speedup_ratio("bench-distill-ddp1", "bench-distill-ddp4")),
+            ("grpo", "GRPO rollouts",
+             speedup_ratio("bench-grpo-rollout-hf", "bench-grpo-rollout-vllm"))):
+        # Plain cells only: the label is formatted in main.tex from `speedup`.
+        accel_rows.append(dict(key=key, label=label,
                                speedup=round(value, 2) if value else 0,
-                               pending=int(value is None),
-                               text=f"\\texttimes{value:.1f}" if value else "to run",
-                               times=times(before, after)))
+                               pending=int(value is None)))
 
     # Per-step times (scripts/accel_step_times.py): B2's two phases, since the 1-GPU run slowed
     # after step 5 and the ratio over train_runtime mixes them; B3's per-step saving and the
@@ -589,6 +580,13 @@ def main() -> None:
         cols = list(recs[0])
         # col sep=comma: a comma inside a value would shift every later column of its row.
         bad = [(c, r[c]) for r in recs for c in cols if "," in str(r[c])]
+        assert not bad, (name, bad)
+        # Cells are read in the preamble: only the escapes the poster has compiled with.
+        def rest(v: str) -> str:
+            for ok in ("\\textminus{}", "\\texttimes", "\\%"):
+                v = v.replace(ok, "")
+            return v
+        bad = [(c, r[c]) for r in recs for c in cols if "\\" in rest(str(r[c]))]
         assert not bad, (name, bad)
         body = "\n".join(",".join(str(r[c]) for c in cols) for r in recs)
         return f"\\pgfplotstableread[col sep=comma]{{\n{','.join(cols)}\n{body}\n}}\\{name}\n"
