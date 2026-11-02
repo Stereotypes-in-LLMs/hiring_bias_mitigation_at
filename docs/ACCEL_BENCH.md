@@ -212,7 +212,8 @@ slowdown: "No slowdown (steps 6–40 within 5% of steps 1–5)". Read two-sided 
 slowdown test it was written as (steps 6–40 at most 5% slower), the repeat passes. The
 generator applies the one-sided reading (`poster/latex/latex_data.py`, `TrainState`), so the
 repeat is the 1-GPU baseline. This reading was settled after seeing the repeat; the two-sided
-reading would have kept the first run and reported both phases.
+reading would have kept the first run and reported both phases. The user kept the one-sided
+reading (2026-11-02, "Keep it").
 
 **Result with the repeat as baseline.** One basis per column:
 
