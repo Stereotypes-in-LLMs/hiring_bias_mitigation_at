@@ -186,13 +186,16 @@ grpo,GRPO rollouts,1.09,0
 \newcommand{\PatchTotalGPUh}{14.4}
 \newcommand{\BackendUnstableMax}{0.22}
 \newcommand{\BackendDeltaShift}{0.33}
-\newcommand{\AuditDetail}{HF generate \textrightarrow{} vLLM: 1\thinspace{}091 \textrightarrow{} 64.7 s, generation only; 3,105 prompts, about 37 tokens out}
-\newcommand{\TrainDetail}{1 \textrightarrow{} 4 GH200, global batch 32, same 40 steps: 2\thinspace{}420 \textrightarrow{} 550 s}
-\newcommand{\GRPODetail}{HF \textrightarrow{} colocated vLLM, 6 steps: 200 \textrightarrow{} 183 s; 37-token outputs, so only 2.8 of 32.5 s a step is saved}
 \newcommand{\TrainOneEarly}{50}
 \newcommand{\TrainOneLate}{62}
 \newcommand{\TrainRatioEarly}{3.5}
 \newcommand{\TrainRatioLate}{4.5}
+\newcommand{\TrainExtraGPUh}{+37}
+\newcommand{\TrainState}{pending}
+\newcommand{\TrainNote}{1-GPU run slowed 50 \textrightarrow{} 62 s/step after step 5; rerunning}
+\newcommand{\AuditDetail}{HF generate \textrightarrow{} vLLM: 1\thinspace{}091 \textrightarrow{} 64.7 s, generation only; 3,105 prompts, about 37 tokens out}
+\newcommand{\TrainDetail}{1 \textrightarrow{} 4 GH200, global batch 32, same 40 steps: 2\thinspace{}420 \textrightarrow{} 550 s wall-clock, at +37\% GPU-h}
+\newcommand{\GRPODetail}{HF \textrightarrow{} colocated vLLM, 6 steps: 200 \textrightarrow{} 183 s; 37-token outputs, so only 2.8 of 32.5 s a step is saved}
 \newcommand{\RolloutTokens}{37}
 \newcommand{\RolloutSavedS}{2.8}
 \newcommand{\RolloutStepS}{32.5}
@@ -240,8 +243,6 @@ Gender / implicit,0.72,0.20,\textminus{}72\%
 \newcommand{\MethodGRPO}{\RelRL{} prompts, anchor reward; lr decay over the last 26\% [3, 5]}
 \newcommand{\MethodDistill}{KL to frozen SFT-v3 on the attribute-free CV, decision token; 1 epoch}
 % Section 3C's scope: which seed, which pairs, which contrasts, in the order of its cells.
-% B2's note: the first 1-GPU run slowed after step 5; the repeat decides what the poster says.
-\newcommand{\TrainNote}{1-GPU run slowed \TrainOneEarly{} \textrightarrow{} \TrainOneLate{} s/step after step 5; rerunning}
 \newcommand{\ScopeNote}{One selected seed per stage (fresh LoRA r32 on SFT-v3 merged [1]); pairs chosen on SFT-v3's own effect, 64 per contrast (gender 45); one value per contrast, in B's order: combat implicit, combat explicit, religion, gender}
 % The NVIDIA stack as used (docs/SYSTEM_OVERVIEW.md): one node of 4 x GH200 120 GB per job.
 % nvidia-smi names the device 'GH200 120GB'; its HBM3 is 96 GB (97,871 MiB), CSCS Alps/Daint.

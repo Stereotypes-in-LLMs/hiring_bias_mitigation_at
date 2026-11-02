@@ -176,6 +176,15 @@ batch 32 rows. The 4-GPU run took 14.0 s a step over steps 1–5 and 13.7 s over
 phases the ratio is **3.5×** (steps 1–5) and **4.5×** (steps 6–40); the 4.40× on
 `train_runtime` mixes the two.
 
+**Cost beside speed** (the user, 2026-11-02: report the two together). Used GPU-h of the two cost
+steps, GPUs × wall with process start and model load included: 0.945 (4 GPUs, 850 s) against
+0.691 (1 GPU, 2,489 s), **+37%** for the 4.4× in wall-clock. On training time alone the order
+reverses for this pair of runs: 4 × 549.6 = 2,198 GPU-s against 2,420 (−9%), because of the
+1-GPU run's slowdown. The difference is outside training: 300 s of each 4-GPU process's step
+(850 − 549.6) against 69 s (2,489 − 2,420), 1,202 against 69 GPU-s. What those 300 s are (four
+concurrent model loads, process-group start-up, data preparation per rank) is not separated.
+The poster states the wall-clock ratio with the used-GPU-h change of the same two steps.
+
 **Interpretation, not confirmed.** The above-linear ratio comes from the 1-GPU run slowing by
 a quarter after step 5, not from any difference in work per row; at its early pace the scaling is
 sublinear (3.5×, 88%). What slowed it (clocks, power, memory, the host) was not measured; the

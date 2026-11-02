@@ -20,6 +20,8 @@ import pandas as pd
 ROOT = Path(__file__).resolve().parents[1]
 LOGS = Path(os.environ.get("HBM_OUTPUT_ROOT", "/ritom/scratch/cscs/zhang/xw")) / "logs"
 B2 = LOGS / "xw-bench-train-5236800.out"
+# The registered repeat of the 1-GPU run (docs/ACCEL_BENCH.md, "B2 repeat"), when present.
+B2_REPEATS = sorted(LOGS.glob("xw-bench-1gpu-*.out"))
 B3 = LOGS / "xw-bench-grpo-5236801.out"
 OUT = ROOT / "reports/throughput_b/accel/step_times.csv"
 # A run's lines end at its cost record: "cost: train/<label> ok in ..."
@@ -42,7 +44,8 @@ def clock(t: str) -> int:
 
 def b2_rows() -> list[dict]:
     rows = []
-    for label, seg in segments(B2.read_text(errors="replace")):
+    for label, seg in (x for log in (B2, *B2_REPEATS)
+                       for x in segments(log.read_text(errors="replace"))):
         seen = {}
         for step, total, elapsed in re.findall(r"(\d+)/(\d+) \[(\d+:\d{2}(?::\d{2})?)<", seg):
             if int(total) == 40 and int(step) > 0:

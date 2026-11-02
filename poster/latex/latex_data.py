@@ -527,20 +527,64 @@ def main() -> None:
     def secs(x: float) -> str:
         return f"{x:,.0f}".replace(",", "\\thinspace{}")  # for the detail macros, not tables
 
+    def used_gpu_h(label: str) -> float | None:
+        """GPU-h of the whole cost step: GPUs x wall, model loads and process start included."""
+        hit = steps[steps["label"] == label]
+        return float(hit["gpu_h"].iloc[-1]) if len(hit) else None
+
+    # Per-step times (scripts/accel_step_times.py). B2's 1-GPU baseline follows the rule
+    # registered in docs/ACCEL_BENCH.md ("B2 repeat"): the repeat replaces the first run if its
+    # steps 6-40 stay within 5% of its steps 1-5 ('steady'); if it slows again ('drift'), both
+    # phases are reported; until it exists ('pending'), the first run with its drift stated.
+    st = pd.read_csv(ROOT / "reports/throughput_b/accel/step_times.csv")
+    b2 = st[st["bench"] == "B2"].pivot(index="step", columns="label", values="elapsed_s")
+
+    def phases(label: str) -> tuple[float, float]:
+        t = b2[label]
+        return t[5] / 5, (t[40] - t[5]) / 35
+
+    first, repeat, four = "bench-distill-ddp1", "bench-distill-ddp1-r2", "bench-distill-ddp4"
+    if repeat in b2 and runtime(repeat):
+        early, late = phases(repeat)
+        b2_state = "steady" if abs(late / early - 1) <= 0.05 else "drift"
+    else:
+        b2_state = "pending"
+    one = repeat if b2_state == "steady" else first
+    e1, l1 = phases(first)
+    e4, l4 = phases(four)
+    extra = used_gpu_h(four) / used_gpu_h(one) - 1
+    findings.update({
+        "TrainOneEarly": f"{e1:.0f}", "TrainOneLate": f"{l1:.0f}",
+        "TrainRatioEarly": f"{e1 / e4:.1f}", "TrainRatioLate": f"{l1 / l4:.1f}",
+        "TrainExtraGPUh": f"{100 * extra:+.0f}",
+        "TrainState": b2_state,
+    })
+    if b2_state == "steady":
+        findings["TrainNote"] = (
+            f"Baseline: the 1-GPU repeat, steady at {phases(repeat)[1]:.0f} s/step")
+    elif b2_state == "drift":
+        findings["TrainNote"] = (
+            f"Both 1-GPU runs slow after step 5: \\texttimes{e1 / e4:.1f} before, "
+            f"\\texttimes{l1 / l4:.1f} after")
+    else:
+        findings["TrainNote"] = (
+            f"1-GPU run slowed {e1:.0f} \\textrightarrow{{}} {l1:.0f} s/step after step 5; "
+            f"rerunning")
+
     tp = pd.read_csv(ROOT / "reports/cost/throughput.csv")
     tp = tp[tp["label"] == "throughput-accel-vllm"]
-    st_b3 = pd.read_csv(ROOT / "reports/throughput_b/accel/step_times.csv")
-    st_b3 = st_b3[st_b3["bench"] == "B3"].groupby("label")[["step_time_s",
-                                                             "completion_tokens_mean"]].mean()
+    st_b3 = st[st["bench"] == "B3"].groupby("label")[["step_time_s",
+                                                      "completion_tokens_mean"]].mean()
     if b1_times and len(tp):
         findings["AuditDetail"] = (
             f"HF generate \\textrightarrow{{}} vLLM: {secs(b1_times[0])} \\textrightarrow{{}} "
             f"{b1_times[1]:.1f} s, generation only; {int(tp['requests'].iloc[0]):,} prompts, "
             f"about {(tp['output_tokens'] / tp['requests']).mean():.0f} tokens out")
+    # Wall-clock and the GPU-hours it costs, side by side (the user, 2026-11-02).
     findings["TrainDetail"] = (
         f"1 \\textrightarrow{{}} 4 GH200, global batch 32, same 40 steps: "
-        f"{secs(runtime('bench-distill-ddp1'))} \\textrightarrow{{}} "
-        f"{secs(runtime('bench-distill-ddp4'))} s")
+        f"{secs(runtime(one))} \\textrightarrow{{}} {secs(runtime(four))} s wall-clock, "
+        f"at {100 * extra:+.0f}\\% GPU-h")
     hf_s, vl_s = (st_b3.loc[f"bench-grpo-rollout-{k}", "step_time_s"] for k in ("hf", "vllm"))
     findings["GRPODetail"] = (
         f"HF \\textrightarrow{{}} colocated vLLM, 6 steps: "
@@ -548,33 +592,20 @@ def main() -> None:
         f"{secs(runtime('bench-grpo-rollout-vllm'))} s; "
         f"{st_b3['completion_tokens_mean'].mean():.0f}-token outputs, so only "
         f"{hf_s - vl_s:.1f} of {hf_s:.1f} s a step is saved")
+    findings.update({
+        "RolloutTokens": f"{st_b3['completion_tokens_mean'].mean():.0f}",
+        "RolloutSavedS": f"{hf_s - vl_s:.1f}",
+        "RolloutStepS": f"{hf_s:.1f}",
+    })
     for key, label, value in (
             ("audit", "Audit generation", b1),
-            ("train", "Training", speedup_ratio("bench-distill-ddp1", "bench-distill-ddp4")),
+            ("train", "Training", speedup_ratio(one, four)),
             ("grpo", "GRPO rollouts",
              speedup_ratio("bench-grpo-rollout-hf", "bench-grpo-rollout-vllm"))):
         # Plain cells only: the label is formatted in main.tex from `speedup`.
         accel_rows.append(dict(key=key, label=label,
                                speedup=round(value, 2) if value else 0,
                                pending=int(value is None)))
-
-    # Per-step times (scripts/accel_step_times.py): B2's two phases, since the 1-GPU run slowed
-    # after step 5 and the ratio over train_runtime mixes them; B3's per-step saving and the
-    # completions' length, which bound what a faster sampler can save.
-    st = pd.read_csv(ROOT / "reports/throughput_b/accel/step_times.csv")
-    b2 = st[st["bench"] == "B2"].pivot(index="step", columns="label", values="elapsed_s")
-    one, four = b2["bench-distill-ddp1"], b2["bench-distill-ddp4"]
-    b3 = st[st["bench"] == "B3"].groupby("label")[["step_time_s", "completion_tokens_mean"]].mean()
-    hf, vl = b3.loc["bench-grpo-rollout-hf"], b3.loc["bench-grpo-rollout-vllm"]
-    findings.update({
-        "TrainOneEarly": f"{one[5] / 5:.0f}",
-        "TrainOneLate": f"{(one[40] - one[5]) / 35:.0f}",
-        "TrainRatioEarly": f"{(one[5] / 5) / (four[5] / 5):.1f}",
-        "TrainRatioLate": f"{(one[40] - one[5]) / (four[40] - four[5]):.1f}",
-        "RolloutTokens": f"{b3['completion_tokens_mean'].mean():.0f}",
-        "RolloutSavedS": f"{hf['step_time_s'] - vl['step_time_s']:.1f}",
-        "RolloutStepS": f"{hf['step_time_s']:.1f}",
-    })
 
     def tex_table(name: str, recs: list[dict]) -> str:
         cols = list(recs[0])
