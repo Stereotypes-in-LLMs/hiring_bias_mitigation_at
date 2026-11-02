@@ -95,6 +95,26 @@ The three jobs are submitted together (the user, 2026-11-02), one node each. All
 all, under the `accel_bench` arm. The three sbatch scripts take `HBM_COST_ARM=accel_bench
 REPO=$PWD`.
 
+### B2 repeat: the 1-GPU run once more, with the GPU's clocks logged (registered 2026-11-02)
+
+**Why.** The first 1-GPU run slowed from 50 to 62 s a step after step 5 while the 4-GPU run
+held 13.7 s; the 4.40× mixes the two phases (section 3). The user: rerun the baseline rather
+than word around it, and log throttle reasons.
+
+**Run.** `scripts/cscs/bench_train_1gpu_repeat.sbatch`: the same `bench_ddp1.yaml` on GPU 0,
+node allocated whole (`--exclusive`; the first run's node was too: 288 CPUs, all memory), cost
+label `bench-distill-ddp1-r2`. Every 10 s: SM and memory clocks, power, temperature,
+utilisation (`logs/xw-bench-1gpu-<job>-gpu.csv`) and `nvidia-smi -q -d PERFORMANCE`, whose
+"Clocks Event Reasons" name any throttle (`-perf.txt`); the PERFORMANCE, CLOCK and POWER
+sections before and after.
+
+**Read as.** No slowdown (steps 6–40 within 5% of steps 1–5): the first run's drift was a
+one-off; the poster's ratio becomes runtime(repeat) / runtime(4 GPUs), stated with the drift
+of the first run in this document. The slowdown again: the poster reports both phases and
+the throttle reason the log names, or "no throttle reason logged" if none.
+
+**Stop.** One job, 1 h 15 cap, about 1 GPU-h of the 4 allocated used.
+
 ## 2. Ledger
 
 | # | job | what | GPU-h allocated | running total |
