@@ -2,12 +2,16 @@
 
     python scripts/ablate_adapter_layers.py --adapter outputs/distill/decision_distill_seed42 \\
         --layers 15 20 --out outputs/distill/decision_distill_seed42_xw15_20
+    python scripts/ablate_adapter_layers.py --adapter outputs/distill/decision_distill_seed42 \\
+        --layers 15 20 --keep --out outputs/distill/decision_distill_seed42_xk15_20
 
 An ablation of a trained adapter, not a trained arm (docs/PATCHING_DISTILL.md, section 1F).
 `lora_B` of every module in layers FIRST..LAST (inclusive) is set to zero, so those modules add
 nothing (the update is scaling * B @ A) and every other tensor is copied bit for bit. The layer
 is read from the tensor name with the same pattern as `interp.spec.mask_adapter_layers`, which
 does the complement at run time: it keeps layers FIRST..LAST and zeroes the scaling outside.
+With `--keep` the file gets that complement: `lora_B` is zeroed in every layer outside
+FIRST..LAST (docs/DISTILL_FOLLOWUP.md, section H).
 `adapter_config.json` and `run_config.json` are copied unchanged, so
 `mitigation.merge.adapter_chain` stacks the copy on the same parent as the original;
 `ablation.json` records the source, its hash and what was zeroed. Paths resolve under
@@ -32,7 +36,7 @@ LAYER = re.compile(r"(?:^|\.)layers\.(\d+)\.")
 COPIED = ("adapter_config.json", "run_config.json")
 
 
-def ablate(adapter: Path, out: Path, first: int, last: int) -> dict:
+def ablate(adapter: Path, out: Path, first: int, last: int, keep: bool = False) -> dict:
     from safetensors.numpy import load_file, save_file
 
     source = adapter / "adapter_model.safetensors"
@@ -45,12 +49,13 @@ def ablate(adapter: Path, out: Path, first: int, last: int) -> dict:
         layer = int(match.group(1))
         module = name.split(".lora_")[0]
         modules.add(module)
-        if first <= layer <= last and ".lora_B." in name:
+        if (first <= layer <= last) != keep and ".lora_B." in name:
             tensors[name] = value * 0
             zeroed.append(name)
             layers.add(layer)
     if not zeroed:
-        raise ValueError(f"{adapter}: no LoRA module in layers {first}..{last}")
+        where = "outside" if keep else "in"
+        raise ValueError(f"{adapter}: no LoRA module {where} layers {first}..{last}")
     out.mkdir(parents=True, exist_ok=False)
     save_file(tensors, str(out / "adapter_model.safetensors"))
     for name in COPIED:
@@ -61,13 +66,15 @@ def ablate(adapter: Path, out: Path, first: int, last: int) -> dict:
     record = {
         "source": str(adapter),
         "source_sha256": hashlib.sha256(source.read_bytes()).hexdigest(),
-        "layers_zeroed": [first, last],
+        "layers_zeroed": [first, last] if not keep else None,
+        "layers_kept": [first, last] if keep else None,
         "layers_found": sorted(layers),
         "modules_total": len(modules),
         "modules_zeroed": len(zeroed),
         "lora_B_params_zeroed": params["zeroed"],
         "params_total": params["total"],
-        "note": "lora_B zeroed in these layers; every other tensor copied unchanged",
+        "note": ("lora_B zeroed outside the kept layers" if keep
+                 else "lora_B zeroed in these layers") + "; every other tensor copied unchanged",
     }
     (out / "ablation.json").write_text(json.dumps(record, indent=2) + "\n")
     return record
@@ -78,10 +85,12 @@ def main() -> None:
                                      formatter_class=argparse.RawDescriptionHelpFormatter)
     parser.add_argument("--adapter", required=True)
     parser.add_argument("--layers", nargs=2, type=int, required=True, metavar=("FIRST", "LAST"))
+    parser.add_argument("--keep", action="store_true",
+                        help="zero lora_B outside FIRST..LAST instead of inside")
     parser.add_argument("--out", required=True)
     args = parser.parse_args()
     record = ablate(Path(resolve_output_path(args.adapter)), Path(resolve_output_path(args.out)),
-                    *args.layers)
+                    *args.layers, keep=args.keep)
     print(json.dumps(record, indent=2))
 
 
