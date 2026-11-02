@@ -132,6 +132,7 @@ own point, on the margin files already written. It is descriptive and decides no
 | 11 | 5233661 | I seed 42 audit (nid005576): −0.59 [−1.39, +0.26] pp against SFT-v3 (one epoch: −0.42), greedy TPR +1.29, agreement +0.11, every guardrail passes, conforms; merge kept 95.9%. Head to head against one epoch s42 at 23.13%: −0.21 [−0.69, +0.19] | 1.19 | 28.87 |
 | 12 | 5233403 | I seed 43 training (nid005676): 682 steps, 2:30:54; 10.041 GPU-h measured; train_loss 0.028 over the run, attributed KL at the end 0.0030 | 10.06 | 38.93 |
 | 13 | 5233871 | I seed 43 audit (nid005514): −0.84 [−1.67, −0.04] pp against SFT-v3 (one epoch: −0.59 [−1.24, −0.03]), greedy TPR +1.20, agreement +0.16, every guardrail passes, conforms; merge kept 95.8%. Head to head against one epoch s43 at 23.08%: −0.30 [−0.78, +0.14] | 1.20 | 40.13 |
+| 14 | 5233658 | I seed 44 training (nid005408): 682 steps, 2:33:53; 10.240 GPU-h measured; train_loss 0.028 over the run, attributed KL at the end 0.0040 | 10.26 | 50.39 |
 
 ## 3. Result
 
