@@ -130,6 +130,7 @@ own point, on the margin files already written. It is descriptive and decides no
 | 9 | 5232838 | I seed 42 training (retry 1, nid005944): 682 steps, 2:31:33; 10.085 GPU-h measured; train_loss 0.028 over the run, attributed KL at the end 0.0063 | 10.10 | 26.44 |
 | 10 | 5233609 | G GRPO student s43 audit (nid005906): −0.91 [−1.72, −0.13] pp against SFT-v3 ("better, pending a second seed"), greedy TPR +0.78, agreement +0.04, every guardrail passes, conforms; merge kept 95.1%. Head to head against its parent GRPO + decay R4 s43 at 23.09%: −0.49 [−1.19, +0.21] | 1.24 | 27.68 |
 | 11 | 5233661 | I seed 42 audit (nid005576): −0.59 [−1.39, +0.26] pp against SFT-v3 (one epoch: −0.42), greedy TPR +1.29, agreement +0.11, every guardrail passes, conforms; merge kept 95.9%. Head to head against one epoch s42 at 23.13%: −0.21 [−0.69, +0.19] | 1.19 | 28.87 |
+| 12 | 5233403 | I seed 43 training (nid005676): 682 steps, 2:30:54; 10.041 GPU-h measured; train_loss 0.028 over the run, attributed KL at the end 0.0030 | 10.06 | 38.93 |
 
 ## 3. Result
 
