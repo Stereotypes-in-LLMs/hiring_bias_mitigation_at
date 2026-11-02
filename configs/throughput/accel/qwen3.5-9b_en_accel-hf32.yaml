@@ -1,0 +1,33 @@
+# Hand-written -- NOT produced by generate_experiment_configs.py.
+# Acceleration benchmark B1 (docs/ACCEL_BENCH.md, scripts/cscs/bench_audit_backend.sbatch): the
+# audit's generation on one GH200 through the engine the audits use (vLLM 0.31, prefix cache on,
+# as-built order) against the repository's own HF transformers generate loop (left-padded
+# batches of 8, the backend's default, and of 32). The three configs differ only in backend,
+# batch_size and the vLLM engine block; model, prompts and decoding are those of
+# configs/audit/qwen3.5-9b_en_baseline_gh200.yaml, on the benchmark's first 45 pairs (3,105
+# prompts, one tenth of an audit). Generation only: never scored, written to raw_dir below.
+backend: transformers
+batch_size: 32
+submit_order: as_built
+limit_pairs: 45                   # 3,105 prompts
+raw_dir: outputs/throughput/accel/raw
+seed: 42
+conditions:
+- explicit
+- implicit
+- attr_free
+chat_template_kwargs:
+  enable_thinking: false
+max_intersection_cells: null
+generation:
+  max_new_tokens: 512
+  temperature: 0.0
+  top_p: 1.0
+  seed: 42
+model: Qwen/Qwen3.5-9B
+lang: en
+protected_groups:
+- military_status
+- gender
+- religion
+run_suffix: throughput-accel-hf32

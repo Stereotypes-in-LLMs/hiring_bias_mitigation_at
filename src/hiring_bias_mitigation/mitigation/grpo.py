@@ -828,9 +828,21 @@ def train(cfg: dict, trainer_cls=None, reward_funcs=None, trainer_kwargs: dict |
                                      n_train=len(train_ds)).to_dict()
     # No TRL evaluation (the decision monitor is the eval), but checkpoints all the same.
     base_args.update(save_strategy="steps", save_steps=int(cfg.get("save_steps", 25)))
-    if not (cfg.get("use_vllm") and cfg.get("vllm_mode") == "colocate"):
+    # docs/ACCEL_BENCH.md, B3: a timing run of a few steps. `benchmark_only` drops the monitors
+    # that generate outside the training step; `benchmark_generation: transformers` takes the
+    # rollouts through transformers' generate instead of the colocated vLLM engine. Nothing
+    # either trains is audited or kept.
+    bench_only = bool(cfg.get("benchmark_only"))
+    hf_bench = cfg.get("benchmark_generation") == "transformers"
+    if hf_bench:
+        bad = cfg.get("use_vllm") or not bench_only or int(cfg.get("max_steps", -1)) <= 0
+        if bad:
+            raise ValueError("benchmark_generation: transformers needs use_vllm: false, "
+                             "benchmark_only: true and a positive max_steps")
+    elif not (cfg.get("use_vllm") and cfg.get("vllm_mode") == "colocate"):
         raise ValueError("this trainer expects use_vllm: true and vllm_mode: colocate")
-    patch_vllm_engine_kwargs(cfg.get("vllm_engine_kwargs") or {})
+    if not hf_bench:
+        patch_vllm_engine_kwargs(cfg.get("vllm_engine_kwargs") or {})
 
     from trl import GRPOConfig, GRPOTrainer
 
@@ -902,12 +914,15 @@ def train(cfg: dict, trainer_cls=None, reward_funcs=None, trainer_kwargs: dict |
         grpo_continuation.initialize_tracking_after_resume(
             trainer.accelerator, lambda: C.wandb_resume(cfg, output_dir), _broadcast)
     policy = trainer.accelerator.unwrap_model(trainer.model)
-    install_weight_sync(trainer.vllm_generation, policy)
+    if not hf_bench:
+        install_weight_sync(trainer.vllm_generation, policy)
 
     from .decision_eval import eval_rows
 
     monitor = None
-    if "validation" in splits:
+    if bench_only:
+        log.warning("benchmark_only: the sync validation and the decision monitor are off")
+    elif "validation" in splits:
         rows = splits["validation"].to_pandas()
         seed = int(cfg.get("seed", 42))
         check = eval_rows(rows, int(cfg.get("sync_validate_rows", 256)), seed)

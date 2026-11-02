@@ -1,0 +1,44 @@
+# Hand-written -- NOT produced by generate_experiment_configs.py.
+# Acceleration benchmark B2 (docs/ACCEL_BENCH.md, scripts/cscs/bench_train_scaling.sbatch):
+# decision_distill_seed42's first 40 optimizer steps, 32 rows a step, on 4 GPU(s). The two
+# bench_ddp*.yaml differ only in gradient_accumulation_steps (32 / GPUs) and output_dir; nothing
+# trained here is audited or kept.
+stage: decision_distill
+objective: decision_distill
+base_model: Qwen/Qwen3.5-9B
+sft_checkpoint: outputs/sft/qwen3.5-9b_en_only_sft_v3_additional
+data_config: configs/data/en_only_distill_v3_all.yaml
+output_dir: outputs/bench/distill_ddp4
+chat_template_kwargs:
+  enable_thinking: false
+use_lora: true
+lora_r: 32
+lora_alpha: 64
+lora_dropout: 0.0
+# One prompt per device and micro-step (no padding): 4 GPUs x 8 accumulation = 32 rows a step,
+# 10,907 rows = 340 steps in one epoch.
+num_train_epochs: 1
+max_steps: 40                   # the benchmark's fixed length
+learning_rate: 3.0e-05
+lr_scheduler_type: warmup_stable_decay   # GRPO-improve's default: decay over the last 26%
+lr_scheduler_kwargs:
+  num_decay_steps: 10
+  decay_type: linear
+warmup_steps: 5
+per_device_train_batch_size: 1
+gradient_accumulation_steps: 8   # 4 GPU x 1 x 8 = 32 rows a step, as the real run
+gradient_checkpointing: true
+gradient_checkpointing_kwargs:
+  use_reentrant: false
+ddp_find_unused_parameters: false
+weight_decay: 0.0
+dtype: bfloat16
+seed: 42
+logging_steps: 5
+save_steps: 1000                # no checkpoint inside 40 steps
+save_total_limit: 10
+memory_floor_gb: 12
+resume: false
+wandb_project: hiring-bias-mitigation
+wandb_run_name: bench-distill-ddp4
+use_wandb: false

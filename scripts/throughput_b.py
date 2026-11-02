@@ -116,6 +116,14 @@ ROUNDS = {
                     "cacheoff-shuffle"),
         config="configs/throughput/full/qwen3.5-9b_en_dpo_v3_4880_{condition}.yaml",
     ),
+    # docs/ACCEL_BENCH.md, B1: the audits' engine against the repository's HF transformers
+    # generate loop, 45 pairs (3,105 prompts) of the base model, on one GH200 each.
+    "accel": Round(
+        raw_dir="outputs/throughput/accel/raw", label_prefix="throughput-accel-",
+        production="Qwen3.5-9B--en--baseline--cscs", report_dir=REPORT_DIR / "accel",
+        differences="decision", conditions=("vllm", "hf8", "hf32"),
+        config="configs/throughput/accel/qwen3.5-9b_en_accel-{condition}.yaml",
+    ),
 }
 
 
