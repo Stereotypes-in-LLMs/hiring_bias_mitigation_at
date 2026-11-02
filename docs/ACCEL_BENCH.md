@@ -148,10 +148,19 @@ less wall time. Train loss over the 40 steps 0.066 and 0.070. One run each.
 **Against the registration.** At or above the expected 3–3.8×: the ratio exceeds the GPU
 count; scaling efficiency on `train_runtime` 110%.
 
-**Interpretation, not confirmed.** Above-linear scaling is consistent with the one-GPU run
-paying more per row: 32 accumulation micro-steps of one row each, 32 checkpointed
-forward-backward passes per optimizer step on one device, against 8 per device. Memory
-bandwidth and the optimizer step are not separated here.
+**Per step** (`scripts/accel_step_times.py`, from the progress bar in the log;
+`reports/throughput_b/accel/step_times.csv`). The two configurations are the same except the
+accumulation count: one row per GPU and micro-step, gradient checkpointing on in both, global
+batch 32 rows. The 4-GPU run took 14.0 s a step over steps 1–5 and 13.7 s over steps 6–40. The
+1-GPU run took 49.6 s a step over steps 1–5 and then 62.0 s over steps 6–40. Over the same
+phases the ratio is **3.5×** (steps 1–5) and **4.5×** (steps 6–40); the 4.40× on
+`train_runtime` mixes the two.
+
+**Interpretation, not confirmed.** The above-linear ratio comes from the 1-GPU run slowing by
+a quarter after step 5, not from any difference in work per row; at its early pace the scaling is
+sublinear (3.5×, 88%). What slowed it (clocks, power, memory, the host) was not measured; the
+end of warm-up (step 5) is the only change in the schedule there. An earlier reading here, that
+the 1-GPU run pays more per row, is withdrawn: its work per micro-step is the same.
 
 **Unknown.** One repeat each; the ratio at other per-device batch sizes.
 
@@ -168,6 +177,10 @@ path.
 **Against the registration.** The expected 3–10× did not appear; the observed ratio is below
 the 2× that was registered as counting against. At R4's real length, 259 steps, the per-step
 saving (2.8 s) would repay the start-up after about 130 steps and end about 350 s (4%) ahead.
+
+**Per step** (`scripts/accel_step_times.py`, the trainer's `step_time`): 29.7 s on the vLLM path
+and 32.5 s on the transformers path, completions of 37 tokens on average on both. The colocated
+engine saves 2.8 s a step.
 
 **Interpretation, not confirmed.** The rollouts here are prefill-dominated: prompts of about
 2,500 tokens, completions of under 40. Transformers' generate on a GH200, 64 sequences per
@@ -192,4 +205,5 @@ HBM_COST_ARM=accel_bench REPO=$PWD scripts/cscs/submit.sh --exclude=nid005679,ni
 HBM_OUTPUT_ROOT=/ritom/scratch/cscs/zhang/xw OPENBLAS_NUM_THREADS=1 ../venv/bin/python scripts/cost_report.py
 HBM_OUTPUT_ROOT=/ritom/scratch/cscs/zhang/xw OPENBLAS_NUM_THREADS=1 ../venv/bin/python scripts/throughput_b.py speedup --round accel
 HBM_OUTPUT_ROOT=/ritom/scratch/cscs/zhang/xw OPENBLAS_NUM_THREADS=1 ../venv/bin/python scripts/throughput_b.py compare --round accel
+HBM_OUTPUT_ROOT=/ritom/scratch/cscs/zhang/xw OPENBLAS_NUM_THREADS=1 ../venv/bin/python scripts/accel_step_times.py
 ```

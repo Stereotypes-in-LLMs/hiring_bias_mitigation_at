@@ -454,6 +454,8 @@ def main() -> None:
     patching = cost_steps[(cost_steps["stage"] == "patching") & (cost_steps["source"] == "record")]
     ok = patching[patching["status"] == "ok"]
     patch_ok = ok[ok["label"].str.startswith("patch-")]
+    # The medians are over 64-pair runs: the gender runs (45 pairs against SFT-v3) are left out.
+    patch_64 = patch_ok[~patch_ok["label"].str.contains("gen_male_female")]
     margins_ok = ok[ok["label"].str.startswith("margins-") & (ok["wall_s"] > 600)]
     assert len(patch_ok) >= 10 and len(margins_ok) >= 5, (len(patch_ok), len(margins_ok))
     audits = [json.loads((ROOT / f"reports/interp/margins_summary-{spec}-grid-en.json")
@@ -482,8 +484,9 @@ def main() -> None:
         "PatchRealPerPair": rng(real_n, "d"),
         "PatchVerifyPerPair": rng(verify_n, "d"),
         "AtPHeads": f"{128 + 768:,}",
-        "PatchStepMin": f"{patch_ok['wall_s'].median() / 60:.0f}",
-        "PatchStepGPUh": f"{patch_ok['gpu_h'].median():.2f}",
+        "PatchStepMin": f"{patch_64['wall_s'].median() / 60:.0f}",
+        "PatchStepGPUh": f"{patch_64['gpu_h'].median():.2f}",
+        "PatchRuns64": str(len(patch_64)),
         "PatchPeakGiB": f"{patch_ok['mem_peak_gib'].max():.0f}",
         "PatchStepsOK": str(len(patch_ok)),
         "MarginsStepMin": f"{margins_ok['wall_s'].median() / 60:.0f}",
@@ -493,11 +496,14 @@ def main() -> None:
     })
     accel_rows = []
     speed = ROOT / "reports/throughput_b/accel/speedup_summary.csv"
-    b1 = None
+    b1 = b1_times = None
     if speed.exists():
         t = pd.read_csv(speed)
         hit = t[(t["condition"] == "vllm") & (t["ref_condition"] == "hf8")]
         b1 = float(hit["speedup_x_median"].iloc[0]) if len(hit) else None
+        if len(hit):
+            b1_times = (float(hit["ref_generate_s_median"].iloc[0]),
+                        float(hit["generate_s_median"].iloc[0]))
     steps = pd.read_csv(ROOT / "reports/cost/steps.csv", dtype={"job_id": str})
     steps = steps[(steps["source"] == "record") & (steps["status"] == "ok")]
 
@@ -509,16 +515,45 @@ def main() -> None:
         a, b = runtime(before), runtime(after)
         return a / b if a and b else None
 
-    for key, label, sub, value in (
-            ("audit", "Audit generation", "vLLM vs HF transformers", b1),
-            ("train", "Training: 4 vs 1 GPU", "DDP; same 32-row steps",
-             speedup_ratio("bench-distill-ddp1", "bench-distill-ddp4")),
-            ("grpo", "GRPO rollouts", "colocated vLLM vs HF",
-             speedup_ratio("bench-grpo-rollout-hf", "bench-grpo-rollout-vllm"))):
+    def secs(x: float) -> str:
+        return f"{x:,.0f}".replace(",", "\\thinspace{}")  # the table is comma-separated
+
+    def times(before: float | None, after: float | None) -> str:
+        return (f"{secs(before)} \\textrightarrow{{}} {secs(after)} s"
+                if before and after else "")
+
+    for key, label, sub, value, (before, after) in (
+            ("audit", "Audit generation", "HF generate \\textrightarrow{} vLLM", b1,
+             b1_times or (None, None)),
+            ("train", "Training", "1 \\textrightarrow{} 4 GH200 GPUs",
+             speedup_ratio("bench-distill-ddp1", "bench-distill-ddp4"),
+             (runtime("bench-distill-ddp1"), runtime("bench-distill-ddp4"))),
+            ("grpo", "GRPO rollouts", "HF \\textrightarrow{} colocated vLLM",
+             speedup_ratio("bench-grpo-rollout-hf", "bench-grpo-rollout-vllm"),
+             (runtime("bench-grpo-rollout-hf"), runtime("bench-grpo-rollout-vllm")))):
         accel_rows.append(dict(key=key, label=label, sub=sub,
                                speedup=round(value, 2) if value else 0,
                                pending=int(value is None),
-                               text=f"\\texttimes{value:.1f}" if value else "to run"))
+                               text=f"\\texttimes{value:.1f}" if value else "to run",
+                               times=times(before, after)))
+
+    # Per-step times (scripts/accel_step_times.py): B2's two phases, since the 1-GPU run slowed
+    # after step 5 and the ratio over train_runtime mixes them; B3's per-step saving and the
+    # completions' length, which bound what a faster sampler can save.
+    st = pd.read_csv(ROOT / "reports/throughput_b/accel/step_times.csv")
+    b2 = st[st["bench"] == "B2"].pivot(index="step", columns="label", values="elapsed_s")
+    one, four = b2["bench-distill-ddp1"], b2["bench-distill-ddp4"]
+    b3 = st[st["bench"] == "B3"].groupby("label")[["step_time_s", "completion_tokens_mean"]].mean()
+    hf, vl = b3.loc["bench-grpo-rollout-hf"], b3.loc["bench-grpo-rollout-vllm"]
+    findings.update({
+        "TrainOneEarly": f"{one[5] / 5:.0f}",
+        "TrainOneLate": f"{(one[40] - one[5]) / 35:.0f}",
+        "TrainRatioEarly": f"{(one[5] / 5) / (four[5] / 5):.1f}",
+        "TrainRatioLate": f"{(one[40] - one[5]) / (four[40] - four[5]):.1f}",
+        "RolloutTokens": f"{b3['completion_tokens_mean'].mean():.0f}",
+        "RolloutSavedS": f"{hf['step_time_s'] - vl['step_time_s']:.1f}",
+        "RolloutStepS": f"{hf['step_time_s']:.1f}",
+    })
 
     def tex_table(name: str, recs: list[dict]) -> str:
         cols = list(recs[0])

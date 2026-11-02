@@ -73,10 +73,10 @@ Self-distillation,dSFT,44,-0.328,-1.038,0.339,-0.285,\textminus{}0.285
 }\SeedData
 
 \pgfplotstableread[col sep=comma]{
-key,label,sub,speedup,pending,text
-audit,Audit generation,vLLM vs HF transformers,16.87,0,\texttimes16.9
-train,Training: 4 vs 1 GPU,DDP; same 32-row steps,4.4,0,\texttimes4.4
-grpo,GRPO rollouts,colocated vLLM vs HF,1.09,0,\texttimes1.1
+key,label,sub,speedup,pending,text,times
+audit,Audit generation,HF generate \textrightarrow{} vLLM,16.87,0,\texttimes16.9,1\thinspace{}091 \textrightarrow{} 65 s
+train,Training,1 \textrightarrow{} 4 GH200 GPUs,4.4,0,\texttimes4.4,2\thinspace{}420 \textrightarrow{} 550 s
+grpo,GRPO rollouts,HF \textrightarrow{} colocated vLLM,1.09,0,\texttimes1.1,200 \textrightarrow{} 183 s
 }\AccelData
 
 \newcommand{\NPairs}{450}
@@ -174,14 +174,22 @@ grpo,GRPO rollouts,colocated vLLM vs HF,1.09,0,\texttimes1.1
 \newcommand{\PatchRealPerPair}{194--194}
 \newcommand{\PatchVerifyPerPair}{86--98}
 \newcommand{\AtPHeads}{896}
-\newcommand{\PatchStepMin}{19}
-\newcommand{\PatchStepGPUh}{0.32}
+\newcommand{\PatchStepMin}{20}
+\newcommand{\PatchStepGPUh}{0.33}
+\newcommand{\PatchRuns64}{21}
 \newcommand{\PatchPeakGiB}{43}
 \newcommand{\PatchStepsOK}{27}
 \newcommand{\MarginsStepMin}{32}
 \newcommand{\MarginsPeakGiB}{87}
 \newcommand{\PatchTotalGPUh}{14.4}
 \newcommand{\BackendUnstableMax}{0.22}
+\newcommand{\TrainOneEarly}{50}
+\newcommand{\TrainOneLate}{62}
+\newcommand{\TrainRatioEarly}{3.5}
+\newcommand{\TrainRatioLate}{4.5}
+\newcommand{\RolloutTokens}{37}
+\newcommand{\RolloutSavedS}{2.8}
+\newcommand{\RolloutStepS}{32.5}
 % END GENERATED DATA
 
 % -------------------------- EDIT CONTENT HERE -------------------------------
@@ -381,7 +389,7 @@ Gender / implicit,0.72,0.20,\textminus{}72\%
 % Samoilenko, 2026-11-02, redrawn in the two-colour palette). A, left: one patch. Right: the
 % Base-model pathway patching found, simplified from fig:circuit of
 % reports/interp/latex/activation_patching_report.tex (docs/INTERP_SFT_V3.md).
-\Txt[text=greenDark]{512}{284}{700}{16}{\bfseries A\quad HOW ACTIVATION PATCHING FINDS THE PATHWAY}
+\Txt[text=greenDark]{512}{284}{700}{16}{\bfseries A\quad HOW ACTIVATION PATCHING PROBES ATTRIBUTE EFFECTS}
 
 % A1: copy one layer's activation from the attribute-B run into the attribute-A run.
 \Txt[text=ink]{512}{314}{190}{13.5}{\bfseries Swap one activation}
@@ -401,7 +409,7 @@ Gender / implicit,0.72,0.20,\textminus{}72\%
 \Txt[text=body]{522}{491}{180}{10}{share of the attribute's effect removed}
 
 % A2: the pathway. x = 770 + 11.2 * layer, so boxes sit over the layers they occupy.
-\Txt[text=ink]{772}{314}{420}{13.5}{\bfseries The pathway it reveals (Base model)}
+\Txt[text=ink]{772}{314}{420}{13.5}{\bfseries Attribute-sensitive components in the Base model}
 \Rect{998}{334}{56}{146}{rule}
 \Txt[text=ink,align=center]{988}{337}{76}{10.5}{\bfseries bottleneck}
 \NodeBox{772}{360}{68}{44}{ink}{white}{12.5}{Attribute}
@@ -496,19 +504,19 @@ Gender / implicit,0.72,0.20,\textminus{}72\%
   \Txt[text=body]{1074}{\yy}{138}{11.5}{\PRoute}
 }
 % Definitions of C's columns (scripts/interp/20_distill_compare.py; reports/interp/distill/<spec>/).
-\Txt[text=body]{512}{872}{700}{10}{\textbf{Profile r}: correlation of component-level patching effects with SFT-v3's (64 mixer and MLP outputs \texttimes{} 2 token classes).\\\textbf{Hub rank}: rank of L15.H11 among all heads by the arm's own attribution patching.\\\textbf{Margin ratio}: median attribute-free $|$log p(hire) $-$ log p(reject)$|$, arm / SFT-v3.\\\textbf{Signature}: similar if profile r $\geq$ 0.80 and hub rank $\leq$ 3 on every contrast.}
+\Txt[text=body]{512}{871}{700}{10.5}{\textbf{Profile r}: correlation of component-level patching effects with SFT-v3's.\\\textbf{Hub rank}: rank of L15.H11 among all heads by the arm's own attribution patching.\\\textbf{Margin ratio}: median attribute-free $|$log p(hire) $-$ log p(reject)$|$, arm / SFT-v3.\\\textbf{Signature}: similar if profile r $\geq$ 0.80 and hub rank $\leq$ 3 on every contrast.}
 % The window from Marta's patching, self-distillation, three seeds each, against the trained
 % all-layer adapter of the same seed (reports/comparisons.csv): trained there alone
 % (docs/PATCHING_DISTILL.md A), only the window kept (docs/DISTILL_FOLLOWUP.md H), the window
 % removed (docs/PATCHING_DISTILL.md F).
 \Rect[draw=greenDark,line width=1bp]{512}{924}{700}{60}{greenPale}
 \Txt[text=greenDark]{524}{930}{290}{13.5}{\bfseries Window-restricted LoRA did not match full-layer adaptation in these runs}
-\Txt[text=body]{524}{964}{290}{10}{Self-distillation, three-seed means; positive = worse [6]}
-\Txt[text=ink]{836}{929}{220}{10.5}{\bfseries Variant of the full-layer adapter}
-\Txt[text=ink,align=right]{1056}{929}{144}{10.5}{\bfseries $\Delta$ unstable sets, pp}
+\Txt[text=body]{524}{964}{290}{10}{Self-distillation, three-seed means [6]}
+\Txt[text=ink]{836}{929}{170}{10.5}{\bfseries LoRA placement / ablation}
+\Txt[text=ink,align=right]{1006}{929}{194}{10.5}{\bfseries $\Delta$ vs full-layer adapter (pp; \textuparrow{} worse)}
 \foreach \yy/\lab/\val in {942/{Trained on layers 15--20 only}/{\WindowOnly},955/{Only the 15--20 update kept}/{\WindowKept},968/{The 15--20 update removed}/{\WindowRemoved}}{%
-  \Txt[text=body]{836}{\yy}{220}{10.5}{\lab}
-  \Txt[text=ink,align=right]{1056}{\yy}{144}{10.5}{\bfseries\val}}
+  \Txt[text=body]{836}{\yy}{170}{10.5}{\lab}
+  \Txt[text=ink,align=right]{1006}{\yy}{194}{10.5}{\bfseries\val}}
 
 % RIGHT: conclusion first. The headline card is Base moved to SFT-v3's hire rate against SFT-v3
 % (poster/base_compare.json) and the two models' agreement with GPT-4o (ModelData). A draws the
@@ -527,23 +535,23 @@ Gender / implicit,0.72,0.20,\textminus{}72\%
 
 % A: the nine seeds, with each stage's tail and recurrence beside them (PathData).
 \Txt[text=greenDark]{1272}{414}{728}{16}{\bfseries A\quad Additional gains remain uncertain across three training seeds}
-\Txt[text=body]{1272}{436}{728}{11}{\CommonCIBelow{} of 9 seed intervals lies below 0 at the matched hire rate; three seeds per stage, then their mean}
+\Txt[text=body]{1272}{436}{728}{11}{\CommonCIBelow{} of 9 seed intervals lies below 0 at the matched hire rate; exploratory: DPO and GRPO recipes chosen after these audits}
 \Txt[text=ink]{1272}{458}{130}{10.5}{\bfseries Added stage}
 \Txt[text=ink,align=center]{1410}{458}{330}{10.5}{\bfseries $\Delta$ unstable sets vs SFT-v3 (pp; lower is better)}
 \Txt[text=ink,align=center]{1760}{458}{110}{10.5}{\bfseries $\Delta$ agreement (pp)}
 \Txt[text=ink]{1880}{458}{62}{10}{\bfseries p99 effect / SFT-v3}
 \Txt[text=ink]{1944}{458}{62}{10}{\bfseries Cross-seed Jaccard}
-\Axis{1410}{668}{330}{-2}{1.5}{-2,-1,0,1}{494}
-\Axis{1760}{668}{110}{-1.2}{1.2}{-1,0,1}{494}
-\draw[gray,dashed,line width=1bp] (1410+2/3.5*330,494) -- (1410+2/3.5*330,668);
-\draw[gray,dashed,line width=1bp] (1760+1.2/2.4*110,494) -- (1760+1.2/2.4*110,668);
+\Axis{1410}{662}{330}{-2}{1.5}{-2,-1,0,1}{494}
+\Axis{1760}{662}{110}{-1.2}{1.2}{-1,0,1}{494}
+\draw[gray,dashed,line width=1bp] (1410+2/3.5*330,494) -- (1410+2/3.5*330,662);
+\draw[gray,dashed,line width=1bp] (1760+1.2/2.4*110,494) -- (1760+1.2/2.4*110,662);
 \foreach \r in {0,...,8}{%
   \SeedValue{\r}{delta}{\D}
   \SeedValue{\r}{lo}{\DL}
   \SeedValue{\r}{hi}{\DH}
   \pgfmathtruncatemacro{\g}{\r/3}
   \pgfmathtruncatemacro{\k}{\r-3*\g}
-  \pgfmathsetmacro{\yy}{500+58*\g+12*\k}
+  \pgfmathsetmacro{\yy}{500+56*\g+12*\k}
   \def\PointFill{white}
   \CI{1410}{330}{-2}{1.5}{\yy}{\D}{\DL}{\DH}{greenDark}
 }
@@ -557,7 +565,7 @@ Gender / implicit,0.72,0.20,\textminus{}72\%
   \DeltaValue{\g}{hi}{\ADH}
   \PathValue{\g}{p99range}{\PTR}
   \PathValue{\g}{jrange}{\PJR}
-  \pgfmathsetmacro{\yy}{500+58*\g}
+  \pgfmathsetmacro{\yy}{500+56*\g}
   \Txt[text=ink]{1272}{\yy-4}{136}{13.5}{\bfseries\GName}
   \Txt[text=body]{1272}{\yy+16}{136}{11}{mean \GMeanTxt{} pp}
   \pgfmathsetmacro{\xm}{1410+(\GMean+2)/3.5*330}
@@ -567,49 +575,58 @@ Gender / implicit,0.72,0.20,\textminus{}72\%
   \Txt[text=body]{1884}{\yy+11}{58}{11}{\PTR}
   \Txt[text=body]{1946}{\yy+11}{56}{11}{\PJR}
 }
-% The caption defines every column and says where the backend could matter.
-\Txt[text=body]{1272}{696}{728}{10.5}{Seeds 42 / 43 / 44 top to bottom, paired 95\% candidate-bootstrap CIs at the \CommonHire\% hire rate; diamond: three-seed mean, no aggregate CI. Agreement with GPT-4o's reference: greedy decisions at each model's own hire rate, paired vs SFT-v3. \textbf{p99 effect / SFT-v3}: 99th percentile of the per-pair attribute effect $|\Delta m|$, arm / SFT-v3, range over the patched seed's \NPatchContrasts{} contrasts. \textbf{Cross-seed Jaccard}: overlap of the unstable sets of two training seeds, range over the 3 seed pairs. Self-distillation: \BorderDistill{} of each seed's unstable sets lie on SFT-v3's \NBorder{} nearest-cut pairs. All model--baseline comparisons use the same inference backend; the largest per-model HF / vLLM difference in unstable-set rate was \BackendUnstableMax{} pp.}
+% The caption in three parts: evaluation, diagnostics, inference.
+\Txt[text=body]{1272}{688}{728}{11}{\textbf{Evaluation.} Paired 95\% candidate-bootstrap CIs at the \CommonHire\% hire rate, seeds 42 / 43 / 44 top to bottom; diamond: three-seed mean, no aggregate CI. Agreement: greedy, each model's own hire rate.\\\textbf{Diagnostics.} p99: 99th percentile of per-pair $|\Delta m|$, arm / SFT-v3, over the patched seed's \NPatchContrasts{} contrasts. Jaccard: overlap of two seeds' unstable sets, over 3 seed pairs.\\\textbf{Inference.} One backend per model--baseline comparison; the largest per-model HF / vLLM gap is \BackendUnstableMax{} pp.}
 
-% 5. The NVIDIA stack on this audit. Left: the mechanistic audit's cost per (model, contrast)
-% and the workloads around it (reports/cost/steps.csv and by_stage.csv; scripts/interp/10_patch.py
-% for the interventions per pair). Right: the before-and-after benchmarks of
-% docs/ACCEL_BENCH.md (AccelData), one bar each on a linear scale.
-\Section{1256}{780}{760}{22}{5. NVIDIA-accelerated audit: workload, runtime and memory}
-\Txt[text=body]{1272}{826}{728}{10.5}{\StackLine}
-\Txt[text=ink]{1272}{846}{440}{13}{\bfseries Mechanistic audit: one model \texttimes{} contrast, one GH200}
-\Txt[text=body]{1272}{864}{440}{10.5}{64 pairs, \PatchEvalsPerPair{} interventions each after attribution screening}
-\foreach \x/\num/\lab in {1272/{\PatchStepMin{} min}/{wall time, median},1412/{\PatchPeakGiB{} GiB}/{peak GPU memory, of 96 GB},1556/{\PatchStepGPUh{} GPU-h}/{per run, median}}{%
-  \Txt[text=greenDark]{\x}{880}{140}{22}{\bfseries\num}
-  \Txt[text=body]{\x}{907}{140}{10}{\lab}}
-\foreach \yy/\wl/\sc/\cost/\fnt in {925/{Workload}/{Scale}/{Time, memory or cost}/{\bfseries},940/{Full margin scoring}/{\NPrompts{} prompts}/{\MarginsStepMin{} min, \MarginsPeakGiB{} GiB peak}/{},955/{All patching jobs}/{every patch and margin run}/{\PatchTotalGPUh{} GPU-h}/{},970/{Training per seed}/{DPO / GRPO / distillation}/{+\PostDPO{} / +\PostGRPO{} / +\DistillTrainGPUh{} GPU-h}/{}}{%
-  \Txt[text=ink]{1272}{\yy}{140}{10.5}{\fnt\wl}
-  \Txt[text=body]{1414}{\yy}{150}{10.5}{\fnt\sc}
-  \Txt[text=body]{1566}{\yy}{150}{10.5}{\fnt\cost}}
-% Right: before and after, the same node and inputs.
-\Txt[text=ink]{1730}{846}{270}{13}{\bfseries Performance comparisons}
-\Txt[text=body]{1730}{864}{270}{10.5}{before \textrightarrow{} after, same node and inputs}
-\foreach \r in {0,1,2}{%
-  \pgfplotstablegetelem{\r}{label}\of\AccelData\let\ALabel\pgfplotsretval
-  \pgfplotstablegetelem{\r}{sub}\of\AccelData\let\ASub\pgfplotsretval
-  \pgfplotstablegetelem{\r}{speedup}\of\AccelData\let\ASpeed\pgfplotsretval
-  \pgfplotstablegetelem{\r}{pending}\of\AccelData\let\APending\pgfplotsretval
-  \pgfplotstablegetelem{\r}{text}\of\AccelData\let\AText\pgfplotsretval
-  \pgfmathsetmacro{\yy}{884+28*\r}
-  \Txt[text=ink]{1730}{\yy}{136}{11}{\bfseries\ALabel}
-  \Txt[text=body]{1730}{\yy+13}{136}{9.5}{\ASub}
+% 5. The NVIDIA stack on this audit. Left: the mechanistic audit's cost per (model, contrast),
+% medians over the 64-pair runs (the gender runs against SFT-v3 have 45 pairs and are left out),
+% why one GH200 suffices, and the workloads around it (reports/cost/steps.csv, by_stage.csv;
+% scripts/interp/10_patch.py for the evaluations per pair). Right: the before-and-after
+% benchmarks of docs/ACCEL_BENCH.md (AccelData): speed-up = time before / time after on the
+% same work, both times printed, one bar each on a linear scale with a x1 line; the two notes
+% come from scripts/accel_step_times.py.
+\Section{1256}{758}{760}{22}{5. NVIDIA-accelerated audit: workload, runtime and memory}
+\Txt[text=body]{1272}{802}{728}{10.5}{\StackLine}
+\Txt[text=ink]{1272}{820}{440}{13}{\bfseries Mechanistic audit: one model \texttimes{} contrast on one GH200}
+\Txt[text=body]{1272}{837}{440}{10.5}{64 pairs per contrast (gender 45); \PatchEvalsPerPair{} intervention evaluations per pair}
+\foreach \x/\num/\lab in {1272/{\PatchStepMin{} min}/{wall time, 64-pair median},1412/{\PatchPeakGiB{} GiB}/{peak GPU memory},1556/{\PatchStepGPUh{} GPU-h}/{per 64-pair run, median}}{%
+  \Txt[text=greenDark]{\x}{853}{140}{22}{\bfseries\num}
+  \Txt[text=body]{\x}{880}{140}{10}{\lab}}
+% Enabled by: both passes fit one GPU's memory, so a (model, contrast) is one single-GPU job.
+\Txt[text=ink]{1272}{896}{440}{10.5}{\bfseries Both passes fit in one GH200's 96 GB HBM3 without offload (margins \MarginsPeakGiB{} GiB, patching \PatchPeakGiB{} GiB peak): every (model, contrast) is a single \PatchStepMin-minute job on one GPU.}
+\foreach \yy/\wl/\sc/\cost in {926/{Full margin scoring}/{\NPrompts{} prompts}/{\MarginsStepMin{} min, \MarginsPeakGiB{} GiB peak},941/{All patching}/{every patch and margin run}/{\PatchTotalGPUh{} GPU-h},956/{Training per seed}/{DPO / GRPO / distillation}/{+\PostDPO{} / +\PostGRPO{} / +\DistillTrainGPUh{} GPU-h},971/{Whole project}/{GPU energy by NVML}/{\ProjectGPUh{} GPU-h, \ProjectKWh{} kWh}}{%
+  \Txt[text=ink]{1272}{\yy}{140}{10.5}{\bfseries\wl}
+  \Txt[text=body]{1414}{\yy}{150}{10.5}{\sc}
+  \Txt[text=body]{1566}{\yy}{150}{10.5}{\cost}}
+% Right: before -> after; row r of AccelData at height y: label and direction on the left,
+% the bar with its ratio, and the two measured times under the bar.
+\newcommand{\AccelRow}[2]{%
+  \pgfplotstablegetelem{#1}{label}\of\AccelData\let\ALabel\pgfplotsretval
+  \pgfplotstablegetelem{#1}{sub}\of\AccelData\let\ASub\pgfplotsretval
+  \pgfplotstablegetelem{#1}{speedup}\of\AccelData\let\ASpeed\pgfplotsretval
+  \pgfplotstablegetelem{#1}{pending}\of\AccelData\let\APending\pgfplotsretval
+  \pgfplotstablegetelem{#1}{text}\of\AccelData\let\AText\pgfplotsretval
+  \pgfplotstablegetelem{#1}{times}\of\AccelData\let\ATimes\pgfplotsretval
+  \Txt[text=ink]{1730}{#2}{132}{11}{\bfseries\ALabel}
+  \Txt[text=body]{1730}{#2+13}{132}{10}{\ASub}
   \ifnum\APending=1
-    \Txt[text=body]{1866}{\yy+2}{130}{11}{to run}
+    \Txt[text=body]{1866}{#2+2}{130}{11}{to run}
   \else
     \pgfmathsetmacro{\bw}{\ASpeed/20*92}
-    \Rect{1866}{\yy+2}{\bw}{14}{green}
-    \Txt[text=ink]{1866+\bw+5}{\yy+1}{44}{12}{\bfseries\AText}
-  \fi
-}
-\draw[rule,line width=1bp] (1866,970) -- (1958,970);
-\foreach \tick in {1,10,20}{%
-  \pgfmathsetmacro{\xx}{1866+\tick/20*92}
-  \draw[rule,line width=0.8bp] (\xx,970) -- (\xx,974);
-  \Txt[align=center,text=body]{\xx-18}{974}{36}{9.5}{\texttimes\tick}}
+    \Rect{1866}{#2+1}{\bw}{12}{green}
+    \Txt[text=ink]{1866+\bw+5}{#2}{44}{11.5}{\bfseries\AText}
+    \Txt[text=body]{1866}{#2+14}{134}{9.5}{\ATimes}
+  \fi}
+\Txt[text=ink]{1730}{820}{270}{13}{\bfseries Performance comparisons}
+\Txt[text=body]{1730}{837}{270}{10.5}{speed-up = time before / time after; tick: \texttimes1}
+\AccelRow{0}{854}
+\AccelRow{1}{884}
+\Txt[text=body]{1730}{910}{270}{10}{Global batch 32 rows, same 40 steps. The 1-GPU run slowed from \TrainOneEarly{} to \TrainOneLate{} s a step after step 5, cause unknown: \texttimes\TrainRatioEarly{} before, \texttimes\TrainRatioLate{} after.}
+\AccelRow{2}{946}
+\Txt[text=body]{1730}{972}{270}{10}{\RolloutTokens-token completions: vLLM saves \RolloutSavedS{} s of a \RolloutStepS{} s step.}
+% The x1 mark beside each bar (a bar ending there is no speed-up), clear of the times below.
+\foreach \yy in {854,884,946}{%
+  \draw[ink,line width=1.2bp] (1866+92/20,\yy-2) -- (1866+92/20,\yy+15);}
 
 % BOTTOM: one band. The take-home sentence, then three findings, each one judgement and its
 % qualifier; the evidence stays in the figures and on the QR page.
@@ -618,7 +635,7 @@ Gender / implicit,0.72,0.20,\textminus{}72\%
 \Txt[text=greenDark]{48}{1037}{600}{12.5}{\bfseries 1\quad Read consistency with quality, compute and seeds}
 \Txt[text=body]{48}{1054}{600}{11}{A matched hire rate controls the comparison and three seeds test reproducibility; one DPO seed alone would have read as a 1 pp gain.}
 \Txt[text=greenDark]{690}{1037}{600}{12.5}{\bfseries 2\quad Mean gains uncertain; extreme attribute effects and recurring cases differ}
-\Txt[text=body]{690}{1054}{600}{11}{After one more stage, RL's extreme effects grow beyond its margin widening and its unstable sets change with the seed; self-distillation's shrink and recur on the same borderline pairs (4A).}
+\Txt[text=body]{690}{1054}{600}{11}{After one more stage, RL's extreme effects grow beyond its margin widening and its unstable sets change with the seed; self-distillation's shrink and recur across seeds (4A).}
 \Txt[text=greenDark]{1332}{1037}{600}{12.5}{\bfseries 3\quad Behavioural change coexists with a similar patching profile}
 \Txt[text=body]{1332}{1054}{600}{11}{The hub head carries far less after SFT-v3; one more stage keeps a similar profile under GRPO and self-distillation, partly later under DPO; window-only LoRA did not match full layers (3C) [6, 7].}
 \node[anchor=north west,inner sep=0pt] at (1940,1012)
