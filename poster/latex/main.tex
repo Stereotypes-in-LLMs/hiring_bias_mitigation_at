@@ -516,11 +516,14 @@ Religion / implicit,1.32,0.52,\textminus{}61\%
 \draw[greenDark,line width=1.2bp] (492,1007) -- (2016,1007);
 \Txt[text=greenDark]{512}{1014}{440}{13.5}{\bfseries 1\quad Evaluate consistency with quality, compute and seeds}
 % DPO's seeds at their own points (final_table.csv delta_own_pp); agreement from DeltaData.
-\Txt[text=body]{512}{1034}{440}{10.5}{DPO's three seeds at their own hire rates: \DPOSeedsOwn{} pp vs SFT-v3; one seed is not a result. Agreement with GPT-4o stays within \AgreeAbsMax{} pp of SFT-v3 for all three methods, each adding +\PostGPUhLow{} to +\PostGPUhHigh{} GPU-h to SFT-v3's \SFTTrainGPUh.}
-\Txt[text=greenDark]{980}{1014}{440}{13.5}{\bfseries 2\quad The methods differ in the tail, not the mean}
-% Margin scale: reports/margin_readout/readout.csv; tail: sensitivity.csv r_attr_p99; overlap and
-% borderline share: reports/seed_overlap/overlap.csv.
-\Txt[text=body]{980}{1034}{440}{10.5}{RL widens margins \texttimes\WidenRange{} and leaves a heavy tail (99th-pct attribute effect \texttimes\TailRL{} of SFT-v3's) on sets that change with the seed (Jaccard \JacRL). Self-distillation compresses them (\texttimes\ScaleDistill), has no tail (\texttimes\TailDistill) and keeps the same \NBorder{} borderline pairs (Jaccard \JacDistill, \BorderDistill{} on them).}
+\Txt[text=body]{512}{1034}{440}{10.5}{A matched hire rate controls the comparison; three seeds test reproducibility. DPO's seeds at their own hire rates: \DPOSeedsOwn{} pp vs SFT-v3; one seed is not a result. Agreement with GPT-4o stays within \AgreeAbsMax{} pp of SFT-v3 for all three methods, at +\PostGPUhLow{} to +\PostGPUhHigh{} GPU-h over SFT-v3's \SFTTrainGPUh.}
+\Txt[text=greenDark]{980}{1014}{440}{13.5}{\bfseries 2\quad Alike on the matched mean within noise; different in the tail}
+% Margin scale: reports/margin_readout/readout.csv (median attribute-free |m|, arm / SFT-v3); tail:
+% sensitivity.csv r_attr_p99 (99th-pct |dm|, arm / SFT-v3, 450 pairs). RL's tail ratio exceeds its
+% scale ratio; self-distillation's (0.40-0.43) matches its scale (0.46): the tail shrinks with the
+% rest. Overlap: Jaccard of two seeds' unstable sets; borderline share: of each seed's unstable
+% sets, those on SFT-v3's 35 nearest-cut pairs (reports/seed_overlap/overlap.csv).
+\Txt[text=body]{980}{1034}{440}{10.5}{RL widens margins \texttimes\WidenRange{}, and its tail grows faster than they do: 99th-pct attribute effect \texttimes\TailRL{} of SFT-v3's, on sets that change with the seed (Jaccard \JacRL). Self-distillation shrinks tail and margins together (\texttimes\TailDistill{} vs \texttimes\ScaleDistill); its residual instability recurs on SFT-v3's \NBorder{} nearest-cut pairs (Jaccard \JacDistill; \BorderDistill{} of each seed's unstable sets).}
 \Txt[text=greenDark]{1448}{1014}{440}{13.5}{\bfseries 3\quad Behavioural change coexists with the attribute pathway}
 \Txt[text=body]{1448}{1034}{440}{10.5}{The pathway survives SFT-v3 and GRPO (component profile r \ProfGRPO, L15.H11 first); DPO shifts part of it to later layers (\DPOLateHead{} leads). A LoRA on the window patching finds, layers 15--20, does not carry self-distillation's gain: alone \WindowOnly, kept alone \WindowKept, removed \WindowRemoved{} pp vs all layers.}
 \node[anchor=north west,inner sep=0pt] at (1940,1018)
