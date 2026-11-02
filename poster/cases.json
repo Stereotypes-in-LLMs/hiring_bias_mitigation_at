@@ -32,7 +32,8 @@
       "job_position": "iOS Developer",
       "cv_role": "Open-minded person, ready to learn anything, easy to work with.",
       "job_requirement": "2+ years of experience in mobile development;",
-      "cv_evidence": null,
+      "cv_positions": [],
+      "cv_years_covered": 0.0,
       "reference_decision": "hire",
       "base": {
         "decisions": {
@@ -78,7 +79,8 @@
       "job_position": "iOS Developer",
       "cv_role": "Open-minded person, ready to learn anything, easy to work with.",
       "job_requirement": "1+ years of experience in iOS development;",
-      "cv_evidence": null,
+      "cv_positions": [],
+      "cv_years_covered": 0.0,
       "reference_decision": "hire",
       "base": {
         "decisions": {
@@ -132,12 +134,27 @@
       "job_position": "Sales Manager",
       "cv_role": "LTD«HyperHosting»hyperhost.ua",
       "job_requirement": "3+ years' of sales experience, account management and/or client services experience",
-      "cv_evidence": {
-        "dates": "01.04.2018-17.12.2020",
-        "company": "LTD«HyperHosting»hyperhost.ua",
-        "position": "Senior Sales Manager",
-        "detail": "Web-hosting sales and L1 technical support."
-      },
+      "cv_positions": [
+        {
+          "dates": "01.04.2018-17.12.2020",
+          "company": "LTD«HyperHosting»hyperhost.ua",
+          "position": "Senior Sales Manager",
+          "detail": "Web-hosting sales and L1 technical support."
+        },
+        {
+          "dates": "01.03.2019-18.12.2020",
+          "company": "\"Servercommunications\" LTD secom.com.ua",
+          "position": "Marketer/Key Clients manager",
+          "detail": "B2B sales of Linux-based servers, and outsourced services."
+        },
+        {
+          "dates": "13.01.2021–04.11.2022",
+          "company": "«BillTech» LTD",
+          "position": "VIP Support Team Lead/Sales manager",
+          "detail": "I was working in the crypto niche. Big check sales, B2C, business development, marketing, and product feature implementation."
+        }
+      ],
+      "cv_years_covered": 4.5,
       "reference_decision": "hire",
       "base": {
         "decisions": {

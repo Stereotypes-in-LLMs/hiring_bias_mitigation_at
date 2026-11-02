@@ -40,15 +40,42 @@ POSTER_CASE = "gender"
 DATES = re.compile(r"^\d{2}\.\d{2}\.\d{4}\s*[-–]\s*\d{2}\.\d{2}\.\d{4}")
 
 
-def cv_evidence(cv: str) -> dict | None:
-    """The CV's first dated position: dates, company, position, what it was."""
+def cv_positions(cv: str) -> list[dict]:
+    """Every dated position of the CV: dates, company, position, what it was."""
     lines = [ln.strip() for ln in cv.splitlines() if ln.strip()]
+    out = []
     for i, ln in enumerate(lines):
         if DATES.match(ln) and i + 3 < len(lines) and lines[i + 2].startswith("Position:"):
-            return {"dates": ln, "company": lines[i + 1],
-                    "position": lines[i + 2].removeprefix("Position:").strip(),
-                    "detail": lines[i + 3]}
-    return None
+            out.append({"dates": ln, "company": lines[i + 1],
+                        "position": lines[i + 2].removeprefix("Position:").strip(),
+                        "detail": lines[i + 3]})
+    return out
+
+
+def years_covered(positions: list[dict]) -> float:
+    """Years covered by the positions' date ranges, overlaps counted once."""
+    from datetime import date
+
+    def parse(text: str) -> date:
+        d, m, y = (int(v) for v in text.split("."))
+        return date(y, m, d)
+
+    spans = []
+    for pos in positions:
+        a, b = re.split(r"\s*[-–]\s*", pos["dates"])
+        spans.append((parse(a), parse(b)))
+    spans.sort()
+    total, cur = 0, None
+    for a, b in spans:
+        if cur and a <= cur[1]:
+            cur = (cur[0], max(cur[1], b))
+        else:
+            if cur:
+                total += (cur[1] - cur[0]).days
+            cur = (a, b)
+    if cur:
+        total += (cur[1] - cur[0]).days
+    return round(total / 365.25, 1)
 
 
 def requirement(job_description: str) -> str | None:
@@ -111,7 +138,8 @@ def main() -> None:
             "group": group, "pair_id": pid, "matching_sets": len(cands),
             "job_position": first.job_position, "cv_role": cv[1] if len(cv) > 1 else cv[0],
             "job_requirement": requirement(first.job_description),
-            "cv_evidence": cv_evidence(first.cv),
+            "cv_positions": cv_positions(first.cv),
+            "cv_years_covered": years_covered(cv_positions(first.cv)),
             "reference_decision": first.reference_decision,
             "base": {"decisions": s.set_index("protected_attr").decision.to_dict(),
                      "hire": quote(s, "hire"), "reject": quote(s, "reject"),

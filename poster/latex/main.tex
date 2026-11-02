@@ -75,8 +75,8 @@ Self-distillation,dSFT,44,-0.328,-1.038,0.339,-0.285,\textminus{}0.285
 \pgfplotstableread[col sep=comma]{
 key,label,sub,speedup,pending,text
 audit,Audit generation,vLLM vs transformers generate,0,1,to run
-train,Training, 4 vs 1 GPU,DDP, the same 32-row steps,0,1,to run
-grpo,GRPO rollouts,colocated vLLM vs transformers,0,1,to run
+train,Training, 4 vs 1 GPU,DDP, the same 32-row steps,4.4,0,\texttimes4.4
+grpo,GRPO rollouts,colocated vLLM vs transformers,1.09,0,\texttimes1.1
 }\AccelData
 
 \newcommand{\NPairs}{450}
@@ -145,7 +145,7 @@ grpo,GRPO rollouts,colocated vLLM vs transformers,0,1,to run
 \newcommand{\ProfDistill}{0.91--0.98}
 \newcommand{\CaseJob}{Sales Manager}
 \newcommand{\CaseRequirement}{3+ years' of sales experience}
-\newcommand{\CaseEvidence}{01.04.2018-17.12.2020: Senior Sales Manager, Web-hosting sales and L1 technical support}
+\newcommand{\CaseEvidence}{3 dated sales roles, 04/2018 to 11/2022, 4.5 years covered; first: Senior Sales Manager, web-hosting sales and L1 technical support (2.7 years)}
 \newcommand{\CaseHireSentence}{I identify as female please use pronouns she/her \ldots}
 \newcommand{\CaseRejectSentence}{I identify as male please use pronouns he/him \ldots}
 \newcommand{\CaseHireReason}{Candidate has strong hosting sales experience, technical knowledge, and leadership skills matching the role requirements perfectly.}
@@ -166,8 +166,8 @@ grpo,GRPO rollouts,colocated vLLM vs transformers,0,1,to run
 \newcommand{\AuditKWh}{0.105}
 \newcommand{\PrefixSpeedup}{1.10}
 \newcommand{\AgreeHFvLLM}{99.6--99.8}
-\newcommand{\ProjectGPUh}{540}
-\newcommand{\ProjectKWh}{142}
+\newcommand{\ProjectGPUh}{547}
+\newcommand{\ProjectKWh}{143}
 \newcommand{\PatchForwardsPerPair}{250}
 \newcommand{\AtPHeads}{896}
 \newcommand{\PatchStepMin}{20}
@@ -219,10 +219,10 @@ Religion / implicit,1.32,0.52,\textminus{}61\%
 \newcommand{\MethodGRPO}{\RelRL{} prompts, anchor reward; lr decay over the last 26\% [3, 5]}
 \newcommand{\MethodDistill}{KL to frozen SFT-v3 on the attribute-free CV, decision token; 1 epoch}
 % The framework (left column), one line per stage; the counts are generated above.
-\newcommand{\FrameOne}{Counterfactual audit: \NSets{} sets, one attribute changed at a time}
-\newcommand{\FrameTwo}{Standard: matched hire rate, guardrails, three seeds, declared checkpoints}
-\newcommand{\FrameThree}{Post-training: SFT, then DPO, GRPO or self-distillation on top}
-\newcommand{\FrameFour}{Mechanistic audit: activation patching of every stage, not only Base}
+\newcommand{\FrameOne}{Counterfactual audit: \NSets{} sets, one attribute changed}
+\newcommand{\FrameTwo}{Standard: matched hire rate, guardrails, three seeds}
+\newcommand{\FrameThree}{Post-training: SFT, then DPO, GRPO or self-distillation}
+\newcommand{\FrameFour}{Mechanistic audit: activation patching of every stage}
 \newcommand{\FrameFive}{Cost ledger: GPU-hours and energy of every step, from NVML}
 % The NVIDIA stack as used (docs/SYSTEM_OVERVIEW.md): one node of 4 x GH200 120 GB per job.
 % nvidia-smi names the device 'GH200 120GB'; its HBM3 is 96 GB (97,871 MiB), CSCS Alps/Daint.
@@ -422,8 +422,10 @@ Religion / implicit,1.32,0.52,\textminus{}61\%
 \Txt[text=muted]{772}{480}{50}{11}{layer}
 
 % Next: the same pairs in SFT-v3.
-\Txt[text=muted,align=center]{512}{526}{700}{12.5}{Same pairs, Base vs SFT-v3 \textdownarrow}
-\Arrow{862}{545}{862}{567}
+% Operational meaning of the diagram's labels (docs/INTERP_SFT_V3.md; the report's fig:circuit).
+\Txt[text=muted]{772}{506}{440}{9.5}{Readers: layers 7--14 that carry the attribute toward the hub. Hub: the head whose patch removes most of the effect. Opposers: heads pushing against the bias. Readout: where the margin forms.}
+\Txt[text=muted,align=center]{512}{540}{700}{12.5}{Same pairs, Base vs SFT-v3 \textdownarrow}
+\Arrow{862}{557}{862}{567}
 
 % B: Base vs SFT-v3 on the same pairs. Left: attribute effect per pair; right: the hub head.
 % Base gray, SFT-v3 ink, as in the results column.
@@ -525,17 +527,17 @@ Religion / implicit,1.32,0.52,\textminus{}61\%
 \Txt[text=ink]{1790}{484}{80}{11}{\bfseries GPU-h}
 \Txt[text=ink]{1886}{484}{56}{11}{\bfseries p99 (\texttimes)}
 \Txt[text=ink]{1946}{484}{54}{11}{\bfseries Jaccard}
-\Axis{1410}{690}{230}{-2}{1.5}{-2,-1,0,1}{500}
-\Axis{1660}{690}{110}{-1.2}{1.2}{-1,0,1}{500}
-\draw[gray,dashed,line width=1bp] (1410+2/3.5*230,500) -- (1410+2/3.5*230,690);
-\draw[gray,dashed,line width=1bp] (1660+1.2/2.4*110,500) -- (1660+1.2/2.4*110,690);
+\Axis{1410}{670}{230}{-2}{1.5}{-2,-1,0,1}{500}
+\Axis{1660}{670}{110}{-1.2}{1.2}{-1,0,1}{500}
+\draw[gray,dashed,line width=1bp] (1410+2/3.5*230,500) -- (1410+2/3.5*230,670);
+\draw[gray,dashed,line width=1bp] (1660+1.2/2.4*110,500) -- (1660+1.2/2.4*110,670);
 \foreach \r in {0,...,8}{%
   \SeedValue{\r}{delta}{\D}
   \SeedValue{\r}{lo}{\DL}
   \SeedValue{\r}{hi}{\DH}
   \pgfmathtruncatemacro{\g}{\r/3}
   \pgfmathtruncatemacro{\k}{\r-3*\g}
-  \pgfmathsetmacro{\yy}{504+62*\g+13*\k}
+  \pgfmathsetmacro{\yy}{504+58*\g+12*\k}
   \def\PointFill{white}
   \CI{1410}{230}{-2}{1.5}{\yy}{\D}{\DL}{\DH}{greenDark}
 }
@@ -551,13 +553,13 @@ Religion / implicit,1.32,0.52,\textminus{}61\%
   \ModelValue{\mm}{post}{\Post}
   \PathValue{\g}{p99range}{\PTR}
   \PathValue{\g}{jrange}{\PJR}
-  \pgfmathsetmacro{\yy}{504+62*\g}
+  \pgfmathsetmacro{\yy}{504+58*\g}
   \Txt[text=ink]{1272}{\yy-4}{130}{13.5}{\bfseries\GName}
   \Txt[text=muted]{1272}{\yy+16}{130}{11}{mean \GMeanTxt{} pp}
   \pgfmathsetmacro{\xm}{1410+(\GMean+2)/3.5*230}
-  \MeanDiamond{\xm}{\yy+39}{greenDark}
+  \MeanDiamond{\xm}{\yy+36}{greenDark}
   \def\PointFill{greenDark}
-  \CI{1660}{110}{-1.2}{1.2}{\yy+19}{\AD}{\ADL}{\ADH}{greenDark}
+  \CI{1660}{110}{-1.2}{1.2}{\yy+18}{\AD}{\ADL}{\ADH}{greenDark}
   \pgfmathsetmacro{\bw}{\Post/12*50}
   \Rect{1790}{\yy+12}{\bw}{14}{green}
   \Txt[text=ink]{1790+\bw+4}{\yy+11}{40}{12}{\bfseries+\pgfmathprintnumber[fixed,precision=1]{\Post}}
@@ -565,22 +567,23 @@ Religion / implicit,1.32,0.52,\textminus{}61\%
   \Txt[text=body]{1946}{\yy+11}{54}{11}{\PJR}
 }
 % Stability and quality sit on different decision settings and the caption says so.
-\Txt[text=muted]{1272}{716}{728}{10.5}{Seeds 42 / 43 / 44 top to bottom, paired 95\% candidate-bootstrap CIs at the common hire rate; diamond: 3-seed mean, no aggregate CI. Agreement with GPT-4o's reference: greedy decisions at each model's own hire rate, paired vs SFT-v3. GPU-h: the stage's own training over SFT-v3's \SFTTrainGPUh. p99 / Jaccard: one patched seed, 3 contrasts / 3 seed pairs; dSFT: \BorderDistill{} on SFT-v3's \NBorder{} nearest-cut pairs.}
+\Txt[text=muted]{1272}{694}{728}{10.5}{Seeds 42 / 43 / 44 top to bottom, paired 95\% candidate-bootstrap CIs at the common hire rate; diamond: 3-seed mean, no aggregate CI. Agreement with GPT-4o's reference: greedy decisions at each model's own hire rate, paired vs SFT-v3. GPU-h: the stage's own training over SFT-v3's \SFTTrainGPUh. p99 / Jaccard: one patched seed, 3 contrasts / 3 seed pairs; dSFT: \BorderDistill{} on SFT-v3's \NBorder{} nearest-cut pairs.}
 
 % 5. The NVIDIA stack on this audit: the patching workload and its cost (reports/cost/steps.csv,
 % stage patching; scripts/interp/10_patch.py), the audits' engine as measured
 % (docs/THROUGHPUT_B.md round 2), and the before-and-after benchmarks of docs/ACCEL_BENCH.md
 % (AccelData; 'to run' until each has run).
-\Section{1256}{756}{760}{22}{5. NVIDIA-accelerated audit: workload, runtime and memory}
-\Txt[text=muted]{1272}{802}{728}{11}{\StackLine}
-\Txt[text=ink]{1272}{824}{300}{12}{\bfseries Before and after, same node and prompts}
+\Section{1256}{734}{760}{22}{5. NVIDIA-accelerated audit: workload, runtime and memory}
+\Txt[text=muted]{1272}{780}{728}{11}{\StackLine}
+% Left: the before-and-after benchmarks (AccelData) and the audits' engine as measured.
+\Txt[text=ink]{1272}{800}{300}{12}{\bfseries Before and after, same node and prompts}
 \foreach \r in {0,1,2}{%
   \pgfplotstablegetelem{\r}{label}\of\AccelData\let\ALabel\pgfplotsretval
   \pgfplotstablegetelem{\r}{sub}\of\AccelData\let\ASub\pgfplotsretval
   \pgfplotstablegetelem{\r}{speedup}\of\AccelData\let\ASpeed\pgfplotsretval
   \pgfplotstablegetelem{\r}{pending}\of\AccelData\let\APending\pgfplotsretval
   \pgfplotstablegetelem{\r}{text}\of\AccelData\let\AText\pgfplotsretval
-  \pgfmathsetmacro{\yy}{846+22*\r}
+  \pgfmathsetmacro{\yy}{822+22*\r}
   \Txt[text=ink]{1272}{\yy-2}{150}{11.5}{\bfseries\ALabel}
   \Txt[text=muted]{1272}{\yy+11}{150}{9}{\ASub}
   \ifnum\APending=1
@@ -591,15 +594,21 @@ Religion / implicit,1.32,0.52,\textminus{}61\%
     \Txt[text=ink]{1430+\bw+6}{\yy}{44}{12.5}{\bfseries\AText}
   \fi
 }
-\draw[rule,line width=1bp] (1430,912) -- (1520,912);
+\draw[rule,line width=1bp] (1430,888) -- (1520,888);
 \foreach \tick in {1,5,10}{%
   \pgfmathsetmacro{\xx}{1430+\tick/10*90}
-  \draw[rule,line width=0.8bp] (\xx,912) -- (\xx,916);
-  \Txt[align=center,text=muted]{\xx-18}{916}{36}{10}{\texttimes\tick}}
-\Txt[text=muted]{1272}{934}{300}{10}{Audit engine: \NPrompts{} prompts, \AuditGenS{} s of generation (\AuditReqPerS{} req/s), \AuditWallS{} s with the load, \AuditKWh{} kWh, one GH200; prefix cache \texttimes\PrefixSpeedup{} over cache off}
-\Txt[text=ink]{1590}{824}{410}{12}{\bfseries Mechanistic audit: one (model, contrast) on one GH200}
-\Txt[text=body]{1590}{846}{410}{10}{Pairs: 64 per contrast, 3 contrasts, one selected seed per stage. Per pair: \PatchForwardsPerPair{} patched forwards (33 residual points, 64 components, 56 verified heads, 2 token classes) and one attribution-patching backward over \AtPHeads{} heads; bf16, the decision token's margin only, source activations captured once per batch.}
-\Txt[text=body]{1590}{918}{410}{10}{Runtime: \PatchStepMin{} min, \PatchStepGPUh{} GPU-h and \PatchPeakGiB{} GiB peak per (model, contrast); the \NPrompts{}-prompt margin pass \MarginsStepMin{} min, \MarginsPeakGiB{} GiB peak; all patching \PatchTotalGPUh{} of the project's \ProjectGPUh{} GPU-h (\ProjectKWh{} kWh GPU energy). HF and vLLM decisions agree on \AgreeHFvLLM\% of rows; the backend shifts a model's unstable-set rate by at most \BackendUnstableMax{} pp, so every comparison stays within one backend.}
+  \draw[rule,line width=0.8bp] (\xx,888) -- (\xx,892);
+  \Txt[align=center,text=muted]{\xx-18}{892}{36}{10}{\texttimes\tick}}
+\Txt[text=muted]{1272}{908}{300}{10}{Audit engine: \NPrompts{} prompts, \AuditGenS{} s of generation (\AuditReqPerS{} req/s), \AuditWallS{} s with the load, \AuditKWh{} kWh, one GH200}
+\Txt[text=muted]{1272}{944}{300}{10}{HF and vLLM decisions agree on \AgreeHFvLLM\% of rows; the backend shifts a model's unstable-set rate by at most \BackendUnstableMax{} pp, so every comparison stays within one backend}
+% Right: the mechanistic audit's workload, the four numbers first, then why one GH200 suffices.
+\Txt[text=ink]{1590}{800}{410}{12}{\bfseries Mechanistic audit: one (model, contrast) on one GH200}
+\foreach \x/\num/\lab in {1590/{\PatchStepMin{} min}/{per (model, contrast)},1695/{\PatchPeakGiB{} GiB}/{peak, of 96 GB HBM3},1800/{\PatchTotalGPUh{} GPU-h}/{all patching},1905/{\ProjectKWh{} kWh}/{project GPU energy}}{%
+  \Txt[text=greenDark]{\x}{820}{100}{18}{\bfseries\num}
+  \Txt[text=muted]{\x}{846}{100}{9}{\lab}}
+% Enabled by: the margin pass's 87 GiB peak fits one GPU's 96 GB without offloading, so one
+% (model, contrast) runs in 20 minutes and all patching stays at 13 GPU-h.
+\Txt[text=body]{1590}{866}{410}{10}{The full-grid margin pass over \NPrompts{} prompts peaks at \MarginsPeakGiB{} GiB and a patching pass at \PatchPeakGiB{} GiB: both fit one GH200's 96 GB HBM3 with no offloading, so one (model, contrast), 64 pairs, \PatchForwardsPerPair{} patched forwards per pair (33 residual points, 64 components, 56 verified heads, 2 token classes) and one attribution-patching backward over \AtPHeads{} heads, bf16, decision-token margin only, source activations captured once per batch, runs in \PatchStepMin{} min (\PatchStepGPUh{} GPU-h); the margin pass in \MarginsStepMin{} min. All patching, \PatchStepsOK{} passes, cost \PatchTotalGPUh{} of the project's \ProjectGPUh{} GPU-h.}
 
 % BOTTOM: one band. The take-home sentence, then three findings, each one judgement and its
 % qualifier; the evidence stays in the figures and on the QR page (the review, 2026-11-02).

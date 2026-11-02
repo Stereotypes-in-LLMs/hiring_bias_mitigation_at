@@ -100,8 +100,27 @@ REPO=$PWD`.
 | # | job | what | GPU-h allocated | running total |
 |---|---|---|---|---|
 | 1 | 5236801 | B3, both paths (nid006001), 13:55 wall: vLLM rollouts `train_runtime` 183.5 s, cost step 557 s (0.619 GPU-h measured); transformers rollouts `train_runtime` 200.5 s, cost step 268 s (0.298 GPU-h). 1,536 completions each (6 steps × 256), mean length 37 tokens, none clipped (`logs/xw-bench-grpo-5236801.out`) | 0.93 | 0.93 |
+| 2 | 5236800 | B2, both runs (nid006496), 55:50 wall: 4 GPUs under DDP `train_runtime` 549.6 s, 2.33 samples/s, cost step 850 s (0.945 GPU-h measured, 562 kJ); 1 GPU `train_runtime` 2,420 s, 0.53 samples/s, cost step 2,489 s (0.691 GPU-h, 453 kJ); 40 steps of 32 rows each, train_loss 0.066 / 0.070 (`logs/xw-bench-train-5236800.out`) | 3.72 | 4.65 |
 
 ## 3. Result
+
+### B2. Training: one GPU against four under DDP
+
+**Fact.** The same 40 optimizer steps of 32 rows took 2,420 s on one GH200 (accumulation 32)
+and 549.6 s on four under DDP (accumulation 8): **4.40×** on `train_runtime`, 0.53 against 2.33
+samples per second. In GPU-hours the four-GPU run cost 0.945 against 0.691 (its wall includes
+four processes' model loads), and in GPU energy 562 against 453 kJ: 37% more GPU-h for 4.4×
+less wall time. Train loss over the 40 steps 0.066 and 0.070. One run each.
+
+**Against the registration.** At or above the expected 3–3.8×: the ratio exceeds the GPU
+count; scaling efficiency on `train_runtime` 110%.
+
+**Interpretation, not confirmed.** Above-linear scaling is consistent with the one-GPU run
+paying more per row: 32 accumulation micro-steps of one row each, 32 checkpointed
+forward-backward passes per optimizer step on one device, against 8 per device. Memory
+bandwidth and the optimizer step are not separated here.
+
+**Unknown.** One repeat each; the ratio at other per-device batch sizes.
 
 ### B3. GRPO rollouts: the colocated vLLM engine against transformers' generate
 

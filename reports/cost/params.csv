@@ -1,4 +1,8 @@
 run,family,base_model,lora_r,lora_alpha,target_modules,params_trainable,params_base,params_base_vision,params_base_mtp,params_base_text,trainable_pct_of_text
+distill_ddp1,bench,Qwen/Qwen3.5-9B,32,64,down_proj+gate_proj+k_proj+o_proj+q_proj+up_proj+v_proj,58195968,9653104368,456010480,243290624,8953803264,0.65
+distill_ddp4,bench,Qwen/Qwen3.5-9B,32,64,down_proj+gate_proj+k_proj+o_proj+q_proj+up_proj+v_proj,58195968,9653104368,456010480,243290624,8953803264,0.65
+grpo_rollout_hf,bench,Qwen/Qwen3.5-9B,32,64,down_proj+gate_proj+k_proj+o_proj+q_proj+up_proj+v_proj,58195968,9653104368,456010480,243290624,8953803264,0.65
+grpo_rollout_vllm,bench,Qwen/Qwen3.5-9B,32,64,down_proj+gate_proj+k_proj+o_proj+q_proj+up_proj+v_proj,58195968,9653104368,456010480,243290624,8953803264,0.65
 dapo_improve_d1_decay,dapo,Qwen/Qwen3.5-9B,32,64,down_proj+gate_proj+k_proj+o_proj+q_proj+up_proj+v_proj,58195968,9653104368,456010480,243290624,8953803264,0.65
 dapo_improve_d1_decay_seed43,dapo,Qwen/Qwen3.5-9B,32,64,down_proj+gate_proj+k_proj+o_proj+q_proj+up_proj+v_proj,58195968,9653104368,456010480,243290624,8953803264,0.65
 dapo_improve_d1_decay_seed44,dapo,Qwen/Qwen3.5-9B,32,64,down_proj+gate_proj+k_proj+o_proj+q_proj+up_proj+v_proj,58195968,9653104368,456010480,243290624,8953803264,0.65

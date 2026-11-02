@@ -365,13 +365,28 @@ def main() -> None:
     case = next(c for c in cases["cases"] if c["group"] == cases["poster_case"])
     case_counts = cases["counts"]
     sft_reason = case["sft_v3"]["feedback"].split(". ")[0].rstrip(".") + "."
-    ev = case["cv_evidence"]
+    ev = case["cv_positions"][0]
+    first_years = years = case["cv_years_covered"]
+    from datetime import date as _date
+
+    def _d(t: str) -> _date:
+        d, m, y = (int(v) for v in t.split("."))
+        return _date(y, m, d)
+
+    a, b = re.split(r"\s*[-–]\s*", ev["dates"])
+    first_years = round((_d(b) - _d(a)).days / 365.25, 1)
+    last = case["cv_positions"][-1]["dates"].split("-")[-1].split("–")[-1]
+    detail = ev["detail"].rstrip(". ")
     decisions = case["base"]["decisions"]
     rejected = [v for v, d in decisions.items() if d == "reject"]
     findings.update({
         "CaseJob": tex(case["job_position"]),
         "CaseRequirement": tex(case["job_requirement"].split(", account")[0]),
-        "CaseEvidence": tex(f"{ev['dates']}: {ev['position']}, {ev['detail'].rstrip('. ')}"),
+        "CaseEvidence": tex(f"{len(case['cv_positions'])} dated sales roles, "
+                           f"{a[3:5]}/{a[6:]} to {last[3:5]}/{last[6:]}, {years} years covered; "
+                           f"first: {ev['position']}, "
+                           f"{detail[:1].lower()}{detail[1:]} "
+                           f"({first_years} years)"),
         "CaseHireSentence": clipped(case["base"]["hire"]["sentence"]),
         "CaseRejectSentence": clipped(case["base"]["reject"]["sentence"]),
         "CaseHireReason": tex(case["base"]["hire"]["feedback"]),
