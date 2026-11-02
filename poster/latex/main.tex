@@ -102,12 +102,19 @@ GRPO,greenDark,0,1.03,0.29,1.96
 % F) says the trained adapter's gain does not need layers 15-20.
 \newcommand{\PosterSubtitle}{Activation patching locates the attribute pathway; SFT, DPO, GRPO and self-distillation compared at a matched hire rate}
 \newcommand{\PosterAuthors}{Authors and affiliations [to finalise]}
-% docs/INTERP_SFT_V3.md, Patching (Marta Samoilenko): 64 pairs per contrast, 3 contrasts,
-% pairs picked for |dm_base| >= 0.5; per-pair |dm| falls 61-77% on them. On all 450 pairs it
-% falls 52-66% (poster/effect_share.json), given on the QR page: the route clause below was
-% measured on the patched pairs only, so both clauses stay on that population.
-\newcommand{\MechanisticFinding}{SFT-v3 removes 61--77\% of the per-pair effect (patched pairs);\\
-  the rest still reaches the decision tokens at layers 15--20 (head L15.H11).}
+% Section 2B, quoted from the patching table of docs/INTERP_SFT_V3.md (Marta Samoilenko):
+% mean |dm| over the same 64 pairs per contrast (picked for |dm_base| >= 0.5), Base and SFT-v3,
+% logits per pair; change = SFT-v3 vs Base. Hub = head L15.H11 by real patching, implicit combat.
+% On all 450 pairs the effect falls 52-66% (poster/effect_share.json), given on the QR page;
+% these bars stay on the patched pairs, the population the pathway was measured on.
+\pgfplotstableread[col sep=comma]{
+label,base,sft,change
+Combat / implicit,1.33,0.45,\textminus{}66\%
+Combat / explicit,1.50,0.34,\textminus{}77\%
+Religion / implicit,1.32,0.52,\textminus{}61\%
+}\MechData
+\newcommand{\HubBase}{0.66}
+\newcommand{\HubSFT}{0.13}
 
 % The decision-distillation design as trained (docs/DECISION_DISTILL.md).
 \newcommand{\TeacherSignal}{The frozen parent on the attribute-free CV}
@@ -258,36 +265,89 @@ GRPO,greenDark,0,1.03,0.29,1.96
 \Txt[text=greenDark]{64}{950}{388}{13.8}{\bfseries NVIDIA GPU roles: nodes of 4 \texttimes{} GH200 for training,\\
   vLLM audits and patching; RTX 6000 Ada for Base / SFT patching.}
 
-% MIDDLE: donor intervention -> observed finding -> distillation -> audit.
-\Txt[text=greenDark]{512}{284}{620}{16}{\bfseries A\quad HOW ACTIVATION PATCHING WORKS}
-\Txt{512}{315}{620}{15.5}{Same CV and job; swap an activation between attribute variants.}
-\Txt[text=ink,align=center]{522}{350}{180}{16}{\bfseries Donor run}
-\Txt[text=ink,align=center]{932}{350}{180}{16}{\bfseries Patched run}
-\NodeBox{522}{377}{180}{28}{body}{white}{14.5}{CV + job + cue A}
-\NodeBox{932}{377}{180}{28}{body}{white}{14.5}{CV + job + cue B}
-\NodeBox{522}{418}{180}{25}{body}{white}{13.5}{Earlier layers}
-\NodeBox{932}{418}{180}{25}{body}{white}{13.5}{Earlier layers}
-\NodeBox{522}{457}{180}{28}{ink}{mist}{13.5}{Selected activation}
-\NodeBox{932}{457}{180}{28}{ink}{mist}{13.5}{Patched activation}
-\NodeBox{522}{498}{180}{25}{body}{white}{13.5}{Later layers}
-\NodeBox{932}{498}{180}{25}{body}{white}{13.5}{Later layers}
-\foreach \xx in {612,1022}{%
-  \Arrow{\xx}{405}{\xx}{418}
-  \Arrow{\xx}{443}{\xx}{457}
-  \Arrow{\xx}{485}{\xx}{498}}
-\Arrow[ink]{702}{471}{932}{471}
-\Txt[text=ink,align=center]{710}{438}{214}{14.5}{\bfseries Swap one activation}
-\Txt[text=muted,align=center]{710}{497}{214}{14}{Measure cue-B margin\\before / after patching}
-\Arrow{932}{510}{916}{510}
-\Txt[text=muted]{512}{535}{330}{13.5}{Compare Base / SFT-v3 across layers and heads.}
-\Arrow{817}{533}{825}{568}
+% MIDDLE: patching -> observed finding -> distillation -> audit (Marta Samoilenko, 2026-11-02,
+% redrawn in the two-colour palette). A, left: one patch. Right: the Base-model pathway patching
+% found, simplified from fig:circuit of reports/interp/latex/activation_patching_report.tex
+% (docs/INTERP_SFT_V3.md).
+\Txt[text=greenDark]{512}{284}{620}{16}{\bfseries A\quad HOW ACTIVATION PATCHING FINDS THE PATHWAY}
 
-\Rect[draw=greenDark,line width=1bp]{512}{569}{620}{73}{greenPale}
-\Txt[text=greenDark]{526}{579}{592}{14}{\bfseries B\quad MECHANISTIC FINDING FROM PATCHING [4]}
-\Txt[text=ink]{526}{606}{592}{16.5}{\bfseries\MechanisticFinding}
+% A1: copy one layer's activation from the attribute-B run into the attribute-A run.
+\Txt[text=ink]{512}{314}{190}{13.5}{\bfseries Swap one activation}
+\NodeBox{522}{338}{70}{22}{ink}{white}{10}{Attribute A}
+\NodeBox{622}{338}{70}{22}{ink}{white}{10}{Attribute B}
+\foreach \k in {0,...,4}{%
+  \pgfmathsetmacro{\yy}{370+18*\k}
+  \ifnum\k=2 \def\BarColour{ink}\else\def\BarColour{rule}\fi
+  \Rect{527}{\yy}{60}{12}{\BarColour}
+  \Rect{627}{\yy}{60}{12}{\BarColour}}
+\draw[ink,line width=2.2bp,-{Latex[length=8bp,width=5.5bp]}] (627,412) to[bend right=55] (587,412);
+\Txt[text=ink,align=center]{587}{384}{40}{11}{\bfseries swap}
+% Result: how much of the attribute's effect disappears.
+\Arrow{557}{458}{557}{470}
+\Rect{522}{472}{170}{14}{rule}
+\Rect{522}{472}{120}{14}{ink}
+\Txt[text=muted]{522}{491}{180}{10}{share of the attribute's effect removed}
+\Txt[text=ink]{522}{512}{180}{12}{\bfseries layer \textrightarrow{} block \textrightarrow{} head}
+
+% A2: the pathway. x = 770 + 11.2 * layer, so boxes sit over the layers they occupy.
+\Txt[text=ink]{712}{314}{420}{13.5}{\bfseries The pathway it reveals (Base model)}
+\Rect{938}{334}{56}{146}{rule}
+\Txt[text=ink,align=center]{928}{337}{76}{10.5}{\bfseries bottleneck}
+\NodeBox{712}{360}{68}{44}{ink}{white}{12.5}{Attribute}
+\NodeBox{848}{360}{79}{44}{body}{white}{12}{Readers\\L7--14}
+\NodeBox{933}{354}{66}{56}{ink}{mist}{12}{Hub\\L15.H11}
+\draw[ink,line width=2.2bp] (933,354) rectangle ++(66,56);
+\NodeBox{1056}{360}{66}{44}{body}{white}{12}{Readout\\MLP 31}
+\NodeBox{1052}{420}{80}{22}{ink}{white}{11.5}{hire / reject}
+\Arrow[ink]{780}{382}{848}{382}
+\Arrow[ink]{927}{382}{933}{382}
+\Arrow[ink]{999}{382}{1056}{382}
+\Arrow[ink]{1089}{404}{1089}{420}
+% Opposing heads push back on the signal between hub and readout.
+\NodeBox{918}{440}{96}{24}{body}{white}{11.5}{Opposers}
+\draw[gray,dashed,line width=1.8bp,-{Bar[width=9bp]}] (1014,452) -- (1030,452) -- (1030,385);
+% Layer axis.
+\draw[gray,line width=1.2bp] (770,486) -- (1117,486);
+\foreach \L in {0,7,15,20,31}{%
+  \pgfmathsetmacro{\xx}{770+11.2*\L}
+  \draw[gray,line width=1.2bp] (\xx,482) -- (\xx,490);
+  \Txt[text=muted,align=center]{\xx-15}{494}{30}{11}{\L}}
+\Txt[text=muted]{712}{480}{50}{11}{layer}
+
+% Next: the same pairs in SFT-v3.
+\Txt[text=muted,align=center]{512}{526}{620}{12.5}{Same pairs, Base vs SFT-v3 \textdownarrow}
+\Arrow{822}{545}{822}{567}
+
+% B: Base vs SFT-v3 on the same pairs. Left: attribute effect per pair; right: the hub head.
+% Base gray, SFT-v3 ink, as in the results column.
+\Rect[draw=greenDark,line width=1bp]{512}{569}{620}{94}{greenPale}
+\Txt[text=greenDark]{526}{577}{400}{14}{\bfseries B\quad WHAT PATCHING FINDS [4]}
+\Rect{950}{581}{9}{9}{gray}\Txt[text=muted]{963}{579}{50}{11.5}{Base}
+\Rect{1010}{581}{9}{9}{ink}\Txt[text=muted]{1023}{579}{110}{11.5}{SFT-v3, same pairs}
+% Left: bars at 110 units per logit.
+\foreach \r in {0,1,2}{%
+  \pgfplotstablegetelem{\r}{label}\of\MechData\let\MLabel\pgfplotsretval
+  \pgfplotstablegetelem{\r}{base}\of\MechData\let\MBase\pgfplotsretval
+  \pgfplotstablegetelem{\r}{sft}\of\MechData\let\MSFT\pgfplotsretval
+  \pgfplotstablegetelem{\r}{change}\of\MechData\let\MChange\pgfplotsretval
+  \pgfmathsetmacro{\yy}{601+16*\r}
+  \Txt[text=body]{526}{\yy}{94}{11}{\MLabel}
+  \Rect{622}{\yy}{\MBase*110}{6}{gray}
+  \Rect{622}{\yy+7}{\MSFT*110}{6}{ink}
+  \Txt[text=ink]{\MBase*110+628}{\yy+1}{50}{11.5}{\bfseries\MChange}}
+\Txt[text=muted]{622}{650}{220}{10.5}{attribute effect per pair (logits)}
+% Right: the same hub carries far less.
+\Txt[text=ink]{868}{600}{256}{14}{\bfseries Same pathway, weaker}
+\draw[gray,line width=5bp] (868,627) -- (1108,627);
+\draw[ink,line width=1.5bp] (868,640) -- (1108,640);
+\NodeBox{958}{619}{64}{30}{ink}{mist}{11.5}{L15.H11}
+\draw[ink,line width=1.6bp] (958,619) rectangle ++(64,30);
+\Txt[text=gray]{1034}{612}{70}{11}{\bfseries\HubBase}
+\Txt[text=ink]{1034}{643}{70}{11}{\bfseries\HubSFT}
+\Txt[text=muted]{868}{650}{90}{10.5}{logits / pair}
 \draw[greenDark,dashed,line width=2bp,-{Latex[length=8bp,width=5.5bp]}]
-  (822,645) -- (822,673);
-\Txt[text=greenDark]{846}{649}{286}{13}{Shows what distillation changes}
+  (822,664) -- (822,682);
+\Txt[text=greenDark]{846}{666}{286}{12}{Shows what distillation changes}
 
 \Txt[text=greenDark]{512}{684}{620}{16}{\bfseries C\quad DECISION DISTILLATION, READ THROUGH PATCHING}
 \Txt[text=ink]{512}{718}{225}{15}{\bfseries Current training signals}
