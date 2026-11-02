@@ -1,0 +1,68 @@
+{
+  "case": {
+    "CaseYears": "4.5",
+    "CaseBaseRejects": "5",
+    "CaseVariants": "20",
+    "CaseJob": "Sales Manager"
+  },
+  "geometry": {
+    "backend": "vllm",
+    "recipe": "DPO",
+    "seed": 42,
+    "contrast": "mil_combat_civ_impl",
+    "cut_35": -33.09375,
+    "cut_22_512": 7.125,
+    "large": {
+      "a": "-7.125",
+      "b": "24.9375",
+      "absolute_effect": "32.06249915171611",
+      "rank_effect": "0.02114331723027374",
+      "direction": "-1.0",
+      "free_margin": "29.0625",
+      "pair_hash": "216583fef5661a4c779b",
+      "candidate_hash": "6e38e67e89d179f260f8",
+      "job_hash": "bb6e1370d08ac27c35c4",
+      "canonical_35_borderline": "True",
+      "crossing_weight": "1.0",
+      "sft_crossing_weight": "0.0",
+      "midpoint_distance_to_cut": "1.78125",
+      "nearest_endpoint_distance_to_cut": "14.25",
+      "top1pct_including_ties": "True",
+      "backend": "vllm",
+      "recipe": "DPO",
+      "seed": "42",
+      "rate_label": "sft_common",
+      "actual_hire_rate_pct": "22.51207729468599",
+      "contrast": "mil_combat_civ_impl"
+    },
+    "small": {
+      "a": "-32.015625",
+      "b": "-33.578125",
+      "absolute_effect": "1.5625018491991796",
+      "rank_effect": "0.1763607085346216",
+      "direction": "1.0",
+      "free_margin": "-33.625",
+      "pair_hash": "bb4540e0134d7fdf6141",
+      "candidate_hash": "21ac428d622262b59950",
+      "job_hash": "eaf5073d77a962f37800",
+      "canonical_35_borderline": "False",
+      "crossing_weight": "0.0",
+      "sft_crossing_weight": "0.0",
+      "midpoint_distance_to_cut": "39.921875",
+      "nearest_endpoint_distance_to_cut": "39.140625",
+      "top1pct_including_ties": "False",
+      "backend": "vllm",
+      "recipe": "DPO",
+      "seed": "42",
+      "rate_label": "sft_common",
+      "actual_hire_rate_pct": "22.51207729468599",
+      "contrast": "mil_combat_civ_impl"
+    },
+    "selection": "Largest top-1%-effect pair crossing common cut but entirely above 35% cut; largest-effect pair strictly crossing 35% cut. One seed and contrast only."
+  },
+  "sources": {
+    "reports/research_followup/decision_geometry/common_rate_pair_features.csv": "c8e352aaf3e13778c646fccc2641cc78e4c8518157e02b6859b3fed250876035",
+    "reports/research_followup/decision_geometry/cuts.csv": "9768d0fa219024304a03edebf5e00f8a193391cbb67921a4bf3e53de61a6f879",
+    "poster/latex/main.tex": "c851f6b75294d583aeaaa975d245bd46eba9b4d2c4d8d223c1f8b08a06fd3a46"
+  }
+}
