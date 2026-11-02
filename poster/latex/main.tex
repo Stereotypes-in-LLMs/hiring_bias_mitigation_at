@@ -519,9 +519,9 @@ Religion / implicit,1.32,0.52,\textminus{}61\%
   \pgfmathsetmacro{\yy}{820+28*\r}
   \pgfmathsetmacro{\xa}{1290+(ln(\Pa)-ln(0.25))/(ln(16)-ln(0.25))*200}
   \pgfmathsetmacro{\xb}{1290+(ln(\Pb)-ln(0.25))/(ln(16)-ln(0.25))*200}
-  \pgfmathsetmacro{\wd}{\xb-\xa}
+  \pgfmathsetmacro{\barw}{\xb-\xa}
   \Txt[text=ink]{1192}{\yy}{90}{12.5}{\bfseries\PShort}
-  \Rect{\xa}{\yy+3}{\wd}{10}{greenDark}
+  \Rect{\xa}{\yy+3}{\barw}{10}{greenDark}
   \Txt[text=body]{1500}{\yy+1}{70}{11}{\PTR\texttimes}
 }
 \Txt[text=muted]{1192}{922}{378}{10}{Range over 3 contrasts, one patched seed per arm; raw logit units, sensitive to the margin scale; not a CI. Dashed: \texttimes1 = SFT-v3}
@@ -541,9 +541,9 @@ Religion / implicit,1.32,0.52,\textminus{}61\%
   \PathValue{\r}{jrange}{\PJR}
   \pgfmathsetmacro{\yy}{820+28*\r}
   \pgfmathsetmacro{\xa}{1700+\Ja*200}
-  \pgfmathsetmacro{\wd}{(\Jb-\Ja)*200}
+  \pgfmathsetmacro{\barw}{(\Jb-\Ja)*200}
   \Txt[text=ink]{1604}{\yy}{90}{12.5}{\bfseries\PShort}
-  \Rect{\xa}{\yy+3}{\wd}{10}{greenDark}
+  \Rect{\xa}{\yy+3}{\barw}{10}{greenDark}
   \Txt[text=body]{1910}{\yy+1}{90}{11}{\PJR}
 }
 \Txt[text=muted]{1604}{922}{396}{10}{Range over the 3 seed pairs; higher overlap means recurring cases, not better decisions. Of dSFT's unstable sets, \BorderDistill{} lie on SFT-v3's \NBorder{} nearest-cut pairs}
