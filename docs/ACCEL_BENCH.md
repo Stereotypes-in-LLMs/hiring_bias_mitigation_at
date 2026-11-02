@@ -99,8 +99,32 @@ REPO=$PWD`.
 
 | # | job | what | GPU-h allocated | running total |
 |---|---|---|---|---|
+| 1 | 5236801 | B3, both paths (nid006001), 13:55 wall: vLLM rollouts `train_runtime` 183.5 s, cost step 557 s (0.619 GPU-h measured); transformers rollouts `train_runtime` 200.5 s, cost step 268 s (0.298 GPU-h). 1,536 completions each (6 steps × 256), mean length 37 tokens, none clipped (`logs/xw-bench-grpo-5236801.out`) | 0.93 | 0.93 |
 
 ## 3. Result
+
+### B3. GRPO rollouts: the colocated vLLM engine against transformers' generate
+
+**Fact.** Over six steps of 256 completions, the vLLM path trained in 183.5 s and the
+transformers path in 200.5 s (`train_runtime`, the engine's start-up excluded): **1.09×**, 30.6
+against 33.4 s per step. End to end, the vLLM run's cost step took 557 s and the transformers
+run's 268 s: the colocated engine's start-up and first weight sync cost about 370 s, so for six
+steps the path without vLLM was faster. Both runs sampled completions of 36–38 tokens on
+average, none truncated at 96, and rewards in the same range (0.65–1.04 per step). One run per
+path.
+
+**Against the registration.** The expected 3–10× did not appear; the observed ratio is below
+the 2× that was registered as counting against. At R4's real length, 259 steps, the per-step
+saving (2.8 s) would repay the start-up after about 130 steps and end about 350 s (4%) ahead.
+
+**Interpretation, not confirmed.** The rollouts here are prefill-dominated: prompts of about
+2,500 tokens, completions of under 40. Transformers' generate on a GH200, 64 sequences per
+process, is close to vLLM on that shape; vLLM's advantage lies in long decodes. The weight sync
+every step and the engine's 0.30 memory share may also cost the vLLM path. Which of these holds
+is not measured.
+
+**Unknown.** One repeat per path; whether `generation_batch_size` or `vllm_gpu_memory_utilization`
+change the ratio; the ratio at longer completions.
 
 ## 4. Reading
 
