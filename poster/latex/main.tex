@@ -54,9 +54,9 @@ Self-distillation,greenDark,0,0.2,-0.53,0.89
 
 \pgfplotstableread[col sep=comma]{
 method,short,rmean,rrange,ranks,scale,route,p99mean,p99range,p99min,p99max,jmean,jrange,jmin,jmax,border
-DPO,DPO,0.741,0.65--0.89,6 / 3 / 2,2.68,partly later (L23.H1),7.14,4.5--10.7,4.46,10.69,0.18,0.14--0.26,0.139,0.256,74--81\%
-GRPO + lr decay,GRPO,0.928,0.90--0.97,1 / 1 / 1,2.16,similar profile,2.83,2.2--3.8,2.21,3.8,0.167,0.09--0.28,0.085,0.28,68--91\%
-Self-distillation,dSFT,0.948,0.91--0.98,1 / 1 / 1,0.46,similar (attenuated),0.41,0.40--0.43,0.4,0.43,0.528,0.45--0.60,0.453,0.604,95--97\%
+DPO,DPO,0.749,0.65--0.89,6 / 3 / 2 / 1,2.68,partly later (L23.H1),6.73,4.5--10.7,4.46,10.69,0.18,0.14--0.26,0.139,0.256,74--81\%
+GRPO + lr decay,GRPO,0.934,0.90--0.97,1 / 1 / 1 / 1,2.16,similar profile,2.95,2.2--3.8,2.21,3.8,0.167,0.09--0.28,0.085,0.28,68--91\%
+Self-distillation,dSFT,0.949,0.91--0.98,1 / 1 / 1 / 1,0.46,similar (attenuated),0.44,0.40--0.51,0.4,0.51,0.528,0.45--0.60,0.453,0.604,95--97\%
 }\PathData
 
 \pgfplotstableread[col sep=comma]{
@@ -133,7 +133,7 @@ grpo,GRPO rollouts,colocated vLLM vs HF,1.09,0,\texttimes1.1
 \newcommand{\ScaleDistill}{0.47--0.51}
 \newcommand{\TailDPO}{4.5--10.7}
 \newcommand{\TailGRPO}{2.2--3.8}
-\newcommand{\TailDistill}{0.40--0.43}
+\newcommand{\TailDistill}{0.40--0.51}
 \newcommand{\JacDPO}{0.14--0.26}
 \newcommand{\JacGRPO}{0.09--0.28}
 \newcommand{\JacDistill}{0.45--0.60}
@@ -167,20 +167,20 @@ grpo,GRPO rollouts,colocated vLLM vs HF,1.09,0,\texttimes1.1
 \newcommand{\AuditKWh}{0.105}
 \newcommand{\PrefixSpeedup}{1.10}
 \newcommand{\AgreeHFvLLM}{99.6--99.8}
-\newcommand{\ProjectGPUh}{548}
+\newcommand{\ProjectGPUh}{549}
 \newcommand{\ProjectKWh}{143}
-\newcommand{\NPatchContrasts}{3}
+\newcommand{\NPatchContrasts}{4}
 \newcommand{\PatchEvalsPerPair}{280--292}
 \newcommand{\PatchRealPerPair}{194--194}
 \newcommand{\PatchVerifyPerPair}{86--98}
 \newcommand{\AtPHeads}{896}
-\newcommand{\PatchStepMin}{20}
-\newcommand{\PatchStepGPUh}{0.33}
+\newcommand{\PatchStepMin}{19}
+\newcommand{\PatchStepGPUh}{0.32}
 \newcommand{\PatchPeakGiB}{43}
-\newcommand{\PatchStepsOK}{21}
+\newcommand{\PatchStepsOK}{27}
 \newcommand{\MarginsStepMin}{32}
 \newcommand{\MarginsPeakGiB}{87}
-\newcommand{\PatchTotalGPUh}{13.2}
+\newcommand{\PatchTotalGPUh}{14.4}
 \newcommand{\BackendUnstableMax}{0.22}
 % END GENERATED DATA
 
@@ -206,11 +206,14 @@ grpo,GRPO rollouts,colocated vLLM vs HF,1.09,0,\texttimes1.1
 % logits per pair; change = SFT-v3 vs Base. Hub = head L15.H11 by real patching, implicit combat.
 % On all 450 pairs the effect falls 52-66% (poster/effect_share.json), given on the QR page;
 % these bars stay on the patched pairs, the population the pathway was measured on.
+% The gender row: 64 of 66 pairs chosen on Base the same way (docs/GENDER_PATCHING.md, Result,
+% reports/interp/patching/{base,sft_v3}-grid-gen_male_female_impl-n64-s42/pairs.csv).
 \pgfplotstableread[col sep=comma]{
 label,base,sft,change
 Combat / implicit,1.33,0.45,\textminus{}66\%
 Combat / explicit,1.50,0.34,\textminus{}77\%
 Religion / implicit,1.32,0.52,\textminus{}61\%
+Gender / implicit,0.72,0.20,\textminus{}72\%
 }\MechData
 \newcommand{\HubBase}{0.66}
 \newcommand{\HubSFT}{0.13}
@@ -223,7 +226,7 @@ Religion / implicit,1.32,0.52,\textminus{}61\%
 \newcommand{\MethodGRPO}{\RelRL{} prompts, anchor reward; lr decay over the last 26\% [3, 5]}
 \newcommand{\MethodDistill}{KL to frozen SFT-v3 on the attribute-free CV, decision token; 1 epoch}
 % Section 3C's scope: which seed, which pairs, which contrasts, in the order of its cells.
-\newcommand{\ScopeNote}{One selected seed per stage (fresh LoRA r32 on SFT-v3 merged [1]); 64 pairs per contrast chosen on SFT-v3's own effect; military and religion contrasts only; one value per contrast, in B's order}
+\newcommand{\ScopeNote}{One selected seed per stage (fresh LoRA r32 on SFT-v3 merged [1]); pairs chosen on SFT-v3's own effect, 64 per contrast (gender 45); one value per contrast, in B's order: combat implicit, combat explicit, religion, gender}
 % The NVIDIA stack as used (docs/SYSTEM_OVERVIEW.md): one node of 4 x GH200 120 GB per job.
 % nvidia-smi names the device 'GH200 120GB'; its HBM3 is 96 GB (97,871 MiB), CSCS Alps/Daint.
 % 'Triton' here would mean the Triton-language GDN kernels, not Triton Inference Server: left out.
@@ -426,41 +429,41 @@ Religion / implicit,1.32,0.52,\textminus{}61\%
 
 % B: Base vs SFT-v3 on the same pairs. Left: attribute effect per pair; right: the hub head.
 % Base gray, SFT-v3 ink, as in the results column.
-\Rect[draw=greenDark,line width=1bp]{512}{546}{700}{94}{greenPale}
+\Rect[draw=greenDark,line width=1bp]{512}{546}{700}{102}{greenPale}
 \Txt[text=greenDark]{526}{554}{500}{14}{\bfseries B\quad WHAT PATCHING FINDS: BASE VS SFT-v3, SAME PAIRS [4]}
 \Rect{1060}{558}{9}{9}{gray}\Txt[text=body]{1073}{556}{50}{11.5}{Base}
 \Rect{1124}{558}{9}{9}{ink}\Txt[text=body]{1137}{556}{70}{11.5}{SFT-v3}
 % Left: bars at 110 units per logit.
-\foreach \r in {0,1,2}{%
+\foreach \r in {0,1,2,3}{%
   \pgfplotstablegetelem{\r}{label}\of\MechData\let\MLabel\pgfplotsretval
   \pgfplotstablegetelem{\r}{base}\of\MechData\let\MBase\pgfplotsretval
   \pgfplotstablegetelem{\r}{sft}\of\MechData\let\MSFT\pgfplotsretval
   \pgfplotstablegetelem{\r}{change}\of\MechData\let\MChange\pgfplotsretval
-  \pgfmathsetmacro{\yy}{578+16*\r}
+  \pgfmathsetmacro{\yy}{576+14*\r}
   \Txt[text=body]{526}{\yy}{94}{11}{\MLabel}
   \Rect{622}{\yy}{\MBase*110}{6}{gray}
   \Rect{622}{\yy+7}{\MSFT*110}{6}{ink}
   \Txt[text=ink]{\MBase*110+628}{\yy+1}{50}{11.5}{\bfseries\MChange}}
-\Txt[text=body]{622}{627}{220}{10.5}{attribute effect per pair (logits)}
+\Txt[text=body]{622}{634}{220}{10.5}{attribute effect per pair (logits)}
 % Right: the same hub head carries far less; the claim is about patching effects, not a
 % proven circuit (no edge-level test).
-\Txt[text=ink]{928}{577}{284}{12}{\bfseries Similar patching profile, weaker effects}
+\Txt[text=ink]{928}{577}{284}{12}{\bfseries The hub head carries far less}
 \draw[gray,line width=5bp] (928,604) -- (1168,604);
 \draw[ink,line width=1.5bp] (928,617) -- (1168,617);
 \NodeBox{1018}{596}{64}{30}{ink}{mist}{11.5}{L15.H11}
 \draw[ink,line width=1.6bp] (1018,596) rectangle ++(64,30);
 \Txt[text=gray]{1094}{589}{70}{11}{\bfseries\HubBase}
 \Txt[text=ink]{1094}{620}{70}{11}{\bfseries\HubSFT}
-\Txt[text=body]{928}{627}{90}{10.5}{logits / pair}
+\Txt[text=body]{928}{627}{240}{10.5}{logits / pair, combat implicit}
 \draw[greenDark,dashed,line width=2bp,-{Latex[length=8bp,width=5.5bp]}]
-  (862,641) -- (862,659);
-\Txt[text=greenDark]{886}{643}{326}{12}{One stage on SFT-v3, then the same test \textdownarrow}
+  (862,649) -- (862,665);
+\Txt[text=greenDark]{886}{651}{326}{12}{One stage on SFT-v3, then the same test \textdownarrow}
 
 % The three stages as trained (content macros above), before the test that reads them.
 \foreach \x/\ttl/\desc in {512/{DPO}/{\MethodDPO},752/{GRPO + lr decay}/{\MethodGRPO},992/{Self-distillation}/{\MethodDistill}}{%
-  \Rect[draw=rule,line width=0.9bp]{\x}{664}{220}{56}{white}
-  \Txt[text=ink]{\x+10}{669}{200}{13.5}{\bfseries\ttl}
-  \Txt{\x+10}{688}{200}{10.5}{\desc}}
+  \Rect[draw=rule,line width=0.9bp]{\x}{670}{220}{52}{white}
+  \Txt[text=ink]{\x+10}{674}{200}{13.5}{\bfseries\ttl}
+  \Txt{\x+10}{692}{200}{10.5}{\desc}}
 
 % C: the same patching after one stage on SFT-v3, one seed each: DPO_V3_4880 s42
 % (docs/RL_PATCHING.md), GRPO + lr decay R4 s42 (docs/PATCHING_DISTILL.md, section 4),
@@ -617,7 +620,7 @@ Religion / implicit,1.32,0.52,\textminus{}61\%
 \Txt[text=greenDark]{690}{1037}{600}{12.5}{\bfseries 2\quad Mean gains uncertain; extreme attribute effects and recurring cases differ}
 \Txt[text=body]{690}{1054}{600}{11}{After one more stage, RL's extreme effects grow beyond its margin widening and its unstable sets change with the seed; self-distillation's shrink and recur on the same borderline pairs (4A).}
 \Txt[text=greenDark]{1332}{1037}{600}{12.5}{\bfseries 3\quad Behavioural change coexists with a similar patching profile}
-\Txt[text=body]{1332}{1054}{600}{11}{The profile stays similar after SFT-v3 and GRPO and shifts partly later under DPO; a LoRA restricted to that window did not match full-layer adaptation (3C): localization need not inform editing [6, 7].}
+\Txt[text=body]{1332}{1054}{600}{11}{The hub head carries far less after SFT-v3; one more stage keeps a similar profile under GRPO and self-distillation, partly later under DPO; window-only LoRA did not match full layers (3C) [6, 7].}
 \node[anchor=north west,inner sep=0pt] at (1940,1012)
   {\qrcode[height=1.33in]{https://github.com/Stereotypes-in-LLMs/hiring\_bias\_mitigation\_at/blob/main/poster/DETAILS.md}};
 \Txt[text=greenDark,align=right]{1880}{1082}{124}{10}{Full results + code}

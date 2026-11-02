@@ -1,5 +1,5 @@
 arm,datagen_gpu_h,train_gpu_h,eval_gpu_h,patching_gpu_h,other_gpu_h,shared_gpu_h,total_gpu_h,recipe_gpu_h,excluded_gpu_h,wall_h,steps
-accel_bench,0,2.553,0.977,0.206,0,0,3.736,2.553,0,2.34,16
+accel_bench,0,2.553,0.977,1.433,0,0,4.963,2.553,0,3.566,16
 dapo_improve,0,16.782,2.796,0,0,0,19.578,16.782,0,6.463,21
 dapo_v3_all,0,4.312,0.501,0,0,0,4.813,4.312,0,1.579,5
 decision_distill,0,21.231,2.019,6.721,0,0,29.971,21.231,0,14.05,52
