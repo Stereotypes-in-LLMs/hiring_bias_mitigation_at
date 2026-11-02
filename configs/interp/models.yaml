@@ -19,6 +19,7 @@ adapters:
   sft_v3: outputs/sft/qwen3.5-9b_en_only_sft_v3_additional
   distill42: outputs/distill/decision_distill_seed42
   distill43: outputs/distill/decision_distill_seed43
+  distill44: outputs/distill/decision_distill_seed44
   # The same seed-43 adapter, masked by layer (adapter_layers below): docs/DISTILL_PATCHING.md,
   # "Layer-masked check". 0-20 holds the hub and the arrival (layers 11-20), 21-31 the readout.
   distill43_l0_20: outputs/distill/decision_distill_seed43
@@ -32,6 +33,11 @@ adapters:
   # docs/PATCHING_DISTILL.md: the poster's GRPO (GRPO + lr decay R4, seed 42, final adapter) and
   # distillation confined to layers 15-20 (seed 42, final adapter).
   grpo_r4: outputs/grpo/grpo_improve_r4_tipped_v2
+  # Poster follow-up: existing trained checkpoints, frozen before these probes.
+  dpo4880_s43: outputs/dpo/qwen3.5-9b_en_only_dpo_v3_4880_seed43/checkpoint-305
+  dpo4880_s44: outputs/dpo/qwen3.5-9b_en_only_dpo_v3_4880_seed44/checkpoint-305
+  grpo_r4_s43: outputs/grpo/grpo_improve_r4_tipped_seed43
+  grpo_r4_s44: outputs/grpo/grpo_improve_r4_tipped_seed44
   pd42: outputs/distill/decision_distill_l15_20_seed42
 
 specs:
@@ -45,12 +51,17 @@ specs:
   sft_v3: {adapters: [sft_v3]}
   distill42: {adapters: [sft_v3, distill42], reference: sft_v3}
   distill43: {adapters: [sft_v3, distill43], reference: sft_v3}
+  distill44: {adapters: [sft_v3, distill44], reference: sft_v3}
   distill43_l0_20: {adapters: [sft_v3, distill43_l0_20], reference: sft_v3}
   distill43_l21_31: {adapters: [sft_v3, distill43_l21_31], reference: sft_v3}
   distill43_t0_20: {adapters: [sft_v3, distill43_t0_20], reference: sft_v3}
   dpo4880: {adapters: [sft_v3, dpo4880], reference: sft_v3}
   grpo525: {adapters: [sft_v3, grpo525], reference: sft_v3}
   grpo_r4: {adapters: [sft_v3, grpo_r4], reference: sft_v3}
+  dpo4880_s43: {adapters: [sft_v3, dpo4880_s43], reference: sft_v3}
+  dpo4880_s44: {adapters: [sft_v3, dpo4880_s44], reference: sft_v3}
+  grpo_r4_s43: {adapters: [sft_v3, grpo_r4_s43], reference: sft_v3}
+  grpo_r4_s44: {adapters: [sft_v3, grpo_r4_s44], reference: sft_v3}
   pd42: {adapters: [sft_v3, pd42], reference: sft_v3}
 
 adapter_layers:

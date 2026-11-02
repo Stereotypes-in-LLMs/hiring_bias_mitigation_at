@@ -1,0 +1,55 @@
+{
+  "analysis": "poster CPU follow-up",
+  "canonical_matching_sha256": "76c60f2f074168b0aeb1aa9f881431cf106a900eb65146ad5e9caedb67c06221",
+  "n_boot": 1000,
+  "seed": 42,
+  "scope": "exploratory development benchmark; no new model inference",
+  "checks": {
+    "behavioral": {
+      "status": "complete",
+      "prompts": 31050,
+      "sets": 2700,
+      "candidates": 150,
+      "common_hire_count": 6990,
+      "common_hire_rate_pct": 22.51207729468599,
+      "borderline_pairs": 35,
+      "score_sha256": {
+        "Qwen3.5-9B--en--sft--adapter--en_only_sft_v3_additional": "ab9c84c76a0b3394483df1e18782cb61375a8a5c398374b95a5f5f519068fc48",
+        "Qwen3.5-9B--en--dpo--adapter--en_only_dpo_v3_4880_step305": "576dcbdd8d1a68eb191fdd2c9338d661c906aad755ee4a8738bd4b7e0f5cfb80",
+        "Qwen3.5-9B--en--dpo--adapter--en_only_dpo_v3_4880_seed43_step305": "0eb4c0c05920b512346a017fa6b5dcb0e5f9d1b0d84e80ddb40f633265cdb793",
+        "Qwen3.5-9B--en--dpo--adapter--en_only_dpo_v3_4880_seed44_step305": "0d1d5f2fd3d4b2d13de2c4cf76de2f3b2292173d5dcb712c421968ab350a38be",
+        "Qwen3.5-9B--en--grpo--adapter--en_only_grpo_improve_r4_tipped_v2": "6ec9d11ed17613f5ae91484806b8c425a9333acd8edfba68d80aba560918fd5c",
+        "Qwen3.5-9B--en--grpo--adapter--en_only_grpo_improve_r4_tipped_seed43": "ddef410ccd5068c680a849fccc486f4dad0011e0a957ad2459197fb6ee396e7f",
+        "Qwen3.5-9B--en--grpo--adapter--en_only_grpo_improve_r4_tipped_seed44": "e5ee74a1a191e26397a3f736e8752246f894e8d5a0820ee9d32b2b772bf0b0d2",
+        "Qwen3.5-9B--en--sft--adapter--en_only_decision_distill_seed42": "1a65c8d63d8c9d9e61f365ec47996f451d50749e1b6bcec881321aa0e22b679e",
+        "Qwen3.5-9B--en--sft--adapter--en_only_decision_distill_seed43": "7f22b2506a1aa7e2b1433021f58ca35007946b6f4c104955901f91394f1601a3",
+        "Qwen3.5-9B--en--sft--adapter--en_only_decision_distill_seed44": "584220fb15f40d1158fdb822c48d4e27d6f01809ce50814a00b7c183fa61b281"
+      },
+      "interval": "paired candidate percentile bootstrap, fixed global cuts",
+      "jaccard": "sum(min(set weights)) / sum(max(set weights)); descriptive fuzzy membership overlap"
+    },
+    "real_heads": {
+      "status": "complete",
+      "runs_summarized": 24,
+      "missing_runs": [],
+      "caution": "AtP selected most tested heads; subset correlation/rank does not validate a full circuit or a global real-head rank"
+    },
+    "full_grid_effects": {
+      "status": "complete",
+      "source_sha256": "3ac634dc1dc84598bb3e19926e2b46201be5eb8ebadac38e1041e2bfa69ff561",
+      "contrasts": [
+        "mil_combat_civ_impl",
+        "mil_combat_civ_expl",
+        "rel_atheist_christian_impl",
+        "gen_male_female_impl"
+      ],
+      "tail_rows": 12
+    },
+    "existing_tail_tables": {
+      "status": "complete",
+      "rows": 12,
+      "missing": []
+    }
+  },
+  "complete": true
+}

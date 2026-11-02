@@ -5,6 +5,9 @@ refusal on a flipping prompt must show as incomplete or uncovered, never as a fa
 """
 
 import json
+from concurrent.futures import ThreadPoolExecutor
+from pathlib import Path
+from threading import Event
 
 import numpy as np
 import pandas as pd
@@ -279,3 +282,72 @@ def test_an_arm_compared_with_the_base_model_is_judged_against_the_baseline_row(
     assert long.at["arm", "reference_run"] == "base"
     assert long.at["arm", "std_tpr_vs_ref_pp"] == pytest.approx(24.0)
     assert long.at["arm", "std_verdict"] == "better"
+
+
+def test_row_readers_never_see_a_partially_written_refresh(tmp_path, monkeypatch):
+    rows = tmp_path / "rows"
+    path = RM.write_row({"run": "arm", "version": 1}, rows)
+    started, release = Event(), Event()
+    original = Path.write_text
+
+    def interrupted_write(target, text, *args, **kwargs):
+        if '"version": 2' not in text:
+            return original(target, text, *args, **kwargs)
+        with target.open("w", encoding="utf-8") as handle:
+            handle.write(text[:len(text) // 2])
+            handle.flush()
+            started.set()
+            assert release.wait(5), "reader did not release the paused writer"
+            handle.write(text[len(text) // 2:])
+        return len(text)
+
+    monkeypatch.setattr(Path, "write_text", interrupted_write)
+    with ThreadPoolExecutor(max_workers=1) as pool:
+        pending = pool.submit(RM.write_row, {"run": "arm", "version": 2}, rows)
+        try:
+            assert started.wait(5)
+            assert json.loads(path.read_text())["version"] == 1
+        finally:
+            release.set()
+        pending.result(timeout=5)
+    assert json.loads(path.read_text())["version"] == 2
+
+
+def test_concurrent_table_refresh_cannot_publish_an_older_snapshot_last(tmp_path, monkeypatch):
+    rows, reports = tmp_path / "rows", tmp_path / "reports"
+    reports.mkdir()
+    table, comparisons = tmp_path / "table.csv", tmp_path / "comparisons.csv"
+    RM.write_row({"run": "first", "family": "none"}, rows)
+    older_ready, release_older, newer_started, newer_publishing = (Event() for _ in range(4))
+    original = RM._write_csv
+
+    def pause_old_snapshot(frame, path):
+        if path == table:
+            if set(frame["run"]) == {"first"}:
+                older_ready.set()
+                assert release_older.wait(5), "newer refresh did not release the older snapshot"
+            else:
+                newer_publishing.set()
+        return original(frame, path)
+
+    def newer_refresh():
+        RM.write_row({"run": "second", "family": "none"}, rows)
+        newer_started.set()
+        return RM.write_table(rows, table, reports, comparisons)
+
+    monkeypatch.setattr(RM, "_write_csv", pause_old_snapshot)
+    with ThreadPoolExecutor(max_workers=2) as pool:
+        older = pool.submit(RM.write_table, rows, table, reports, comparisons)
+        assert older_ready.wait(5)
+        newer = pool.submit(newer_refresh)
+        try:
+            assert newer_started.wait(5)
+            # A serialized reader waits here. Without serialization it publishes the
+            # two-row snapshot first, and the paused one-row writer erases it later.
+            if newer_publishing.wait(0.2):
+                newer.result(timeout=5)
+        finally:
+            release_older.set()
+        older.result(timeout=5)
+        newer.result(timeout=5)
+    assert set(pd.read_csv(table)["run"]) == {"first", "second"}

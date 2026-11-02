@@ -1,0 +1,13 @@
+method,spec,contrast,pairs,p50_ratio,p99_ratio,mean_abs_ratio,scope
+DPO,dpo4880,mil_combat_civ_impl,450,0.2938462,6.261460918850374,1.3309218,"one selected checkpoint; quantiles over aligned pairs, descriptive"
+DPO,dpo4880,mil_combat_civ_expl,450,0.364114,4.462153727352138,1.2000477,"one selected checkpoint; quantiles over aligned pairs, descriptive"
+DPO,dpo4880,rel_atheist_christian_impl,450,0.35491937,10.688757391195555,2.1073854,"one selected checkpoint; quantiles over aligned pairs, descriptive"
+DPO,dpo4880,gen_male_female_impl,450,0.51832074,5.507222330811911,1.4422749,"one selected checkpoint; quantiles over aligned pairs, descriptive"
+GRPO + lr decay,grpo_r4,mil_combat_civ_impl,450,0.51797926,2.2113919238839723,1.2184436,"one selected checkpoint; quantiles over aligned pairs, descriptive"
+GRPO + lr decay,grpo_r4,mil_combat_civ_expl,450,0.56517506,2.4669767620854204,1.3774675,"one selected checkpoint; quantiles over aligned pairs, descriptive"
+GRPO + lr decay,grpo_r4,rel_atheist_christian_impl,450,0.59192246,3.796855574893997,1.75267,"one selected checkpoint; quantiles over aligned pairs, descriptive"
+GRPO + lr decay,grpo_r4,gen_male_female_impl,450,0.7794052,3.324665569310245,1.5203385,"one selected checkpoint; quantiles over aligned pairs, descriptive"
+Self-distillation,distill43,mil_combat_civ_impl,450,0.4489823,0.4035433301845603,0.40978557,"one selected checkpoint; quantiles over aligned pairs, descriptive"
+Self-distillation,distill43,mil_combat_civ_expl,450,0.50729316,0.4087466793277096,0.45543352,"one selected checkpoint; quantiles over aligned pairs, descriptive"
+Self-distillation,distill43,rel_atheist_christian_impl,450,0.5247796,0.42532279931337014,0.46077272,"one selected checkpoint; quantiles over aligned pairs, descriptive"
+Self-distillation,distill43,gen_male_female_impl,450,0.64285123,0.5141323649775885,0.52771604,"one selected checkpoint; quantiles over aligned pairs, descriptive"

@@ -35,7 +35,10 @@ from __future__ import annotations
 
 import hashlib
 import json
+import fcntl
 import subprocess
+import tempfile
+from contextlib import contextmanager
 from datetime import datetime, timezone
 from pathlib import Path
 
@@ -486,15 +489,42 @@ def write_row(row: dict, row_dir: Path = ROW_DIR) -> Path:
     row_dir = Path(row_dir)
     row_dir.mkdir(parents=True, exist_ok=True)
     path = row_dir / f"{row['run']}.json"
-    path.write_text(json.dumps(row, indent=2, ensure_ascii=False, default=str), encoding="utf-8")
+    with _atomic_output(path) as temporary:
+        temporary.write_text(json.dumps(row, indent=2, ensure_ascii=False, default=str),
+                             encoding="utf-8")
     return path
+
+
+@contextmanager
+def _atomic_output(path: Path):
+    """Publish a complete file, with a distinct temporary name for each writer."""
+    path.parent.mkdir(parents=True, exist_ok=True)
+    with tempfile.NamedTemporaryFile(prefix=f".{path.name}.", suffix=".tmp",
+                                     dir=path.parent, delete=False) as handle:
+        temporary = Path(handle.name)
+    try:
+        yield temporary
+        temporary.replace(path)
+    finally:
+        temporary.unlink(missing_ok=True)
+
+
+@contextmanager
+def _file_lock(path: Path):
+    """Serialize processes sharing the scratch reports directory."""
+    path.parent.mkdir(parents=True, exist_ok=True)
+    with path.open("a") as handle:
+        fcntl.flock(handle, fcntl.LOCK_EX)
+        try:
+            yield
+        finally:
+            fcntl.flock(handle, fcntl.LOCK_UN)
 
 
 def _write_csv(frame: pd.DataFrame, path: Path) -> Path:
     path = Path(path)
-    tmp = path.with_suffix(".csv.tmp")
-    frame.to_csv(tmp, index=False, float_format="%.4g")
-    tmp.replace(path)
+    with _atomic_output(path) as temporary:
+        frame.to_csv(temporary, index=False, float_format="%.4g")
     return path
 
 
@@ -506,6 +536,13 @@ def write_table(row_dir: Path = ROW_DIR, table: Path = TABLE, report_dir: Path =
     and its reference arm, and either may be refreshed later. `reports/comparisons.csv` holds
     one row per op-margin-v2 report whose run has a row, each judged against its own reference.
     """
+    # Lock before reading the rows: atomic replacement alone can still let an older
+    # snapshot replace a newer aggregate when audit and margin jobs finish together.
+    with _file_lock(Path(table).with_suffix(".csv.lock")):
+        return _write_table(row_dir, table, report_dir, comparisons)
+
+
+def _write_table(row_dir: Path, table: Path, report_dir: Path, comparisons: Path) -> Path:
     from .eval_standard import judge, judge_rows
 
     rows = [json.loads(p.read_text(encoding="utf-8")) for p in sorted(Path(row_dir).glob("*.json"))]
@@ -543,6 +580,14 @@ def write_for_record(record: dict, results_dir: Path | None = None, raw_dir: Pat
     The run is paired with its baseline by `eval.report.baseline_for` (same model, language
     and serving stack, or `meta.baseline_run`); a baseline row names no baseline.
     """
+    # Audit and margin passes can refresh the same run concurrently. Compute under
+    # a per-run lock so an older calculation cannot overwrite the newer row.
+    with _file_lock(Path(row_dir) / f".{record['run_name']}.lock"):
+        return _write_for_record(record, results_dir, raw_dir, margin_dir, row_dir, table)
+
+
+def _write_for_record(record: dict, results_dir: Path | None, raw_dir: Path | None,
+                      margin_dir: Path | None, row_dir: Path, table: Path) -> Path | None:
     from ..eval.report import baseline_for, load_records, serving_stack
     from ..utils.config import resolve_output_path
     from .eval_standard import declared_reference

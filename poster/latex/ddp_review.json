@@ -1,0 +1,8 @@
+{
+  "status": "reviewed",
+  "one_gpu": {"label": "bench-distill-ddp1-r2", "job_id": "5238558"},
+  "four_gpu": {"label": "bench-distill-ddp4", "job_id": "5236800"},
+  "note": "Reviewed one-GPU repeat; no late slowdown",
+  "phase_rule": "late <= 1.05 * early",
+  "phase_rule_provenance": "Post-hoc one-sided no-slowdown interpretation accepted by the user; the original registration used an absolute 5 percent bound."
+}

@@ -1,0 +1,13 @@
+method,spec,contrast,pairs,p50_ratio,p99_ratio,mean_abs_ratio,margin_scale_ratio,scope
+DPO,dpo4880,mil_combat_civ_impl,450,0.2938461899757385,6.261460918850374,1.3309218,2.6849952,one selected checkpoint; all aligned pairs; descriptive quantiles
+DPO,dpo4880,mil_combat_civ_expl,450,0.364113986492157,4.462153727352138,1.2000477,2.6849952,one selected checkpoint; all aligned pairs; descriptive quantiles
+DPO,dpo4880,rel_atheist_christian_impl,450,0.3549193739891052,10.688757391195557,2.1073859,2.6849952,one selected checkpoint; all aligned pairs; descriptive quantiles
+DPO,dpo4880,gen_male_female_impl,450,0.5183207392692566,5.507222330811911,1.4422749,2.6849952,one selected checkpoint; all aligned pairs; descriptive quantiles
+GRPO + lr decay,grpo_r4,mil_combat_civ_impl,450,0.5179792642593384,2.2113919238839723,1.2184439,2.1620824,one selected checkpoint; all aligned pairs; descriptive quantiles
+GRPO + lr decay,grpo_r4,mil_combat_civ_expl,450,0.5651750564575195,2.4669767620854204,1.3774674,2.1620824,one selected checkpoint; all aligned pairs; descriptive quantiles
+GRPO + lr decay,grpo_r4,rel_atheist_christian_impl,450,0.5919224619865417,3.796855574893997,1.7526702,2.1620824,one selected checkpoint; all aligned pairs; descriptive quantiles
+GRPO + lr decay,grpo_r4,gen_male_female_impl,450,0.7794051766395569,3.324665569310245,1.5203384,2.1620824,one selected checkpoint; all aligned pairs; descriptive quantiles
+Self-distillation,distill43,mil_combat_civ_impl,450,0.448982298374176,0.4035433301845603,0.40978557,0.46364498,one selected checkpoint; all aligned pairs; descriptive quantiles
+Self-distillation,distill43,mil_combat_civ_expl,450,0.507293164730072,0.4087466793277096,0.4554335,0.46364498,one selected checkpoint; all aligned pairs; descriptive quantiles
+Self-distillation,distill43,rel_atheist_christian_impl,450,0.5247796177864075,0.4253227993133701,0.46077275,0.46364498,one selected checkpoint; all aligned pairs; descriptive quantiles
+Self-distillation,distill43,gen_male_female_impl,450,0.6428512334823608,0.5141323649775885,0.52771604,0.46364498,one selected checkpoint; all aligned pairs; descriptive quantiles

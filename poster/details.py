@@ -17,6 +17,12 @@ def _doc(path: str) -> str:
 
 
 def write(n: dict, path: Path) -> None:
+    # The LaTeX poster has a separate, measured-data evidence page. Keep its QR
+    # destination current when the older Typst builder is invoked as well.
+    if (path.parent.parent / "reports/poster_followup/summary.json").exists():
+        import revision_details
+        revision_details.write(path)
+        return
     ex = n["example"]
     vals = ex["values_per_group"]
     rows = "\n".join(

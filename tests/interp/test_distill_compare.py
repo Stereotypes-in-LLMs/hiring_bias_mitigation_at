@@ -27,7 +27,14 @@ def toy(scale_all: float, scale_attr: float, n: int = 40, seed: int = 0):
     m_ref = free.assign(margin_fp32=free_ref)
     m_spec = free.assign(margin_fp32=scale_all * free_ref)
     manifest = pd.DataFrame({"contrast_id": "x", "aligned": True, "candidate_id": cands,
-                             "dm_ref": dm_ref, "dm_spec": scale_all * scale_attr * dm_ref})
+                             "uid_a": [f"a{i}" for i in range(n)],
+                             "uid_b": [f"b{i}" for i in range(n)]})
+    for side, sign in (("a", 0.5), ("b", -0.5)):
+        attributed = free.assign(prompt_uid=[f"{side}{i}" for i in range(n)],
+                                 condition="implicit")
+        m_ref = pd.concat([m_ref, attributed.assign(margin_fp32=sign * dm_ref)], ignore_index=True)
+        m_spec = pd.concat([m_spec, attributed.assign(
+            margin_fp32=sign * scale_all * scale_attr * dm_ref)], ignore_index=True)
     return manifest, m_ref, m_spec
 
 
@@ -56,8 +63,9 @@ def test_noise_biases_the_raw_ratio_up_and_the_correction_removes_it():
     manifest, m_ref, m_spec = toy(0.5, 1.0, n=4000, seed=1)
     rng = np.random.default_rng(2)
     var = 0.15 ** 2
-    manifest["dm_ref"] += rng.normal(0, np.sqrt(var), len(manifest))
-    manifest["dm_spec"] += rng.normal(0, np.sqrt(var), len(manifest))
+    for frame in (m_ref, m_spec):
+        is_a = frame["prompt_uid"].str.startswith("a")
+        frame.loc[is_a, "margin_fp32"] += rng.normal(0, np.sqrt(var), len(manifest))
     noise = {"ref": {"var_dm": var}, "spec": {"var_dm": var}}
     out = DC.sensitivity(manifest, m_ref, m_spec, "spec", "ref", ["x"], n_boot=20, seed=0,
                          noise=noise).iloc[0]

@@ -23,6 +23,7 @@ from final_table.csv and recipes.csv.
 
 from __future__ import annotations
 
+import argparse
 import csv
 import json
 import os
@@ -32,6 +33,8 @@ from pathlib import Path
 
 import numpy as np
 import pandas as pd
+
+from compute_data import compute_data, macro_lines, refresh_compute_block, tex_table, write_compute_summary
 
 HERE = Path(__file__).resolve().parent
 ROOT = HERE.parents[1]
@@ -101,6 +104,32 @@ def ratio(per: pd.DataFrame, num: str, den: str, w: np.ndarray) -> tuple[float, 
     point = 100 * per[num].sum() / per[den].sum()
     draws = 100 * (w @ per[num].to_numpy()) / (w @ per[den].to_numpy())
     return point, *np.percentile(draws, [2.5, 97.5])
+
+
+def followup_findings() -> dict:
+    """Use completed full-grid and real-head checks for the added scope notes."""
+    summary = json.loads((ROOT / "reports/poster_followup/summary.json").read_text())
+    if not summary["complete"]:
+        raise ValueError("Poster CPU follow-up is incomplete")
+    effects = pd.read_csv(ROOT / "reports/poster_followup/full_grid_effects.csv").set_index("contrast")
+    gender = effects.loc["gen_male_female_impl"]
+    others = effects.drop("gen_male_female_impl")["removed_pct"]
+    if len(effects) != 4 or not effects["pairs"].eq(450).all():
+        raise ValueError("Expected four full-grid 450-pair contrasts")
+    heads = pd.read_csv(ROOT / "reports/poster_followup/target_heads.csv")
+    target = heads[(heads["spec"] == "dpo4880") &
+                   (heads["contrast"] == "mil_combat_civ_impl") &
+                   (heads["target"] == "L23.H1")]
+    if len(target) != 1 or int(target.iloc[0]["real_rank_tested"]) != 1:
+        raise ValueError("The limited L23.H1 first-among-tested claim needs review")
+    head = target.iloc[0]
+    return {
+        "GenderFullRemoval": f"{gender['removed_pct']:.0f}",
+        "GenderFullRemovalCI": f"{gender['ci_low']:.0f}--{gender['ci_high']:.0f}",
+        "OtherFullRemoval": f"{others.min():.0f}--{others.max():.0f}",
+        "DPOLateTested": str(int(head["verified_heads"])),
+        "DPOLateRealEffect": f"{head['real_removed_logits_per_pair']:.3f}",
+    }
 
 
 def main() -> None:
@@ -425,41 +454,11 @@ def main() -> None:
                                      for c in case_counts.values())),
     })
 
-    # The NVIDIA stack: the audits' engine against the naive setup (docs/THROUGHPUT_B.md, round
-    # 2), HF against vLLM decisions (reports/interp/margins_summary-*.json), the project's cost
-    # (reports/cost/by_stage.csv), and the acceleration benchmarks of docs/ACCEL_BENCH.md, each
-    # 'to run' until its files exist.
-    full = pd.read_csv(ROOT / "reports/throughput_b/full/speedup_summary.csv")
-    engine = full[(full["condition"] == "cacheon-asbuilt-nostats")
-                  & (full["ref_condition"] == "cacheoff-shuffle")].iloc[0]
-    agree = [json.loads((ROOT / f"reports/interp/margins_summary-{spec}-grid-en.json")
-                        .read_text())["audit"]["agreement_pct"]
-             for spec in ("sft_v3", "dpo4880", "grpo_r4", "distill43")]
-    stage = pd.read_csv(ROOT / "reports/cost/by_stage.csv")
-    findings.update({
-        "AuditWallS": f"{float(engine['wall_s_median']):.0f}",
-        "AuditGenS": f"{float(engine['generate_s_median']):.0f}",
-        "AuditReqPerS": f"{float(engine['requests_per_s_median']):.1f}",
-        "AuditKWh": f"{float(engine['gpu_energy_kwh_median']):.3f}",
-        "PrefixSpeedup": f"{float(engine['speedup_x_median']):.2f}",
-        "AgreeHFvLLM": rng(agree, ".1f"),
-        "ProjectGPUh": f"{float(stage.set_index('stage').loc['total allocated', 'gpu_h']):.0f}",
-        "ProjectKWh": f"{stage['gpu_energy_kwh'].sum():.0f}",
-    })
-    # The patching workload and its cost (reports/cost/steps.csv, stage patching): one `patch-*`
-    # step is one (model, contrast) on one GH200; a full-grid `margins-*` step reads 31,050
-    # prompts. Patched forwards per pair from scripts/interp/10_patch.py: residual at 32 layers
-    # plus the final pre-norm (33) and components (32 mixers + 32 MLPs), each over two token
-    # classes, then the top 24 heads per class and 8 random heads re-measured by real patching;
-    # AtP over 128 attention and 768 GDN heads in one backward.
-    cost_steps = pd.read_csv(ROOT / "reports/cost/steps.csv", dtype={"job_id": str})
-    patching = cost_steps[(cost_steps["stage"] == "patching") & (cost_steps["source"] == "record")]
-    ok = patching[patching["status"] == "ok"]
-    patch_ok = ok[ok["label"].str.startswith("patch-")]
-    # The medians are over 64-pair runs: the gender runs (45 pairs against SFT-v3) are left out.
-    patch_64 = patch_ok[~patch_ok["label"].str.contains("gen_male_female")]
-    margins_ok = ok[ok["label"].str.startswith("margins-") & (ok["wall_s"] > 600)]
-    assert len(patch_ok) >= 10 and len(margins_ok) >= 5, (len(patch_ok), len(margins_ok))
+    # Reproducible compute summaries. The 64-pair cohort uses actual selected-pair files,
+    # and the DDP measurement pair is chosen explicitly in ddp_review.json.
+    compute_tables, compute_findings = compute_data(ROOT, RAW.parent.parent)
+    findings.update(compute_findings)
+    write_compute_summary(ROOT, compute_tables, compute_findings, RAW.parent.parent)
     audits = [json.loads((ROOT / f"reports/interp/margins_summary-{spec}-grid-en.json")
                          .read_text())["audit"]
               for spec in ("sft_v3", "dpo4880", "grpo_r4", "distill43")]
@@ -492,150 +491,39 @@ def main() -> None:
         "PatchRealPerPair": rng(real_n, "d"),
         "PatchVerifyPerPair": rng(verify_n, "d"),
         "AtPHeads": f"{128 + 768:,}",
-        "PatchStepMin": f"{patch_64['wall_s'].median() / 60:.0f}",
-        "PatchStepGPUh": f"{patch_64['gpu_h'].median():.2f}",
-        "PatchRuns64": str(len(patch_64)),
-        "PatchPeakGiB": f"{patch_ok['mem_peak_gib'].max():.0f}",
-        "PatchStepsOK": str(len(patch_ok)),
-        "MarginsStepMin": f"{margins_ok['wall_s'].median() / 60:.0f}",
-        "MarginsPeakGiB": f"{margins_ok['mem_peak_gib'].max():.0f}",
-        "PatchTotalGPUh": f"{float(stage.set_index('stage').loc['patching', 'gpu_h']):.1f}",
+        "AgreeHFvLLM": rng([a["agreement_pct"] for a in audits], ".1f"),
         "BackendUnstableMax": f"{backend_gap:.2f}",
         "BackendDeltaShift": f"{delta_shift:.2f}",
     })
-    accel_rows = []
-    speed = ROOT / "reports/throughput_b/accel/speedup_summary.csv"
-    b1 = b1_times = None
-    if speed.exists():
-        t = pd.read_csv(speed)
-        hit = t[(t["condition"] == "vllm") & (t["ref_condition"] == "hf8")]
-        b1 = float(hit["speedup_x_median"].iloc[0]) if len(hit) else None
-        if len(hit):
-            b1_times = (float(hit["ref_generate_s_median"].iloc[0]),
-                        float(hit["generate_s_median"].iloc[0]))
-    steps = pd.read_csv(ROOT / "reports/cost/steps.csv", dtype={"job_id": str})
-    steps = steps[(steps["source"] == "record") & (steps["status"] == "ok")]
+    # The curve caption (section 2, plot_revision.py's right panel): three-seed mean change in
+    # unstable sets against SFT-v3 at each matched hire rate, reports/final/curves.csv.
+    curves = pd.read_csv(ROOT / "reports/final/curves.csv")
+    ref_curve = curves[curves["label"] == "SFT-v3"].set_index("hire_rate_pct")["unstable_pct"]
 
-    def runtime(label: str) -> float | None:
-        hit = steps[steps["label"] == label]
-        return float(hit["train_runtime_s"].iloc[-1]) if len(hit) else None
+    def mean_curve(prefix: str) -> pd.Series:
+        seeds = [curves[curves["label"] == f"{prefix} s{s}"].set_index("hire_rate_pct")
+                 ["unstable_pct"] - ref_curve for s in (42, 43, 44)]
+        assert all(len(x) == 51 for x in seeds), prefix
+        return pd.concat(seeds, axis=1).mean(axis=1)
 
-    def speedup_ratio(before: str, after: str) -> float | None:
-        a, b = runtime(before), runtime(after)
-        return a / b if a and b else None
+    def signed(x: float) -> str:
+        return ("\\textminus{}" if x < 0 else "+") + f"{abs(x):.1f}"
 
-    def secs(x: float) -> str:
-        return f"{x:,.0f}".replace(",", "\\thinspace{}")  # for the detail macros, not tables
-
-    def step_of(label: str) -> pd.Series:
-        return steps[steps["label"] == label].iloc[-1]
-
-    # Per-step times (scripts/accel_step_times.py). B2's 1-GPU baseline follows the rule
-    # registered in docs/ACCEL_BENCH.md ("B2 repeat"): the repeat replaces the first run if it
-    # does not slow down, steps 6-40 at most 5% slower than steps 1-5 ('steady'); if it slows
-    # again ('drift'), both phases are reported; until it exists ('pending'), the first run
-    # with its drift stated. Applied one-sided, as the slowdown it was written for: the
-    # repeat's steps 1-5 are the slower ones (warm-up), see ACCEL_BENCH.md.
-    st = pd.read_csv(ROOT / "reports/throughput_b/accel/step_times.csv")
-    b2 = st[st["bench"] == "B2"].pivot(index="step", columns="label", values="elapsed_s")
-
-    def phases(label: str) -> tuple[float, float]:
-        t = b2[label]
-        return t[5] / 5, (t[40] - t[5]) / 35
-
-    first, repeat, four = "bench-distill-ddp1", "bench-distill-ddp1-r2", "bench-distill-ddp4"
-    if repeat in b2 and runtime(repeat):
-        early, late = phases(repeat)
-        b2_state = "steady" if late <= 1.05 * early else "drift"
-    else:
-        b2_state = "pending"
-    one = repeat if b2_state == "steady" else first
-    e1, l1 = phases(first)
-    e4, l4 = phases(four)
-    # Speed and cost on one basis each: training time (the trainer's train_runtime, GPUs x it
-    # for GPU-s) and the whole cost step (wall with process start and model load, its gpu_h).
-    s1, s4 = step_of(one), step_of(four)
-    gpu_s = {k: v["n_gpus"] * v["train_runtime_s"] for k, v in (("one", s1), ("four", s4))}
-    train_extra = gpu_s["four"] / gpu_s["one"] - 1
-    extra = s4["gpu_h"] / s1["gpu_h"] - 1
+    dpo_c, grpo_c, dist_c = (mean_curve(p) for p in ("DPO_V3_4880", "GRPO+decay R4", "Distill"))
+    # DPO: the lowest rate from which its mean stays above +0.5 pp to the end of the range.
+    dpo_from = next(r for r in dpo_c.index if (dpo_c.loc[r:] > 0.5).all())
     findings.update({
-        "TrainOneEarly": f"{e1:.0f}", "TrainOneLate": f"{l1:.0f}",
-        "TrainRatioEarly": f"{e1 / e4:.1f}", "TrainRatioLate": f"{l1 / l4:.1f}",
-        "TrainExtraGPUh": f"{100 * extra:+.0f}",
-        "TrainExtraTrainGPUh": f"{100 * train_extra:+.0f}",
-        "TrainWallRatio": f"{s1['wall_s'] / s4['wall_s']:.1f}",
-        "TrainState": b2_state,
+        "CurveDPOFrom": f"{dpo_from:.0f}",
+        "CurveDPOMax": signed(dpo_c.max()), "CurveDPOMaxAt": f"{dpo_c.idxmax():.0f}",
+        "CurveGRPOMax": signed(grpo_c.max()),
+        "CurveDistillLo": signed(dist_c.min()), "CurveDistillHi": signed(dist_c.max()),
     })
-    if b2_state == "steady":
-        findings["TrainNote"] = (
-            "1-GPU baseline: steady repeat (first run slowed at step 5)")
-    elif b2_state == "drift":
-        findings["TrainNote"] = (
-            f"Both 1-GPU runs slow after step 5: \\texttimes{e1 / e4:.1f} before, "
-            f"\\texttimes{l1 / l4:.1f} after")
-    else:
-        findings["TrainNote"] = (
-            f"1-GPU run slowed {e1:.0f} \\textrightarrow{{}} {l1:.0f} s/step after step 5; "
-            f"rerunning")
-
-    tp = pd.read_csv(ROOT / "reports/cost/throughput.csv")
-    tp = tp[tp["label"] == "throughput-accel-vllm"]
-    st_b3 = st[st["bench"] == "B3"].groupby("label")[["step_time_s",
-                                                      "completion_tokens_mean"]].mean()
-    if b1_times and len(tp):
-        findings["AuditDetail"] = (
-            f"HF generate \\textrightarrow{{}} vLLM: {secs(b1_times[0])} \\textrightarrow{{}} "
-            f"{b1_times[1]:.1f} s, generation only; {int(tp['requests'].iloc[0]):,} prompts, "
-            f"about {(tp['output_tokens'] / tp['requests']).mean():.0f} tokens out")
-    # Wall-clock and the GPU-hours it costs, side by side (the user, 2026-11-02).
-    findings["TrainDetail"] = (
-        f"1 \\textrightarrow{{}} 4 GH200, batch 32, 40 steps: training "
-        f"{secs(runtime(one))} \\textrightarrow{{}} {secs(runtime(four))} s at "
-        f"{100 * train_extra:+.0f}\\% GPU-h; with start-up "
-        f"\\texttimes{s1['wall_s'] / s4['wall_s']:.1f} at {100 * extra:+.0f}\\%")
-    hf_s, vl_s = (st_b3.loc[f"bench-grpo-rollout-{k}", "step_time_s"] for k in ("hf", "vllm"))
-    findings["GRPODetail"] = (
-        f"HF \\textrightarrow{{}} colocated vLLM, 6 steps: "
-        f"{secs(runtime('bench-grpo-rollout-hf'))} \\textrightarrow{{}} "
-        f"{secs(runtime('bench-grpo-rollout-vllm'))} s; "
-        f"{st_b3['completion_tokens_mean'].mean():.0f}-token outputs, so only "
-        f"{hf_s - vl_s:.1f} of {hf_s:.1f} s a step is saved")
-    findings.update({
-        "RolloutTokens": f"{st_b3['completion_tokens_mean'].mean():.0f}",
-        "RolloutSavedS": f"{hf_s - vl_s:.1f}",
-        "RolloutStepS": f"{hf_s:.1f}",
-    })
-    for key, label, value in (
-            ("audit", "Audit generation", b1),
-            ("train", "Training", speedup_ratio(one, four)),
-            ("grpo", "GRPO rollouts",
-             speedup_ratio("bench-grpo-rollout-hf", "bench-grpo-rollout-vllm"))):
-        # Plain cells only: the label is formatted in main.tex from `speedup`.
-        accel_rows.append(dict(key=key, label=label,
-                               speedup=round(value, 2) if value else 0,
-                               pending=int(value is None)))
-
-    def tex_table(name: str, recs: list[dict]) -> str:
-        cols = list(recs[0])
-        # col sep=comma: a comma inside a value would shift every later column of its row.
-        bad = [(c, r[c]) for r in recs for c in cols if "," in str(r[c])]
-        assert not bad, (name, bad)
-        # Cells are read in the preamble: only the escapes the poster has compiled with.
-        def rest(v: str) -> str:
-            for ok in ("\\textminus{}", "\\texttimes", "\\%"):
-                v = v.replace(ok, "")
-            return v
-        bad = [(c, r[c]) for r in recs for c in cols if "\\" in rest(str(r[c]))]
-        assert not bad, (name, bad)
-        body = "\n".join(",".join(str(r[c]) for c in cols) for r in recs)
-        return f"\\pgfplotstableread[col sep=comma]{{\n{','.join(cols)}\n{body}\n}}\\{name}\n"
-
+    findings.update(followup_findings())
     out = ["% Generated by poster/latex/latex_data.py -- do not edit; rerun the script.",
            tex_table("ModelData", model_rows), tex_table("DeltaData", delta_rows),
            tex_table("PathData", path_rows), tex_table("SeedData", seed_rows),
-           tex_table("AccelData", accel_rows)]
-    for k, v in findings.items():
-        out.append(f"\\newcommand{{\\{k}}}{{{v}}}")
+           *(tex_table(name, records) for name, records in compute_tables.items())]
+    out.extend(macro_lines(findings))
     # Written into main.tex between its markers, so the poster is one self-contained file.
     main_tex = HERE / "main.tex"
     tex = main_tex.read_text()
@@ -647,4 +535,19 @@ def main() -> None:
 
 
 if __name__ == "__main__":
-    main()
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--compute-only", action="store_true",
+                        help="Refresh compute tables/macros only; preserves existing scientific data")
+    parser.add_argument("--output", type=Path,
+                        help="Target TeX file for --compute-only; default: main.tex")
+    args = parser.parse_args()
+    if args.compute_only:
+        target = args.output or HERE / "main.tex"
+        tables, findings = compute_data(ROOT, RAW.parent.parent)
+        target.write_text(refresh_compute_block(target.read_text(), tables, findings))
+        write_compute_summary(ROOT, tables, findings, RAW.parent.parent)
+        print(f"Refreshed compute data in {target}")
+    elif args.output:
+        parser.error("--output is only supported with --compute-only")
+    else:
+        main()

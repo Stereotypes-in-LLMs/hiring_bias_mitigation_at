@@ -1,0 +1,9 @@
+{
+  "spec": "distill42",
+  "completed": true,
+  "selection_reference": "sft_v3",
+  "selection_seed": 42,
+  "requested_pairs": 64,
+  "gender_actual_pairs": 45,
+  "contrasts": 4
+}

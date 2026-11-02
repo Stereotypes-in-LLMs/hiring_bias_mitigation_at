@@ -86,14 +86,43 @@ def noise_floor(spec: str, name: str, noise: str) -> dict:
 
 def sensitivity(manifest, m_ref, m_spec, spec, ref, contrasts, n_boot, seed,
                 noise=None) -> pd.DataFrame:
+    # The shared manifest predates later checkpoints. Compute their effects from
+    # the supplied margins in memory, without adding model columns to that file.
+    rows = manifest[manifest["contrast_id"].isin(contrasts) & manifest["aligned"]].copy()
+    indexed = {}
+    for name, frame in ((ref, m_ref), (spec, m_spec)):
+        if frame["prompt_uid"].isna().any() or frame["prompt_uid"].duplicated().any():
+            raise ValueError(f"{name}: missing or duplicate prompt_uid in margins")
+        if not np.isfinite(frame["margin_fp32"]).all():
+            raise ValueError(f"{name}: nonfinite margins")
+        indexed[name] = frame.set_index("prompt_uid")
+    if set(indexed[ref].index) != set(indexed[spec].index):
+        raise ValueError("reference and compared margins have different prompt_uid sets")
+    for column in ("candidate_id", "condition"):
+        if not indexed[ref][column].equals(indexed[spec][column].reindex(indexed[ref].index)):
+            raise ValueError(f"reference and compared margins disagree on {column}")
+    for name, frame in indexed.items():
+        for side in ("a", "b"):
+            uids = rows[f"uid_{side}"]
+            if uids.isna().any() or not uids.isin(frame.index).all():
+                raise ValueError(f"{name}: aligned contrast contains unscored prompt_uid")
+            if not uids.map(frame["candidate_id"]).equals(rows["candidate_id"]):
+                raise ValueError(f"{name}: aligned contrast candidate_id differs from margins")
+        rows[f"dm_{name}"] = (rows["uid_a"].map(frame["margin_fp32"])
+                                - rows["uid_b"].map(frame["margin_fp32"]))
+    manifest = rows
     free = m_ref[m_ref["condition"] == "attr_free"][["candidate_id", "prompt_uid", "margin_fp32"]]
     free = free.merge(m_spec[["prompt_uid", "margin_fp32"]], on="prompt_uid",
-                      suffixes=("_ref", "_spec"))
+                      suffixes=("_ref", "_spec"), validate="one_to_one")
     rng = np.random.default_rng(seed)
     out = []
     for c in contrasts:
         rows = manifest[(manifest["contrast_id"] == c) & manifest["aligned"]]
-        cands = np.array(sorted(set(rows["candidate_id"]) & set(free["candidate_id"])))
+        if rows.empty:
+            raise ValueError(f"{c}: no aligned contrast pairs")
+        if not set(rows["candidate_id"]).issubset(set(free["candidate_id"])):
+            raise ValueError(f"{c}: candidate lacks an aligned attribute-free margin")
+        cands = np.array(sorted(set(rows["candidate_id"])))
         per = rows.assign(a_ref=rows[f"dm_{ref}"].abs(), a_spec=rows[f"dm_{spec}"].abs(),
                           q_ref=rows[f"dm_{ref}"] ** 2, q_spec=rows[f"dm_{spec}"] ** 2)
         per = per.groupby("candidate_id")[["a_ref", "a_spec", "q_ref", "q_spec"]].agg(

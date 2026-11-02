@@ -541,7 +541,10 @@ def arm_report(run_name: str, ref_name: str, run: pd.DataFrame, run_meta: dict,
 
 
 def _write_report(summary: dict, path: Path) -> None:
-    path.write_text(json.dumps(summary, indent=2))
+    from hiring_bias_mitigation.analysis.reference_metrics import _atomic_output
+
+    with _atomic_output(path) as temporary:
+        temporary.write_text(json.dumps(summary, indent=2))
     print(json.dumps({k: v for k, v in summary.items() if k != "inputs"}, indent=2))
     for issue in summary["issues"]:
         log.warning("does not conform: %s", issue)

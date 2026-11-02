@@ -1,0 +1,190 @@
+{
+  "sources_sha256": {
+    "reports/cost/steps.csv": "661c85e1893cf1385a4998f0e615c7255ba7d2e65263df397459417c079516e9",
+    "reports/cost/by_stage.csv": "f975de5d3269270b19617787c1e5e6d6764bb97bc2eddfe34bef6d26f83c71d3",
+    "reports/throughput_b/full/speedup_summary.csv": "e5de701d08a97bc855b8fce2d045436fed90698fc6891fd2517663768fc5e53e",
+    "reports/throughput_b/accel/speedup_summary.csv": "5056a7d482243075379da07df652ee32cae2ad0eac1159d95f0b4ceec025334a",
+    "reports/throughput_b/accel/identity.csv": "a9bfff8bb8434b3ee631a734d97e1426c88493f0d76fa063b8a620026b81ab65",
+    "reports/throughput_b/accel/step_times.csv": "da3c6f4a6f6f371c7ff563295b3e39f8b70e65e4804764d6fea269d3910a2198",
+    "poster/latex/ddp_review.json": "07a05337cd795671cbcd706329acef290636d3910ea32b450da6abf4431707bd"
+  },
+  "ddp_review": {
+    "status": "reviewed",
+    "one_gpu": {
+      "label": "bench-distill-ddp1-r2",
+      "job_id": "5238558"
+    },
+    "four_gpu": {
+      "label": "bench-distill-ddp4",
+      "job_id": "5236800"
+    },
+    "note": "Reviewed one-GPU repeat; no late slowdown",
+    "phase_rule": "late <= 1.05 * early",
+    "phase_rule_provenance": "Post-hoc one-sided no-slowdown interpretation accepted by the user; the original registration used an absolute 5 percent bound."
+  },
+  "ddp_selected_records": {
+    "one_gpu": {
+      "job_id": "5238558",
+      "label": "bench-distill-ddp1-r2",
+      "wall_s": 2270.6,
+      "train_runtime_s": 2040.0676,
+      "gpu_h": 0.6307,
+      "gpu_basis": "used"
+    },
+    "four_gpu": {
+      "job_id": "5236800",
+      "label": "bench-distill-ddp4",
+      "wall_s": 850.3,
+      "train_runtime_s": 549.5725,
+      "gpu_h": 0.9448,
+      "gpu_basis": "used"
+    }
+  },
+  "ddp_phase_diagnostics": {
+    "bench-distill-ddp1": {
+      "state": "late slowdown",
+      "early_s": 49.6,
+      "late_s": 62.02857142857143,
+      "fractional_change": 0.25057603686635943
+    },
+    "bench-distill-ddp1-r2": {
+      "state": "no late slowdown",
+      "early_s": 57.4,
+      "late_s": 50.05714285714286,
+      "fractional_change": -0.12792434046789447
+    },
+    "bench-distill-ddp4": {
+      "state": "no late slowdown",
+      "early_s": 14.0,
+      "late_s": 13.685714285714285,
+      "fractional_change": -0.022448979591836782
+    }
+  },
+  "patch_sixty_four": {
+    "runs": 22,
+    "median_minutes": 19.620833333333334,
+    "median_used_gpu_h": 0.32704999999999995,
+    "peak_gib": 42.05,
+    "job_ids": [
+      "5185108",
+      "5185258",
+      "5190857",
+      "5198222",
+      "5228380",
+      "5228526",
+      "5237408"
+    ],
+    "pair_count_sources": [
+      "reports/interp/patching/base-grid-gen_male_female_impl-n64-s42/pairs.csv",
+      "reports/interp/patching/distill42-grid-mil_combat_civ_impl-n64-s42-sel_sft_v3/pairs.csv",
+      "reports/interp/patching/distill42-grid-rel_atheist_christian_impl-n64-s42-sel_sft_v3/pairs.csv",
+      "reports/interp/patching/distill43-grid-mil_combat_civ_expl-n64-s42-sel_sft_v3/pairs.csv",
+      "reports/interp/patching/distill43-grid-mil_combat_civ_impl-n64-s42-sel_sft_v3/pairs.csv",
+      "reports/interp/patching/distill43-grid-rel_atheist_christian_impl-n64-s42-sel_sft_v3/pairs.csv",
+      "reports/interp/patching/dpo4880-grid-mil_combat_civ_expl-n64-s42-sel_sft_v3/pairs.csv",
+      "reports/interp/patching/dpo4880-grid-mil_combat_civ_impl-n64-s42-sel_sft_v3/pairs.csv",
+      "reports/interp/patching/dpo4880-grid-rel_atheist_christian_impl-n64-s42-sel_sft_v3/pairs.csv",
+      "reports/interp/patching/grpo525-grid-mil_combat_civ_expl-n64-s42-sel_sft_v3/pairs.csv",
+      "reports/interp/patching/grpo525-grid-mil_combat_civ_impl-n64-s42-sel_sft_v3/pairs.csv",
+      "reports/interp/patching/grpo525-grid-rel_atheist_christian_impl-n64-s42-sel_sft_v3/pairs.csv",
+      "reports/interp/patching/grpo_r4-grid-mil_combat_civ_expl-n64-s42-sel_sft_v3/pairs.csv",
+      "reports/interp/patching/grpo_r4-grid-mil_combat_civ_impl-n64-s42-sel_sft_v3/pairs.csv",
+      "reports/interp/patching/grpo_r4-grid-rel_atheist_christian_impl-n64-s42-sel_sft_v3/pairs.csv",
+      "reports/interp/patching/pd42-grid-mil_combat_civ_expl-n64-s42-sel_sft_v3/pairs.csv",
+      "reports/interp/patching/pd42-grid-mil_combat_civ_impl-n64-s42-sel_sft_v3/pairs.csv",
+      "reports/interp/patching/pd42-grid-rel_atheist_christian_impl-n64-s42-sel_sft_v3/pairs.csv",
+      "reports/interp/patching/sft_v3-grid-gen_male_female_impl-n64-s42/pairs.csv",
+      "reports/interp/patching/sft_v3-grid-mil_combat_civ_expl-n64-s42-sel_sft_v3/pairs.csv",
+      "reports/interp/patching/sft_v3-grid-mil_combat_civ_impl-n64-s42-sel_sft_v3/pairs.csv",
+      "reports/interp/patching/sft_v3-grid-rel_atheist_christian_impl-n64-s42-sel_sft_v3/pairs.csv"
+    ]
+  },
+  "timing_scope": {
+    "audit_benchmark": "generation only; startup excluded",
+    "full_audit_wall": "startup, generation and writing; downstream scoring excluded",
+    "full_audit_requests_per_s": "generation throughput, not end-to-end throughput",
+    "ddp_training_speedup": "train_runtime; startup excluded",
+    "ddp_end_to_end_speedup": "cost-step wall time; startup included",
+    "ddp_gpu_h": "used GPU-h; startup included",
+    "ddp_training_gpu_h": "GPU count times train_runtime; startup excluded",
+    "project_gpu_h": "allocated GPU-h"
+  },
+  "tables": {
+    "AuditBenchData": [
+      {
+        "key": "hf8",
+        "label": "HF batch 8",
+        "seconds": 1090.938,
+        "lo": 1064.822,
+        "hi": 1117.053
+      },
+      {
+        "key": "hf32",
+        "label": "HF batch 32",
+        "seconds": 469.87,
+        "lo": 460.062,
+        "hi": 479.677
+      },
+      {
+        "key": "vllm",
+        "label": "vLLM",
+        "seconds": 64.668,
+        "lo": 64.379,
+        "hi": 64.957
+      }
+    ]
+  },
+  "macros": {
+    "AuditWallS": "793",
+    "AuditGenS": "680",
+    "AuditReqPerS": "45.65",
+    "AuditKWh": "0.105",
+    "FullAuditPrompts": "31,050",
+    "FullAuditRepeats": "4",
+    "PrefixSpeedup": "1.10",
+    "ProjectGPUh": "552",
+    "ProjectKWh": "144",
+    "PatchRunsSixtyFour": "22",
+    "PatchStepMin": "20",
+    "PatchStepGPUh": "0.33",
+    "PatchPeakGiB": "42",
+    "PatchStepMinLow": "12.7",
+    "PatchStepMinHigh": "21.7",
+    "PatchStepsOK": "27",
+    "MarginsStepMin": "32",
+    "MarginsPeakGiB": "87",
+    "PatchTotalGPUh": "14.4",
+    "AuditBenchPrompts": "3,105",
+    "AuditBenchRepeats": "2",
+    "AuditSpeedSmall": "16.9",
+    "AuditSpeedLarge": "7.3",
+    "AuditBackendAgree": "99.68--99.78",
+    "AuditHFSmallSeconds": "1091",
+    "AuditHFLargeSeconds": "470",
+    "AuditVLLMSeconds": "64.7",
+    "DDPTrainingSpeedup": "3.71",
+    "DDPEndToEndSpeedup": "2.67",
+    "DDPOneSeconds": "2040",
+    "DDPFourSeconds": "550",
+    "DDPOneWallSeconds": "2271",
+    "DDPFourWallSeconds": "850",
+    "DDPOneGPUh": "0.631",
+    "DDPFourGPUh": "0.945",
+    "DDPCostIncrease": "50",
+    "DDPCostDelta": "+50",
+    "DDPTrainingCostDelta": "+8",
+    "DDPTrainingOneGPUh": "0.567",
+    "DDPTrainingFourGPUh": "0.611",
+    "DDPReviewed": "1",
+    "DDPStatus": "Reviewed one-GPU repeat; no late slowdown",
+    "DDPBatch": "32",
+    "DDPSteps": "40",
+    "DDPRepeatState": "no late slowdown",
+    "DDPFirstEarlyS": "49.6",
+    "DDPFirstLateS": "62.0",
+    "DDPRepeatEarlyS": "57.4",
+    "DDPRepeatLateS": "50.1",
+    "DDPFourEarlyS": "14.0",
+    "DDPFourLateS": "13.7"
+  }
+}

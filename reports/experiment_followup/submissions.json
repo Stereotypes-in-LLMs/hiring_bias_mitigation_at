@@ -1,0 +1,124 @@
+{
+  "jobs": {
+    "xw-w163-s42": {
+      "job_id": "5238996",
+      "script": "scripts/cscs/train_window_budget.sbatch",
+      "wall_cap": "02:00:00",
+      "environment": {
+        "POSTER_SEED": "42"
+      },
+      "dependency": null,
+      "submitted_at_utc": "2026-11-02T15:22:30.457530+00:00"
+    },
+    "xw-w163-e42": {
+      "job_id": "5238997",
+      "script": "scripts/cscs/evaluate_window_budget.sbatch",
+      "wall_cap": "01:00:00",
+      "environment": {
+        "POSTER_SEED": "42"
+      },
+      "dependency": "5238996",
+      "submitted_at_utc": "2026-11-02T15:22:30.872741+00:00"
+    },
+    "xw-w163-s43": {
+      "job_id": "5238999",
+      "script": "scripts/cscs/train_window_budget.sbatch",
+      "wall_cap": "02:00:00",
+      "environment": {
+        "POSTER_SEED": "43"
+      },
+      "dependency": null,
+      "submitted_at_utc": "2026-11-02T15:22:31.451594+00:00"
+    },
+    "xw-w163-e43": {
+      "job_id": "5239000",
+      "script": "scripts/cscs/evaluate_window_budget.sbatch",
+      "wall_cap": "01:00:00",
+      "environment": {
+        "POSTER_SEED": "43"
+      },
+      "dependency": "5238999",
+      "submitted_at_utc": "2026-11-02T15:22:31.971314+00:00"
+    },
+    "xw-w163-s44": {
+      "job_id": "5239001",
+      "script": "scripts/cscs/train_window_budget.sbatch",
+      "wall_cap": "02:00:00",
+      "environment": {
+        "POSTER_SEED": "44"
+      },
+      "dependency": null,
+      "submitted_at_utc": "2026-11-02T15:22:32.439859+00:00"
+    },
+    "xw-w163-e44": {
+      "job_id": "5239002",
+      "script": "scripts/cscs/evaluate_window_budget.sbatch",
+      "wall_cap": "01:00:00",
+      "environment": {
+        "POSTER_SEED": "44"
+      },
+      "dependency": "5239001",
+      "submitted_at_utc": "2026-11-02T15:22:32.969586+00:00"
+    },
+    "xw-mech-dpo4880_s43": {
+      "job_id": "5239007",
+      "script": "scripts/cscs/poster_mechanism.sbatch",
+      "wall_cap": "01:30:00",
+      "environment": {
+        "POSTER_SPEC": "dpo4880_s43"
+      },
+      "dependency": null,
+      "submitted_at_utc": "2026-11-02T15:23:00.531098+00:00"
+    },
+    "xw-mech-dpo4880_s44": {
+      "job_id": "5239008",
+      "script": "scripts/cscs/poster_mechanism.sbatch",
+      "wall_cap": "01:30:00",
+      "environment": {
+        "POSTER_SPEC": "dpo4880_s44"
+      },
+      "dependency": null,
+      "submitted_at_utc": "2026-11-02T15:23:00.949748+00:00"
+    },
+    "xw-mech-grpo_r4_s43": {
+      "job_id": "5239009",
+      "script": "scripts/cscs/poster_mechanism.sbatch",
+      "wall_cap": "01:30:00",
+      "environment": {
+        "POSTER_SPEC": "grpo_r4_s43"
+      },
+      "dependency": null,
+      "submitted_at_utc": "2026-11-02T15:23:01.847476+00:00"
+    },
+    "xw-mech-grpo_r4_s44": {
+      "job_id": "5239010",
+      "script": "scripts/cscs/poster_mechanism.sbatch",
+      "wall_cap": "01:30:00",
+      "environment": {
+        "POSTER_SPEC": "grpo_r4_s44"
+      },
+      "dependency": null,
+      "submitted_at_utc": "2026-11-02T15:23:02.440999+00:00"
+    },
+    "xw-mech-distill42": {
+      "job_id": "5239011",
+      "script": "scripts/cscs/poster_mechanism.sbatch",
+      "wall_cap": "01:30:00",
+      "environment": {
+        "POSTER_SPEC": "distill42"
+      },
+      "dependency": null,
+      "submitted_at_utc": "2026-11-02T15:23:02.888838+00:00"
+    },
+    "xw-mech-distill44": {
+      "job_id": "5239012",
+      "script": "scripts/cscs/poster_mechanism.sbatch",
+      "wall_cap": "01:30:00",
+      "environment": {
+        "POSTER_SPEC": "distill44"
+      },
+      "dependency": null,
+      "submitted_at_utc": "2026-11-02T15:23:03.362018+00:00"
+    }
+  }
+}
