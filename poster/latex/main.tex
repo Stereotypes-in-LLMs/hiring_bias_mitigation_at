@@ -148,7 +148,9 @@ Self-distillation,dSFT,44,-0.328,-1.038,0.339,-0.285,\textminus{}0.285
 % as a result (docs/FINAL_TABLE.md, docs/DPO_V3_4880_SEEDS.md). Placing the LoRA on the window
 % patching finds did not help (docs/PATCHING_DISTILL.md A and F, docs/DISTILL_FOLLOWUP.md H), so
 % patching is reported as explaining, not guiding.
-\newcommand{\PosterSubtitle}{SFT, then DPO, GRPO or self-distillation on Qwen3.5-9B, three seeds each, compared with SFT-v3 at a matched hire rate and read with activation patching}
+% The subtitle states the scope: three seeds for the behavioural audit, one selected checkpoint per
+% method for the patching. Model, methods, hire-rate matching and seeds sit in the setup and captions.
+\newcommand{\PosterSubtitle}{Post-training after SFT: three-seed behavioural evaluation and mechanistic probes of selected checkpoints}
 \newcommand{\PosterAuthors}{Authors and affiliations [to finalise]}
 % Section 2B, quoted from the patching table of docs/INTERP_SFT_V3.md (Marta Samoilenko):
 % mean |dm| over the same 64 pairs per contrast (picked for |dm_base| >= 0.5), Base and SFT-v3,
@@ -235,7 +237,7 @@ Religion / implicit,1.32,0.52,\textminus{}61\%
 }
 % A filled diamond, for a seed mean (\Diamond itself is amssymb's math symbol).
 \newcommand{\MeanDiamond}[3]{%
-  \path[fill=#3] (#1,#2-4.5) -- (#1+4.5,#2) -- (#1,#2+4.5) -- (#1-4.5,#2) -- cycle;%
+  \path[fill=#3] (#1,#2-5.5) -- (#1+5.5,#2) -- (#1,#2+5.5) -- (#1-5.5,#2) -- cycle;%
 }
 % Editable plot axes: left, baseline, width, min, max, tick list, grid top.
 \newcommand{\Axis}[7]{%
@@ -252,10 +254,10 @@ Religion / implicit,1.32,0.52,\textminus{}61\%
   \pgfmathsetmacro{\xm}{#1+(#6-#3)/(#4-#3)*#2}%
   \pgfmathsetmacro{\xl}{#1+(#7-#3)/(#4-#3)*#2}%
   \pgfmathsetmacro{\xh}{#1+(#8-#3)/(#4-#3)*#2}%
-  \draw[#9,line width=2.2bp] (\xl,#5) -- (\xh,#5);%
+  \draw[#9,line width=2.8bp] (\xl,#5) -- (\xh,#5);%
   \draw[#9,line width=1.6bp] (\xl,#5-3) -- (\xl,#5+3);%
   \draw[#9,line width=1.6bp] (\xh,#5-3) -- (\xh,#5+3);%
-  \path[draw=#9,fill=\PointFill,line width=1.8bp] (\xm,#5) circle[radius=3.2];%
+  \path[draw=#9,fill=\PointFill,line width=2bp] (\xm,#5) circle[radius=3.8];%
 }
 
 \begin{document}
@@ -343,14 +345,13 @@ Religion / implicit,1.32,0.52,\textminus{}61\%
 \Txt[text=ink,align=center]{928}{337}{76}{10.5}{\bfseries bottleneck}
 \NodeBox{712}{360}{68}{44}{ink}{white}{12.5}{Attribute}
 \NodeBox{848}{360}{79}{44}{body}{white}{12}{Readers\\L7--14}
-\NodeBox{933}{354}{66}{56}{ink}{mist}{12}{Hub\\L15.H11}
+\NodeBox{933}{354}{66}{56}{ink}{mist}{13.5}{Hub\\L15.H11}
 \draw[ink,line width=2.2bp] (933,354) rectangle ++(66,56);
 \NodeBox{1056}{360}{66}{44}{body}{white}{12}{Readout\\MLP 31}
 \NodeBox{1052}{420}{80}{22}{ink}{white}{11.5}{hire / reject}
-\Arrow[ink]{780}{382}{848}{382}
-\Arrow[ink]{927}{382}{933}{382}
-\Arrow[ink]{999}{382}{1056}{382}
-\Arrow[ink]{1089}{404}{1089}{420}
+% The main path, heavier than the opposers' dashed line and the layer axis.
+\foreach \xa/\ya/\xb/\yb in {780/382/848/382,927/382/933/382,999/382/1056/382,1089/404/1089/420}{%
+  \draw[ink,line width=2.4bp,-{Latex[length=9bp,width=6.5bp]}] (\xa,\ya) -- (\xb,\yb);}
 % Opposing heads push back on the signal between hub and readout.
 \NodeBox{918}{440}{96}{24}{body}{white}{11.5}{Opposers}
 \draw[gray,dashed,line width=1.8bp,-{Bar[width=9bp]}] (1014,452) -- (1030,452) -- (1030,385);
@@ -447,22 +448,22 @@ Religion / implicit,1.32,0.52,\textminus{}61\%
 % are descriptive ranges (PathData), not confidence intervals. Design after the user's 2026-11-02
 % reference bundle, redrawn here so the file stays one and every number generated.
 \Txt[text=greenDark]{1192}{284}{808}{22}{\bfseries SFT delivers the main stability gain}
-\Txt[text=muted]{1192}{316}{808}{12.5}{One more stage changes score sensitivity; its mean gain stays within seed noise}
+\Txt[text=muted]{1192}{316}{808}{13}{Additional mean gains remain uncertain, while extreme attribute effects and recurring cases differ}
 \Rect[draw=greenDark,line width=1bp]{1192}{346}{808}{70}{greenPale}
-\Txt[text=greenDark]{1208}{354}{220}{9.5}{\bfseries UNSTABLE SETS AT \CommonHire\% HIRE RATE}
+\Txt[text=greenDark]{1208}{353}{220}{11}{\bfseries UNSTABLE SETS AT \CommonHire\% HIRE RATE}
 \Txt[text=ink]{1208}{376}{220}{24}{\bfseries\BaseAtSFT\% \textrightarrow{} \SFTOwn\%}
-\Txt[text=greenDark]{1440}{354}{270}{9.5}{\bfseries BASE TO SFT-v3, PAIRED 95\% CI}
+\Txt[text=greenDark]{1440}{353}{270}{11}{\bfseries BASE TO SFT-v3, PAIRED 95\% CI}
 \Txt[text=greenDark]{1440}{380}{270}{18}{\bfseries\SFTvsBase{} pp}
-\Txt[text=greenDark]{1725}{354}{265}{9.5}{\bfseries AGREEMENT WITH GPT-4o, BASE TO SFT-v3}
+\Txt[text=greenDark]{1725}{353}{265}{11}{\bfseries AGREEMENT WITH GPT-4o, BASE TO SFT-v3}
 \Txt[text=ink]{1725}{376}{265}{24}{\bfseries\BaseAgree\% \textrightarrow{} \SFTAgree\%}
 
 % A: the nine seeds.
 \Txt[text=greenDark]{1192}{432}{808}{16}{\bfseries A\quad Additional stability gains stay within seed noise}
-\Txt[text=muted]{1192}{456}{808}{11.5}{\CommonCIBelow{} of 9 seed intervals lies below 0 at the matched hire rate; each stage's three seeds, then their mean}
-\Txt[text=ink]{1192}{480}{150}{11}{\bfseries Added stage}
-\Txt[text=ink,align=center]{1352}{480}{310}{11}{\bfseries $\Delta$ unstable sets at \CommonHire\% (pp)}
-\Txt[text=ink,align=center]{1690}{480}{160}{11}{\bfseries $\Delta$ agreement (pp)}
-\Txt[text=ink,align=center]{1870}{480}{130}{11}{\bfseries Training (GPU-h)}
+\Txt[text=muted]{1192}{456}{808}{12.5}{\CommonCIBelow{} of 9 seed intervals lies below 0 at the matched hire rate; each stage's three seeds, then their mean}
+\Txt[text=ink]{1192}{479}{150}{12}{\bfseries Added stage}
+\Txt[text=ink,align=center]{1352}{479}{310}{12}{\bfseries $\Delta$ unstable sets at \CommonHire\% (pp)}
+\Txt[text=ink,align=center]{1690}{479}{160}{12}{\bfseries $\Delta$ agreement (pp)}
+\Txt[text=ink,align=center]{1870}{479}{130}{12}{\bfseries Training (GPU-h)}
 \Axis{1352}{690}{310}{-2}{1.5}{-2,-1,0,1}{496}
 \Axis{1690}{690}{160}{-1.2}{1.2}{-1,0,1}{496}
 \draw[gray,dashed,line width=1bp] (1352+2/3.5*310,496) -- (1352+2/3.5*310,690);
@@ -488,26 +489,26 @@ Religion / implicit,1.32,0.52,\textminus{}61\%
   \DeltaValue{\g}{hi}{\ADH}
   \ModelValue{\mm}{post}{\Post}
   \pgfmathsetmacro{\yy}{500+66*\g}
-  \Txt[text=ink]{1192}{\yy-4}{150}{13}{\bfseries\GName}
-  \Txt[text=muted]{1192}{\yy+16}{150}{10.5}{mean \GMeanTxt{} pp}
+  \Txt[text=ink]{1192}{\yy-4}{150}{14}{\bfseries\GName}
+  \Txt[text=muted]{1192}{\yy+18}{150}{11.5}{mean \GMeanTxt{} pp}
   \pgfmathsetmacro{\xm}{1352+(\GMean+2)/3.5*310}
   \MeanDiamond{\xm}{\yy+42}{greenDark}
   \def\PointFill{greenDark}
   \CI{1690}{160}{-1.2}{1.2}{\yy+21}{\AD}{\ADL}{\ADH}{greenDark}
   \pgfmathsetmacro{\bw}{\Post/12*100}
   \Rect{1880}{\yy+14}{\bw}{14}{green}
-  \Txt[text=ink]{1880+\bw+5}{\yy+14}{50}{11}{\bfseries+\Post}
+  \Txt[text=ink]{1880+\bw+6}{\yy+13}{50}{12.5}{\bfseries+\pgfmathprintnumber[fixed,precision=1]{\Post}}
 }
-\Txt[text=muted]{1192}{712}{808}{10.5}{Instability: seeds 42 / 43 / 44 top to bottom, each a paired 95\% candidate-bootstrap CI with SFT-v3 moved to the seed's hire rate; the diamond is the 3-seed mean, no aggregate CI. Agreement: GPT-4o reference, greedy decisions, paired CI vs SFT-v3. Training: the stage's own GPU-h over SFT-v3's \SFTTrainGPUh.}
+\Txt[text=muted]{1192}{712}{808}{11}{Seeds 42 / 43 / 44 top to bottom, paired 95\% candidate-bootstrap CIs at the common hire rate; diamond: 3-seed mean, no aggregate CI. Agreement: paired vs SFT-v3, greedy decisions. Training: the stage's own GPU-h over SFT-v3's \SFTTrainGPUh.}
 \draw[rule,line width=1bp] (1192,750) -- (2000,750);
 
 % B: the attribute effect's tail, a range over the three contrasts on a log axis.
-\Txt[text=greenDark]{1192}{760}{378}{17}{\bfseries B\quad Extreme score effects}
-\Txt[text=muted]{1192}{784}{378}{11}{99th-pct attribute effect, arm / SFT-v3, log scale}
+\Txt[text=greenDark]{1192}{760}{378}{17}{\bfseries B\quad Extreme attribute effects}
+\Txt[text=muted]{1192}{784}{378}{12}{99th-pct attribute effect, arm / SFT-v3, log scale}
 \foreach \tick/\lab in {0.25/0.25,0.5/0.5,1/1,2/2,4/4,8/8,16/16}{%
   \pgfmathsetmacro{\xx}{1290+(ln(\tick)-ln(0.25))/(ln(16)-ln(0.25))*200}
   \draw[rule,line width=0.6bp] (\xx,810) -- (\xx,900);
-  \Txt[align=center,text=muted]{\xx-18}{905}{36}{11}{\lab}}
+  \Txt[align=center,text=muted]{\xx-18}{905}{36}{12}{\lab}}
 \draw[rule,line width=1bp] (1290,900) -- (1490,900);
 \pgfmathsetmacro{\xone}{1290+(ln(1)-ln(0.25))/(ln(16)-ln(0.25))*200}
 \draw[ink,dashed,line width=1bp] (\xone,810) -- (\xone,900);
@@ -520,19 +521,19 @@ Religion / implicit,1.32,0.52,\textminus{}61\%
   \pgfmathsetmacro{\xa}{1290+(ln(\Pa)-ln(0.25))/(ln(16)-ln(0.25))*200}
   \pgfmathsetmacro{\xb}{1290+(ln(\Pb)-ln(0.25))/(ln(16)-ln(0.25))*200}
   \pgfmathsetmacro{\barw}{\xb-\xa}
-  \Txt[text=ink]{1192}{\yy}{90}{12.5}{\bfseries\PShort}
-  \Rect{\xa}{\yy+3}{\barw}{10}{greenDark}
-  \Txt[text=body]{1500}{\yy+1}{70}{11}{\PTR\texttimes}
+  \Txt[text=ink]{1192}{\yy-1}{90}{13.5}{\bfseries\PShort}
+  \Rect{\xa}{\yy+2}{\barw}{12}{greenDark}
+  \Txt[text=body]{1500}{\yy}{70}{12}{\PTR\texttimes}
 }
-\Txt[text=muted]{1192}{922}{378}{10}{Range over 3 contrasts, one patched seed per arm; raw logit units, sensitive to the margin scale; not a CI. Dashed: \texttimes1 = SFT-v3}
+\Txt[text=muted]{1192}{922}{378}{11}{Range over 3 contrasts, one patched seed; logit units, not a CI; dashed = SFT-v3}
 
 % C: the overlap of each stage's unstable sets across its seeds.
 \Txt[text=greenDark]{1604}{760}{396}{17}{\bfseries C\quad Do the same cases recur?}
-\Txt[text=muted]{1604}{784}{396}{11}{Jaccard overlap of unstable sets across training seeds}
+\Txt[text=muted]{1604}{784}{396}{12}{Jaccard overlap of unstable sets across training seeds}
 \foreach \tick/\lab in {0/0,0.25/.25,0.5/.50,0.75/.75,1/1}{%
   \pgfmathsetmacro{\xx}{1700+\tick*200}
   \draw[rule,line width=0.6bp] (\xx,810) -- (\xx,900);
-  \Txt[align=center,text=muted]{\xx-18}{905}{36}{11}{\lab}}
+  \Txt[align=center,text=muted]{\xx-18}{905}{36}{12}{\lab}}
 \draw[rule,line width=1bp] (1700,900) -- (1900,900);
 \foreach \r in {0,1,2}{%
   \PathValue{\r}{short}{\PShort}
@@ -542,37 +543,29 @@ Religion / implicit,1.32,0.52,\textminus{}61\%
   \pgfmathsetmacro{\yy}{820+28*\r}
   \pgfmathsetmacro{\xa}{1700+\Ja*200}
   \pgfmathsetmacro{\barw}{(\Jb-\Ja)*200}
-  \Txt[text=ink]{1604}{\yy}{90}{12.5}{\bfseries\PShort}
-  \Rect{\xa}{\yy+3}{\barw}{10}{greenDark}
-  \Txt[text=body]{1910}{\yy+1}{90}{11}{\PJR}
+  \Txt[text=ink]{1604}{\yy-1}{90}{13.5}{\bfseries\PShort}
+  \Rect{\xa}{\yy+2}{\barw}{12}{greenDark}
+  \Txt[text=body]{1910}{\yy}{90}{12}{\PJR}
 }
-\Txt[text=muted]{1604}{922}{396}{10}{Range over the 3 seed pairs; higher overlap means recurring cases, not better decisions. Of dSFT's unstable sets, \BorderDistill{} lie on SFT-v3's \NBorder{} nearest-cut pairs}
-\Txt[text=muted]{1192}{962}{808}{10}{Shared setup: Qwen3.5-9B, LoRA r32, \StandardParams{} M trainable per stage (\StandardPct\% of the \BackboneB{} B backbone); SFT-v3 training \SFTTrainGPUh{} GPU-h. Best DPO and GRPO were chosen after the audits: exploratory.}
+\Txt[text=muted]{1604}{922}{396}{11}{Range over the 3 seed pairs: recurrence, not better decisions. dSFT: \BorderDistill{} of its unstable sets on SFT-v3's \NBorder{} nearest-cut pairs}
+\Txt[text=muted]{1192}{964}{808}{10.5}{Qwen3.5-9B, LoRA r32, \StandardParams{} M trainable per stage; SFT-v3 training \SFTTrainGPUh{} GPU-h; best DPO and GRPO chosen after the audits (exploratory)}
 
-% BOTTOM: the take-home and three findings.
-\Rect{48}{1007}{420}{97}{green}
-\Txt[text=ink]{64}{1014}{388}{20}{\bfseries 5. Take-home}
-% Base at SFT-v3's hire rate vs SFT-v3 (poster/base_compare.json); the three-seed means' span.
-\Txt[text=ink]{64}{1040}{388}{10.5}{One SFT stage cuts unstable counterfactual sets from \BaseAtSFT\% to \SFTOwn\% at SFT-v3's hire rate (\CommonHire\%). DPO, GRPO and self-distillation then move it by \PostLow{} to \PostHigh{} pp over three seeds each (\CommonCIBelow{} of 9 seed intervals below 0), at +\PostGPUhLow{} to +\PostGPUhHigh{} GPU-h.}
-\draw[greenDark,line width=1.2bp] (492,1007) -- (2016,1007);
-\Txt[text=greenDark]{512}{1014}{440}{13.5}{\bfseries 1\quad Evaluate consistency with quality, compute and seeds}
-% DPO's seeds at their own points (final_table.csv delta_own_pp); agreement from DeltaData.
-\Txt[text=body]{512}{1034}{440}{10.5}{A matched hire rate controls the comparison; three seeds test reproducibility. DPO's seeds at their own hire rates: \DPOSeedsOwn{} pp vs SFT-v3; one seed is not a result. Agreement point estimates differ by at most \AgreeAbsMax{} pp from SFT-v3 for all three methods, at +\PostGPUhLow{} to +\PostGPUhHigh{} GPU-h over SFT-v3's \SFTTrainGPUh.}
-\Txt[text=greenDark]{980}{1014}{440}{13.5}{\bfseries 2\quad Alike on the matched mean within noise; different in the tail}
-% Margin scale: reports/margin_readout/readout.csv (median attribute-free |m|, arm / SFT-v3); tail:
-% sensitivity.csv r_attr_p99 (99th-pct |dm|, arm / SFT-v3, 450 pairs). RL's tail ratio exceeds its
-% scale ratio; self-distillation's (0.40-0.43) matches its scale (0.46): the tail shrinks with the
-% rest. Overlap: Jaccard of two seeds' unstable sets; borderline share: of each seed's unstable
-% sets, those on SFT-v3's 35 nearest-cut pairs (reports/seed_overlap/overlap.csv).
-\Txt[text=body]{980}{1034}{440}{10.5}{RL widens margins \texttimes\WidenRange{}, and its tail grows faster than they do: 99th-pct attribute effect \texttimes\TailRL{} of SFT-v3's, on sets that change with the seed (Jaccard \JacRL). Self-distillation shrinks tail and margins together (\texttimes\TailDistill{} vs \texttimes\ScaleDistill); its residual instability recurs on SFT-v3's \NBorder{} nearest-cut pairs (Jaccard \JacDistill; \BorderDistill{} of each seed's unstable sets).}
-\Txt[text=greenDark]{1448}{1014}{440}{13.5}{\bfseries 3\quad Behavioural change coexists with the attribute pathway}
-\Txt[text=body]{1448}{1034}{440}{10.5}{The pathway survives SFT-v3 and GRPO (component profile r \ProfGRPO, L15.H11 first); DPO shifts part of it to later layers (\DPOLateHead{} leads). A LoRA on the window patching finds, layers 15--20, does not carry self-distillation's gain: alone \WindowOnly, kept alone \WindowKept, removed \WindowRemoved{} pp vs all layers.}
+% BOTTOM: one band. The take-home sentence, then three findings, each one judgement and its
+% qualifier; the evidence stays in the figures and on the QR page (the review, 2026-11-02).
+\draw[greenDark,line width=1.2bp] (48,1007) -- (2016,1007);
+\Txt[text=ink]{48}{1014}{1860}{16}{\bfseries SFT delivers the main stability gain; additional training changes what remains, with uncertain further gains across three seeds.}
+\Txt[text=greenDark]{48}{1044}{600}{12.5}{\bfseries 1\quad Read consistency with quality, compute and seeds}
+\Txt[text=body]{48}{1062}{600}{11}{A matched hire rate controls the comparison and three seeds test reproducibility; one DPO seed alone would have read as a 1 pp gain.}
+\Txt[text=greenDark]{690}{1044}{600}{12.5}{\bfseries 2\quad Methods differ in extreme attribute effects and recurring cases}
+\Txt[text=body]{690}{1062}{600}{11}{After one more stage, RL's extreme effects grow beyond its margin widening and its unstable sets change with the seed; self-distillation's shrink and recur on the same borderline pairs (4B, 4C).}
+\Txt[text=greenDark]{1332}{1044}{600}{12.5}{\bfseries 3\quad Behavioural change coexists with the attribute pathway}
+\Txt[text=body]{1332}{1062}{600}{11}{The pathway survives SFT-v3 and GRPO and shifts partly later under DPO; a LoRA placed on that window does not carry self-distillation's gain (2C).}
 \node[anchor=north west,inner sep=0pt] at (1940,1018)
   {\qrcode[height=1.33in]{https://github.com/Stereotypes-in-LLMs/hiring\_bias\_mitigation\_at/blob/main/poster/DETAILS.md}};
 \Txt[text=greenDark,align=right]{1880}{1088}{124}{10}{Full results + code}
 
 % Small on-poster references; full URLs and reporting details are in source and README.
-\Txt[text=muted]{512}{1092}{1348}{10.5}{%
+\Txt[text=muted]{48}{1092}{1812}{10.5}{%
   \href{https://arxiv.org/abs/2106.09685}{[1] Hu et al. LoRA (2021)}\quad
   \href{https://arxiv.org/abs/2305.18290}{[2] Rafailov et al. DPO (2023)}\quad
   \href{https://arxiv.org/abs/2402.03300}{[3] Shao et al. GRPO (2024)}\quad
