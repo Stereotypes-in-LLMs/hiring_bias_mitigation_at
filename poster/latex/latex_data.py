@@ -203,6 +203,10 @@ def main() -> None:
 
     # One row per post-SFT method: the patched seed's route and tail against SFT-v3, the margin
     # scale over its three seeds, and how much its seeds' unstable sets overlap.
+    # The head that leads DPO on implicit combat, where L15.H11 drops to rank 6.
+    dpo_impl = pd.read_csv(ROOT / "reports/interp/distill/dpo4880/component_summary.csv")
+    dpo_late = dpo_impl.set_index("contrast").loc["mil_combat_civ_impl", "top3_heads_spec"]
+    dpo_late = dpo_late.split()[0]
     path_rows, scales, tails, jacs, borders, profiles, ranks = [], {}, {}, {}, {}, {}, {}
     for slot, short in ((s, sh) for s, n, _c, _f, sh in SLOTS if s in POST_SFT):
         spec, recipe, prefix = PATCHED[slot]
@@ -221,7 +225,7 @@ def main() -> None:
         ranks[slot] = " / ".join(str(int(v)) for v in comps["l15h11_rank_spec"])
         same = (comps["profile_r"] >= 0.80).all() and (comps["l15h11_rank_spec"] <= 3).all()
         route = ("same (compressed)" if same and float(sens["r_scale"].iloc[0]) < 1
-                 else "same route" if same else "shifted later")
+                 else "same route" if same else f"partly later ({dpo_late})")
         path_rows.append(dict(
             method=slot, short=short, rmean=round(float(comps["profile_r"].mean()), 3),
             rrange=profiles[slot], ranks=ranks[slot], scale=f"{float(sens['r_scale'].iloc[0]):.2f}",
@@ -237,9 +241,6 @@ def main() -> None:
     post = ("DPO_V3_4880", "GRPO+decay R4", "Distill")
     post_means = [float(recipes[n]["delta_common_pp"]) for n in post]
     post_gpu = [mean_of(n, "train_gpu_h") for n in post]
-    dpo_impl = pd.read_csv(ROOT / "reports/interp/distill/dpo4880/component_summary.csv")
-    dpo_late = dpo_impl.set_index("contrast").loc["mil_combat_civ_impl", "top3_heads_spec"]
-    dpo_late = dpo_late.split()[0]
 
     window_params = params["decision_distill_l15_20_seed42"]
     d = recipes["Distill"]

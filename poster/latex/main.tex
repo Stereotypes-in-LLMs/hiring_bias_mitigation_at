@@ -54,7 +54,7 @@ Self-distillation,greenDark,0,0.2,-0.53,0.89
 
 \pgfplotstableread[col sep=comma]{
 method,short,rmean,rrange,ranks,scale,route,p99mean,p99range,jmean,jrange,border
-DPO,DPO,0.741,0.65--0.89,6 / 3 / 2,2.68,shifted later,7.14,4.5--10.7,0.18,0.14--0.26,74--81\%
+DPO,DPO,0.741,0.65--0.89,6 / 3 / 2,2.68,partly later (L23.H1),7.14,4.5--10.7,0.18,0.14--0.26,74--81\%
 GRPO + lr decay,GRPO,0.928,0.90--0.97,1 / 1 / 1,2.16,same route,2.83,2.2--3.8,0.167,0.09--0.28,68--91\%
 Self-distillation,dSFT,0.948,0.91--0.98,1 / 1 / 1,0.46,same (compressed),0.41,0.40--0.43,0.528,0.45--0.60,95--97\%
 }\PathData
@@ -255,7 +255,7 @@ Religion / implicit,1.32,0.52,\textminus{}61\%
 \Rect{492}{226}{660}{762}{panel}
 \Rect{1176}{226}{840}{762}{panel}
 \Section{48}{226}{420}{24}{1. Problem Formulation}
-\Section{492}{226}{660}{25}{2. Mechanism: activation patching}
+\Section{492}{226}{660}{25}{2. Methods and mechanism}
 \Section{1176}{226}{840}{25}{4. Results: one stage after SFT-v3}
 
 % LEFT: problem, example, then experimental setup.
@@ -373,20 +373,27 @@ Religion / implicit,1.32,0.52,\textminus{}61\%
 \Txt[text=muted]{868}{650}{90}{10.5}{logits / pair}
 \draw[greenDark,dashed,line width=2bp,-{Latex[length=8bp,width=5.5bp]}]
   (822,664) -- (822,682);
-\Txt[text=greenDark]{846}{666}{286}{12}{Same test after one stage on SFT-v3 \textdownarrow}
+\Txt[text=greenDark]{846}{666}{286}{12}{One stage on SFT-v3, then the same test \textdownarrow}
+
+% The three stages as trained (content macros above), before the test that reads them.
+\Txt[text=muted]{512}{686}{620}{11}{Three stages on SFT-v3 merged, each a fresh LoRA r32 [1]; the patched seed is one of three}
+\foreach \x/\ttl/\desc in {512/{DPO}/{\MethodDPO},722/{GRPO + lr decay}/{\MethodGRPO},932/{Self-distillation}/{\MethodDistill}}{%
+  \Rect[draw=rule,line width=0.9bp]{\x}{703}{200}{58}{white}
+  \Txt[text=ink]{\x+10}{709}{180}{13.5}{\bfseries\ttl}
+  \Txt{\x+10}{729}{180}{10.5}{\desc}}
 
 % C: the same patching after one stage on SFT-v3, one seed each: DPO_V3_4880 s42
 % (docs/RL_PATCHING.md), GRPO + lr decay R4 s42 (docs/PATCHING_DISTILL.md, section 4),
 % self-distillation s43 (docs/DISTILL_PATCHING.md). 64 pairs per contrast, chosen on SFT-v3's own
 % effect (|dm| >= 0.5): not B's pairs, which were chosen on Base. PathData: latex_data.py from
 % reports/interp/distill/<spec>/{sensitivity,component_summary}.csv.
-\Txt[text=greenDark]{512}{684}{620}{16}{\bfseries C\quad THE SAME TEST AFTER DPO, GRPO AND SELF-DISTILLATION}
-\Txt[text=muted]{512}{706}{620}{11.5}{Each arm vs SFT-v3, 64 pairs per contrast chosen on SFT-v3's own effect, 3 contrasts, one seed each; hub = L15.H11}
-\Txt[text=ink]{512}{730}{130}{12}{\bfseries Method}
-\Txt[text=ink]{648}{730}{200}{12}{\bfseries Profile r vs SFT-v3}
-\Txt[text=ink,align=center]{860}{730}{70}{12}{\bfseries Hub rank}
-\Txt[text=ink,align=center]{936}{730}{60}{12}{\bfseries Margins}
-\Txt[text=ink]{1002}{730}{130}{12}{\bfseries Route}
+\Txt[text=greenDark]{512}{774}{620}{16}{\bfseries C\quad THE SAME TEST AFTER DPO, GRPO AND SELF-DISTILLATION}
+\Txt[text=muted]{512}{796}{620}{11.5}{Per arm vs SFT-v3: 64 pairs per contrast on SFT-v3's own effect, one seed; three values per cell = B's contrasts, in order}
+\Txt[text=ink]{512}{820}{130}{12}{\bfseries Method}
+\Txt[text=ink]{648}{820}{200}{12}{\bfseries Profile r vs SFT-v3}
+\Txt[text=ink,align=center]{860}{820}{70}{12}{\bfseries Hub rank}
+\Txt[text=ink,align=center]{936}{820}{60}{12}{\bfseries Margins}
+\Txt[text=ink]{1002}{820}{130}{12}{\bfseries Route}
 \foreach \r in {0,1,2}{%
   \PathValue{\r}{method}{\PMethod}
   \PathValue{\r}{rmean}{\PR}
@@ -394,7 +401,7 @@ Religion / implicit,1.32,0.52,\textminus{}61\%
   \PathValue{\r}{ranks}{\PRanks}
   \PathValue{\r}{scale}{\PScale}
   \PathValue{\r}{route}{\PRoute}
-  \pgfmathsetmacro{\yy}{752+26*\r}
+  \pgfmathsetmacro{\yy}{842+26*\r}
   \Txt[text=ink]{512}{\yy}{130}{12.5}{\bfseries\PMethod}
   \Rect{648}{\yy+3}{110}{10}{rule}
   \pgfmathsetmacro{\ww}{\PR*110}
@@ -404,16 +411,9 @@ Religion / implicit,1.32,0.52,\textminus{}61\%
   \Txt[text=body,align=center]{936}{\yy}{60}{11.5}{\texttimes\PScale}
   \Txt[text=body]{1002}{\yy}{130}{11.5}{\PRoute}
 }
-
-% The three stages as trained, then the one shared evaluation.
-\Txt[text=muted]{512}{832}{620}{11}{Three stages on SFT-v3 merged, each a fresh LoRA r32 [1]; the patched seed is one of three}
-\foreach \x/\ttl/\desc in {512/{DPO}/{\MethodDPO},722/{GRPO + lr decay}/{\MethodGRPO},932/{Self-distillation}/{\MethodDistill}}{%
-  \Rect[draw=rule,line width=0.9bp]{\x}{850}{200}{58}{white}
-  \Txt[text=ink]{\x+10}{856}{180}{13.5}{\bfseries\ttl}
-  \Txt{\x+10}{876}{180}{10.5}{\desc}}
 % The window from Marta's patching, three seeds each, vs the trained all-layer adapter: trained
 % there alone (docs/PATCHING_DISTILL.md A), kept alone (docs/DISTILL_FOLLOWUP.md H), removed (F).
-\Txt[text=muted]{512}{916}{620}{11.5}{Placing self-distillation's LoRA by patching, 3 seeds each, pp vs all layers: layers 15--20 only \WindowOnly; 15--20 kept of the trained adapter \WindowKept; 15--20 removed \WindowRemoved. The window explains; it does not yet guide.}
+\Txt[text=muted]{512}{920}{620}{11.5}{Placing self-distillation's LoRA by patching, 3 seeds each, pp vs all layers: trained on 15--20 only \WindowOnly; the trained adapter with only 15--20 kept \WindowKept; with 15--20 removed \WindowRemoved. The window explains; it does not yet guide.}
 \Rect{512}{958}{620}{28}{ink}
 \Txt[text=white,align=center]{524}{965}{596}{15}{\bfseries Shared evaluation: Base, SFT-v3 and the three stages on one audit}
 
