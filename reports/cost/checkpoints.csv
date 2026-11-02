@@ -396,5 +396,6 @@ output_dir,arm,checkpoint_step,saved_at,job_id,n_gpus,gpu_h_segment_to_checkpoin
 /ritom/scratch/cscs/zhang/xw/outputs/distill/decision_distill_e2_seed44,distill_followup,682,2026-11-02 03:25:21,5233658,4,10.2344,0.0,10.2344
 /ritom/scratch/cscs/zhang/xw/outputs/bench/distill_ddp4,accel_bench,40,2026-11-02 13:06:52,5236800,4,0.9411,0.0,0.9411
 /ritom/scratch/cscs/zhang/xw/outputs/bench/distill_ddp1,accel_bench,40,2026-11-02 13:48:21,5236800,1,0.6903,0.0,0.6903
+/ritom/scratch/cscs/zhang/xw/outputs/bench/distill_ddp1,accel_bench,40,2026-11-02 16:02:17,5238558,1,0.6297,0.6914,1.3211
 /ritom/scratch/cscs/zhang/xw/outputs/bench/grpo_rollout_vllm,accel_bench,6,2026-11-02 13:17:49,5236801,4,0.6011,0.0,0.6011
 /ritom/scratch/cscs/zhang/xw/outputs/bench/grpo_rollout_hf,accel_bench,6,2026-11-02 13:22:28,5236801,4,0.2922,0.0,0.2922

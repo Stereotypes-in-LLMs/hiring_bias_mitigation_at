@@ -77,7 +77,7 @@ Self-distillation,dSFT,44,-0.328,-1.038,0.339,-0.285,\textminus{}0.285
 \pgfplotstableread[col sep=comma]{
 key,label,speedup,pending
 audit,Audit generation,16.87,0
-train,Training,4.4,0
+train,Training,3.71,0
 grpo,GRPO rollouts,1.09,0
 }\AccelData
 
@@ -169,8 +169,8 @@ grpo,GRPO rollouts,1.09,0
 \newcommand{\AuditKWh}{0.105}
 \newcommand{\PrefixSpeedup}{1.10}
 \newcommand{\AgreeHFvLLM}{99.6--99.8}
-\newcommand{\ProjectGPUh}{549}
-\newcommand{\ProjectKWh}{143}
+\newcommand{\ProjectGPUh}{552}
+\newcommand{\ProjectKWh}{144}
 \newcommand{\NPatchContrasts}{4}
 \newcommand{\PatchEvalsPerPair}{280--292}
 \newcommand{\PatchRealPerPair}{194--194}
@@ -190,11 +190,13 @@ grpo,GRPO rollouts,1.09,0
 \newcommand{\TrainOneLate}{62}
 \newcommand{\TrainRatioEarly}{3.5}
 \newcommand{\TrainRatioLate}{4.5}
-\newcommand{\TrainExtraGPUh}{+37}
-\newcommand{\TrainState}{pending}
-\newcommand{\TrainNote}{1-GPU run slowed 50 \textrightarrow{} 62 s/step after step 5; rerunning}
+\newcommand{\TrainExtraGPUh}{+50}
+\newcommand{\TrainExtraTrainGPUh}{+8}
+\newcommand{\TrainWallRatio}{2.7}
+\newcommand{\TrainState}{steady}
+\newcommand{\TrainNote}{1-GPU baseline: steady repeat (first run slowed at step 5)}
 \newcommand{\AuditDetail}{HF generate \textrightarrow{} vLLM: 1\thinspace{}091 \textrightarrow{} 64.7 s, generation only; 3,105 prompts, about 37 tokens out}
-\newcommand{\TrainDetail}{1 \textrightarrow{} 4 GH200, global batch 32, same 40 steps: 2\thinspace{}420 \textrightarrow{} 550 s wall-clock, at +37\% GPU-h}
+\newcommand{\TrainDetail}{1 \textrightarrow{} 4 GH200, batch 32, 40 steps: training 2\thinspace{}040 \textrightarrow{} 550 s at +8\% GPU-h; with start-up \texttimes2.7 at +50\%}
 \newcommand{\GRPODetail}{HF \textrightarrow{} colocated vLLM, 6 steps: 200 \textrightarrow{} 183 s; 37-token outputs, so only 2.8 of 32.5 s a step is saved}
 \newcommand{\RolloutTokens}{37}
 \newcommand{\RolloutSavedS}{2.8}

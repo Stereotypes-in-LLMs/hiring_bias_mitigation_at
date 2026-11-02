@@ -1,8 +1,8 @@
 stage,steps,wall_h,gpu_h,gpu_h_measured,gpu_h_reconstructed,gpu_h_other_basis,gpu_h_not_ok,gpu_energy_kwh,node_h,node_energy_kwh,node_h_with_energy
 datagen,130,26.102,57.511,26.807,30.704,,11.3,10.747,,,
-train,69,88.99,353.575,337.974,15.601,,9.726,106.066,,,
+train,70,89.62,354.206,338.605,15.601,,9.726,106.183,,,
 eval,270,41.154,70.018,54.301,15.716,,4.105,19.846,,,
 patching,56,14.413,14.412,14.412,,,0.229,6.809,,,
 other,103,0.517,1.843,,1.843,,0.69,,,,
-idle (156 recorded jobs),,,52.007,,,,,,,,
-total allocated,222,,549.366,,,,,,137.398,208.4,127.052
+idle (157 recorded jobs),,,53.912,,,,,,,,
+total allocated,223,,551.902,,,,,,138.031,208.8,127.686

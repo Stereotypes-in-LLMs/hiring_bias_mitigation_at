@@ -221,3 +221,4 @@ job_id,job_name,partition,state,start,end,elapsed_h,nodes,gpus,node_h,gpu_h_allo
 5236801,xw-bench-grpo,normal,COMPLETED,2026-11-02 13:08:39,2026-11-02 13:22:34,0.2319,1,4,0.2319,0.9278,0.344,/ritom/scratch/cscs/zhang/xw/hiring_bias_mitigation_at-accel,records,0.9169,0.0109
 5237407,xw-interp,normal,COMPLETED,2026-11-02 13:51:01,2026-11-02 14:06:58,0.2658,1,4,0.2658,1.0633,0.609,/ritom/scratch/cscs/zhang/xw/hiring_bias_mitigation_at-accel,records,0.9557,0.1076
 5237408,xw-interp,normal,COMPLETED,2026-11-02 13:51:01,2026-11-02 14:08:10,0.2858,1,4,0.2858,1.1433,0.372,/ritom/scratch/cscs/zhang/xw/hiring_bias_mitigation_at-accel,records,0.477,0.6663
+5238558,xw-bench-1gpu,normal,COMPLETED,2026-11-02 15:24:20,2026-11-02 16:02:22,0.6339,1,4,0.6339,2.5356,0.46,/ritom/scratch/cscs/zhang/xw/hiring_bias_mitigation_at,records,0.6307,1.9049

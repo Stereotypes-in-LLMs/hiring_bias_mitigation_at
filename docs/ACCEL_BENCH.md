@@ -122,6 +122,7 @@ the throttle reason the log names, or "no throttle reason logged" if none.
 | 1 | 5236801 | B3, both paths (nid006001), 13:55 wall: vLLM rollouts `train_runtime` 183.5 s, cost step 557 s (0.619 GPU-h measured); transformers rollouts `train_runtime` 200.5 s, cost step 268 s (0.298 GPU-h). 1,536 completions each (6 steps × 256), mean length 37 tokens, none clipped (`logs/xw-bench-grpo-5236801.out`) | 0.93 | 0.93 |
 | 2 | 5236800 | B2, both runs (nid006496), 55:50 wall: 4 GPUs under DDP `train_runtime` 549.6 s, 2.33 samples/s, cost step 850 s (0.945 GPU-h measured, 562 kJ); 1 GPU `train_runtime` 2,420 s, 0.53 samples/s, cost step 2,489 s (0.691 GPU-h, 453 kJ); 40 steps of 32 rows each, train_loss 0.066 / 0.070 (`logs/xw-bench-train-5236800.out`) | 3.72 | 4.65 |
 | 3 | 5236799 | B1, six runs (nid006001 node group, one GPU each), 43:03 wall: `vllm` `generate_s` 64.4 / 65.0 s (load 74 / 86 s, wall 150 / 161 s, 0.0126 kWh); `hf8` 1,065 / 1,117 s (load 15 s, wall 1,085 / 1,137 s, 0.0739 kWh); `hf32` 460 / 480 s (load 16 s, wall 481 / 502 s, 0.0488 kWh); 3,105 decisions each, all decided (`logs/xw-bench-audit-5236799-*.log`, `reports/throughput_b/accel/`) | 2.87 | 7.52 |
+| 4 | 5238558 | B2 repeat, 1 GPU (nid006338, node exclusive), 38:02 wall: `train_runtime` 2,040 s, 0.627 samples/s, cost step 2,271 s (0.631 GPU-h measured, 421 kJ); steps 1–5 57.4 s/step (step 1 64 s), steps 6–40 50.1 s/step; GPU 0 at 1,980 MHz SM throughout, 185–195 W of a 900 W limit, 26–27 °C, utilisation 17–21% by quarter; throttle counters unchanged over the job (`logs/xw-bench-1gpu-5238558*`) | 2.54 | 10.06 |
 
 ## 3. Result
 
@@ -192,6 +193,48 @@ end of warm-up (step 5) is the only change in the schedule there. An earlier rea
 the 1-GPU run pays more per row, is withdrawn: its work per micro-step is the same.
 
 **Unknown.** One repeat each; the ratio at other per-device batch sizes.
+
+### B2 repeat: the 1-GPU run once more, with the GPU's clocks logged
+
+**Fact.** The repeat ran the same 40 steps in 2,040 s (`train_runtime`; the first run 2,420 s):
+57.4 s a step over steps 1–5, of which step 1 took 64 s, then 50.1 s over steps 6–40, 50.5 over
+6–20 and 49.7 over 21–40. No slowdown. On GPU 0, sampled every 10 s over the 35 minutes of
+training: SM clock 1,980 MHz in every sample (its maximum), power 185–195 W by quarter against
+a 900 W limit, 26–27 °C, utilisation 17–21%. Every "Clocks Event Reasons" counter (SW power
+cap, HW and SW thermal slowdown, power brake, sync boost) was unchanged between the snapshots
+before and after the job, and the only active reason in 224 snapshots was Idle, at the ends.
+Peak device memory 23.1 GiB (the first run: 30.7; the 4-GPU run: 23.6 per GPU). NVML mean
+utilisation of the whole step: 18.4% (the first 1-GPU run 16.4%, the 4-GPU run 25.1%).
+
+**Against the registration, and how the rule was applied.** The rule was written to catch a
+slowdown: "No slowdown (steps 6–40 within 5% of steps 1–5)". Read two-sided it fails: steps
+6–40 are 12.7% *faster* than steps 1–5, because step 1 carries the warm-up. Read as the
+slowdown test it was written as (steps 6–40 at most 5% slower), the repeat passes. The
+generator applies the one-sided reading (`poster/latex/latex_data.py`, `TrainState`), so the
+repeat is the 1-GPU baseline. This reading was settled after seeing the repeat; the two-sided
+reading would have kept the first run and reported both phases.
+
+**Result with the repeat as baseline.** One basis per column:
+
+| Basis | 1 GPU (repeat) | 4 GPUs | Speed-up | GPU-h, 4 against 1 |
+|---|---:|---:|---:|---:|
+| Training (`train_runtime`; GPUs × it) | 2,040 s | 549.6 s | **3.71×** | +8% (2,198 against 2,040 GPU-s) |
+| Whole cost step (start and load included) | 2,271 s | 850 s | 2.67× | +50% (0.945 against 0.631 GPU-h) |
+| Steady steps (6–40, per step) | 50.1 s | 13.7 s | 3.66× | |
+
+Scaling efficiency on training time 93%.
+
+**Interpretation, not confirmed.** The GPU is idle four fifths of the time in every B2 run:
+one row per micro-step with gradient checkpointing is a sequence of small kernels, and the
+log warns that the GDN layers' `causal_conv1d` falls back to its PyTorch reference
+implementation. A step bound by the host and by kernel launches would scale with the number of
+processes as much as with the number of GPUs, which fits near-linear scaling at 18–25%
+utilisation. Which of the two dominates is not measured. The first run's slowdown after step 5
+remains unexplained: it had no clock log, its peak memory was 7.6 GiB higher, and it ran on GPU
+0 right after the 4-GPU run in the same job; none of these is tested.
+
+**Unknown.** One repeat; the effect of installing `causal_conv1d` or of larger per-device
+batches (more rows per micro-step) on both the ratio and the utilisation.
 
 ### B3. GRPO rollouts: the colocated vLLM engine against transformers' generate
 
