@@ -351,25 +351,40 @@ def main() -> None:
     # wording, the base model's hire and reject on one CV, SFT-v3's one decision, quoted as written.
     def tex(text: str) -> str:
         return (text.replace("\\", "/").replace("&", "\\&").replace("%", "\\%")
-                .replace("$", "\\$").replace("#", "\\#").replace("_", "\\_"))
+                .replace("$", "\\$").replace("#", "\\#").replace("_", "\\_")
+                .replace("~", "\\textasciitilde{}").replace("^", "\\textasciicircum{}")
+                .replace("«", "``").replace("»", "''"))
 
     def clipped(sentence: str) -> str:
-        """The sentence up to its first comma or ' and', then an ellipsis."""
-        cut = min((i for i in (sentence.find(","), sentence.find(" and ")) if i > 0),
-                  default=len(sentence))
+        """The sentence up to its first comma, ' and' or ' in', then an ellipsis."""
+        cut = min((i for i in (sentence.find(","), sentence.find(" and "), sentence.find(" in "))
+                   if i > 0), default=len(sentence))
         return tex(sentence[:cut].rstrip()) + " \\ldots"
 
     cases = json.loads((HERE.parent / "cases.json").read_text())
-    case = next(c for c in cases["cases"] if c["group"] == "military_status")
+    case = next(c for c in cases["cases"] if c["group"] == cases["poster_case"])
     case_counts = cases["counts"]
     sft_reason = case["sft_v3"]["feedback"].split(". ")[0].rstrip(".") + "."
+    ev = case["cv_evidence"]
+    decisions = case["base"]["decisions"]
+    rejected = [v for v, d in decisions.items() if d == "reject"]
     findings.update({
         "CaseJob": tex(case["job_position"]),
+        "CaseRequirement": tex(case["job_requirement"].split(", account")[0]),
+        "CaseEvidence": tex(f"{ev['dates']}: {ev['position']}, {ev['detail'].rstrip('. ')}"),
         "CaseHireSentence": clipped(case["base"]["hire"]["sentence"]),
         "CaseRejectSentence": clipped(case["base"]["reject"]["sentence"]),
+        "CaseHireReason": tex(case["base"]["hire"]["feedback"]),
         "CaseRejectReason": tex(case["base"]["reject"]["feedback"]),
         "CaseSFTReason": tex(sft_reason),
-        "CaseVariants": str(len(case["base"]["decisions"])),
+        # Faithful excerpts for the poster: the reason up to its first ';' or ',', then an ellipsis.
+        "CaseRejectExcerpt": tex(case["base"]["reject"]["feedback"].split(";")[0])
+        + " \\ldots",
+        "CaseSFTExcerpt": tex(sft_reason.split(",")[0]) + " \\ldots",
+        "CaseGroup": case["group"].replace("_", " "),
+        "CaseVariants": str(len(decisions)),
+        "CaseBaseRejects": str(len(rejected)),
+        "CaseRejectValues": tex(", ".join(rejected)),
         "CaseUnstableTotal": str(sum(c["base_unstable_sets"] for c in case_counts.values())),
         "CaseStableSFT": str(sum(c["stable_in_SFT-v3"] for c in case_counts.values())),
         "CaseStableDistill": str(sum(c["stable_in_Self-distillation s43"]
@@ -396,6 +411,33 @@ def main() -> None:
         "AgreeHFvLLM": rng(agree, ".1f"),
         "ProjectGPUh": f"{float(stage.set_index('stage').loc['total allocated', 'gpu_h']):.0f}",
         "ProjectKWh": f"{stage['gpu_energy_kwh'].sum():.0f}",
+    })
+    # The patching workload and its cost (reports/cost/steps.csv, stage patching): one `patch-*`
+    # step is one (model, contrast) on one GH200; a full-grid `margins-*` step reads 31,050
+    # prompts. Patched forwards per pair from scripts/interp/10_patch.py: residual at 32 layers
+    # plus the final pre-norm (33) and components (32 mixers + 32 MLPs), each over two token
+    # classes, then the top 24 heads per class and 8 random heads re-measured by real patching;
+    # AtP over 128 attention and 768 GDN heads in one backward.
+    cost_steps = pd.read_csv(ROOT / "reports/cost/steps.csv", dtype={"job_id": str})
+    patching = cost_steps[(cost_steps["stage"] == "patching") & (cost_steps["source"] == "record")]
+    ok = patching[patching["status"] == "ok"]
+    patch_ok = ok[ok["label"].str.startswith("patch-")]
+    margins_ok = ok[ok["label"].str.startswith("margins-") & (ok["wall_s"] > 600)]
+    assert len(patch_ok) >= 10 and len(margins_ok) >= 5, (len(patch_ok), len(margins_ok))
+    audits = [json.loads((ROOT / f"reports/interp/margins_summary-{spec}-grid-en.json")
+                         .read_text())["audit"] for spec in ("sft_v3", "dpo4880", "grpo_r4", "distill43")]
+    backend_gap = max(abs(a["unstable_sets_hf_pct"] - a["unstable_sets_audit_pct"]) for a in audits)
+    findings.update({
+        "PatchForwardsPerPair": str(33 * 2 + 64 * 2 + (24 * 2 + 8)),
+        "AtPHeads": f"{128 + 768:,}",
+        "PatchStepMin": f"{patch_ok['wall_s'].median() / 60:.0f}",
+        "PatchStepGPUh": f"{patch_ok['gpu_h'].median():.2f}",
+        "PatchPeakGiB": f"{patch_ok['mem_peak_gib'].max():.0f}",
+        "PatchStepsOK": str(len(patch_ok)),
+        "MarginsStepMin": f"{margins_ok['wall_s'].median() / 60:.0f}",
+        "MarginsPeakGiB": f"{margins_ok['mem_peak_gib'].max():.0f}",
+        "PatchTotalGPUh": f"{float(stage.set_index('stage').loc['patching', 'gpu_h']):.1f}",
+        "BackendUnstableMax": f"{backend_gap:.2f}",
     })
     accel_rows = []
     speed = ROOT / "reports/throughput_b/accel/speedup_summary.csv"

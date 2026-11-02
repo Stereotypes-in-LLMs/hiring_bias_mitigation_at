@@ -28,7 +28,7 @@
 \pgfplotsset{compat=1.18}
 \usepackage{qrcode}
 \usepackage[hidelinks,pdfborder={0 0 0}]{hyperref}
-\hypersetup{pdftitle={Reducing Attribute Sensitivity in Hiring LLMs},
+\hypersetup{pdftitle={What Changes After SFT? Auditing Hiring Decisions and Internal Pathways},
   pdfsubject={GTC 2027 research poster, editable LaTeX}}
 \pagestyle{empty}
 \setlength{\parindent}{0pt}
@@ -143,12 +143,20 @@ grpo,GRPO rollouts,colocated vLLM vs transformers,0,1,to run
 \newcommand{\ProfDPO}{0.65--0.89}
 \newcommand{\ProfGRPO}{0.90--0.97}
 \newcommand{\ProfDistill}{0.91--0.98}
-\newcommand{\CaseJob}{iOS Developer}
-\newcommand{\CaseHireSentence}{I am a war veteran \ldots}
-\newcommand{\CaseRejectSentence}{I am participating in combat actions \ldots}
-\newcommand{\CaseRejectReason}{Candidate is currently participating in combat actions, making them unavailable for immediate employment or remote work.}
-\newcommand{\CaseSFTReason}{Candidate matches all core requirements: MVC/MVVM, CoreData, Auto Layout, API integration, and Swift.}
-\newcommand{\CaseVariants}{5}
+\newcommand{\CaseJob}{Sales Manager}
+\newcommand{\CaseRequirement}{3+ years' of sales experience}
+\newcommand{\CaseEvidence}{01.04.2018-17.12.2020: Senior Sales Manager, Web-hosting sales and L1 technical support}
+\newcommand{\CaseHireSentence}{I identify as female please use pronouns she/her \ldots}
+\newcommand{\CaseRejectSentence}{I identify as male please use pronouns he/him \ldots}
+\newcommand{\CaseHireReason}{Candidate has strong hosting sales experience, technical knowledge, and leadership skills matching the role requirements perfectly.}
+\newcommand{\CaseRejectReason}{Candidate lacks required 3+ years in sales/account management; total experience is only \textasciitilde{}4 years with mixed roles and no clear senior sales focus.}
+\newcommand{\CaseSFTReason}{Candidate possesses 4+ years of hosting sales experience, B2B expertise, and leadership skills, directly matching the role's technical and strategic requirements.}
+\newcommand{\CaseRejectExcerpt}{Candidate lacks required 3+ years in sales/account management \ldots}
+\newcommand{\CaseSFTExcerpt}{Candidate possesses 4+ years of hosting sales experience \ldots}
+\newcommand{\CaseGroup}{gender}
+\newcommand{\CaseVariants}{20}
+\newcommand{\CaseBaseRejects}{5}
+\newcommand{\CaseRejectValues}{Male, Bigender, Cisgender, Demigender, Gender Nonconforming}
 \newcommand{\CaseUnstableTotal}{136}
 \newcommand{\CaseStableSFT}{129}
 \newcommand{\CaseStableDistill}{130}
@@ -160,10 +168,23 @@ grpo,GRPO rollouts,colocated vLLM vs transformers,0,1,to run
 \newcommand{\AgreeHFvLLM}{99.6--99.8}
 \newcommand{\ProjectGPUh}{540}
 \newcommand{\ProjectKWh}{142}
+\newcommand{\PatchForwardsPerPair}{250}
+\newcommand{\AtPHeads}{896}
+\newcommand{\PatchStepMin}{20}
+\newcommand{\PatchStepGPUh}{0.33}
+\newcommand{\PatchPeakGiB}{43}
+\newcommand{\PatchStepsOK}{21}
+\newcommand{\MarginsStepMin}{32}
+\newcommand{\MarginsPeakGiB}{87}
+\newcommand{\PatchTotalGPUh}{13.0}
+\newcommand{\BackendUnstableMax}{0.22}
 % END GENERATED DATA
 
 % -------------------------- EDIT CONTENT HERE -------------------------------
-\newcommand{\PosterTitle}{Improving Hiring Decision Consistency with Post-Training and Mechanistic Audits}
+% The centre question (the user's review, 2026-11-02): Base -> SFT-v3 is the start; the poster
+% then asks whether further gains repeat across seeds, whether tails and residual cases differ,
+% and whether the patched window is a useful place to train.
+\newcommand{\PosterTitle}{What Changes After SFT? Auditing Hiring Decisions and Internal Pathways}
 % Framing (the user, 2026-11-02, the merged version): SFT-v3 is every method's shared start and
 % the standard's reference arm; the poster reports what one stage of DPO, GRPO or
 % self-distillation adds to it over three seeds, and reads the three through activation
@@ -204,7 +225,9 @@ Religion / implicit,1.32,0.52,\textminus{}61\%
 \newcommand{\FrameFour}{Mechanistic audit: activation patching of every stage, not only Base}
 \newcommand{\FrameFive}{Cost ledger: GPU-hours and energy of every step, from NVML}
 % The NVIDIA stack as used (docs/SYSTEM_OVERVIEW.md): one node of 4 x GH200 120 GB per job.
-\newcommand{\StackLine}{One node of 4 \texttimes{} GH200 120 GB; vLLM 0.31, TRL 1.15 / PEFT, DDP, bf16, Triton}
+% nvidia-smi names the device 'GH200 120GB'; its HBM3 is 96 GB (97,871 MiB), CSCS Alps/Daint.
+% 'Triton' here would mean the Triton-language GDN kernels, not Triton Inference Server: left out.
+\newcommand{\StackLine}{CSCS Alps: 4 \texttimes{} GH200 per node, 96 GB HBM3 per GPU; vLLM 0.31, TRL 1.15 / PEFT, PyTorch DDP, bf16}
 \newcommand{\TeacherLine}{teacher Qwen3.5-122B-A10B in GPTQ-Int4, tensor parallel 4}
 
 % ------------------------------- DESIGN -------------------------------------
@@ -311,33 +334,37 @@ Religion / implicit,1.32,0.52,\textminus{}61\%
 \Rect{48}{226}{420}{762}{panel}
 \Rect{492}{226}{740}{762}{panel}
 \Rect{1256}{226}{760}{762}{panel}
-\Section{48}{226}{420}{24}{1. Problem Formulation}
-\Section{492}{226}{740}{25}{2. Methods and mechanism}
-\Section{1256}{226}{760}{25}{4. Results: one stage after SFT-v3}
+\Section{48}{226}{420}{24}{1. Problem}
+\Section{492}{226}{740}{25}{3. Methods and mechanistic findings}
+\Section{1256}{226}{760}{25}{4. Behavioural results after SFT-v3}
 
 % LEFT: problem, dataset, one case before and after SFT-v3, the framework.
 \Txt[text=ink]{64}{284}{388}{20}{\bfseries Can identity cues change a decision\\when qualifications stay the same?}
 \Txt[text=greenDark]{64}{342}{388}{16}{\bfseries Goal: reduce decision instability while preserving task quality.}
-\Section{48}{392}{420}{25}{3. Dataset and one case}
+\Section{48}{392}{420}{25}{2. Dataset, setup and one case}
 % Benchmark size: README.md, docs/EVAL_STANDARD.md. Groups: poster/example.json.
 \Txt[text=muted]{64}{436}{388}{12}{\NPairs{} pairs, \NCandidates{} candidates; military (\NMilitary), religion (\NReligion), gender (\NGender) values, explicit / implicit + attribute-free: \NPrompts{} prompts, \NSets{} sets [4]}
-% One real set (poster/cases.json, pick_cases.py): military status, implicit wording; the base
-% model's decisions and reasons and SFT-v3's, quoted as written. The counts are over the three
-% groups' implicit sets the base model decides inconsistently.
-\Rect[draw=rule,line width=0.8bp]{64}{472}{388}{36}{white}
-\Txt[text=ink]{80}{480}{356}{16}{\bfseries Same CV, same job: \CaseJob}
-\NodeBox{64}{518}{184}{40}{ink}{white}{12}{``\CaseHireSentence''}
-\NodeBox{268}{518}{184}{40}{ink}{white}{12}{``\CaseRejectSentence''}
-\draw[gray,line width=1.3bp] (156,558) -- (156,570) -- (258,570);
-\draw[gray,line width=1.3bp] (360,558) -- (360,570) -- (258,570);
-\Arrow{258}{570}{258}{582}
-\NodeBox{64}{582}{388}{30}{ink}{white}{15}{Base model, greedy decoding}
-\Txt[text=ink,align=center]{64}{618}{184}{19}{\bfseries Hire}
-\Txt[text=ink,align=center]{268}{618}{184}{19}{\bfseries Reject}
-\Txt[text=muted]{64}{646}{388}{11.5}{Its reason for the reject, as written: ``\CaseRejectReason''}
-\NodeBox{64}{712}{388}{30}{white}{greenDark}{15}{After SFT-v3: all \CaseVariants{} variants \textrightarrow{} Hire}
-\Txt[text=muted]{64}{748}{388}{11.5}{Its reason: ``\CaseSFTReason''}
-\Txt[text=greenDark]{64}{794}{388}{12.5}{\bfseries \CaseStableSFT{} of the \CaseUnstableTotal{} implicit sets the base model decides inconsistently are stable after SFT-v3 (self-distillation: \CaseStableDistill).}
+% One real set (poster/cases.json, pick_cases.py, poster_case): gender, implicit wording; the
+% only change between the two prompts is the pronoun sentence. The job's requirement, the CV's
+% first dated position, the base model's two decisions with their reasons and SFT-v3's one
+% decision are quoted as written. The counts are over the three groups' implicit sets the base
+% model decides inconsistently.
+\Rect[draw=rule,line width=0.8bp]{64}{472}{388}{64}{white}
+\Txt[text=ink]{76}{477}{364}{12.5}{\bfseries Job: \CaseJob{} \textemdash{} requires \CaseRequirement}
+\Txt[text=body]{76}{508}{364}{10.5}{CV: \CaseEvidence; two later sales roles to 2022}
+\NodeBox{64}{544}{184}{40}{ink}{white}{11.5}{``\CaseHireSentence''}
+\NodeBox{268}{544}{184}{40}{ink}{white}{11.5}{``\CaseRejectSentence''}
+\draw[gray,line width=1.3bp] (156,584) -- (156,594) -- (258,594);
+\draw[gray,line width=1.3bp] (360,584) -- (360,594) -- (258,594);
+\Arrow{258}{594}{258}{604}
+\NodeBox{64}{604}{388}{28}{ink}{white}{14.5}{Base model, greedy decoding}
+\Txt[text=ink,align=center]{64}{636}{184}{18}{\bfseries Hire}
+\Txt[text=ink,align=center]{268}{636}{184}{18}{\bfseries Reject}
+% The reasons are excerpts of the model's own text, cut at a clause boundary, never reworded.
+\Txt[text=muted]{64}{660}{388}{11}{Its reason for the reject: ``\CaseRejectExcerpt'' \CaseBaseRejects{} of the \CaseVariants{} gender values are rejected; the rest, with the same CV, hired.}
+\NodeBox{64}{718}{388}{28}{white}{greenDark}{14.5}{After SFT-v3: all \CaseVariants{} gender variants \textrightarrow{} Hire}
+\Txt[text=muted]{64}{752}{388}{11}{Its reason: ``\CaseSFTExcerpt''}
+\Txt[text=greenDark]{64}{784}{388}{12.5}{\bfseries \CaseStableSFT{} of the \CaseUnstableTotal{} implicit sets the base model decides inconsistently are stable after SFT-v3 (self-distillation: \CaseStableDistill).}
 % The framework, one line per stage.
 \Rect{48}{832}{420}{30}{rule}
 \Txt[text=ink]{64}{838}{388}{18}{\bfseries Framework}
@@ -430,24 +457,23 @@ Religion / implicit,1.32,0.52,\textminus{}61\%
 \Txt[text=greenDark]{886}{666}{326}{12}{One stage on SFT-v3, then the same test \textdownarrow}
 
 % The three stages as trained (content macros above), before the test that reads them.
-\Txt[text=muted]{512}{686}{700}{11}{Three stages on SFT-v3 merged, each a fresh LoRA r32 [1]; the patched seed is one of three}
 \foreach \x/\ttl/\desc in {512/{DPO}/{\MethodDPO},752/{GRPO + lr decay}/{\MethodGRPO},992/{Self-distillation}/{\MethodDistill}}{%
-  \Rect[draw=rule,line width=0.9bp]{\x}{703}{220}{58}{white}
-  \Txt[text=ink]{\x+10}{709}{200}{13.5}{\bfseries\ttl}
-  \Txt{\x+10}{729}{200}{10.5}{\desc}}
+  \Rect[draw=rule,line width=0.9bp]{\x}{690}{220}{56}{white}
+  \Txt[text=ink]{\x+10}{695}{200}{13.5}{\bfseries\ttl}
+  \Txt{\x+10}{714}{200}{10.5}{\desc}}
 
 % C: the same patching after one stage on SFT-v3, one seed each: DPO_V3_4880 s42
 % (docs/RL_PATCHING.md), GRPO + lr decay R4 s42 (docs/PATCHING_DISTILL.md, section 4),
 % self-distillation s43 (docs/DISTILL_PATCHING.md). 64 pairs per contrast, chosen on SFT-v3's own
 % effect (|dm| >= 0.5): not B's pairs, which were chosen on Base. PathData: latex_data.py from
 % reports/interp/distill/<spec>/{sensitivity,component_summary}.csv.
-\Txt[text=greenDark]{512}{774}{700}{16}{\bfseries C\quad THE SAME TEST AFTER DPO, GRPO AND SELF-DISTILLATION}
-\Txt[text=muted]{512}{796}{700}{11.5}{Per arm vs SFT-v3: 64 pairs per contrast chosen on SFT-v3's own effect, one patched seed; three values per cell = B's contrasts, in order}
-\Txt[text=ink]{512}{820}{140}{12}{\bfseries Method}
-\Txt[text=ink]{668}{820}{200}{12}{\bfseries Profile r vs SFT-v3}
-\Txt[text=ink,align=center]{900}{820}{70}{12}{\bfseries Hub rank}
-\Txt[text=ink,align=center]{980}{820}{60}{12}{\bfseries Margins}
-\Txt[text=ink]{1050}{820}{162}{12}{\bfseries Route}
+\Txt[text=greenDark]{512}{756}{700}{16}{\bfseries C\quad THE SAME TEST AFTER DPO, GRPO AND SELF-DISTILLATION}
+\Txt[text=muted]{512}{776}{700}{11}{Mechanistic probes: one selected seed per stage (fresh LoRA r32 on SFT-v3 merged [1]), 64 pairs per contrast chosen on SFT-v3's own effect, military and religion contrasts only; three values per cell = B's contrasts, in order}
+\Txt[text=ink]{512}{816}{140}{12}{\bfseries Method}
+\Txt[text=ink]{668}{816}{200}{12}{\bfseries Profile r vs SFT-v3}
+\Txt[text=ink,align=center]{900}{816}{70}{12}{\bfseries Hub rank}
+\Txt[text=ink,align=center]{980}{816}{60}{12}{\bfseries Margins}
+\Txt[text=ink]{1050}{816}{162}{12}{\bfseries Route}
 \foreach \r in {0,1,2}{%
   \PathValue{\r}{method}{\PMethod}
   \PathValue{\r}{rmean}{\PR}
@@ -455,7 +481,7 @@ Religion / implicit,1.32,0.52,\textminus{}61\%
   \PathValue{\r}{ranks}{\PRanks}
   \PathValue{\r}{scale}{\PScale}
   \PathValue{\r}{route}{\PRoute}
-  \pgfmathsetmacro{\yy}{842+26*\r}
+  \pgfmathsetmacro{\yy}{838+26*\r}
   \Txt[text=ink]{512}{\yy}{140}{12.5}{\bfseries\PMethod}
   \Rect{668}{\yy+3}{120}{10}{rule}
   \pgfmathsetmacro{\ww}{\PR*120}
@@ -467,9 +493,9 @@ Religion / implicit,1.32,0.52,\textminus{}61\%
 }
 % The window from Marta's patching, three seeds each, vs the trained all-layer adapter: trained
 % there alone (docs/PATCHING_DISTILL.md A), kept alone (docs/DISTILL_FOLLOWUP.md H), removed (F).
-\Txt[text=muted]{512}{920}{700}{11.5}{Placing self-distillation's LoRA by patching, 3 seeds each, pp vs all layers: trained on 15--20 only \WindowOnly; the trained adapter with only 15--20 kept \WindowKept; with 15--20 removed \WindowRemoved. The window explains; it does not yet guide.}
-\Rect{512}{958}{700}{28}{ink}
-\Txt[text=white,align=center]{524}{965}{676}{15}{\bfseries Shared evaluation: Base, SFT-v3 and the three stages on one audit}
+\Txt[text=ink]{512}{916}{700}{12}{\bfseries Restricting LoRA to the patched window did not match full-layer adaptation:} \Txt[text=body]{512}{916}{700}{12}{\phantom{\bfseries Restricting LoRA to the patched window did not match full-layer adaptation:} 3 seeds each, pp vs all layers: trained on 15--20 only \WindowOnly; the trained adapter with only 15--20 kept \WindowKept; with 15--20 removed \WindowRemoved{} [6].}
+% Definitions of C's columns (scripts/interp/20_distill_compare.py; reports/interp/distill/<spec>/).
+\Txt[text=muted]{512}{952}{700}{10}{Profile r: Pearson r of the effect each component's patch removes (64 mixer and MLP outputs \texttimes{} 2 token classes), arm vs SFT-v3. Hub rank: L15.H11 among all heads by the arm's own attribution patching. Margins: median attribute-free $|$log p(hire) $-$ log p(reject)$|$, arm / SFT-v3. Route: same if r $\geq$ 0.80 and rank $\leq$ 3 on every contrast. Unstable set: one CV and job whose attribute variants get different decisions.}
 
 % RIGHT: conclusion first. The headline card is Base moved to SFT-v3's hire rate against SFT-v3
 % (poster/base_compare.json) and the two models' agreement with GPT-4o (ModelData). A draws the
@@ -487,29 +513,31 @@ Religion / implicit,1.32,0.52,\textminus{}61\%
 \Txt[text=ink]{1284}{376}{215}{24}{\bfseries\BaseAtSFT\% \textrightarrow{} \SFTOwn\%}
 \Txt[text=greenDark]{1510}{353}{240}{10.5}{\bfseries BASE TO SFT-v3, PAIRED 95\% CI}
 \Txt[text=greenDark]{1510}{380}{240}{17}{\bfseries\SFTvsBase{} pp}
-\Txt[text=greenDark]{1760}{353}{230}{10.5}{\bfseries AGREEMENT WITH GPT-4o, BASE TO SFT-v3}
+\Txt[text=greenDark]{1760}{353}{230}{10.5}{\bfseries GPT-4o AGREEMENT (GREEDY, OWN RATE)}
 \Txt[text=ink]{1760}{376}{230}{24}{\bfseries\BaseAgree\% \textrightarrow{} \SFTAgree\%}
 
-% A: the nine seeds.
-\Txt[text=greenDark]{1272}{432}{728}{16}{\bfseries A\quad Additional stability gains stay within seed noise}
-\Txt[text=muted]{1272}{456}{728}{12.5}{\CommonCIBelow{} of 9 seed intervals lies below 0 at the matched hire rate; each stage's three seeds, then their mean}
-\Txt[text=ink]{1272}{479}{140}{12}{\bfseries Added stage}
-\Txt[text=ink,align=center]{1420}{479}{280}{12}{\bfseries $\Delta$ unstable sets at \CommonHire\% (pp)}
-\Txt[text=ink,align=center]{1720}{479}{140}{12}{\bfseries $\Delta$ agreement (pp)}
-\Txt[text=ink,align=center]{1870}{479}{130}{12}{\bfseries Training (GPU-h)}
-\Axis{1420}{690}{280}{-2}{1.5}{-2,-1,0,1}{496}
-\Axis{1720}{690}{140}{-1.2}{1.2}{-1,0,1}{496}
-\draw[gray,dashed,line width=1bp] (1420+2/3.5*280,496) -- (1420+2/3.5*280,690);
-\draw[gray,dashed,line width=1bp] (1720+1.2/2.4*140,496) -- (1720+1.2/2.4*140,690);
+% A: the nine seeds, with each stage's tail and recurrence beside them (PathData).
+\Txt[text=greenDark]{1272}{432}{728}{16}{\bfseries A\quad Additional gains remain uncertain across three training seeds}
+\Txt[text=muted]{1272}{456}{728}{11.5}{\CommonCIBelow{} of 9 seed intervals lies below 0 at the matched hire rate; three seeds per stage, then their mean; p99 and Jaccard are ranges, not CIs}
+\Txt[text=ink]{1272}{484}{130}{11}{\bfseries Added stage}
+\Txt[text=ink,align=center]{1410}{484}{230}{11}{\bfseries $\Delta$ unstable sets at \CommonHire\% (pp)}
+\Txt[text=ink,align=center]{1660}{484}{110}{11}{\bfseries $\Delta$ agreement}
+\Txt[text=ink]{1790}{484}{80}{11}{\bfseries GPU-h}
+\Txt[text=ink]{1886}{484}{56}{11}{\bfseries p99 (\texttimes)}
+\Txt[text=ink]{1946}{484}{54}{11}{\bfseries Jaccard}
+\Axis{1410}{690}{230}{-2}{1.5}{-2,-1,0,1}{500}
+\Axis{1660}{690}{110}{-1.2}{1.2}{-1,0,1}{500}
+\draw[gray,dashed,line width=1bp] (1410+2/3.5*230,500) -- (1410+2/3.5*230,690);
+\draw[gray,dashed,line width=1bp] (1660+1.2/2.4*110,500) -- (1660+1.2/2.4*110,690);
 \foreach \r in {0,...,8}{%
   \SeedValue{\r}{delta}{\D}
   \SeedValue{\r}{lo}{\DL}
   \SeedValue{\r}{hi}{\DH}
   \pgfmathtruncatemacro{\g}{\r/3}
   \pgfmathtruncatemacro{\k}{\r-3*\g}
-  \pgfmathsetmacro{\yy}{500+66*\g+14*\k}
+  \pgfmathsetmacro{\yy}{504+62*\g+13*\k}
   \def\PointFill{white}
-  \CI{1420}{280}{-2}{1.5}{\yy}{\D}{\DL}{\DH}{greenDark}
+  \CI{1410}{230}{-2}{1.5}{\yy}{\D}{\DL}{\DH}{greenDark}
 }
 \foreach \g in {0,1,2}{%
   \pgfmathtruncatemacro{\rr}{3*\g}
@@ -521,89 +549,57 @@ Religion / implicit,1.32,0.52,\textminus{}61\%
   \DeltaValue{\g}{lo}{\ADL}
   \DeltaValue{\g}{hi}{\ADH}
   \ModelValue{\mm}{post}{\Post}
-  \pgfmathsetmacro{\yy}{500+66*\g}
-  \Txt[text=ink]{1272}{\yy-4}{140}{14}{\bfseries\GName}
-  \Txt[text=muted]{1272}{\yy+18}{140}{11.5}{mean \GMeanTxt{} pp}
-  \pgfmathsetmacro{\xm}{1420+(\GMean+2)/3.5*280}
-  \MeanDiamond{\xm}{\yy+42}{greenDark}
+  \PathValue{\g}{p99range}{\PTR}
+  \PathValue{\g}{jrange}{\PJR}
+  \pgfmathsetmacro{\yy}{504+62*\g}
+  \Txt[text=ink]{1272}{\yy-4}{130}{13.5}{\bfseries\GName}
+  \Txt[text=muted]{1272}{\yy+16}{130}{11}{mean \GMeanTxt{} pp}
+  \pgfmathsetmacro{\xm}{1410+(\GMean+2)/3.5*230}
+  \MeanDiamond{\xm}{\yy+39}{greenDark}
   \def\PointFill{greenDark}
-  \CI{1720}{140}{-1.2}{1.2}{\yy+21}{\AD}{\ADL}{\ADH}{greenDark}
-  \pgfmathsetmacro{\bw}{\Post/12*90}
-  \Rect{1880}{\yy+14}{\bw}{14}{green}
-  \Txt[text=ink]{1880+\bw+6}{\yy+13}{44}{12.5}{\bfseries+\pgfmathprintnumber[fixed,precision=1]{\Post}}
+  \CI{1660}{110}{-1.2}{1.2}{\yy+19}{\AD}{\ADL}{\ADH}{greenDark}
+  \pgfmathsetmacro{\bw}{\Post/12*50}
+  \Rect{1790}{\yy+12}{\bw}{14}{green}
+  \Txt[text=ink]{1790+\bw+4}{\yy+11}{40}{12}{\bfseries+\pgfmathprintnumber[fixed,precision=1]{\Post}}
+  \Txt[text=body]{1886}{\yy+11}{56}{11}{\PTR}
+  \Txt[text=body]{1946}{\yy+11}{54}{11}{\PJR}
 }
-\Txt[text=muted]{1272}{712}{728}{11}{Seeds 42 / 43 / 44 top to bottom, paired 95\% candidate-bootstrap CIs at the common hire rate; diamond: 3-seed mean, no aggregate CI. Agreement: paired vs SFT-v3, greedy decisions. Training: the stage's own GPU-h over SFT-v3's \SFTTrainGPUh.}
-\draw[rule,line width=1bp] (1272,750) -- (2000,750);
+% Stability and quality sit on different decision settings and the caption says so.
+\Txt[text=muted]{1272}{716}{728}{10.5}{Seeds 42 / 43 / 44 top to bottom, paired 95\% candidate-bootstrap CIs at the common hire rate; diamond: 3-seed mean, no aggregate CI. Agreement with GPT-4o's reference: greedy decisions at each model's own hire rate, paired vs SFT-v3. GPU-h: the stage's own training over SFT-v3's \SFTTrainGPUh. p99 / Jaccard: one patched seed, 3 contrasts / 3 seed pairs; dSFT: \BorderDistill{} on SFT-v3's \NBorder{} nearest-cut pairs.}
 
-% B: the attribute effect's tail (log axis) and the seeds' overlap, one panel.
-\Txt[text=greenDark]{1272}{760}{338}{17}{\bfseries B\quad Tail and recurrence}
-\Txt[text=muted]{1272}{784}{338}{11.5}{Effect tail vs SFT-v3 (log); unstable sets shared by seeds}
-\Txt[text=ink,align=center]{1340}{812}{100}{10.5}{\bfseries p99 effect (\texttimes)}
-\Txt[text=ink,align=center]{1500}{812}{66}{10.5}{\bfseries Jaccard}
-\foreach \tick/\lab in {0.25/0.25,1/1,4/4,16/16}{%
-  \pgfmathsetmacro{\xx}{1340+(ln(\tick)-ln(0.25))/(ln(16)-ln(0.25))*100}
-  \draw[rule,line width=0.6bp] (\xx,828) -- (\xx,902);
-  \Txt[align=center,text=muted]{\xx-18}{906}{36}{10.5}{\lab}}
-\pgfmathsetmacro{\xone}{1340+(ln(1)-ln(0.25))/(ln(16)-ln(0.25))*100}
-\draw[ink,dashed,line width=1bp] (\xone,828) -- (\xone,902);
-\foreach \tick/\lab in {0/0,0.5/.5,1/1}{%
-  \pgfmathsetmacro{\xx}{1500+\tick*66}
-  \draw[rule,line width=0.6bp] (\xx,828) -- (\xx,902);
-  \Txt[align=center,text=muted]{\xx-18}{906}{36}{10.5}{\lab}}
-\draw[rule,line width=1bp] (1340,902) -- (1440,902);
-\draw[rule,line width=1bp] (1500,902) -- (1566,902);
-\foreach \r in {0,1,2}{%
-  \PathValue{\r}{short}{\PShort}
-  \PathValue{\r}{p99min}{\Pa}
-  \PathValue{\r}{p99max}{\Pb}
-  \PathValue{\r}{p99range}{\PTR}
-  \PathValue{\r}{jmin}{\Ja}
-  \PathValue{\r}{jmax}{\Jb}
-  \PathValue{\r}{jrange}{\PJR}
-  \pgfmathsetmacro{\yy}{832+26*\r}
-  \pgfmathsetmacro{\xa}{1340+(ln(\Pa)-ln(0.25))/(ln(16)-ln(0.25))*100}
-  \pgfmathsetmacro{\xb}{1340+(ln(\Pb)-ln(0.25))/(ln(16)-ln(0.25))*100}
-  \pgfmathsetmacro{\barw}{\xb-\xa}
-  \Txt[text=ink]{1272}{\yy-1}{64}{13}{\bfseries\PShort}
-  \Rect{\xa}{\yy+2}{\barw}{12}{greenDark}
-  \Txt[text=body]{1446}{\yy}{50}{10.5}{\PTR}
-  \pgfmathsetmacro{\xa}{1500+\Ja*66}
-  \pgfmathsetmacro{\barw}{(\Jb-\Ja)*66}
-  \Rect{\xa}{\yy+2}{\barw}{12}{greenDark}
-  \Txt[text=body]{1572}{\yy}{48}{10.5}{\PJR}
-}
-\Txt[text=muted]{1272}{926}{338}{10.5}{Ranges, not CIs: 3 contrasts (one seed), 3 seed pairs; dashed = SFT-v3. dSFT: \BorderDistill{} on the \NBorder{} nearest-cut pairs}
-\Txt[text=muted]{1272}{962}{338}{10.5}{Qwen3.5-9B, LoRA r32, \StandardParams{} M trainable per stage; SFT-v3 training \SFTTrainGPUh{} GPU-h; best DPO and GRPO chosen after the audits (exploratory)}
-
-% C: the NVIDIA stack, before and after (docs/ACCEL_BENCH.md; docs/THROUGHPUT_B.md round 2).
-\Txt[text=greenDark]{1630}{760}{370}{17}{\bfseries C\quad NVIDIA stack: before and after}
-\Txt[text=muted]{1630}{784}{370}{11}{\StackLine}
+% 5. The NVIDIA stack on this audit: the patching workload and its cost (reports/cost/steps.csv,
+% stage patching; scripts/interp/10_patch.py), the audits' engine as measured
+% (docs/THROUGHPUT_B.md round 2), and the before-and-after benchmarks of docs/ACCEL_BENCH.md
+% (AccelData; 'to run' until each has run).
+\Section{1256}{756}{760}{22}{5. NVIDIA-accelerated audit: workload, runtime and memory}
+\Txt[text=muted]{1272}{802}{728}{11}{\StackLine}
+\Txt[text=ink]{1272}{824}{300}{12}{\bfseries Before and after, same node and prompts}
 \foreach \r in {0,1,2}{%
   \pgfplotstablegetelem{\r}{label}\of\AccelData\let\ALabel\pgfplotsretval
   \pgfplotstablegetelem{\r}{sub}\of\AccelData\let\ASub\pgfplotsretval
   \pgfplotstablegetelem{\r}{speedup}\of\AccelData\let\ASpeed\pgfplotsretval
   \pgfplotstablegetelem{\r}{pending}\of\AccelData\let\APending\pgfplotsretval
   \pgfplotstablegetelem{\r}{text}\of\AccelData\let\AText\pgfplotsretval
-  \pgfmathsetmacro{\yy}{816+24*\r}
-  \Txt[text=ink]{1630}{\yy-2}{165}{11.5}{\bfseries\ALabel}
-  \Txt[text=muted]{1630}{\yy+12}{165}{9.5}{\ASub}
+  \pgfmathsetmacro{\yy}{846+22*\r}
+  \Txt[text=ink]{1272}{\yy-2}{150}{11.5}{\bfseries\ALabel}
+  \Txt[text=muted]{1272}{\yy+11}{150}{9}{\ASub}
   \ifnum\APending=1
-    \Txt[text=muted]{1800}{\yy+2}{150}{11}{to run}
+    \Txt[text=muted]{1430}{\yy+2}{140}{11}{to run}
   \else
-    \pgfmathsetmacro{\bw}{min(\ASpeed,10)/10*140}
-    \Rect{1800}{\yy+1}{\bw}{14}{green}
-    \Txt[text=ink]{1800+\bw+6}{\yy}{50}{12.5}{\bfseries\AText}
+    \pgfmathsetmacro{\bw}{min(\ASpeed,10)/10*90}
+    \Rect{1430}{\yy+1}{\bw}{14}{green}
+    \Txt[text=ink]{1430+\bw+6}{\yy}{44}{12.5}{\bfseries\AText}
   \fi
 }
-\draw[rule,line width=1bp] (1800,888) -- (1940,888);
+\draw[rule,line width=1bp] (1430,912) -- (1520,912);
 \foreach \tick in {1,5,10}{%
-  \pgfmathsetmacro{\xx}{1800+\tick/10*140}
-  \draw[rule,line width=0.8bp] (\xx,888) -- (\xx,892);
-  \Txt[align=center,text=muted]{\xx-18}{893}{36}{10}{\texttimes\tick}}
-% Measured on the audits' engine (reports/throughput_b/full/speedup_summary.csv): one GH200,
-% the whole audit; HF-vs-vLLM agreement from reports/interp/margins_summary-*.json; the
-% project's allocated GPU-h and GPU energy from reports/cost/by_stage.csv.
-\Txt[text=muted]{1630}{912}{370}{10.5}{Audit: \NPrompts{} prompts in \AuditWallS{} s on one GH200, \AuditReqPerS{} req/s, \AuditKWh{} kWh; prefix cache \texttimes\PrefixSpeedup{} over cache off. HF and vLLM decisions agree on \AgreeHFvLLM\% of rows; \TeacherLine. Project: \ProjectGPUh{} GPU-h, \ProjectKWh{} kWh GPU energy.}
+  \pgfmathsetmacro{\xx}{1430+\tick/10*90}
+  \draw[rule,line width=0.8bp] (\xx,912) -- (\xx,916);
+  \Txt[align=center,text=muted]{\xx-18}{916}{36}{10}{\texttimes\tick}}
+\Txt[text=muted]{1272}{934}{300}{10}{Audit engine: \NPrompts{} prompts, \AuditGenS{} s of generation (\AuditReqPerS{} req/s), \AuditWallS{} s with the load, \AuditKWh{} kWh, one GH200; prefix cache \texttimes\PrefixSpeedup{} over cache off}
+\Txt[text=ink]{1590}{824}{410}{12}{\bfseries Mechanistic audit: one (model, contrast) on one GH200}
+\Txt[text=body]{1590}{846}{410}{10}{Pairs: 64 per contrast, 3 contrasts, one selected seed per stage. Per pair: \PatchForwardsPerPair{} patched forwards (33 residual points, 64 components, 56 verified heads, 2 token classes) and one attribution-patching backward over \AtPHeads{} heads; bf16, the decision token's margin only, source activations captured once per batch.}
+\Txt[text=body]{1590}{918}{410}{10}{Runtime: \PatchStepMin{} min, \PatchStepGPUh{} GPU-h and \PatchPeakGiB{} GiB peak per (model, contrast); the \NPrompts{}-prompt margin pass \MarginsStepMin{} min, \MarginsPeakGiB{} GiB peak; all patching \PatchTotalGPUh{} of the project's \ProjectGPUh{} GPU-h (\ProjectKWh{} kWh GPU energy). HF and vLLM decisions agree on \AgreeHFvLLM\% of rows; the backend shifts a model's unstable-set rate by at most \BackendUnstableMax{} pp, so every comparison stays within one backend.}
 
 % BOTTOM: one band. The take-home sentence, then three findings, each one judgement and its
 % qualifier; the evidence stays in the figures and on the QR page (the review, 2026-11-02).
@@ -611,21 +607,23 @@ Religion / implicit,1.32,0.52,\textminus{}61\%
 \Txt[text=ink]{48}{1014}{1860}{16}{\bfseries SFT delivers the main stability gain; additional training changes what remains, with uncertain further gains across three seeds.}
 \Txt[text=greenDark]{48}{1044}{600}{12.5}{\bfseries 1\quad Read consistency with quality, compute and seeds}
 \Txt[text=body]{48}{1062}{600}{11}{A matched hire rate controls the comparison and three seeds test reproducibility; one DPO seed alone would have read as a 1 pp gain.}
-\Txt[text=greenDark]{690}{1044}{600}{12.5}{\bfseries 2\quad Methods differ in extreme attribute effects and recurring cases}
+\Txt[text=greenDark]{690}{1044}{600}{12.5}{\bfseries 2\quad Mean gains uncertain; extreme attribute effects and recurring cases differ}
 \Txt[text=body]{690}{1062}{600}{11}{After one more stage, RL's extreme effects grow beyond its margin widening and its unstable sets change with the seed; self-distillation's shrink and recur on the same borderline pairs (4B, 4C).}
 \Txt[text=greenDark]{1332}{1044}{600}{12.5}{\bfseries 3\quad Behavioural change coexists with the attribute pathway}
-\Txt[text=body]{1332}{1062}{600}{11}{The pathway survives SFT-v3 and GRPO and shifts partly later under DPO; a LoRA placed on that window does not carry self-distillation's gain (2C).}
+\Txt[text=body]{1332}{1062}{600}{11}{The pathway survives SFT-v3 and GRPO and shifts partly later under DPO; a LoRA restricted to that window did not match full-layer adaptation (2C): localization need not inform editing [6, 7].}
 \node[anchor=north west,inner sep=0pt] at (1940,1018)
   {\qrcode[height=1.33in]{https://github.com/Stereotypes-in-LLMs/hiring\_bias\_mitigation\_at/blob/main/poster/DETAILS.md}};
 \Txt[text=greenDark,align=right]{1880}{1088}{124}{10}{Full results + code}
 
 % Small on-poster references; full URLs and reporting details are in source and README.
-\Txt[text=muted]{48}{1092}{1812}{10.5}{%
-  \href{https://arxiv.org/abs/2106.09685}{[1] Hu et al. LoRA (2021)}\quad
-  \href{https://arxiv.org/abs/2305.18290}{[2] Rafailov et al. DPO (2023)}\quad
-  \href{https://arxiv.org/abs/2402.03300}{[3] Shao et al. GRPO (2024)}\quad
+\Txt[text=muted]{48}{1092}{1812}{9.5}{%
+  \href{https://arxiv.org/abs/2106.09685}{[1] Hu et al., LoRA, 2021}\quad
+  \href{https://arxiv.org/abs/2305.18290}{[2] Rafailov et al., DPO, 2023}\quad
+  \href{https://arxiv.org/abs/2402.03300}{[3] Shao et al., GRPO, 2024}\quad
   \href{https://github.com/Stereotypes-in-LLMs/hiring_bias_mitigation_at}{[4] Code: github.com/Stereotypes-in-LLMs/hiring\_bias\_mitigation\_at}\quad
-  \href{https://huggingface.co/datasets/Stereotypes-in-LLMs/hiring-bias-mitigation-v3}{[5] Training data: huggingface.co/datasets/Stereotypes-in-LLMs/hiring-bias-mitigation-v3}}
+  \href{https://huggingface.co/datasets/Stereotypes-in-LLMs/hiring-bias-mitigation-v3}{[5] Data: huggingface.co/datasets/Stereotypes-in-LLMs/hiring-bias-mitigation-v3}\quad
+  \href{https://arxiv.org/abs/2301.04213}{[6] Hase et al., Does localization inform editing?, NeurIPS 2023}\quad
+  \href{https://arxiv.org/abs/2309.16042}{[7] Zhang \& Nanda, Best practices of activation patching, ICLR 2024}}
 
 \end{scope}
 \end{tikzpicture}

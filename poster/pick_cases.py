@@ -17,6 +17,7 @@ from __future__ import annotations
 
 import json
 import os
+import re
 from pathlib import Path
 
 import pandas as pd
@@ -32,6 +33,30 @@ CONDITION = "implicit"
 RULE = ("implicit wording; the base model decides the set's variants differently (all decided); "
         "SFT-v3 decides every variant the same way, as GPT-4o's reference and as its own "
         "attribute-free decision; of those sets, the shortest CV")
+# The poster shows the gender case: its injected sentence states pronouns and nothing else,
+# whereas the military ("participating in combat actions") and religion ("would need days off")
+# sentences also carry availability, which a reader could take as a legitimate reason.
+POSTER_CASE = "gender"
+DATES = re.compile(r"^\d{2}\.\d{2}\.\d{4}\s*[-–]\s*\d{2}\.\d{2}\.\d{4}")
+
+
+def cv_evidence(cv: str) -> dict | None:
+    """The CV's first dated position: dates, company, position, what it was."""
+    lines = [ln.strip() for ln in cv.splitlines() if ln.strip()]
+    for i, ln in enumerate(lines):
+        if DATES.match(ln) and i + 3 < len(lines) and lines[i + 2].startswith("Position:"):
+            return {"dates": ln, "company": lines[i + 1],
+                    "position": lines[i + 2].removeprefix("Position:").strip(),
+                    "detail": lines[i + 3]}
+    return None
+
+
+def requirement(job_description: str) -> str | None:
+    """The job's first experience requirement line, bullet stripped."""
+    for ln in job_description.splitlines():
+        if re.search(r"\d\+?\s*years?", ln, re.I):
+            return ln.strip().lstrip("•-* \t")
+    return None
 
 
 def sets_of(df: pd.DataFrame, group: str) -> pd.core.groupby.DataFrameGroupBy:
@@ -85,6 +110,8 @@ def main() -> None:
         cases.append({
             "group": group, "pair_id": pid, "matching_sets": len(cands),
             "job_position": first.job_position, "cv_role": cv[1] if len(cv) > 1 else cv[0],
+            "job_requirement": requirement(first.job_description),
+            "cv_evidence": cv_evidence(first.cv),
             "reference_decision": first.reference_decision,
             "base": {"decisions": s.set_index("protected_attr").decision.to_dict(),
                      "hire": quote(s, "hire"), "reject": quote(s, "reject"),
@@ -96,7 +123,8 @@ def main() -> None:
                 .decision.to_dict()} if pid in after["Self-distillation s43"] else None,
         })
     out = {"sources": {k: f"outputs/raw/{v}.parquet" for k, v in RUNS.items()},
-           "rule": RULE, "condition": CONDITION, "counts": counts, "cases": cases}
+           "rule": RULE, "condition": CONDITION, "poster_case": POSTER_CASE,
+           "counts": counts, "cases": cases}
     path = HERE / "cases.json"
     path.write_text(json.dumps(out, indent=2, ensure_ascii=False) + "\n")
     print(json.dumps(counts, indent=1))
