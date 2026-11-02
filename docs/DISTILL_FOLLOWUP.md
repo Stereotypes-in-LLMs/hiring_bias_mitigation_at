@@ -133,6 +133,7 @@ own point, on the margin files already written. It is descriptive and decides no
 | 12 | 5233403 | I seed 43 training (nid005676): 682 steps, 2:30:54; 10.041 GPU-h measured; train_loss 0.028 over the run, attributed KL at the end 0.0030 | 10.06 | 38.93 |
 | 13 | 5233871 | I seed 43 audit (nid005514): −0.84 [−1.67, −0.04] pp against SFT-v3 (one epoch: −0.59 [−1.24, −0.03]), greedy TPR +1.20, agreement +0.16, every guardrail passes, conforms; merge kept 95.8%. Head to head against one epoch s43 at 23.08%: −0.30 [−0.78, +0.14] | 1.20 | 40.13 |
 | 14 | 5233658 | I seed 44 training (nid005408): 682 steps, 2:33:53; 10.240 GPU-h measured; train_loss 0.028 over the run, attributed KL at the end 0.0040 | 10.26 | 50.39 |
+| 15 | 5234047 | I seed 44 audit (nid006514): −0.72 [−1.56, +0.13] pp against SFT-v3 (one epoch: −0.70 [−1.52, +0.08]), greedy TPR +1.04, agreement +0.03, every guardrail passes, conforms; merge kept 95.9%. Head to head against one epoch s44 at 22.96%: −0.04 [−0.54, +0.40] | 1.22 | 51.61 |
 
 ## 3. Result
 
@@ -180,6 +181,32 @@ the merge kept 91.6-91.8%.
   that patching locates. The window's part does not duplicate the rest. This is an ablation of
   adapters trained with every layer present, so it does not show what a model trained without
   those layers would do.
+
+### I. Two epochs (registered call: helps, by a narrow margin; not clearly better than SFT-v3)
+
+`decision_distill_e2_seed{42,43,44}`: 682 steps, the decay over the last 178. Head to head against
+one epoch of the same seed at the two-epoch arm's hire rate (`compare-arms`). Every audit
+conforms and passes every guardrail against SFT-v3; the merge kept 95.8-95.9%.
+
+| seed | two epochs vs one epoch, pp [95% CI] | two epochs vs SFT-v3, pp [95% CI] | one epoch vs SFT-v3, pp | TPR / agreement vs SFT-v3, pp |
+|---|---|---|---|---|
+| 42 | −0.21 [−0.69, +0.19] | −0.59 [−1.39, +0.26] | −0.42 | +1.29 / +0.11 |
+| 43 | −0.30 [−0.78, +0.14] | −0.84 [−1.67, −0.04] | −0.59 | +1.20 / +0.16 |
+| 44 | −0.04 [−0.54, +0.40] | −0.72 [−1.56, +0.13] | −0.70 | +1.04 / +0.03 |
+| mean | **−0.18** | −0.72 | −0.57 | |
+
+- **Call (section 1I).** Every seed is below 0 and the mean, −0.185, is at most −0.15: by the
+  registered rule a second epoch **helps**. Every head-to-head interval holds 0, and the mean
+  clears the threshold by 0.035 pp; without seed 43 it would be −0.13, undecided.
+- **G3 against SFT-v3.** Every seed is below 0, but only seed 43's interval is, so two epochs are
+  **not "clearly better than SFT-v3"**. The standard's verdicts: s43 "better, pending a second
+  seed"; s42 and s44 "not better: the interval reaches 0".
+- **Fact.** Seed 44 gained nothing from the second epoch (−0.70 to −0.72); seeds 42 and 43 moved
+  by −0.17 and −0.25. Training cost doubled: 10.0-10.2 GPU-h a seed against 5.1-5.3 (`reports/cost/steps.csv`, jobs 5162175-5162177).
+- **Interpretation, not confirmed.** The attributed KL kept falling (end of run 0.003-0.006
+  against 0.013-0.023 after one epoch), and the matched metric moved a little in the same
+  direction. One epoch was close to, but not at, the ceiling this objective reaches on these
+  data.
 
 ### J. Overlap of the unstable sets across training seeds (CPU, descriptive)
 
