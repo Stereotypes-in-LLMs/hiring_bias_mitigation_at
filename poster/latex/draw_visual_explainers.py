@@ -111,7 +111,7 @@ def measured_case(out, tex):
         arrow(ax, (966,y+75),(1025,y+75), INK)
 
     text(ax, 1180, 235, "Base", 23, "bold", ha="center")
-    text(ax, 1540, 235, "SFT-v3", 23, "bold", ha="center")
+    text(ax, 1540, 235, "SFT", 23, "bold", ha="center")
     line(ax, [(1360,260),(1360,632)], RULE, 1.5)
     pill(ax, 1070, 307, "Hire")
     pill(ax, 1070, 502, "Reject", False)
@@ -124,7 +124,7 @@ def measured_case(out, tex):
     box(ax, 50, 702, 1650, 155, PANEL, PANEL)
     text(ax, 72, 720, "All 20 variants", 20, "bold")
     text(ax, 72, 768, "Same CV-job pair", 16)
-    for y, label, nhire in ((727, "Base", 15), (790, "SFT-v3", 20)):
+    for y, label, nhire in ((727, "Base", 15), (790, "SFT", 20)):
         text(ax, 435, y+3, label, 18, "bold")
         for i in range(20):
             box(ax, 585+i*38, y, 28, 28, GREEN if i < nhire else "white",

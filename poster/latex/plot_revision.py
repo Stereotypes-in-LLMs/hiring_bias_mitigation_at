@@ -91,7 +91,7 @@ def behaviour(preview_dir: Path | None):
     forest.set_ylim(-.55, 2.55)
     forest.set_yticks([2, 1, 0], [method[0] for method in METHODS])
     forest.tick_params(axis="y", length=0, pad=12)
-    forest.set_xlabel("Δ unstable sets vs SFT-v3 (pp)", labelpad=8, fontsize=26)
+    forest.set_xlabel("Δ unstable sets vs SFT (pp)", labelpad=8, fontsize=26)
     style(forest)
     all_delta = []
     handles = []
@@ -129,7 +129,7 @@ def behaviour(preview_dir: Path | None):
     curve.set_ylim(min(all_delta)-.16, max(all_delta)+.23)
     curve.set_yticks([-1, 0, 1, 2, 3, 4])
     curve.set_xlabel("Matched hire rate (%)", labelpad=11)
-    curve.set_ylabel("Δ unstable sets (pp)\nvs SFT-v3", labelpad=11, fontsize=26)
+    curve.set_ylabel("Δ unstable sets (pp)\nvs SFT", labelpad=11, fontsize=26)
     curve.legend(handles=handles, ncol=3, loc="lower left", bbox_to_anchor=(-.005, 1.04),
                  borderaxespad=0, fontsize=26, handlelength=1.7, columnspacing=.8,
                  handletextpad=.6)
@@ -164,7 +164,7 @@ def residual(preview_dir: Path | None):
     tail.xaxis.set_major_formatter(FuncFormatter(lambda x, _: f"{x:g}"))
     tail.xaxis.set_minor_locator(FixedLocator([]))
     tail.axvline(1, color="#6E818A", lw=1.8, ls=(0, (3, 3)))
-    tail.set_xlabel("Absolute effect / SFT-v3 · log scale", labelpad=9)
+    tail.set_xlabel("Absolute effect / SFT · log scale", labelpad=9)
     tail.legend(handles=[Line2D([], [], marker="o", color=MUTED, mfc="white", ls="", markersize=11,
                                markeredgewidth=2.5, label="p50"),
                          Line2D([], [], marker="o", color=MUTED, mfc=MUTED, ls="", markersize=11,

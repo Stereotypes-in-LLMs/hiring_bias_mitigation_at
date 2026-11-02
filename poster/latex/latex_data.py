@@ -50,7 +50,7 @@ SFT_V3 = "SFT-v3"
 # every stage after SFT-v3 green and filled. Names and weight tell the rows apart.
 SLOTS = [
     ("Base", None, "gray", 0, "Base"),
-    ("SFT-v3", SFT_V3, "ink", 0, "SFT-v3"),
+    ("SFT-v3", SFT_V3, "ink", 0, "SFT"),
     ("DPO", "DPO_V3_4880", "greenDark", 1, "DPO"),
     ("GRPO + lr decay", "GRPO+decay R4", "greenDark", 1, "GRPO"),
     ("Self-distillation", "Distill", "greenDark", 1, "dSFT"),
@@ -187,7 +187,7 @@ def main() -> None:
             data = sft_data + mean_of(name, "data_gpu_h")
             train, post = sft_train, mean_of(name, "train_gpu_h")
         model_rows.append(dict(
-            model=slot, params=p, colour=colour, filled=filled, pending=0,
+            model="SFT" if slot == SFT_V3 else slot, params=p, colour=colour, filled=filled, pending=0,
             instability=round(u[0], 2), ilo=round(u[1], 2), ihi=round(u[2], 2),
             quality=round(q[0], 2), qlo=round(q[1], 2), qhi=round(q[2], 2),
             data=round(data, 2), train=round(train, 2), post=round(post, 2),

@@ -32,7 +32,7 @@
 \pgfplotstableread[col sep=comma]{
 model,params,colour,filled,pending,instability,ilo,ihi,quality,qlo,qhi,data,train,post,eval,short,seeds
 Base,--,gray,0,0,8.78,6.89,11.0,78.83,75.16,82.3,0.0,0.0,0.0,0.5,Base,1
-SFT-v3,58.2*,ink,0,0,1.85,1.0,2.78,82.4,78.56,85.79,15.4,21.64,0.0,0.5,SFT-v3,1
+SFT,58.2*,ink,0,0,1.85,1.0,2.78,82.4,78.56,85.79,15.4,21.64,0.0,0.5,SFT,1
 DPO,58.2*,greenDark,1,0,1.56,0.9,2.32,82.24,78.26,85.72,29.31,21.64,4.04,0.5,DPO,3
 GRPO + lr decay,58.2*,greenDark,1,0,1.62,0.96,2.37,82.15,78.09,85.56,31.59,21.64,10.83,0.5,GRPO,3
 Self-distillation,58.2*,greenDark,1,0,1.53,0.81,2.36,82.6,78.49,86.12,31.59,21.64,5.18,0.5,dSFT,3
@@ -244,7 +244,7 @@ Gender / implicit,0.72,0.20,\textminus{}72\%
 % pairs, docs/INTERP_SFT_V3.md. These are not population-wide means.
 \newcommand{\HubBase}{0.66}
 \newcommand{\HubSFT}{0.13}
-% Borderline set: docs/SCALE_CONTROL.md, SFT-v3 pair margin < 2.
+% Borderline set: docs/SCALE_CONTROL.md, SFT pair margin < 2.
 \newcommand{\NBorder}{35}
 \providecommand{\DDPTrainingCostDelta}{pending}
 
@@ -320,7 +320,7 @@ Gender / implicit,0.72,0.20,\textminus{}72\%
 \Txt[text=ink]{64}{405}{100}{14.5}{\bfseries Base}
 \NodeBox{174}{397}{118}{34}{greenDark}{greenPale}{15}{Hire}
 \NodeBox{310}{397}{122}{34}{ink}{white}{15}{Reject}
-\Txt[text=ink]{64}{448}{100}{14.5}{\bfseries SFT-v3}
+\Txt[text=ink]{64}{448}{100}{14.5}{\bfseries SFT}
 \NodeBox{174}{440}{118}{34}{greenDark}{greenPale}{15}{Hire}
 \NodeBox{310}{440}{122}{34}{greenDark}{greenPale}{15}{Hire}
 \pgfmathtruncatemacro{\CaseBaseHires}{\CaseVariants-\CaseBaseRejects}
@@ -339,7 +339,7 @@ Gender / implicit,0.72,0.20,\textminus{}72\%
 \Txt{64}{756}{368}{13.3}{\textbf{DPO}: direct preference optimization [2].}
 \Txt{64}{774}{368}{13.3}{\textbf{GRPO}: group relative policy optimization [3].}
 \Txt{64}{792}{368}{13.3}{\textbf{LoRA}: low-rank adaptation, rank 32 [1].}
-\Txt{64}{810}{368}{13.3}{\textbf{Self-distillation}: decision-token KL to\\frozen SFT-v3 on the cue-free pair.}
+\Txt{64}{810}{368}{13.3}{\textbf{Self-distillation}: decision-token KL to\\frozen SFT on the cue-free pair.}
 \Rect{64}{844}{368}{16}{greenPale}
 \Txt[text=greenDark]{72}{845}{352}{12.7}{\bfseries New: seed sweeps; controlled overlap; editing probes.}
 
@@ -364,7 +364,7 @@ Gender / implicit,0.72,0.20,\textminus{}72\%
 \Section{472}{570}{800}{24}{3. Residual risk changes with training}
 \node[anchor=north west,inner sep=0pt] at (472,608)
   {\includegraphics[width=16.666667in,keepaspectratio]{figures/residual.pdf}};
-\Txt{488}{771}{768}{13.3}{Left: each seed's own greedy threshold (seeds 43/44); control: SFT-v3 recalibrated to that seed's hire rate. Right: DPO/GRPO show lower p50 and higher p99 absolute logit effects; four contrasts \texttimes{} 450 pairs, one checkpoint per stage.}
+\Txt{488}{771}{768}{13.3}{Left: each seed's own greedy threshold (seeds 43/44); control: SFT recalibrated to that seed's hire rate. Right: DPO/GRPO show lower p50 and higher p99 absolute logit effects; four contrasts \texttimes{} 450 pairs, one checkpoint per stage.}
 \Rect{488}{808}{768}{52}{greenPale}
 \Txt[text=ink]{498}{814}{748}{16}{\bfseries \BorderDistill{} of distillation's unstable sets lie in \NBorder{} borderline pairs.}
 \Txt{498}{837}{748}{13.3}{Each model's own threshold; \NBorder{}/\NPairs{} pairs have an attribute-free SFT margin below 2 logits.}
@@ -418,9 +418,9 @@ Gender / implicit,0.72,0.20,\textminus{}72\%
 \Txt[text=ink]{1740}{560}{248}{20}{\bfseries vs 72\% selected}
 
 \Rect[draw=greenDark,line width=1bp]{1312}{602}{688}{170}{greenPale}
-\Txt[text=greenDark]{1326}{610}{500}{15}{\bfseries B\quad Effect-selected pairs: Base vs SFT-v3}
+\Txt[text=greenDark]{1326}{610}{500}{15}{\bfseries B\quad Effect-selected pairs: Base vs SFT}
 \Rect{1860}{614}{10}{10}{gray}\Txt{1874}{611}{52}{14}{Base}
-\Rect{1924}{614}{10}{10}{ink}\Txt{1938}{611}{63}{14}{SFT-v3}
+\Rect{1924}{614}{10}{10}{ink}\Txt{1938}{611}{63}{14}{SFT}
 \Txt{1326}{632}{662}{14}{64 pairs per contrast, selected on Base effect; same pairs for Base and SFT.}
 \foreach \r in {0,1,2,3}{%
   \pgfplotstablegetelem{\r}{label}\of\MechData\let\MLabel\pgfplotsretval
