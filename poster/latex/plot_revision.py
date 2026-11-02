@@ -26,10 +26,10 @@ METHODS = (
 )
 
 plt.rcParams.update({
-    "font.family": "DejaVu Sans", "font.size": 23,
+    "font.family": "DejaVu Sans", "font.size": 28,
     "pdf.fonttype": 42, "ps.fonttype": 42, "pdf.use14corefonts": False,
-    "axes.labelsize": 23, "axes.titlesize": 24, "xtick.labelsize": 21,
-    "ytick.labelsize": 23, "text.color": INK, "axes.labelcolor": INK,
+    "axes.labelsize": 28, "axes.titlesize": 28, "xtick.labelsize": 25,
+    "ytick.labelsize": 28, "text.color": INK, "axes.labelcolor": INK,
     "xtick.color": MUTED, "ytick.color": INK, "axes.edgecolor": "#A9B9C0",
     "axes.spines.top": False, "axes.spines.right": False,
     "axes.linewidth": 1.2, "savefig.facecolor": "white", "figure.facecolor": "white",
@@ -82,8 +82,8 @@ def behaviour(preview_dir: Path | None):
                  for row in curves if row["label"] == "SFT-v3"}
     assert len(reference) == 51
     fig = plt.figure(figsize=(WIDTH, 5.0))
-    forest = fig.add_axes([.155, .23, .19, .60])
-    curve = fig.add_axes([.455, .23, .53, .60])
+    forest = fig.add_axes([.185, .245, .17, .585])
+    curve = fig.add_axes([.465, .245, .52, .585])
     forest.set_title("At 22.51% hire rate", loc="left", pad=16)
     forest.axvline(0, color="#6E818A", lw=1.8, ls=(0, (3, 3)), zorder=1)
     forest.set_xlim(-1.85, 1.3)
@@ -119,7 +119,8 @@ def behaviour(preview_dir: Path | None):
         curve.plot(x, np.mean(means, axis=0), color=colour, lw=4.6, ls=line,
                    marker=marker, markevery=10, markersize=7.5, markeredgewidth=1.5,
                    markerfacecolor="white", clip_on=False, zorder=4+group)
-        handles.append(Line2D([], [], color=colour, lw=4.6, ls=line, label=label,
+        legend_label = ("DPO", "GRPO + decay", "Self-distillation")[group]
+        handles.append(Line2D([], [], color=colour, lw=4.6, ls=line, label=legend_label,
                               marker=marker, markersize=7.5, markerfacecolor="white"))
     curve.axhline(0, color="#6E818A", lw=1.8, zorder=1)
     curve.axvline(22.512, color="#6E818A", lw=1.8, ls=(0, (3, 3)), zorder=1)
@@ -130,7 +131,7 @@ def behaviour(preview_dir: Path | None):
     curve.set_xlabel("Matched hire rate (%)", labelpad=11)
     curve.set_ylabel("Δ unstable sets (pp)", labelpad=11)
     curve.legend(handles=handles, ncol=3, loc="lower left", bbox_to_anchor=(-.005, 1.04),
-                 borderaxespad=0, fontsize=22, handlelength=1.8, columnspacing=1.0,
+                 borderaxespad=0, fontsize=26, handlelength=1.7, columnspacing=.8,
                  handletextpad=.6)
     style(curve, ygrid=True)
     save(fig, "behaviour", preview_dir)
@@ -138,9 +139,9 @@ def behaviour(preview_dir: Path | None):
 
 def residual(preview_dir: Path | None):
     overlap = read("reports/seed_overlap/overlap.csv")
-    fig = plt.figure(figsize=(WIDTH, 3.4))
-    jac = fig.add_axes([.155, .29, .29, .55])
-    tail = fig.add_axes([.59, .29, .395, .55])
+    fig = plt.figure(figsize=(WIDTH, 3.8))
+    jac = fig.add_axes([.185, .31, .26, .53])
+    tail = fig.add_axes([.60, .31, .385, .53])
     jac.set_yticks([2, 1, 0], [method[0] for method in METHODS])
     jac.set_ylim(-.9, 2.5)
     jac.set_xlim(0, 1)
@@ -152,7 +153,7 @@ def residual(preview_dir: Path | None):
                         Line2D([], [], marker="o", color=MUTED, mfc="white", ls="", markersize=11,
                                markeredgewidth=2.5, label="SFT threshold control")],
                ncol=2, loc="lower left", bbox_to_anchor=(-.02, 1.05), borderaxespad=0,
-               borderpad=0, fontsize=22, handlelength=1, handletextpad=.5, columnspacing=1.0)
+               borderpad=0, fontsize=26, handlelength=1, handletextpad=.4, columnspacing=.7)
     tail.set_xscale("log")
     tail.set_xlim(.1, 16)
     tail.set_ylim(-.9, 2.5)
@@ -161,13 +162,13 @@ def residual(preview_dir: Path | None):
     tail.xaxis.set_major_formatter(FuncFormatter(lambda x, _: f"{x:g}"))
     tail.xaxis.set_minor_locator(FixedLocator([]))
     tail.axvline(1, color="#6E818A", lw=1.8, ls=(0, (3, 3)))
-    tail.set_xlabel("Effect ratio to SFT-v3 · log scale", labelpad=9)
+    tail.set_xlabel("Absolute effect / SFT-v3 · log scale", labelpad=9)
     tail.legend(handles=[Line2D([], [], marker="o", color=MUTED, mfc="white", ls="", markersize=11,
                                markeredgewidth=2.5, label="p50"),
                          Line2D([], [], marker="o", color=MUTED, mfc=MUTED, ls="", markersize=11,
                                 label="p99")],
                 ncol=2, loc="lower left", bbox_to_anchor=(0, 1.05), borderaxespad=0,
-                borderpad=0, fontsize=22, handletextpad=.5, columnspacing=1.3)
+                borderpad=0, fontsize=26, handletextpad=.5, columnspacing=1.3)
     style(jac)
     style(tail)
     for index, (label, prefix, spec, colour, _) in enumerate(METHODS):
@@ -177,8 +178,8 @@ def residual(preview_dir: Path | None):
         jac.plot([actual, control], [y, y], color=colour, alpha=.9, lw=3.2)
         jac.plot(actual, y, "o", color=colour, markersize=11.5)
         jac.plot(control, y, "o", mec=colour, mfc="white", mew=2.5, markersize=11.5)
-        jac.text(actual, y-.20, f"{actual:.2f}", ha="center", va="top", fontsize=22, color=colour)
-        jac.text(control, y-.20, f"{control:.2f}", ha="center", va="top", fontsize=22, color=colour)
+        jac.text(actual, y-.20, f"{actual:.2f}", ha="center", va="top", fontsize=26, color=colour)
+        jac.text(control, y-.20, f"{control:.2f}", ha="center", va="top", fontsize=26, color=colour)
         sensitivity = read(f"reports/interp/distill/{spec}/sensitivity.csv")
         assert len(sensitivity) == 4 and all(int(r["pairs"]) == 450 for r in sensitivity)
         for key, offset, fill in (("r_attr_median", .20, "white"), ("r_attr_p99", -.20, colour)):

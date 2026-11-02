@@ -225,6 +225,19 @@ GPU energy. It excludes follow-up jobs submitted after that snapshot.
 All source hashes, selected cost records, excluded-pilot logic and timing scopes are in
 [`reports/poster_followup/compute_summary.json`](https://github.com/Stereotypes-in-LLMs/hiring_bias_mitigation_at/blob/main/reports/poster_followup/compute_summary.json) and [`poster/latex/compute_data.py`](https://github.com/Stereotypes-in-LLMs/hiring_bias_mitigation_at/blob/main/poster/latex/compute_data.py).
 
+## References, code and data
+
+The poster keeps short scope notes beside each figure. Full citations and detailed controls
+are collected here so they remain readable rather than forming a small-text footer.
+
+- [Hu et al., LoRA: Low-Rank Adaptation of Large Language Models, 2021](https://arxiv.org/abs/2106.09685).
+- [Rafailov et al., Direct Preference Optimization, 2023](https://arxiv.org/abs/2305.18290).
+- [Shao et al., DeepSeekMath, introducing GRPO, 2024](https://arxiv.org/abs/2402.03300).
+- [Hase et al., Does Localization Inform Editing?, 2023](https://arxiv.org/abs/2301.04213).
+- [Zhang and Nanda, Towards Best Practices of Activation Patching, 2024](https://arxiv.org/abs/2309.16042).
+- [Project code](https://github.com/Stereotypes-in-LLMs/hiring_bias_mitigation_at).
+- [Hiring-bias-mitigation-v3 dataset](https://huggingface.co/datasets/Stereotypes-in-LLMs/hiring-bias-mitigation-v3).
+
 ## Reproduction
 
 1. Run `scripts/poster_audit_followup.py` in the project environment with the canonical raw outputs.
