@@ -389,9 +389,11 @@ def main() -> None:
         return f"{t[3:5]}/{t[6:]}"
 
     roles = []
-    for pos in case["cv_positions"]:
+    for i, pos in enumerate(case["cv_positions"]):
         a, b = re.split(r"\s*[-–]\s*", pos["dates"])
-        roles.append(f"{tex(pos['position'])}, {month(a)}--{month(b)}")
+        duty = pos["detail"].split(" and ")[0].rstrip(". ")
+        duty = f" ({tex(duty[:1].lower() + duty[1:])})" if i == 0 else ""
+        roles.append(f"{tex(pos['position'])}{duty}, {month(a)}--{month(b)}")
     decisions = case["base"]["decisions"]
     rejected = [v for v, d in decisions.items() if d == "reject"]
     findings.update({
@@ -478,6 +480,12 @@ def main() -> None:
             evals.append(real_n[-1] + verify_n[-1])
     assert len(evals) >= 12, len(evals)
     backend_gap = max(abs(a["unstable_sets_hf_pct"] - a["unstable_sets_audit_pct"]) for a in audits)
+    # The comparison 4A makes is arm minus SFT-v3; how far that difference moves between the
+    # two backends (greedy unstable-set rate at each model's own hire rate, patched seeds).
+    ref = audits[0]
+    delta_shift = max(abs((a["unstable_sets_hf_pct"] - ref["unstable_sets_hf_pct"])
+                          - (a["unstable_sets_audit_pct"] - ref["unstable_sets_audit_pct"]))
+                      for a in audits[1:])
     findings.update({
         "NPatchContrasts": str(max(n_contrasts)),
         "PatchEvalsPerPair": rng(evals, "d"),
@@ -493,6 +501,7 @@ def main() -> None:
         "MarginsPeakGiB": f"{margins_ok['mem_peak_gib'].max():.0f}",
         "PatchTotalGPUh": f"{float(stage.set_index('stage').loc['patching', 'gpu_h']):.1f}",
         "BackendUnstableMax": f"{backend_gap:.2f}",
+        "BackendDeltaShift": f"{delta_shift:.2f}",
     })
     accel_rows = []
     speed = ROOT / "reports/throughput_b/accel/speedup_summary.csv"
@@ -522,6 +531,27 @@ def main() -> None:
         return (f"{secs(before)} \\textrightarrow{{}} {secs(after)} s"
                 if before and after else "")
 
+    tp = pd.read_csv(ROOT / "reports/cost/throughput.csv")
+    tp = tp[tp["label"] == "throughput-accel-vllm"]
+    st_b3 = pd.read_csv(ROOT / "reports/throughput_b/accel/step_times.csv")
+    st_b3 = st_b3[st_b3["bench"] == "B3"].groupby("label")[["step_time_s",
+                                                             "completion_tokens_mean"]].mean()
+    if b1_times and len(tp):
+        findings["AuditDetail"] = (
+            f"HF generate \\textrightarrow{{}} vLLM: {secs(b1_times[0])} \\textrightarrow{{}} "
+            f"{b1_times[1]:.1f} s, generation only; {int(tp['requests'].iloc[0]):,} prompts, "
+            f"about {(tp['output_tokens'] / tp['requests']).mean():.0f} tokens out")
+    findings["TrainDetail"] = (
+        f"1 \\textrightarrow{{}} 4 GH200, global batch 32, same 40 steps: "
+        f"{secs(runtime('bench-distill-ddp1'))} \\textrightarrow{{}} "
+        f"{secs(runtime('bench-distill-ddp4'))} s")
+    hf_s, vl_s = (st_b3.loc[f"bench-grpo-rollout-{k}", "step_time_s"] for k in ("hf", "vllm"))
+    findings["GRPODetail"] = (
+        f"HF \\textrightarrow{{}} colocated vLLM, 6 steps: "
+        f"{secs(runtime('bench-grpo-rollout-hf'))} \\textrightarrow{{}} "
+        f"{secs(runtime('bench-grpo-rollout-vllm'))} s; "
+        f"{st_b3['completion_tokens_mean'].mean():.0f}-token outputs, so only "
+        f"{hf_s - vl_s:.1f} of {hf_s:.1f} s a step is saved")
     for key, label, sub, value, (before, after) in (
             ("audit", "Audit generation", "HF generate \\textrightarrow{} vLLM", b1,
              b1_times or (None, None)),

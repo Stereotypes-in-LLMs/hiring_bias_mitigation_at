@@ -145,7 +145,7 @@ grpo,GRPO rollouts,HF \textrightarrow{} colocated vLLM,1.09,0,\texttimes1.1,200 
 \newcommand{\ProfDistill}{0.91--0.98}
 \newcommand{\CaseJob}{Sales Manager}
 \newcommand{\CaseRequirement}{3+ years of sales experience}
-\newcommand{\CaseRoles}{Senior Sales Manager, 04/2018--12/2020; Marketer/Key Clients manager, 03/2019--12/2020; VIP Support Team Lead/Sales manager, 01/2021--11/2022}
+\newcommand{\CaseRoles}{Senior Sales Manager (web-hosting sales), 04/2018--12/2020; Marketer/Key Clients manager, 03/2019--12/2020; VIP Support Team Lead/Sales manager, 01/2021--11/2022}
 \newcommand{\CaseYears}{4.5}
 \newcommand{\CaseHireSentence}{\Faint{I identify as} female \Faint{please use pronouns} she/her \Faint{\ldots}}
 \newcommand{\CaseRejectSentence}{\Faint{I identify as} male \Faint{please use pronouns} he/him \Faint{\ldots}}
@@ -183,6 +183,10 @@ grpo,GRPO rollouts,HF \textrightarrow{} colocated vLLM,1.09,0,\texttimes1.1,200 
 \newcommand{\MarginsPeakGiB}{87}
 \newcommand{\PatchTotalGPUh}{14.4}
 \newcommand{\BackendUnstableMax}{0.22}
+\newcommand{\BackendDeltaShift}{0.33}
+\newcommand{\AuditDetail}{HF generate \textrightarrow{} vLLM: 1\thinspace{}091 \textrightarrow{} 64.7 s, generation only; 3,105 prompts, about 37 tokens out}
+\newcommand{\TrainDetail}{1 \textrightarrow{} 4 GH200, global batch 32, same 40 steps: 2\thinspace{}420 \textrightarrow{} 550 s}
+\newcommand{\GRPODetail}{HF \textrightarrow{} colocated vLLM, 6 steps: 200 \textrightarrow{} 183 s; 37-token outputs, so only 2.8 of 32.5 s a step is saved}
 \newcommand{\TrainOneEarly}{50}
 \newcommand{\TrainOneLate}{62}
 \newcommand{\TrainRatioEarly}{3.5}
@@ -234,6 +238,8 @@ Gender / implicit,0.72,0.20,\textminus{}72\%
 \newcommand{\MethodGRPO}{\RelRL{} prompts, anchor reward; lr decay over the last 26\% [3, 5]}
 \newcommand{\MethodDistill}{KL to frozen SFT-v3 on the attribute-free CV, decision token; 1 epoch}
 % Section 3C's scope: which seed, which pairs, which contrasts, in the order of its cells.
+% B2's note: the first 1-GPU run slowed after step 5; the repeat decides what the poster says.
+\newcommand{\TrainNote}{1-GPU run slowed \TrainOneEarly{} \textrightarrow{} \TrainOneLate{} s/step after step 5; rerunning}
 \newcommand{\ScopeNote}{One selected seed per stage (fresh LoRA r32 on SFT-v3 merged [1]); pairs chosen on SFT-v3's own effect, 64 per contrast (gender 45); one value per contrast, in B's order: combat implicit, combat explicit, religion, gender}
 % The NVIDIA stack as used (docs/SYSTEM_OVERVIEW.md): one node of 4 x GH200 120 GB per job.
 % nvidia-smi names the device 'GH200 120GB'; its HBM3 is 96 GB (97,871 MiB), CSCS Alps/Daint.
@@ -349,7 +355,7 @@ Gender / implicit,0.72,0.20,\textminus{}72\%
 \Rect{1256}{226}{760}{762}{panel}
 \Section{48}{226}{420}{24}{1. Problem}
 \Section{492}{226}{740}{25}{3. Methods and mechanistic findings}
-\Section{1256}{226}{760}{25}{4. Behavioural results after SFT-v3}
+\Section{1256}{226}{760}{25}{4. Behavioural results across training stages}
 
 % LEFT: problem, the unit of evaluation, one case before and after SFT-v3, the framework.
 \Txt[text=ink]{64}{284}{388}{20}{\bfseries Can identity cues change a decision\\when qualifications stay the same?}
@@ -382,8 +388,8 @@ Gender / implicit,0.72,0.20,\textminus{}72\%
 \Rect{48}{856}{420}{28}{rule}
 \Txt[text=ink]{64}{861}{388}{17}{\bfseries Framework}
 \Txt[text=body]{64}{892}{388}{12}{\textbf{Model:} Qwen3.5-9B, English, LoRA rank 32}
-\Txt[text=body]{64}{912}{388}{12}{\textbf{Design:} DPO, GRPO and self-distillation from SFT-v3; three seeds per stage}
-\Txt[text=body]{64}{946}{388}{12}{\textbf{Evaluation:} matched hire rate, reference agreement and paired confidence intervals}
+\Txt[text=body]{64}{912}{388}{12}{\textbf{Design:} one SFT run (SFT-v3) as the shared reference; DPO, GRPO and self-distillation on it, three seeds each}
+\Txt[text=body]{64}{946}{388}{12}{\textbf{Evaluation:} matched hire rate, reference agreement, paired CIs}
 
 % MIDDLE: patching -> observed finding -> one stage on SFT-v3 -> the same test (Marta
 % Samoilenko, 2026-11-02, redrawn in the two-colour palette). A, left: one patch. Right: the
@@ -509,9 +515,9 @@ Gender / implicit,0.72,0.20,\textminus{}72\%
 % all-layer adapter of the same seed (reports/comparisons.csv): trained there alone
 % (docs/PATCHING_DISTILL.md A), only the window kept (docs/DISTILL_FOLLOWUP.md H), the window
 % removed (docs/PATCHING_DISTILL.md F).
-\Rect[draw=greenDark,line width=1bp]{512}{924}{700}{60}{greenPale}
-\Txt[text=greenDark]{524}{930}{290}{13.5}{\bfseries Window-restricted LoRA did not match full-layer adaptation in these runs}
-\Txt[text=body]{524}{964}{290}{10}{Self-distillation, three-seed means [6]}
+\Rect[draw=greenDark,line width=1bp]{512}{922}{700}{64}{greenPale}
+\Txt[text=greenDark]{524}{927}{290}{13.5}{\bfseries Window-restricted LoRA did not match full-layer adaptation in these runs}
+\Txt[text=body]{524}{961}{290}{10}{Does localization inform adaptation [6]? Self-distillation, three-seed means.}
 \Txt[text=ink]{836}{929}{170}{10.5}{\bfseries LoRA placement / ablation}
 \Txt[text=ink,align=right]{1006}{929}{194}{10.5}{\bfseries $\Delta$ vs full-layer adapter (pp; \textuparrow{} worse)}
 \foreach \yy/\lab/\val in {942/{Trained on layers 15--20 only}/{\WindowOnly},955/{Only the 15--20 update kept}/{\WindowKept},968/{The 15--20 update removed}/{\WindowRemoved}}{%
@@ -524,7 +530,7 @@ Gender / implicit,0.72,0.20,\textminus{}72\%
 % paired candidate-bootstrap CI), the 3-seed mean as a diamond with no aggregate CI, the paired
 % change in agreement (DeltaData), the tail and the seed overlap (PathData; ranges, not CIs).
 \Txt[text=greenDark]{1272}{284}{728}{22}{\bfseries SFT delivers the main stability gain}
-\Txt[text=body]{1272}{316}{728}{13}{Additional mean gains remain uncertain, while extreme attribute effects and recurring cases differ}
+\Txt[text=body]{1272}{316}{728}{13}{Base to SFT-v3 at one hire rate; the later stages differ in extreme effects and recurring cases}
 \Rect[draw=greenDark,line width=1bp]{1272}{342}{728}{58}{greenPale}
 \Txt[text=greenDark]{1284}{348}{215}{10.5}{\bfseries UNSTABLE SETS AT \CommonHire\% HIRE RATE}
 \Txt[text=ink]{1284}{367}{215}{20}{\bfseries\BaseAtSFT\% \textrightarrow{} \SFTOwn\%}
@@ -576,7 +582,7 @@ Gender / implicit,0.72,0.20,\textminus{}72\%
   \Txt[text=body]{1946}{\yy+11}{56}{11}{\PJR}
 }
 % The caption in three parts: evaluation, diagnostics, inference.
-\Txt[text=body]{1272}{688}{728}{11}{\textbf{Evaluation.} Paired 95\% candidate-bootstrap CIs at the \CommonHire\% hire rate, seeds 42 / 43 / 44 top to bottom; diamond: three-seed mean, no aggregate CI. Agreement: greedy, each model's own hire rate.\\\textbf{Diagnostics.} p99: 99th percentile of per-pair $|\Delta m|$, arm / SFT-v3, over the patched seed's \NPatchContrasts{} contrasts. Jaccard: overlap of two seeds' unstable sets, over 3 seed pairs.\\\textbf{Inference.} One backend per model--baseline comparison; the largest per-model HF / vLLM gap is \BackendUnstableMax{} pp.}
+\Txt[text=body]{1272}{688}{728}{11}{\textbf{Evaluation.} Paired 95\% candidate-bootstrap CIs at the \CommonHire\% hire rate, seeds 42 / 43 / 44 top to bottom; diamond: three-seed mean, no aggregate CI. Agreement: greedy, each model's own hire rate.\\\textbf{Diagnostics.} p99: 99th percentile of per-pair $|\Delta m|$, arm / SFT-v3, over the patched seed's \NPatchContrasts{} contrasts. Jaccard: overlap of two seeds' unstable sets, over 3 seed pairs.\\\textbf{Inference.} One backend (vLLM) per comparison; between HF and vLLM the difference vs SFT-v3 moves $\leq$ \BackendDeltaShift{} pp (patched seeds).}
 
 % 5. The NVIDIA stack on this audit. Left: the mechanistic audit's cost per (model, contrast),
 % medians over the 64-pair runs (the gender runs against SFT-v3 have 45 pairs and are left out),
@@ -593,51 +599,46 @@ Gender / implicit,0.72,0.20,\textminus{}72\%
   \Txt[text=greenDark]{\x}{853}{140}{22}{\bfseries\num}
   \Txt[text=body]{\x}{880}{140}{10}{\lab}}
 % Enabled by: both passes fit one GPU's memory, so a (model, contrast) is one single-GPU job.
-\Txt[text=ink]{1272}{896}{440}{10.5}{\bfseries Both passes fit in one GH200's 96 GB HBM3 without offload (margins \MarginsPeakGiB{} GiB, patching \PatchPeakGiB{} GiB peak): every (model, contrast) is a single \PatchStepMin-minute job on one GPU.}
+\Txt[text=ink]{1272}{896}{440}{10.5}{\bfseries Both passes fit in one GH200's 96 GB HBM3 without offload (margins \MarginsPeakGiB{} GiB, patching \PatchPeakGiB{} GiB peak): every (model, contrast) is one single-GPU job of about \PatchStepMin{} minutes.}
 \foreach \yy/\wl/\sc/\cost in {926/{Full margin scoring}/{\NPrompts{} prompts}/{\MarginsStepMin{} min, \MarginsPeakGiB{} GiB peak},941/{All patching}/{every patch and margin run}/{\PatchTotalGPUh{} GPU-h},956/{Training per seed}/{DPO / GRPO / distillation}/{+\PostDPO{} / +\PostGRPO{} / +\DistillTrainGPUh{} GPU-h},971/{Whole project}/{GPU energy by NVML}/{\ProjectGPUh{} GPU-h, \ProjectKWh{} kWh}}{%
   \Txt[text=ink]{1272}{\yy}{140}{10.5}{\bfseries\wl}
   \Txt[text=body]{1414}{\yy}{150}{10.5}{\sc}
   \Txt[text=body]{1566}{\yy}{150}{10.5}{\cost}}
-% Right: before -> after; row r of AccelData at height y: label and direction on the left,
-% the bar with its ratio, and the two measured times under the bar.
-\newcommand{\AccelRow}[2]{%
+% Right: speed-up = time before / time after on the same work. Per row: the name, the bar with
+% its ratio and a x1 tick, then the direction, workload and both times in words (AuditDetail,
+% TrainDetail, GRPODetail from latex_data.py; docs/ACCEL_BENCH.md).
+\newcommand{\AccelRow}[3]{%
   \pgfplotstablegetelem{#1}{label}\of\AccelData\let\ALabel\pgfplotsretval
-  \pgfplotstablegetelem{#1}{sub}\of\AccelData\let\ASub\pgfplotsretval
   \pgfplotstablegetelem{#1}{speedup}\of\AccelData\let\ASpeed\pgfplotsretval
   \pgfplotstablegetelem{#1}{pending}\of\AccelData\let\APending\pgfplotsretval
   \pgfplotstablegetelem{#1}{text}\of\AccelData\let\AText\pgfplotsretval
-  \pgfplotstablegetelem{#1}{times}\of\AccelData\let\ATimes\pgfplotsretval
   \Txt[text=ink]{1730}{#2}{132}{11}{\bfseries\ALabel}
-  \Txt[text=body]{1730}{#2+13}{132}{10}{\ASub}
   \ifnum\APending=1
-    \Txt[text=body]{1866}{#2+2}{130}{11}{to run}
+    \Txt[text=body]{1866}{#2}{130}{11}{to run}
   \else
     \pgfmathsetmacro{\bw}{\ASpeed/20*92}
-    \Rect{1866}{#2+1}{\bw}{12}{green}
+    \Rect{1866}{#2+1}{\bw}{11}{green}
+    \draw[ink,line width=1.2bp] (1866+92/20,#2-1) -- (1866+92/20,#2+13);
     \Txt[text=ink]{1866+\bw+5}{#2}{44}{11.5}{\bfseries\AText}
-    \Txt[text=body]{1866}{#2+14}{134}{9.5}{\ATimes}
-  \fi}
-\Txt[text=ink]{1730}{820}{270}{13}{\bfseries Performance comparisons}
-\Txt[text=body]{1730}{837}{270}{10.5}{speed-up = time before / time after; tick: \texttimes1}
-\AccelRow{0}{854}
-\AccelRow{1}{884}
-\Txt[text=body]{1730}{910}{270}{10}{Global batch 32 rows, same 40 steps. The 1-GPU run slowed from \TrainOneEarly{} to \TrainOneLate{} s a step after step 5, cause unknown: \texttimes\TrainRatioEarly{} before, \texttimes\TrainRatioLate{} after.}
-\AccelRow{2}{946}
-\Txt[text=body]{1730}{972}{270}{10}{\RolloutTokens-token completions: vLLM saves \RolloutSavedS{} s of a \RolloutStepS{} s step.}
-% The x1 mark beside each bar (a bar ending there is no speed-up), clear of the times below.
-\foreach \yy in {854,884,946}{%
-  \draw[ink,line width=1.2bp] (1866+92/20,\yy-2) -- (1866+92/20,\yy+15);}
+  \fi
+  \Txt[text=body]{1730}{#2+14}{270}{10}{#3}}
+\Txt[text=ink]{1730}{820}{270}{13}{\bfseries Speed-up = time before / time after}
+\Txt[text=body]{1730}{836}{270}{10}{same work and node; the tick marks \texttimes1}
+\AccelRow{0}{852}{\AuditDetail}
+\AccelRow{1}{890}{\TrainDetail}
+\Txt[text=body]{1730}{927}{270}{10}{\TrainNote}
+\AccelRow{2}{944}{\GRPODetail}
 
 % BOTTOM: one band. The take-home sentence, then three findings, each one judgement and its
 % qualifier; the evidence stays in the figures and on the QR page.
 \draw[greenDark,line width=1.2bp] (48,1004) -- (2016,1004);
 \Txt[text=ink]{48}{1010}{1860}{16}{\bfseries SFT delivers the main stability gain; additional training changes what remains, with uncertain further gains across three seeds.}
 \Txt[text=greenDark]{48}{1037}{600}{12.5}{\bfseries 1\quad Read consistency with quality, compute and seeds}
-\Txt[text=body]{48}{1054}{600}{11}{A matched hire rate controls the comparison and three seeds test reproducibility; one DPO seed alone would have read as a 1 pp gain.}
-\Txt[text=greenDark]{690}{1037}{600}{12.5}{\bfseries 2\quad Mean gains uncertain; extreme attribute effects and recurring cases differ}
-\Txt[text=body]{690}{1054}{600}{11}{After one more stage, RL's extreme effects grow beyond its margin widening and its unstable sets change with the seed; self-distillation's shrink and recur across seeds (4A).}
+\Txt[text=body]{48}{1054}{600}{11.5}{A matched hire rate controls the comparison and three seeds test reproducibility; one DPO seed alone would have read as a 1 pp gain.}
+\Txt[text=greenDark]{690}{1037}{600}{12.5}{\bfseries 2\quad Internal attribute changes do not imply consistent stability gains}
+\Txt[text=body]{690}{1054}{600}{11.5}{DPO's extreme effects grow beyond its margin widening; DPO's and GRPO's unstable sets change with the seed; self-distillation's shrink and recur across seeds (4A).}
 \Txt[text=greenDark]{1332}{1037}{600}{12.5}{\bfseries 3\quad Behavioural change coexists with a similar patching profile}
-\Txt[text=body]{1332}{1054}{600}{11}{The hub head carries far less after SFT-v3; one more stage keeps a similar profile under GRPO and self-distillation, partly later under DPO; window-only LoRA did not match full layers (3C) [6, 7].}
+\Txt[text=body]{1332}{1054}{600}{11.5}{The hub head carries far less after SFT-v3; one more stage keeps a similar profile under GRPO and self-distillation, partly later under DPO; window-only LoRA did not match full layers (3C) [6, 7].}
 \node[anchor=north west,inner sep=0pt] at (1940,1012)
   {\qrcode[height=1.33in]{https://github.com/Stereotypes-in-LLMs/hiring\_bias\_mitigation\_at/blob/main/poster/DETAILS.md}};
 \Txt[text=greenDark,align=right]{1880}{1082}{124}{10}{Full results + code}
