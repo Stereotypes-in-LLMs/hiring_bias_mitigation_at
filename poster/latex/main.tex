@@ -233,8 +233,8 @@ Religion / implicit,1.32,0.52,\textminus{}61\%
 \newcommand{\SeedValue}[3]{%
   \pgfplotstablegetelem{#1}{#2}\of\SeedData\let#3\pgfplotsretval%
 }
-% A filled diamond, for a seed mean.
-\newcommand{\Diamond}[3]{%
+% A filled diamond, for a seed mean (\Diamond itself is amssymb's math symbol).
+\newcommand{\MeanDiamond}[3]{%
   \path[fill=#3] (#1,#2-4.5) -- (#1+4.5,#2) -- (#1,#2+4.5) -- (#1-4.5,#2) -- cycle;%
 }
 % Editable plot axes: left, baseline, width, min, max, tick list, grid top.
@@ -491,7 +491,7 @@ Religion / implicit,1.32,0.52,\textminus{}61\%
   \Txt[text=ink]{1192}{\yy-4}{150}{13}{\bfseries\GName}
   \Txt[text=muted]{1192}{\yy+16}{150}{10.5}{mean \GMeanTxt{} pp}
   \pgfmathsetmacro{\xm}{1352+(\GMean+2)/3.5*310}
-  \Diamond{\xm}{\yy+42}{greenDark}
+  \MeanDiamond{\xm}{\yy+42}{greenDark}
   \def\PointFill{greenDark}
   \CI{1690}{160}{-1.2}{1.2}{\yy+21}{\AD}{\ADL}{\ADH}{greenDark}
   \pgfmathsetmacro{\bw}{\Post/12*100}
@@ -509,7 +509,8 @@ Religion / implicit,1.32,0.52,\textminus{}61\%
   \draw[rule,line width=0.6bp] (\xx,810) -- (\xx,900);
   \Txt[align=center,text=muted]{\xx-18}{905}{36}{11}{\lab}}
 \draw[rule,line width=1bp] (1290,900) -- (1490,900);
-\draw[ink,dashed,line width=1bp] (1290+(ln(1)-ln(0.25))/(ln(16)-ln(0.25))*200,810) -- (1290+(ln(1)-ln(0.25))/(ln(16)-ln(0.25))*200,900);
+\pgfmathsetmacro{\xone}{1290+(ln(1)-ln(0.25))/(ln(16)-ln(0.25))*200}
+\draw[ink,dashed,line width=1bp] (\xone,810) -- (\xone,900);
 \foreach \r in {0,1,2}{%
   \PathValue{\r}{short}{\PShort}
   \PathValue{\r}{p99min}{\Pa}
