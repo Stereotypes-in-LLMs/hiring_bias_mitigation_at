@@ -106,8 +106,9 @@ additional mechanism-seed results have not been incorporated into those panels.
 
 ## Scope and interpretation
 
-The development benchmark contains 150 candidates, 450 CV–job pairs, 2,700 attribute sets and
-31,050 prompts. Each set varies identity cues while fixing qualifications, job, attribute family
+The development benchmark contains 150 candidates, each paired with three distinct jobs,
+giving 450 CV–job pairs, 2,700 attribute sets and 31,050 prompts. There are 171 distinct jobs
+overall, rather than three jobs shared by every CV. Each set varies identity cues while fixing qualifications, job, attribute family
 and cue style. An unstable set includes both hire and reject decisions. These outcomes audit
 consistency; GPT-4o agreement is a reference proxy, not independently labelled hiring quality.
 Training-candidate exclusion does not make a repeatedly inspected development benchmark a clean
@@ -120,6 +121,21 @@ cuts fixed before subgroup analysis and percentile candidate bootstrap intervals
 the evaluated seeds. No three-seed aggregate confidence interval is claimed. Source hashes and tie handling
 are recorded in {link('reports/poster_followup/summary.json')} and
 {link('scripts/poster_audit_followup.py')}.
+
+## Training signals
+
+- DPO uses 4,880 preference pairs constructed from SFT-v3's sampled mistakes and teacher-written
+  chosen responses. See {link('docs/V3_NEW_DATA.md')}.
+- The plotted GRPO R4 runs use 4,154 tipped prompts, fixed attribute-free decision-reference
+  rewards plus a format reward, and KL regularization to SFT-v3. Learning-rate decay covers
+  the final 26% of the schedule. The 9,140-row released GRPO pool is not the training-row count
+  of these runs. The optional operating-point-anchor method is not enabled in this recipe.
+  See {link('configs/mitigation/grpo_improve/r4_tipped.yaml')} and
+  {link('src/hiring_bias_mitigation/mitigation/grpo.py')}.
+- Self-distillation uses frozen SFT-v3 as the teacher on the same CV–job pair without identity
+  cues. It minimizes teacher-to-student KL over the two decision-token probabilities;
+  attribute-free student rows are also included. See
+  {link('src/hiring_bias_mitigation/mitigation/decision_distill.py')}.
 
 ## Behavioral results and operating points
 
@@ -137,6 +153,8 @@ Fractions below SFT are fractions of these grid points, not hire-rate ranges.
 {table(['Recipe', 'Below SFT, seeds 42 / 43 / 44', 'Seed mean below SFT'], curve_rows)}
 
 The curve points are correlated descriptive evaluations. Their count is not a significance test.
+The thin lines are individual seed trajectories, not confidence bands. Paired bootstrap
+intervals are displayed only at the fixed 22.51% operating point in the adjacent forest plot.
 Sources: {link('reports/final/final_table.csv')}, {link('reports/final/curves.csv')}.
 The family × cue-style breakdown is in {link('reports/poster_followup/family_cue.csv')}.
 It uses global matched-rate cuts before stratification, not a new threshold for each subgroup.
@@ -144,8 +162,11 @@ It uses global matched-rate cuts before stratification, not a new threshold for 
 ## Residual instability and tail sensitivity
 
 The poster illustrates the 43/44 seed pair at each arm's own rate. All pairs are shown here.
-The control holds SFT-v3 scores fixed and moves its cut to each arm's hire rate. A low actual
-overlap alone cannot separate a recipe change from a threshold change.
+The control holds SFT-v3 scores fixed and recalibrates its cut to each seed's greedy hire
+count, including the canonical weighted tie rule. It does not reuse the post-trained model's
+numeric logit threshold. See {link('scripts/seed_overlap.py')} and
+{link('scripts/scale_only_control.py')}. A low actual overlap alone cannot separate a recipe
+change from a threshold change.
 
 {table(['Recipe', 'Seeds', 'Actual Jaccard', 'SFT threshold control'], own)}
 
@@ -153,6 +174,10 @@ Source: {link('reports/seed_overlap/overlap.csv')}. A second analysis fixes ever
 the same 22.512% hire rate. Fractional tied-set membership uses sum(min weights)/sum(max weights).
 The SFT control is then identical across seeds and equals one. Do not mix actual overlaps from
 this table with the own-rate controls above.
+
+For the illustrated seeds 43/44, changing SFT's thresholds alone leaves substantially more
+overlap than the trained-seed comparison. This does not rule out every calibration or
+operating-point explanation and does not establish that training creates new real-world bias.
 
 {table(['Recipe', 'Seeds', 'Common-rate weighted Jaccard', 'Same-cut SFT control'], common)}
 
@@ -164,6 +189,10 @@ these pairs depends on rate convention: the fixed-rate values are recorded per s
 The tail plot uses one selected checkpoint per method and all 450 pairs for each contrast.
 Its p50 and p99 are ratios of quantiles of absolute attribute-induced margin differences,
 relative to SFT-v3. The connecting line spans four contrasts; it is not a confidence interval.
+At these selected checkpoints, DPO and GRPO have p50 ratios below one and p99 ratios above one
+in all four contrasts. Median absolute attribute effects decrease while the extreme tail
+increases. A uniform positive rescaling of all absolute effects cannot produce both changes.
+These logit effects are not probabilities of discrimination or errors.
 
 {table(['Recipe', 'Contrast', 'Pairs', 'p50 ratio', 'p99 ratio'], tails)}
 
@@ -178,8 +207,11 @@ effect, with 64 pairs per contrast except gender, where 45 pairs pass selection.
 applies within a comparison, not across those panels. The Base-selected combat-implicit
 intervention at L15.H11 removes about 0.66 logits per pair in Base and 0.13 after SFT.
 
-Selected-pair effects do not estimate the full benchmark effect. In particular, gender's
-selected-pair reduction is about 72%, while the full 450-pair reduction is about 25%.
+Selected-pair effects do not estimate the full benchmark effect. For the implicit male/female
+contrast, the Base-effect-selected subset shows about 72% reduction, while all 450 pairs show
+about 25% reduction, with a paired candidate-bootstrap 95% CI of 12%–37%. The direction remains
+a reduction on the full benchmark, but the estimated magnitude is sensitive to effect-based
+selection. The poster displays this full-grid result prominently beside the selected subset.
 The full-grid results are:
 
 {table(['Contrast', 'Pairs', 'Mean absolute effect removed', 'Candidate-bootstrap 95% CI'], effect)}
@@ -205,7 +237,8 @@ the full-layer r32 adapter has 58,195,968. The registered window r163 has
 All three training and dependent evaluation jobs completed successfully. Each uses the declared
 final 341-step, one-epoch checkpoint, the same data and training settings as its full-layer
 seed, with alpha/r fixed at two. Layer placement and rank differ, so matching parameter count
-does not equalize optimization geometry or representational capacity.
+does not equalize optimization geometry, compute, training time or representational capacity.
+This is self-distillation with LoRA restricted to layers 15–20, compared with full-layer LoRA.
 
 The primary comparison is window minus same-seed full-layer instability, at the full arm's
 own greedy hire count. Positive is worse. Each 95% interval uses 1,000 paired candidate
@@ -261,20 +294,28 @@ Per-seed comparisons and completion markers are under `reports/experiment_follow
 
 ## NVIDIA acceleration, timing scope and cost
 
-The platform is CSCS Alps, with four NVIDIA GH200 GPUs per node and 96 GiB HBM3 per GPU.
+The platform is CSCS Alps, with four NVIDIA GH200 GPUs per node. The recorded device name is
+`NVIDIA GH200 120GB`, consistent with {link('docs/ACCEL_BENCH.md')}. The poster therefore omits
+the earlier unsupported `96 GB HBM3` label. These logs did not measure total device memory,
+so no additional physical-capacity or HBM-generation claim is inferred from the name.
 The measured software stack uses vLLM 0.31, TRL 1.15 / PEFT and PyTorch DDP in bf16.
-The inference benchmark has {m['AuditBenchPrompts']} prompts and {m['AuditBenchRepeats']} repeats per condition.
-The three bars measure generation only; startup is excluded.
+The inference benchmark has {m['AuditBenchPrompts']} prompts per run and {m['AuditBenchRepeats']} repeats per condition.
+The three bars are per-run medians and measure generation only; startup is excluded.
+With two observations, each median also equals the arithmetic mean.
 
-{table(['Backend', 'Generation time', 'Speed relative to vLLM'], [
+{table(['Backend', 'Median generation time per run', 'Speed relative to vLLM'], [
     ['HF batch 8', m['AuditHFSmallSeconds'] + ' s', m['AuditSpeedSmall'] + '×'],
     ['HF batch 32', m['AuditHFLargeSeconds'] + ' s', m['AuditSpeedLarge'] + '×'],
     ['vLLM', m['AuditVLLMSeconds'] + ' s', '1×']])}
 
-HF/vLLM decision agreement is 99.68%–99.78%. The full 31,050-prompt generation workload takes
-{m['AuditWallS']} s including startup and writeout, with {m['AuditKWh']} kWh measured GPU energy.
+HF/vLLM decision agreement is 99.68%–99.78%. For the full 31,050-prompt generation workload,
+the medians across four repeats are {m['AuditWallS']} s including startup and writeout,
+and {m['AuditKWh']} kWh of GPU energy per run, not energy summed over the four runs.
 Its {m['AuditReqPerS']} requests/s measures generation only, about {m['AuditGenS']} s, not end-to-end
-throughput. This has {m['FullAuditRepeats']} repeats and controlled condition ordering.
+throughput. It is also a per-run median. This has {m['FullAuditRepeats']} repeats and controlled condition ordering.
+Energy is the difference between NVML device total-energy counters across the complete cost
+step, summed over used devices. It includes loading and writing, measures GPU device energy,
+and does not measure node/CPU energy or isolate energy attributable to one process.
 It replaces the old six-step GRPO timing line, which was not a rollout-only measurement.
 
 The DDP comparison uses reviewed one-GPU repeat job 5238558 and four-GPU job 5236800,
@@ -293,9 +334,13 @@ no-slowdown reading is post hoc and recorded in {link('poster/latex/ddp_review.j
 Ledger row 4 and the full rerun account are in {link('docs/ACCEL_BENCH.md')}.
 
 Actual selected-pair metadata, rather than the requested cap, defines the 64-pair patch cost cohort.
-It contains {m['PatchRunsSixtyFour']} measured runs, a median {m['PatchStepMin']} min and
-{m['PatchStepGPUh']} used GPU-h per model × contrast, and peak {m['PatchPeakGiB']} GiB.
-Full 31,050-prompt margin scoring is a separate {m['MarginsStepMin']}-minute, {m['MarginsPeakGiB']}-GiB pass.
+It contains {m['PatchRunsSixtyFour']} measured runs, each with 64 pairs. Runtime and used-GPU-hours
+are medians across those runs: {m['PatchStepMin']} min and {m['PatchStepGPUh']} GPU-h per model × contrast.
+The {m['PatchPeakGiB']} GiB value is the maximum of their sampled device-memory peaks, not a median peak.
+Full 31,050-prompt margin scoring is a separate pass: median {m['MarginsStepMin']} minutes across
+11 runs and maximum measured peak {m['MarginsPeakGiB']} GiB. Memory peaks are sampled NVML
+device-used-memory maxima and include vLLM reservation. Timing/energy collection is documented
+in {link('src/hiring_bias_mitigation/utils/cost.py')} and {link('docs/COST.md')}.
 Each of the patching and margin-scoring passes fits separately on one GH200 without CPU offload.
 The source snapshot totals {m['ProjectGPUh']} **allocated** GPU-h and {m['ProjectKWh']} kWh measured
 GPU energy. It excludes follow-up jobs submitted after that snapshot.

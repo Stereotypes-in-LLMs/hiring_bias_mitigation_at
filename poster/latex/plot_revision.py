@@ -84,14 +84,14 @@ def behaviour(preview_dir: Path | None):
     fig = plt.figure(figsize=(WIDTH, 5.0))
     forest = fig.add_axes([.185, .245, .17, .585])
     curve = fig.add_axes([.465, .245, .52, .585])
-    forest.set_title("At 22.51% hire rate", loc="left", pad=16)
+    forest.set_title("At 22.51% hire rate", loc="left", pad=16, fontsize=26)
     forest.axvline(0, color="#6E818A", lw=1.8, ls=(0, (3, 3)), zorder=1)
     forest.set_xlim(-1.85, 1.3)
     forest.set_xticks([-1, 0, 1])
     forest.set_ylim(-.55, 2.55)
     forest.set_yticks([2, 1, 0], [method[0] for method in METHODS])
     forest.tick_params(axis="y", length=0, pad=12)
-    forest.set_xlabel("Δ unstable sets (pp)", labelpad=11)
+    forest.set_xlabel("Δ unstable sets vs SFT-v3 (pp)", labelpad=8, fontsize=26)
     style(forest)
     all_delta = []
     handles = []
@@ -129,7 +129,7 @@ def behaviour(preview_dir: Path | None):
     curve.set_ylim(min(all_delta)-.16, max(all_delta)+.23)
     curve.set_yticks([-1, 0, 1, 2, 3, 4])
     curve.set_xlabel("Matched hire rate (%)", labelpad=11)
-    curve.set_ylabel("Δ unstable sets (pp)", labelpad=11)
+    curve.set_ylabel("Δ unstable sets (pp)\nvs SFT-v3", labelpad=11, fontsize=26)
     curve.legend(handles=handles, ncol=3, loc="lower left", bbox_to_anchor=(-.005, 1.04),
                  borderaxespad=0, fontsize=26, handlelength=1.7, columnspacing=.8,
                  handletextpad=.6)
@@ -140,8 +140,10 @@ def behaviour(preview_dir: Path | None):
 def residual(preview_dir: Path | None):
     overlap = read("reports/seed_overlap/overlap.csv")
     fig = plt.figure(figsize=(WIDTH, 3.8))
-    jac = fig.add_axes([.185, .31, .26, .53])
-    tail = fig.add_axes([.60, .31, .385, .53])
+    jac = fig.add_axes([.185, .29, .26, .47])
+    tail = fig.add_axes([.60, .29, .385, .47])
+    fig.text(.185, .985, "Unstable-set overlap", ha="left", va="top", fontsize=26, fontweight="bold")
+    fig.text(.60, .985, "Attribute-effect distribution", ha="left", va="top", fontsize=26, fontweight="bold")
     jac.set_yticks([2, 1, 0], [method[0] for method in METHODS])
     jac.set_ylim(-.9, 2.5)
     jac.set_xlim(0, 1)
