@@ -21,7 +21,7 @@
 \pgfplotsset{compat=1.18}
 \usepackage{qrcode}
 \usepackage[hidelinks,pdfborder={0 0 0}]{hyperref}
-\hypersetup{pdftitle={What Changes After SFT? Auditing Hiring Decisions and Internal Pathways},pdfsubject={Research poster; three-seed behavioural audit and mechanistic probes}}
+\hypersetup{pdftitle={Same CV, Different Identity, Different Decision?},pdfsubject={Research poster; three-seed behavioural audit and mechanistic probes}}
 \pagestyle{empty}
 \setlength{\parindent}{0pt}
 \hyphenpenalty=10000
@@ -235,8 +235,8 @@ Combat / explicit,1.50,0.34,\textminus{}77\%
 Religion / implicit,1.32,0.52,\textminus{}61\%
 Gender / implicit,0.72,0.20,\textminus{}72\%
 }\MechData
-\newcommand{\PosterTitle}{What Changes After SFT? Auditing Hiring Decisions and Internal Pathways}
-\newcommand{\PosterSubtitle}{Three-seed comparisons reveal operating-point dependence and changes in residual risk}
+\newcommand{\PosterTitle}{Same CV, Different Identity, Different Decision?}
+\newcommand{\PosterSubtitle}{What one round of supervised fine-tuning changes in an LLM that screens CVs, on the surface and inside}
 % Authors and affiliations: replace the placeholder before submission.
 % Hardware line (section 5): 96 GB HBM3 per GH200, from the Alps node specification.
 \newcommand{\PosterAuthors}{[Author names] \quad\textperiodcentered\quad [Affiliations]}
@@ -295,215 +295,206 @@ Gender / implicit,0.72,0.20,\textminus{}72\%
 \begin{tikzpicture}[remember picture,overlay,x=1.5bp,y=-1.5bp]
 \begin{scope}[shift={(current page.north west)}]
 
-% Main title preserved; author order and affiliations remain to be finalised.
+% Title block. Author order and affiliations remain to be finalised.
 \Txt[align=center,text=ink]{48}{52}{1968}{49}{\bfseries\PosterTitle}
 \Txt[align=center,text=greenDark]{48}{112}{1968}{22}{\bfseries\PosterSubtitle}
 \Txt[align=center,text=muted]{48}{139}{1968}{13.3}{\PosterAuthors}
 
-% -------------------------- 1. PROBLEM / BENCHMARK ---------------------------
-% Same-CV audit diagram, reflowed for the original left column.
-\Rect{48}{155}{400}{705}{panel}
-\Section{48}{155}{400}{24}{1. Problem and benchmark}
-\Txt[text=greenDark]{64}{203}{368}{14}{\bfseries Goal: reduce identity-cue instability\\while preserving reference agreement.}
-\NodeBox{64}{245}{172}{60}{ink}{white}{14}{Same CV\\\CaseYears{} years in sales}
-\NodeBox{252}{245}{180}{60}{ink}{white}{14}{\CaseJob{}\\3+ years required}
-\draw[ink,line width=1.8bp] (150,305) -- (150,320) -- (342,320) -- (342,305);
-\draw[ink,line width=1.8bp] (246,320) -- (246,329) -- (371,329);
-\draw[ink,line width=1.8bp] (246,329) -- (233,329);
-\Arrow[ink]{233}{329}{233}{340}
-\Arrow[ink]{371}{329}{371}{340}
-\Txt[text=ink]{64}{349}{98}{14}{\bfseries Identity\\cue}
-\NodeBox{174}{340}{118}{40}{greenDark}{greenPale}{14}{female\\she / her}
-\NodeBox{310}{340}{122}{40}{greenDark}{greenPale}{14}{male\\he / him}
-\draw[rule,line width=1.2bp] (64,387) -- (432,387);
-% These are two independent checkpoint evaluations of each same input.
-\Txt[text=ink]{64}{405}{100}{14.5}{\bfseries Base}
-\NodeBox{174}{397}{118}{34}{greenDark}{greenPale}{15}{Hire}
-\NodeBox{310}{397}{122}{34}{ink}{white}{15}{Reject}
-\Txt[text=ink]{64}{448}{100}{14.5}{\bfseries SFT}
-\NodeBox{174}{440}{118}{34}{greenDark}{greenPale}{15}{Hire}
-\NodeBox{310}{440}{122}{34}{greenDark}{greenPale}{15}{Hire}
+% -------------------------- ROW A: 1. PROBLEM AND BENCHMARK -------------------
+\Rect{48}{155}{732}{365}{panel}
+\Section{48}{155}{732}{24}{1. Problem and benchmark}
+\Txt[text=ink]{64}{199}{316}{16}{\bfseries An LLM that screens CVs should not change its answer because of who the candidate is.}
+\Txt{64}{258}{316}{14.5}{We audit identity-cue sensitivity in hiring decisions [6]. What changes after SFT, in decisions and inside the model?}
+\Txt[text=ink]{64}{315}{316}{14.5}{\bfseries \NCandidates{} CVs; 3 jobs per CV\\\NPairs{} pairs across 171 distinct jobs}
+\Txt{64}{354}{316}{14.5}{Military status, religion and gender; explicit or implicit cues.\\\textbf{\NSets{} sets; \NPrompts{} prompts.}}
+\Txt{64}{409}{316}{14}{\textbf{Set}: one CV--job pair and cue style, varying one attribute. \textbf{Unstable}: both hire and reject occur.}
+\Txt{64}{461}{316}{14}{\textbf{Agreement}: match GPT-4o's cue-free decision [7]. CVs: anonymised Djinni profiles [8].}
+% Same-CV audit diagram (one measured pair), from commit 76c6486, compressed vertically.
+\NodeBox{388}{203}{172}{60}{ink}{white}{14}{Same CV\\\CaseYears{} years in sales}
+\NodeBox{576}{203}{180}{60}{ink}{white}{14}{\CaseJob{}\\3+ years required}
+\draw[ink,line width=1.8bp] (474,263) -- (474,278) -- (666,278) -- (666,263);
+\draw[ink,line width=1.8bp] (570,278) -- (570,287) -- (695,287);
+\draw[ink,line width=1.8bp] (570,287) -- (557,287);
+\Arrow[ink]{557}{287}{557}{298}
+\Arrow[ink]{695}{287}{695}{298}
+\Txt[text=ink]{388}{307}{98}{14}{\bfseries Identity\\cue}
+\NodeBox{498}{298}{118}{40}{greenDark}{greenPale}{14}{female\\she / her}
+\NodeBox{634}{298}{122}{40}{greenDark}{greenPale}{14}{male\\he / him}
+\draw[rule,line width=1.2bp] (388,345) -- (756,345);
+\Txt[text=ink]{388}{363}{100}{14.5}{\bfseries Base}
+\NodeBox{498}{355}{118}{34}{greenDark}{greenPale}{15}{Hire}
+\NodeBox{634}{355}{122}{34}{ink}{white}{15}{Reject}
+\Txt[text=ink]{388}{406}{100}{14.5}{\bfseries SFT}
+\NodeBox{498}{398}{118}{34}{greenDark}{greenPale}{15}{Hire}
+\NodeBox{634}{398}{122}{34}{greenDark}{greenPale}{15}{Hire}
 \pgfmathtruncatemacro{\CaseBaseHires}{\CaseVariants-\CaseBaseRejects}
-\Txt[text=ink]{64}{487}{368}{14.5}{\bfseries All \CaseVariants{} gender-cue variants}
-\Txt{64}{511}{191}{14}{\textbf{Base:} \CaseBaseHires{} hire / \CaseBaseRejects{} reject}
-\Txt[text=greenDark]{255}{511}{177}{14}{\textbf{SFT:} \CaseVariants{} hire / 0 reject}
-\Txt[text=muted]{64}{539}{368}{12.7}{One measured pair; greedy decoding.\\Consistency alone does not establish correctness.}
-\draw[rule,line width=1.2bp] (64,579) -- (432,579);
-\Txt[text=ink]{64}{590}{368}{15.5}{\bfseries Qwen3.5-9B audit, English}
-\Txt{64}{615}{368}{14}{\textbf{\NCandidates{} CVs [8]}, each paired with \textbf{3 jobs}\\= \textbf{\NPairs{} CV--job pairs}.}
-\Txt{64}{654}{368}{13.3}{Military status, religion, gender; two cue styles.}
-\Txt[text=ink]{64}{674}{368}{14}{\bfseries \NSets{} sets \quad \NPrompts{} prompts}
-\Txt{64}{696}{368}{13.3}{\textbf{Unstable}: both hire and reject within a set.}
-\Txt{64}{715}{368}{13.3}{\textbf{Agreement}: GPT-4o on the cue-free pair [7].}
-\Txt{64}{738}{368}{13.3}{\textbf{SFT}: supervised fine-tuning; reference.}
-\Txt{64}{756}{368}{13.3}{\textbf{DPO}: direct preference optimization [2].}
-\Txt{64}{774}{368}{13.3}{\textbf{GRPO}: group relative policy optimization [3].}
-\Txt{64}{792}{368}{13.3}{\textbf{LoRA}: low-rank adaptation, rank 32 [1].}
-\Txt{64}{810}{368}{13.3}{\textbf{Self-distillation}: decision-token KL to\\frozen SFT on the cue-free pair.}
-\Rect{64}{844}{368}{16}{greenPale}
-\Txt[text=greenDark]{72}{845}{352}{12.7}{\bfseries New: seed sweeps; controlled overlap; editing probes.}
+\Txt[text=ink]{388}{443}{368}{14.5}{\bfseries All \CaseVariants{} gender-cue variants}
+\Txt{388}{466}{191}{14}{\textbf{Base:} \CaseBaseHires{} hire / \CaseBaseRejects{} reject}
+\Txt[text=greenDark]{579}{466}{177}{14}{\textbf{SFT:} \CaseVariants{} hire / 0 reject}
+\Txt[text=muted]{388}{486}{368}{12.7}{One measured pair; greedy decoding. Consistency alone does not establish correctness.}
 
-% -------------------------- 2. BEHAVIOURAL RESULTS ---------------------------
-\Rect{472}{155}{800}{413}{panel}
-\Section{472}{155}{800}{24}{2. Behavioural results}
-\Txt[text=greenDark]{488}{207}{768}{24}{\bfseries SFT delivers the main stability gain}
-\Rect[draw=greenDark,line width=1bp]{488}{238}{768}{72}{greenPale}
-\Txt[text=greenDark]{499}{247}{260}{13.3}{\bfseries Unstable at \CommonHire\% hire}
-\Txt[text=ink]{499}{269}{260}{34}{\bfseries \BaseAtSFT\% \textrightarrow{} \SFTOwn\%}
-\Txt[text=greenDark]{769}{247}{257}{13.3}{\bfseries Base to SFT; paired 95\% CI}
-\Txt[text=ink]{769}{277}{257}{18}{\bfseries \SFTvsBase{} pp}
-\Txt[text=greenDark]{1034}{244}{216}{13.3}{\bfseries GPT-4o agreement [7]\\greedy, at own hire rates}
-\Txt[text=ink]{1034}{277}{216}{28}{\bfseries \BaseAgree\% \textrightarrow{} \SFTAgree\%}
-\node[anchor=north west,inner sep=0pt] at (472,309)
-  {\includegraphics[width=16.666667in,keepaspectratio]{figures/behaviour.pdf}};
-\Txt{488}{518}{374}{12.7}{Paired 95\% candidate-bootstrap CIs; seeds 42/43/44 top to bottom. Only 1 of 9 excludes zero.}
-\Txt{880}{518}{376}{12.7}{Mean $\Delta$ vs SFT at 22.51\% hire: \PostLow{} to \PostHigh{} pp. Thick curves: seed means; thin: seeds.}
-\Txt[text=ink]{488}{549}{768}{15.3}{\bfseries Additional gains are uncertain and depend on hire rate; DPO worsens at 31--35\%.}
+% -------------------------- ROW A: 2. EXPERIMENT SETUP ------------------------
+\Rect{804}{155}{1212}{365}{panel}
+\Section{804}{155}{1212}{24}{2. Experiment setup}
+\Txt[text=greenDark]{820}{199}{450}{15}{\bfseries Training stages: Qwen3.5-9B}
+\Txt{820}{220}{450}{13.3}{LoRA: low-rank adaptation, rank 32 [1].}
+\Txt{820}{243}{450}{14}{\textbf{SFT}, supervised fine-tuning: cue-free reference decisions; one shared parent checkpoint.}
+\Txt{820}{281}{450}{14}{\textbf{DPO}, direct preference optimization [2]: 4,880 teacher-written chosen / SFT-sampled rejected pairs.}
+\Txt{820}{319}{450}{14}{\textbf{GRPO}, group relative policy optimization [3]: 4,154 prompts; cue-free decision-reference rewards.}
+\Txt{820}{357}{450}{14}{\textbf{Self-distillation}: match the frozen, cue-free SFT teacher's decision-token probabilities.}
+\Txt[text=greenDark]{820}{397}{450}{15}{\bfseries Evaluation protocol}
+\Txt{820}{419}{450}{13.3}{Three seeds per added stage; paired 95\% candidate-bootstrap CIs. Threshold hire/reject logit margins to match hire rates. Agreement uses own greedy rates.}
+\Txt[text=greenDark]{820}{474}{450}{13.3}{\bfseries Contributions: hire-rate curves and per-seed CIs; threshold-controlled overlap; cross-stage mechanism probes.}
 
-% -------------------------- 3. RESIDUAL RISK ---------------------------------
-\Rect{472}{570}{800}{290}{panel}
-\Section{472}{570}{800}{24}{3. Residual risk changes with training}
-\node[anchor=north west,inner sep=0pt] at (472,608)
-  {\includegraphics[width=16.666667in,keepaspectratio]{figures/residual.pdf}};
-\Txt[text=ink]{488}{768}{768}{15.3}{\bfseries Training changes which sets are unstable beyond the rate-matched SFT control.}
-\Txt{488}{789}{768}{12.7}{Seeds 43/44; SFT recalibrated to each hire rate: overlap 0.26--0.45 vs control 0.83--0.91.\\Tails: DPO/GRPO lower p50, higher p99; 4 contrasts \texttimes{} 450 pairs, one checkpoint/stage; spans = ranges.}
-\Rect{488}{824}{768}{36}{greenPale}
-\Txt[text=ink]{498}{827}{748}{15}{\bfseries \BorderDistill{} of distillation's unstable sets lie in \NBorder{} borderline pairs.}
-\Txt{498}{845}{748}{12.7}{Own thresholds; \NBorder{}/\NPairs{} pairs have an absolute attribute-free SFT margin below 2 logits.}
-
-% -------------------------- 4. MARTA'S ACTIVATION PATCHING --------------------
-% Original A/B wording, terminology, data and diagram structure retained.
-% Larger labels and vertical spacing improve readability; dashed edges remain untested.
-\Rect{1296}{155}{720}{705}{panel}
-\Section{1296}{155}{720}{24}{4. Inside the model}
-\Txt[text=greenDark]{1312}{203}{688}{16}{\bfseries A\quad How activation patching probes attribute effects [5]}
-\Txt[text=ink]{1312}{234}{210}{15}{\bfseries Swap one activation}
-\NodeBox{1322}{263}{90}{28}{ink}{white}{13.3}{Attribute A}
-\NodeBox{1422}{263}{90}{28}{ink}{white}{13.3}{Attribute B}
+\Txt[text=greenDark]{1290}{199}{720}{16}{\bfseries Inside the model: activation patching [5]}
+\Txt[text=ink]{1290}{230}{210}{15}{\bfseries Swap one activation}
+\NodeBox{1300}{259}{90}{28}{ink}{white}{13.3}{Cue A}
+\NodeBox{1400}{259}{90}{28}{ink}{white}{13.3}{Cue B}
 \foreach \k in {0,...,4}{%
-  \pgfmathsetmacro{\yy}{303+14*\k}
+  \pgfmathsetmacro{\yy}{299+14*\k}
   \ifnum\k=2 \def\BarColour{ink}\else\def\BarColour{rule}\fi
-  \Rect{1327}{\yy}{60}{12}{\BarColour}
-  \Rect{1427}{\yy}{60}{12}{\BarColour}}
-\draw[ink,line width=3bp,-{Latex[length=9bp,width=6.5bp]}] (1427,337) to[bend right=55] (1387,337);
-\Txt[text=ink,align=center]{1387}{311}{40}{13.3}{\bfseries swap}
-\Arrow{1357}{385}{1357}{397}
-\Rect{1322}{399}{186}{14}{rule}
-\Rect{1322}{399}{120}{14}{ink}
-\Txt{1322}{418}{210}{13.3}{share of the attribute's effect removed}
+  \Rect{1305}{\yy}{60}{12}{\BarColour}
+  \Rect{1405}{\yy}{60}{12}{\BarColour}}
+\draw[ink,line width=3bp,-{Latex[length=9bp,width=6.5bp]}] (1405,333) to[bend right=55] (1365,333);
+\Txt[text=ink,align=center]{1365}{307}{40}{13.3}{\bfseries swap}
+\Arrow{1327}{381}{1327}{393}
+\Rect{1300}{395}{186}{14}{rule}
+\Rect{1300}{395}{120}{14}{ink}
+\Txt{1300}{414}{210}{13.3}{share of the cue's effect removed}
 
-\Txt[text=ink]{1572}{234}{428}{15}{\bfseries Attribute-sensitive components in the Base model}
-\Rect{1798}{266}{56}{149}{rule}
-\Txt[text=ink,align=center]{1788}{268}{76}{13.3}{\bfseries bottleneck}
-\NodeBox{1572}{296}{80}{48}{ink}{white}{13.3}{Attribute}
-\NodeBox{1708}{296}{79}{48}{body}{white}{13.3}{Readers\\L7--14}
-\NodeBox{1793}{290}{66}{60}{ink}{mist}{13.3}{Hub\\L15.H11}
-\draw[ink,line width=2.8bp] (1793,290) rectangle ++(66,60);
-\NodeBox{1916}{296}{78}{48}{body}{white}{13.3}{Readout\\MLP 31}
-\NodeBox{1908}{360}{92}{30}{ink}{white}{13.3}{hire / reject}
-\foreach \xa/\ya/\xb/\yb in {1652/320/1708/320,1787/320/1793/320,1859/320/1916/320,1955/344/1955/360}{%
+\Txt[text=ink]{1550}{230}{428}{15}{\bfseries Cue-sensitive components in the Base model}
+\Rect{1776}{262}{56}{149}{rule}
+\Txt[text=ink,align=center]{1766}{264}{76}{13.3}{\bfseries bottleneck}
+\NodeBox{1550}{292}{80}{48}{ink}{white}{13.3}{Cue}
+\NodeBox{1686}{292}{79}{48}{body}{white}{13.3}{Readers\\L7--14}
+\NodeBox{1771}{286}{66}{60}{ink}{mist}{13.3}{Hub\\L15.H11}
+\draw[ink,line width=2.8bp] (1771,286) rectangle ++(66,60);
+\NodeBox{1894}{292}{78}{48}{body}{white}{13.3}{Readout\\MLP 31}
+\NodeBox{1886}{356}{92}{30}{ink}{white}{13.3}{hire / reject}
+\foreach \xa/\ya/\xb/\yb in {1622/316/1678/316,1757/316/1763/316,1829/316/1886/316,1925/340/1925/356}{%
   \draw[ink,dashed,line width=2.8bp,-{Latex[length=9bp,width=6.5bp]}] (\xa,\ya) -- (\xb,\yb);}
-\NodeBox{1778}{376}{108}{28}{body}{white}{13.3}{Opposers}
-\draw[gray,dashed,line width=2.3bp,-{Bar[width=9bp]}] (1886,390) -- (1895,390) -- (1895,323);
-\draw[gray,line width=1.5bp] (1630,416) -- (1977,416);
+\NodeBox{1756}{372}{108}{28}{body}{white}{13.3}{Opposers}
+\draw[gray,dashed,line width=2.3bp,-{Bar[width=9bp]}] (1864,386) -- (1873,386) -- (1873,319);
+\draw[gray,line width=1.5bp] (1608,412) -- (1955,412);
 \foreach \L in {0,7,15,20,31}{%
-  \pgfmathsetmacro{\xx}{1630+11.2*\L}
-  \draw[gray,line width=1.5bp] (\xx,412) -- (\xx,420);
-  \Txt[align=center]{\xx-15}{426}{30}{13.3}{\L}}
-\Txt{1572}{410}{50}{13.3}{layer}
-\Txt{1312}{451}{688}{14}{\textbf{Readers}: layers 7--14 whose patch removes part of the effect upstream. \textbf{Hub}: the head (layer 15, head 11) whose patch removes the most. \textbf{Opposers}: heads whose patch increases the effect: they push against the bias. \textbf{Readout}: the last MLP, where the margin forms.}
-\Txt{1312}{505}{688}{14}{\textbf{Dashed connections:} schematic; edges not individually tested.}
-\begin{scope}[shift={(0,-72)}]
-\Rect[draw=greenDark,line width=1bp]{1312}{602}{688}{170}{greenPale}
-\Txt[text=greenDark]{1326}{610}{500}{15}{\bfseries B\quad Effect-selected pairs: Base vs SFT}
-\Rect{1860}{614}{10}{10}{gray}\Txt{1874}{611}{52}{14}{Base}
-\Rect{1924}{614}{10}{10}{ink}\Txt{1938}{611}{63}{14}{SFT}
-\Txt{1326}{632}{662}{14}{64 pairs per contrast, selected on Base effect; same pairs for Base and SFT.}
+  \pgfmathsetmacro{\xx}{1608+11.2*\L}
+  \draw[gray,line width=1.5bp] (\xx,408) -- (\xx,416);
+  \Txt[align=center]{\xx-15}{422}{30}{13.3}{\L}}
+\Txt{1550}{406}{50}{13.3}{layer}
+\Txt{1290}{447}{720}{13.3}{Run the pair with cue A and with cue B, swap one internal activation between the runs, and measure how much of the decision difference disappears. \textbf{Readers} (layers 7--14) and the \textbf{hub} head (layer 15, head 11) carry the cue; \textbf{opposers} push against it; the \textbf{readout} is the last MLP, where the margin forms. Dashed edges are schematic.}
+
+% -------------------------- ROW B: 3. RESULTS AND CONCLUSION ------------------
+\begin{scope}[shift={(0,8)}]
+\Rect{48}{527}{1968}{353}{panel}
+\Section{48}{527}{1968}{24}{3. Results and conclusion}
+\Rect[draw=greenDark,line width=1bp]{64}{571}{384}{143}{greenPale}
+\Txt[text=greenDark]{74}{578}{364}{16}{\bfseries One SFT stage removes most of the instability}
+\Txt{74}{600}{364}{13.3}{Unstable sets at \CommonHire\% hire, Base \textrightarrow{} SFT}
+\Txt[text=ink]{74}{616}{364}{34}{\bfseries \BaseAtSFT\% \textrightarrow{} \SFTOwn\%}
+\Txt{74}{658}{364}{13.3}{paired 95\% CI \SFTvsBase{} pp}
+\Txt[text=ink]{74}{679}{364}{14}{\bfseries GPT-4o agreement [7]: \BaseAgree\% \textrightarrow{} \SFTAgree\%}
+\Txt[text=muted]{74}{696}{364}{12.7}{At each model's own greedy hire rate.}
+\Rect{64}{722}{384}{156}{greenPale}
+\Txt[text=greenDark]{74}{728}{364}{15}{\bfseries Conclusion}
+\Txt[text=ink]{74}{752}{364}{15.3}{\bfseries Further gains depend on hire rate.}
+\Txt[text=ink]{74}{783}{364}{15.3}{\bfseries Training changes which sets remain unstable.}
+\Txt[text=ink]{74}{825}{364}{15.3}{\bfseries The selected hub's patching effect falls about 5\texttimes.}
+
+\Txt[text=greenDark]{488}{571}{768}{15}{\bfseries Mean gains after SFT are small and depend on hire rate}
+\node[anchor=north west,inner sep=0pt] at (472,590)
+  {\includegraphics[width=16.666667in,keepaspectratio]{figures/behaviour.pdf}};
+\Txt{488}{831}{768}{12.7}{Paired 95\% CIs; seeds 42/43/44 top to bottom. Only \CommonCIBelow{} of 9 excludes zero.\\Means at \CommonHire\% hire: \PostLow{} to \PostHigh{} pp. Thick curves: seed means; thin: single seeds.}
+\Rect{488}{862}{768}{18}{greenPale}
+\Txt[text=ink]{496}{865}{752}{12.7}{\textbf{Unstable-set overlap, seeds 43/44:} Jaccard 0.26--0.45 vs SFT rate-control 0.83--0.91; own rates.}
+
+\Rect[draw=greenDark,line width=1bp]{1296}{571}{720}{170}{greenPale}
+\Txt[text=greenDark]{1310}{579}{500}{15}{\bfseries SFT shrinks the cue's effect on selected pairs}
+\Rect{1844}{583}{10}{10}{gray}\Txt{1858}{580}{52}{14}{Base}
+\Rect{1908}{583}{10}{10}{ink}\Txt{1922}{580}{70}{14}{SFT}
+\Txt{1310}{601}{690}{14}{64 pairs per contrast, chosen for a large Base effect; same pairs for Base and SFT.}
 \foreach \r in {0,1,2,3}{%
   \pgfplotstablegetelem{\r}{label}\of\MechData\let\MLabel\pgfplotsretval
   \pgfplotstablegetelem{\r}{base}\of\MechData\let\MBase\pgfplotsretval
   \pgfplotstablegetelem{\r}{sft}\of\MechData\let\MSFT\pgfplotsretval
   \pgfplotstablegetelem{\r}{change}\of\MechData\let\MChange\pgfplotsretval
-  \pgfmathsetmacro{\yy}{656+20*\r}
-  \Txt{1326}{\yy}{120}{13.3}{\MLabel}
-  \Rect{1448}{\yy}{\MBase*95}{7}{gray}
-  \Rect{1448}{\yy+8}{\MSFT*95}{7}{ink}
-  \Txt[text=ink]{\MBase*95+1454}{\yy}{55}{14}{\bfseries\MChange}}
-\Txt{1448}{740}{238}{14}{attribute effect per pair (logits)}
-\Txt[text=ink]{1740}{656}{248}{14}{\bfseries The hub head carries far less}
-\draw[gray,line width=5bp] (1740,692) -- (1980,692);
-\draw[ink,line width=2bp] (1740,714) -- (1980,714);
-\NodeBox{1824}{684}{80}{38}{ink}{mist}{14}{L15.H11}
-\draw[ink,line width=1.8bp] (1824,684) rectangle ++(80,38);
-\Txt[text=gray]{1918}{670}{70}{14}{\bfseries\HubBase}
-\Txt[text=ink]{1918}{718}{70}{14}{\bfseries\HubSFT}
-\Txt{1740}{740}{248}{14}{logits / pair, combat implicit}
-\end{scope}
-\Rect[draw=greenDark,line width=1.2bp]{1312}{710}{688}{82}{greenPale}
-\Txt[text=greenDark]{1324}{717}{664}{16}{\bfseries Gender / implicit: effect reduction, all 450 pairs}
-\Txt[text=ink]{1324}{738}{122}{28}{\bfseries \GenderFullRemoval\%}
-\Txt[text=ink]{1460}{746}{256}{16}{95\% CI [\GenderFullRemovalCI\%]}
-\Txt[text=ink]{1740}{740}{248}{20}{\bfseries vs 72\% selected}
-\Txt[text=ink]{1324}{775}{664}{14}{Other three probed contrasts: \OtherFullRemoval\% reduction across all 450 pairs.}
-\Txt[text=ink]{1312}{805}{688}{14.5}{\bfseries Post-SFT component profiles correlate with SFT (r = 0.65--0.98).}
-\Txt{1312}{828}{688}{13.3}{64 SFT-selected pairs/contrast, gender 45; one checkpoint per stage.\\Component profiles and parameter-matched editing control [4]: details via QR.}
+  \pgfmathsetmacro{\yy}{625+20*\r}
+  \Txt{1310}{\yy}{120}{13.3}{\MLabel}
+  \Rect{1432}{\yy}{\MBase*95}{7}{gray}
+  \Rect{1432}{\yy+8}{\MSFT*95}{7}{ink}
+  \Txt[text=ink]{\MBase*95+1438}{\yy}{55}{14}{\bfseries\MChange}}
+\Txt{1432}{709}{238}{14}{cue effect per pair (logits)}
+\Txt[text=ink]{1724}{625}{248}{14}{\bfseries The hub head carries far less}
+\draw[gray,line width=5bp] (1724,661) -- (1964,661);
+\draw[ink,line width=2bp] (1724,683) -- (1964,683);
+\NodeBox{1808}{653}{80}{38}{ink}{mist}{14}{L15.H11}
+\draw[ink,line width=1.8bp] (1808,653) rectangle ++(80,38);
+\Txt[text=gray]{1902}{639}{70}{14}{\bfseries\HubBase}
+\Txt[text=ink]{1902}{687}{70}{14}{\bfseries\HubSFT}
+\Txt{1724}{709}{248}{14}{logits / pair, combat implicit}
+\Rect[draw=greenDark,line width=1.2bp]{1296}{750}{720}{58}{greenPale}
+\Txt[text=greenDark]{1310}{756}{690}{15}{\bfseries On all \NPairs{} pairs the gain is smaller}
+\Txt[text=ink]{1310}{778}{690}{14}{Gender / implicit: \GenderFullRemoval\% [95\% CI \GenderFullRemovalCI\%]; other three contrasts: \OtherFullRemoval\%.}
+\Txt{1310}{818}{690}{14}{\textbf{Post-SFT component-effect profiles correlate with SFT: r = 0.65--0.98.}}
+\Txt{1310}{843}{690}{12.7}{One checkpoint per stage; 64 SFT-selected pairs per contrast, gender 45. Full controls and interpretation [4, 5]: QR.}
+\Txt[text=muted]{1310}{864}{690}{12.7}{Exploratory development benchmark; GPT-4o agreement is a reference proxy.}
 
-% -------------------------- 5. HARDWARE AND SOFTWARE ------------------------
-\Rect{48}{875}{1968}{136}{panel}
-\Rect{48}{875}{1968}{31}{green}
-\Txt[text=ink]{64}{880}{880}{22}{\bfseries 5. Application of GH200 hardware and software}
-\Txt[text=ink,align=right]{948}{885}{1052}{12.5}{One node per job: 4 \texttimes{} NVIDIA GH200, 96 GB HBM3 each; vLLM 0.31 [9]; TRL 1.15 and PEFT [10]; PyTorch DDP (distributed data parallel), bf16}
-\Txt[text=ink]{64}{911}{450}{16}{\bfseries vLLM generation: \texttimes\AuditSpeedLarge{} vs HF batch 32}
-\Txt{64}{933}{450}{13}{HF: Hugging Face transformers; \AuditBenchRepeats-run medians; \texttimes\AuditSpeedSmall{} vs batch 8.}
-\Txt{64}{955}{100}{14}{HF batch 8}
-\Txt{64}{975}{100}{14}{HF batch 32}
-\Txt{64}{995}{100}{14}{vLLM}
-\Rect{164}{956}{210}{12}{gray}
+% -------------------------- ROW C: 4. HARDWARE AND SOFTWARE -------------------
+\Rect{48}{895}{1968}{134}{panel}
+\Rect{48}{895}{1968}{31}{green}
+\Txt[text=ink]{64}{900}{880}{22}{\bfseries 4. Application of GH200 hardware and software}
+\Txt[text=ink,align=right]{948}{905}{1052}{12.5}{One node per job: 4 \texttimes{} NVIDIA GH200, 96 GB HBM3 each; vLLM 0.31 [9]; TRL 1.15 and PEFT [10]; PyTorch DDP (distributed data parallel), bf16}
+\Txt[text=ink]{64}{931}{450}{16}{\bfseries vLLM generation: \texttimes\AuditSpeedLarge{} vs HF batch 32}
+\Txt{64}{950}{450}{13}{\AuditBenchPrompts{} prompts; generation only; \AuditBenchRepeats{} repeats. \texttimes\AuditSpeedSmall{} vs HF8.}
+\Txt{64}{969}{100}{14}{HF batch 8}
+\Txt{64}{989}{100}{14}{HF batch 32}
+\Txt{64}{1009}{100}{14}{vLLM}
+\Rect{164}{970}{210}{12}{gray}
 \pgfmathsetmacro{\HFThirtyTwoWidth}{\AuditHFLargeSeconds/\AuditHFSmallSeconds*210}
 \pgfmathsetmacro{\VLLMWidth}{\AuditVLLMSeconds/\AuditHFSmallSeconds*210}
-\Rect{164}{976}{\HFThirtyTwoWidth}{12}{mist}
-\Rect{164}{996}{\VLLMWidth}{12}{greenDark}
-\Txt[text=ink]{390}{952}{124}{16}{\AuditHFSmallSeconds{} s}
-\Txt[text=ink]{390}{972}{124}{16}{\AuditHFLargeSeconds{} s}
-\Txt[text=ink]{390}{992}{124}{16}{\AuditVLLMSeconds{} s}
-\draw[rule,line width=1.3bp] (532,917) -- (532,1003);
-\Txt[text=ink]{548}{911}{450}{16}{\bfseries Full audit, \FullAuditPrompts{} prompts}
-\Txt[text=greenDark]{548}{934}{450}{26}{\bfseries \AuditWallS{} s \textperiodcentered{} \AuditKWh{} kWh}
-\Txt{548}{972}{450}{13}{Medians of \FullAuditRepeats{} runs; wall incl. load/write; \AuditReqPerS{} req/s.}
-\Txt{548}{990}{450}{13}{Energy from NVML (NVIDIA Management Library) GPU counters.}
-\draw[rule,line width=1.3bp] (1016,917) -- (1016,1003);
-\Txt[text=ink]{1032}{911}{450}{16}{\bfseries Training: 1 \textrightarrow{} 4 GH200}
-\Txt[text=greenDark]{1032}{934}{450}{26}{\bfseries \texttimes\DDPTrainingSpeedup{} wall, \DDPTrainingCostDelta\% GPU-h}
-\Txt{1032}{972}{450}{13}{Training loop; start-up excluded.}
-\Txt{1032}{990}{450}{13}{Whole step \texttimes\DDPEndToEndSpeedup{}, \DDPCostDelta\% GPU-h; batch \DDPBatch{}, \DDPSteps{} steps.}
-\draw[rule,line width=1.3bp] (1500,917) -- (1500,1003);
-\Txt[text=ink]{1516}{911}{484}{16}{\bfseries Mechanistic audit, one GH200}
-\Txt[text=greenDark]{1516}{934}{484}{26}{\bfseries \PatchPeakGiB{} GiB peak \textperiodcentered{} \PatchStepMin{} min per pass}
-\Txt{1516}{972}{484}{13}{No offload; \PatchRunsSixtyFour{} runs \texttimes{} 64 pairs; max of sampled GPU peaks.}
-\Txt{1516}{990}{484}{13}{Margin pass: \MarginsPeakGiB{} GiB peak, \MarginsStepMin{} min (\NPrompts{} prompts).}
+\Rect{164}{990}{\HFThirtyTwoWidth}{12}{mist}
+\Rect{164}{1010}{\VLLMWidth}{12}{greenDark}
+\Txt[text=ink]{390}{966}{124}{16}{\AuditHFSmallSeconds{} s}
+\Txt[text=ink]{390}{986}{124}{16}{\AuditHFLargeSeconds{} s}
+\Txt[text=ink]{390}{1006}{124}{16}{\AuditVLLMSeconds{} s}
+\draw[rule,line width=1.3bp] (532,937) -- (532,1023);
+\Txt[text=ink]{548}{931}{450}{16}{\bfseries Full audit, \FullAuditPrompts{} prompts}
+\Txt[text=greenDark]{548}{954}{450}{26}{\bfseries \AuditWallS{} s \textperiodcentered{} \AuditKWh{} kWh}
+\Txt{548}{992}{450}{13}{\FullAuditRepeats{}-run medians; wall includes load/write, excludes scoring.}
+\Txt{548}{1010}{450}{13}{Generation: \AuditReqPerS{} req/s. Energy: NVML GPU counters.}
+\draw[rule,line width=1.3bp] (1016,937) -- (1016,1023);
+\Txt[text=ink]{1032}{931}{450}{16}{\bfseries Training: 1 \textrightarrow{} 4 GH200}
+\Txt[text=greenDark]{1032}{954}{450}{26}{\bfseries \texttimes\DDPTrainingSpeedup{} wall, \DDPTrainingCostDelta\% GPU-h}
+\Txt{1032}{992}{450}{13}{Training loop; start-up excluded.}
+\Txt{1032}{1010}{450}{13}{Whole step \texttimes\DDPEndToEndSpeedup{}, \DDPCostDelta\% GPU-h; batch \DDPBatch{}, \DDPSteps{} steps.}
+\draw[rule,line width=1.3bp] (1500,937) -- (1500,1023);
+\Txt[text=ink]{1516}{931}{484}{16}{\bfseries Mechanistic audit, one GH200}
+\Txt[text=greenDark]{1516}{954}{484}{26}{\bfseries \PatchPeakGiB{} GiB peak \textperiodcentered{} \PatchStepMin{} min per pass}
+\Txt{1516}{992}{484}{13}{No offload; \PatchRunsSixtyFour{} runs \texttimes{} 64 pairs; max of sampled GPU peaks.}
+\Txt{1516}{1010}{484}{13}{Margin pass: \MarginsPeakGiB{} GiB peak, \MarginsStepMin{} min (\NPrompts{} prompts).}
 
-% -------------------------- TAKE-HOME / REFERENCES ---------------------------
-\draw[greenDark,line width=1bp] (48,1013) -- (2016,1013);
-\Txt[text=ink]{48}{1017}{1840}{16.3}{\bfseries SFT gives the main stability gain; further training changes residual risk, with gains that depend on hire rate. The hub patching effect falls about 5\texttimes{} after SFT on 64 Base-selected combat/implicit pairs.}
-\Txt{48}{1039}{1840}{13.3}{One DPO seed alone would have read as a 1 pp gain at its own hire rate. Exploratory development benchmark; agreement is a proxy.}
-\Txt[text=body]{48}{1056}{1840}{8.8}{%
-\href{https://arxiv.org/abs/2106.09685}{[1] Hu et al., LoRA: Low-Rank Adaptation of Large Language Models (2021).}
-\href{https://arxiv.org/abs/2305.18290}{[2] Rafailov et al., Direct Preference Optimization (2023).}
-\href{https://arxiv.org/abs/2402.03300}{[3] Shao et al., DeepSeekMath, which introduces GRPO (2024).}
-\href{https://arxiv.org/abs/2301.04213}{[4] Hase et al., Does Localization Inform Editing? NeurIPS (2023).}
-\href{https://arxiv.org/abs/2309.16042}{[5] Zhang \& Nanda, Towards Best Practices of Activation Patching in Language Models. ICLR (2024).}
-\href{https://arxiv.org/abs/2406.10486}{[6] An et al., Do Large Language Models Discriminate in Hiring Decisions on the Basis of Race, Ethnicity, and Gender? ACL (2024).}
-[7] Benchmark and GPT-4o reference: \href{https://github.com/Stereotypes-in-LLMs/AIHiringBiasAnalysis-LLMs}{github.com/Stereotypes-in-LLMs/AIHiringBiasAnalysis-LLMs}; \href{https://github.com/TianaLina/Fairness-in-AI-Recruitment}{github.com/TianaLina/Fairness-in-AI-Recruitment}.
-[8] Djinni Recruitment Dataset, anonymised public postings: \href{https://huggingface.co/datasets/lang-uk/recruitment-dataset-candidate-profiles-english}{huggingface.co/datasets/lang-uk/recruitment-dataset-candidate-profiles-english}.
-\href{https://arxiv.org/abs/2309.06180}{[9] Kwon et al., Efficient Memory Management for LLM Serving with PagedAttention (vLLM). SOSP (2023).}
-[10] Qwen3.5-9B: \href{https://huggingface.co/Qwen/Qwen3.5-9B}{huggingface.co/Qwen/Qwen3.5-9B}; PEFT and TRL: \href{https://github.com/huggingface/peft}{github.com/huggingface/peft}, \href{https://github.com/huggingface/trl}{github.com/huggingface/trl}.}
-\Txt[text=ink]{48}{1089}{1840}{10.4}{%
+% -------------------------- REFERENCES, LINKS, QR -----------------------------
+\draw[greenDark,line width=1bp] (48,1036) -- (2016,1036);
+% Short references in two columns; full records remain linked.
+\Txt[text=body]{48}{1041}{910}{10.4}{%
+\href{https://arxiv.org/abs/2106.09685}{[1] Hu et al., LoRA (2021).}\quad
+\href{https://arxiv.org/abs/2305.18290}{[2] Rafailov et al., Direct Preference Optimization (2023).}\\
+\href{https://arxiv.org/abs/2402.03300}{[3] Shao et al., DeepSeekMath / GRPO (2024).}\quad
+\href{https://arxiv.org/abs/2301.04213}{[4] Hase et al., Does Localization Inform Editing? NeurIPS (2023).}\\
+\href{https://arxiv.org/abs/2309.16042}{[5] Zhang \& Nanda, Activation Patching Best Practices, ICLR (2024).}\quad
+\href{https://arxiv.org/abs/2406.10486}{[6] An et al., Discrimination in Hiring Decisions, ACL (2024).}}
+\Txt[text=body]{988}{1041}{900}{10.4}{%
+[7] Benchmark / reference: \href{https://github.com/Stereotypes-in-LLMs/AIHiringBiasAnalysis-LLMs}{AIHiringBiasAnalysis-LLMs}; \href{https://github.com/TianaLina/Fairness-in-AI-Recruitment}{Fairness-in-AI-Recruitment}.\\
+\href{https://huggingface.co/datasets/lang-uk/recruitment-dataset-candidate-profiles-english}{[8] Djinni Recruitment Dataset, anonymised candidate profiles.}\quad
+\href{https://arxiv.org/abs/2309.06180}{[9] Kwon et al., PagedAttention / vLLM, SOSP (2023).}\\
+{}[10] \href{https://huggingface.co/Qwen/Qwen3.5-9B}{Qwen3.5-9B}; \href{https://github.com/huggingface/peft}{PEFT}; \href{https://github.com/huggingface/trl}{TRL}. HF: Hugging Face Transformers. NVML: NVIDIA Management Library.}
+\Txt[text=ink]{48}{1081}{1840}{10.4}{%
 \href{https://github.com/Stereotypes-in-LLMs/hiring_bias_mitigation_at}{Code: github.com/Stereotypes-in-LLMs/hiring\_bias\_mitigation\_at}\qquad
 \href{https://huggingface.co/datasets/Stereotypes-in-LLMs/hiring-bias-mitigation-v3}{Data: huggingface.co/datasets/Stereotypes-in-LLMs/hiring-bias-mitigation-v3}}
-\node[anchor=north west,inner sep=0pt] at (1945,1047)
-  {\qrcode[height=0.93in]{https://github.com/Stereotypes-in-LLMs/hiring\_bias\_mitigation\_at/blob/main/poster/DETAILS.md}};
-\Txt[text=greenDark,align=right]{1894}{1092}{121}{9.4}{Results + code}
+\node[anchor=north west,inner sep=0pt] at (1948,1033)
+  {\qrcode[height=1.3in]{https://github.com/Stereotypes-in-LLMs/hiring\_bias\_mitigation\_at/blob/main/poster/DETAILS.md}};
+\Txt[text=greenDark,align=right]{1800}{1086}{140}{10.4}{\bfseries Results + code}
 
+\end{scope}
 \end{scope}
 \end{tikzpicture}
 \end{document}
