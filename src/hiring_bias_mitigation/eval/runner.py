@@ -65,9 +65,21 @@ def build_run_name(cfg: dict) -> str:
 
 
 def build_frame(cfg: dict) -> pd.DataFrame:
-    """The evaluation grid for a run, before any mitigation touches it."""
+    """The evaluation grid for a run, before any mitigation touches it.
+
+    `pairs_path` in the config swaps the benchmark's pairs for a parquet of pairs (the columns
+    `_base_row` reads: pair_id, candidate_id, job_id, cv, job_description, and optionally
+    job_position, reference_decision, reference_feedback), relative to the output root. The
+    audit, the margin pass and the expected frame all build through here, so one run's
+    prompts stay one set; its run name must differ from the benchmark run's (`run_suffix`).
+    """
     lang = cfg["lang"]
-    pairs = B.load_benchmark(lang)
+    if cfg.get("pairs_path"):
+        from ..utils.config import resolve_output_path
+        pairs = pd.read_parquet(resolve_output_path(cfg["pairs_path"]))
+        B.assert_no_leakage(pairs, f"pairs_path {cfg['pairs_path']}")
+    else:
+        pairs = B.load_benchmark(lang)
     limit = cfg.get("limit_pairs")
     if limit:
         # Deterministic head, not a sample: two runs compared against each other must cover
