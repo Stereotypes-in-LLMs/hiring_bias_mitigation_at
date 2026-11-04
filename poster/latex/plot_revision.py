@@ -179,16 +179,19 @@ def heldout(preview_dir: Path | None):
     summary = {row["label"]: row for row in read("reports/qualification_control/summary.csv")}
     direction = {row["label"]: row for row in read("reports/qualification_control/direction.csv")
                  if row["variants"] == "attr_free"}
-    fig = plt.figure(figsize=(WIDTH, 5.0))
-    left = fig.add_axes([.185, .30, .34, .52])
-    right = fig.add_axes([.635, .30, .335, .52])
+    # 27% more plotting height at the same poster width; keep all nine seed CIs.
+    fig = plt.figure(figsize=(WIDTH, 5.5))
+    left = fig.add_axes([.185, .27, .34, .60])
+    right = fig.add_axes([.635, .27, .335, .60])
     rows_y, labels = [], []
     y = 0
     for group, (label, prefix, _, colour, _line) in enumerate(METHODS):
         for seed in (42, 43, 44):
             key = f"{prefix} s{seed}"
             assert key in summary and key in direction, key
-            rows_y.append((y, key, colour, label if seed == 42 else "", seed))
+            # A darker neutral remains distinct without adding another hue.
+            heldout_colour = "#5F737C" if prefix == "GRPO+decay R4" else colour
+            rows_y.append((y, key, heldout_colour, label if seed == 42 else "", seed))
             y += 1
         y += .6
     top = y
@@ -215,11 +218,11 @@ def heldout(preview_dir: Path | None):
     left.tick_params(axis="y", length=0, pad=12)
     right.set_yticks([top - yy for yy, *_ in rows_y], ["" for _ in rows_y])
     right.tick_params(axis="y", length=0)
-    left.set_xlabel("\u2212\u0394 unstable sets at 36.9% hire (better \u2192)", labelpad=8, fontsize=24)
-    right.set_xlabel("\u0394 preference for the matched CV (better \u2192)", labelpad=8, fontsize=24)
+    left.set_xlabel("\u2212\u0394 unstable sets (better \u2192)", labelpad=8, fontsize=24)
+    right.set_xlabel("\u0394 matched-CV preference (better \u2192)", labelpad=8, fontsize=24)
     # The validation's cost: docs/QUALIFICATION_CONTROL.md ledger, ten evaluate_arm jobs, allocated GPU-h.
-    fig.text(.012, .035, "300 held-out RJDB triples; seeds 42/43/44 top to bottom, development checkpoints; "
-             "pointwise paired 95% CIs; 10 jobs, 11.4 GPU\u00b7h.", ha="left", va="bottom", fontsize=20, color=MUTED)
+    fig.text(.012, .035, "300 held-out CVs; seeds 42/43/44 top to bottom. Pointwise paired 95% CIs; "
+             "common hire rate 36.9%; SFT = 0.", ha="left", va="bottom", fontsize=20, color=MUTED)
     save(fig, "heldout", preview_dir)
 
 

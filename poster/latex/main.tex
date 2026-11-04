@@ -440,8 +440,8 @@ Gender / implicit,0.72,0.20,\textminus{}72\%
 % Checkpoint rules: reports/final/arms.csv (declared before the audit; ckpt 525 is marked exploratory).
 % Held-out check: docs/QUALIFICATION_CONTROL.md (RJDB dev triples, read once, after registration).
 \Txt[text=ink]{820}{412}{450}{12.7}{\bfseries The \NCandidates{} CVs and their jobs appear in no training set; \QualTriples{} RJDB CVs were reserved for a frozen final evaluation.}
-\Txt{820}{444}{450}{12.7}{Three seeds per added stage; paired 95\% CIs, bootstrap over candidates; hire rates matched by thresholding the margin; checkpoints fixed in advance.}
-\Txt[text=greenDark]{820}{491}{450}{12}{\bfseries Contribution: SFT's gain replicates on unseen CVs; no added consistency gain detected; some DPO/GRPO runs cost qualification preference.}
+\Txt{820}{447}{450}{12.7}{Three seeds per stage; paired 95\% candidate-bootstrap CIs. Matched hire rates; checkpoints fixed before the held-out evaluation.}
+\Txt{820}{480}{450}{13.3}{\textbf{Qualification preference}: share of pairs where the matched CV scores above its weakened counterpart.}
 
 \Txt[text=greenDark]{1290}{199}{720}{16}{\bfseries Inside the model: activation patching [5]; caveats [4]}
 \Txt[text=ink]{1290}{230}{210}{15}{\bfseries Swap one activation}
@@ -504,25 +504,16 @@ Gender / implicit,0.72,0.20,\textminus{}72\%
 \Rect{64}{839}{384}{51}{greenPale}
 \Txt[text=ink]{74}{843}{364}{12.3}{\bfseries Take-home: SFT's gain replicates, preference kept high; no added consistency gain detected, some DPO/GRPO runs lower preference; development peak not replicated.}
 
-\Txt[text=greenDark]{488}{569}{768}{13.3}{\bfseries C. Held-out check: no additional consistency gain detected; some DPO/GRPO runs lower the qualification preference}
-\node[anchor=north west,inner sep=0pt] at (472,588)
+\Txt[text=greenDark]{488}{569}{768}{18}{\bfseries C. Held-out: no extra consistency gain detected}
+\Txt[text=ink]{488}{591}{768}{13.7}{\bfseries Some DPO/GRPO seeds reduce qualification preference}
+\node[anchor=north west,inner sep=0pt] at (472,608)
   {\includegraphics[width=16.666667in,keepaspectratio]{figures/heldout.pdf}};
-\Rect{488}{798}{768}{94}{greenPale}
+\Rect{488}{842}{768}{50}{greenPale}
 % Development benchmark against the held-out set, the same DPO seeds read the same way (latex_data.py:
 % reports/final/curves.csv, curve_bands.csv, final_table.csv; reports/qualification_control/*.csv).
-\Txt[text=ink]{496}{801}{300}{12.7}{\bfseries Development finding \textrightarrow{} held-out check}
-\Txt[text=ink]{800}{801}{210}{12.7}{\bfseries Development, \NCandidates{} CVs}
-\Txt[text=ink]{1020}{801}{230}{12.7}{\bfseries Held-out, \QualTriples{} CVs}
-\Txt{496}{820}{300}{12}{DPO vs SFT at 35\% hire, consistency gain, 3 seeds}
-\Txt{800}{820}{210}{12}{\DevDPOGainAtThirtyFive{} pp}
-\Txt{1020}{820}{230}{12}{\HeldDPOGainAtThirtyFive{} pp}
-\Txt{496}{838}{300}{12}{DPO vs SFT, 30--35\% band mean, consistency gain}
-\Txt{800}{838}{210}{12}{\DevDPOGainBand{} pp}
-\Txt{1020}{838}{230}{12}{\HeldDPOGainBand{} pp}
-\Txt{496}{856}{300}{12}{Runs with gain CI above 0: own rate / common point}
-\Txt{800}{856}{210}{12}{\OwnBetterRuns{} of \PostRuns{} / \CommonBetterRuns{} of \PostRuns{}}
-\Txt{1020}{856}{230}{12}{0 of 9 / 0 of 9}
-\Txt[text=muted]{496}{875}{760}{10.4}{Consistency gain = SFT instability \textminus{} model instability, positive = better; the development peak did not replicate; full curves: results site.}
+% Band means, all-run CI counts and full curves remain on the results website.
+\Txt[text=ink]{496}{848}{748}{14}{\bfseries DPO at 35\% hire: the development drop did not replicate}
+\Txt{496}{870}{748}{13.3}{Gain, three-seed ranges: development \DevDPOGainAtThirtyFive{} pp; held-out \HeldDPOGainAtThirtyFive{} pp.}
 
 \Rect[draw=greenDark,line width=1bp]{1296}{571}{720}{164}{greenPale}
 \Txt[text=greenDark]{1310}{579}{500}{15}{\bfseries D. Inside: SFT shrinks the cue's effect on selected pairs}
@@ -551,8 +542,10 @@ Gender / implicit,0.72,0.20,\textminus{}72\%
 \Rect[draw=greenDark,line width=1.2bp]{1296}{742}{720}{56}{greenPale}
 \Txt[text=greenDark]{1310}{747}{690}{15}{\bfseries On all \NPairs{} pairs the gain is smaller}
 \Txt[text=ink]{1310}{769}{690}{14}{Gender / implicit: \GenderFullRemoval\% [95\% CI \GenderFullRemovalCI\%]; other three contrasts: \OtherFullRemoval\%.}
-\Txt{1310}{806}{690}{13.3}{One checkpoint per stage; 64 SFT-selected pairs per contrast (gender 45). Post-SFT component-effect profiles correlate with SFT's, r = 0.65--0.98. Keeping only the trained layers 15--20 updates [12] raises instability by \WindowKept{} pp vs the full adapter: the located window does not reproduce it. Full controls and per-stage results: QR.}
-\Txt[text=muted]{1310}{856}{690}{11.5}{The \NCandidates{}-CV benchmark guided method choices; the \QualTriples{}-CV set was reserved for a frozen final evaluation. GPT-4o agreement is a reference proxy.}
+\Txt[text=ink]{1310}{806}{690}{14}{\textbf{Post-SFT component-effect profiles correlate with SFT:} r = 0.65--0.98.}
+\Txt{1310}{827}{690}{12.7}{One checkpoint per stage; 64 SFT-selected pairs per contrast (gender 45).}
+\Txt{1310}{847}{690}{13.3}{Keeping only the trained layers 15--20 updates: \WindowKept{} pp instability vs full [12]. Full controls: QR.}
+\Txt[text=muted]{1310}{872}{690}{11.5}{Development guided method choices; held-out evaluation was frozen. GPT-4o agreement is a reference proxy.}
 
 \begin{scope}[shift={(0,12)}]
 % -------------------------- ROW C: 4. HARDWARE AND SOFTWARE -------------------
