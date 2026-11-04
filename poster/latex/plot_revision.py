@@ -221,8 +221,9 @@ def heldout(preview_dir: Path | None):
     left.set_xlabel("\u2212\u0394 unstable sets (better \u2192)", labelpad=8, fontsize=24)
     right.set_xlabel("\u0394 matched-CV preference (better \u2192)", labelpad=8, fontsize=24)
     # The validation's cost: docs/QUALIFICATION_CONTROL.md ledger, ten evaluate_arm jobs, allocated GPU-h.
-    fig.text(.012, .035, "300 held-out CVs; seeds 42/43/44 top to bottom. Pointwise paired 95% CIs; "
-             "common hire rate 36.9%; SFT = 0.", ha="left", va="bottom", fontsize=20, color=MUTED)
+    fig.text(.012, .020, "300 held-out CVs; seeds 42/43/44 top to bottom  |  "
+             "Paired 95% CIs (pointwise); common hire rate 36.9%; SFT = 0.",
+             ha="left", va="bottom", fontsize=22, color=MUTED)
     save(fig, "heldout", preview_dir)
 
 

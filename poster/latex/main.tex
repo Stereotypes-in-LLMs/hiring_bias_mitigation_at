@@ -492,17 +492,17 @@ Gender / implicit,0.72,0.20,\textminus{}72\%
 % Quality at the same cut as the headline: Base and SFT-v3 both at the common hire count
 % (reports/final/common_point_quality.csv). TPR/FPR: hire rate where the GPT-4o reference hires/rejects.
 % Paired candidate-bootstrap interval of the base model against SFT-v3 (common_point_quality_ci.csv).
-\Txt[text=ink]{74}{665}{364}{12.7}{\bfseries Similar reference quality at \CommonHire\%: GPT-4o agreement [7] \BaseAgreeCommon{} \textrightarrow{} \SFTAgreeCommon\% (CI \BaseAgreeCommonCI{} pp); TPR \BaseTPRCommon{} \textrightarrow{} \SFTTPRCommon\%}
+\Txt[text=ink]{74}{665}{364}{12.7}{Similar reference quality at \CommonHire\%: \textbf{GPT-4o agreement} [7] \textbf{\BaseAgreeCommon{} \textrightarrow{} \SFTAgreeCommon\%} (CI \BaseAgreeCommonCI{} pp); TPR \BaseTPRCommon{} \textrightarrow{} \SFTTPRCommon\%}
 % Card B: the held-out identity x qualification test (docs/QUALIFICATION_CONTROL.md): 300 RJDB dev triples
 % read once after registration; reports/qualification_control/{summary,direction}.csv via latex_data.py.
 \Rect[draw=greenDark,line width=1bp]{64}{706}{384}{128}{greenPale}
 \Txt[text=greenDark]{74}{713}{364}{15}{\bfseries B. Held-out validation, \QualTriples{} unseen RJDB CVs [13]}
 \Txt[text=ink]{74}{732}{364}{30}{\bfseries \QualBaseUnstable\% \textrightarrow{} \QualSFTUnstable\%}
 \Txt{74}{768}{364}{12.7}{Unstable sets at matched \QualCommonHire\% hire, Base \textrightarrow{} SFT; paired 95\% CI \QualSFTvsBase{} pp}
-\Txt[text=ink]{74}{800}{364}{12.7}{\bfseries Matched-over-weakened CV preference: \QualDirBase\% \textrightarrow{} \QualDirSFT\% (\QualDirDiff{} pp)}
+\Txt[text=ink]{74}{800}{364}{12.7}{\textbf{Matched-over-weakened CV preference:} \textbf{\QualDirBase\% \textrightarrow{} \QualDirSFT\%} (\QualDirDiff{} pp)}
 % (the recipes' held-out reading is panel C)
 \Rect{64}{839}{384}{51}{greenPale}
-\Txt[text=ink]{74}{843}{364}{12.3}{\bfseries Take-home: SFT's gain replicates, preference kept high; no added consistency gain detected, some DPO/GRPO runs lower preference; development peak not replicated.}
+\Txt[text=ink]{74}{851}{364}{14}{\textbf{Take-home: SFT's stability gain replicates;} qualification preference remains high.}
 
 \Txt[text=greenDark]{488}{569}{768}{18}{\bfseries C. Held-out: no extra consistency gain detected}
 \Txt[text=ink]{488}{591}{768}{13.7}{\bfseries Some DPO/GRPO seeds reduce qualification preference}
@@ -545,7 +545,7 @@ Gender / implicit,0.72,0.20,\textminus{}72\%
 \Txt[text=ink]{1310}{806}{690}{14}{\textbf{Post-SFT component-effect profiles correlate with SFT:} r = 0.65--0.98.}
 \Txt{1310}{827}{690}{12.7}{One checkpoint per stage; 64 SFT-selected pairs per contrast (gender 45).}
 \Txt{1310}{847}{690}{13.3}{Keeping only the trained layers 15--20 updates: \WindowKept{} pp instability vs full [12]. Full controls: QR.}
-\Txt[text=muted]{1310}{867}{690}{11.5}{Development guided method choices; held-out evaluation was frozen. GPT-4o labels [7] use cue-free prompts: no identity cue enters the label, but it is one model's judgement, used only as a guardrail.}
+\Txt[text=muted]{1310}{867}{690}{12.7}{Development guided tuning; held-out frozen. Cue-free GPT-4o judgements [7] are used only as a guardrail.}
 
 \begin{scope}[shift={(0,12)}]
 % -------------------------- ROW C: 4. HARDWARE AND SOFTWARE -------------------
