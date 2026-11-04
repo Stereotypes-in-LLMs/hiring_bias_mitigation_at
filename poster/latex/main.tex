@@ -545,7 +545,7 @@ Gender / implicit,0.72,0.20,\textminus{}72\%
 \Txt[text=ink]{1310}{806}{690}{14}{\textbf{Post-SFT component-effect profiles correlate with SFT:} r = 0.65--0.98.}
 \Txt{1310}{827}{690}{12.7}{One checkpoint per stage; 64 SFT-selected pairs per contrast (gender 45).}
 \Txt{1310}{847}{690}{13.3}{Keeping only the trained layers 15--20 updates: \WindowKept{} pp instability vs full [12]. Full controls: QR.}
-\Txt[text=muted]{1310}{872}{690}{11.5}{Development guided method choices; held-out evaluation was frozen. GPT-4o agreement is a reference proxy.}
+\Txt[text=muted]{1310}{867}{690}{11.5}{Development guided method choices; held-out evaluation was frozen. GPT-4o labels [7] use cue-free prompts: no identity cue enters the label, but it is one model's judgement, used only as a guardrail.}
 
 \begin{scope}[shift={(0,12)}]
 % -------------------------- ROW C: 4. HARDWARE AND SOFTWARE -------------------
@@ -581,7 +581,7 @@ Gender / implicit,0.72,0.20,\textminus{}72\%
 \Txt[text=greenDark]{1516}{954}{484}{26}{\bfseries \PatchPeakGiB{} GiB peak \textperiodcentered{} \PatchStepMin{} min per pass}
 % 194 real patches per pair (\PatchRealPerPair, a constant); head checks \PatchVerifyPerPair.
 \Txt{1516}{992}{484}{13}{Median of \PatchRunsSixtyFour{} runs \texttimes{} 64 pairs; 194 patches + \PatchVerifyPerPair{} head checks per pair.}
-\Txt{1516}{1010}{484}{13}{No offload; peak = sampled max. Margin pass, \NPrompts{} prompts: \MarginsPeakGiB{} GiB, \MarginsStepMin{} min.}
+\Txt{1516}{1010}{484}{13}{No offload: \MarginsPeakGiB{} GiB fits 96 GB HBM3; margin pass \NPrompts{} prompts, \MarginsStepMin{} min.}
 
 % -------------------------- COMPACT REFERENCES AND LINKS ---------------------
 \draw[greenDark,line width=1bp] (48,1036) -- (2016,1036);
