@@ -1,7 +1,7 @@
 # Hiring audit results website
 
 Static research companion for the poster. Site URL:
-https://hiring-audit-results.xinyangwu0617.chatgpt.site
+https://xinyangwuethz.github.io/hiring-audit-results
 
 The editable site is in `dist/`. Serve that directory with any static HTTP server.
 There are no third-party frontend dependencies or analytics. `build_data.py`
@@ -16,9 +16,10 @@ The parameter-budget section retains the original served-checkpoint evaluation
 basis; it does not substitute later HF merge diagnostics.
 
 Keep `dist/poster.pdf` synchronized with the poster's compiled PDF. Update the
-CSV snapshots and regenerate `results.js` together. The hosted Sites checkout keeps its identity in `.openai/hosting.json`.
-This directory is a portable source snapshot; update the existing hosted site
-when publishing changes, rather than creating a new site.
+CSV snapshots and regenerate `results.js` together. GitHub Pages publishes the main branch root of
+https://github.com/XinyangWuEthz/hiring-audit-results.
+This directory is the research repository source snapshot. Copy dist contents
+to the website repository root when publishing changes.
 
 Scientific source repository:
 https://github.com/Stereotypes-in-LLMs/hiring_bias_mitigation_at
