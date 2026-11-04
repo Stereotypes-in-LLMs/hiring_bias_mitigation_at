@@ -82,8 +82,8 @@ def behaviour(preview_dir: Path | None):
                  for row in curves if row["label"] == "SFT-v3"}
     assert len(reference) == 51
     fig = plt.figure(figsize=(WIDTH, 5.0))
-    forest = fig.add_axes([.185, .305, .17, .555])
-    curve = fig.add_axes([.465, .305, .52, .555])
+    forest = fig.add_axes([.185, .35, .17, .51])
+    curve = fig.add_axes([.465, .35, .52, .51])
     forest.set_title("At 22.51% hire rate", loc="left", pad=16, fontsize=26)
     forest.axvline(0, color="#6E818A", lw=1.8, ls=(0, (3, 3)), zorder=1)
     forest.set_xlim(-1.85, 1.3)
@@ -144,10 +144,83 @@ def behaviour(preview_dir: Path | None):
                  borderaxespad=0, fontsize=26, handlelength=1.7, columnspacing=.8,
                  handletextpad=.6)
     style(curve, ygrid=True)
-    fig.text(.012, .035, "Paired 95% CIs over candidates, seeds 42/43/44 top to bottom; 1 of 9 excludes zero. "
+    fig.text(.012, .085, "Paired 95% CIs over candidates, seeds 42/43/44 top to bottom; 1 of 9 excludes zero. "
              "Thick curves: seed means; thin: single seeds.", ha="left", va="bottom", fontsize=20,
              color=MUTED)
+    # Why DPO worsens at 35%: SFT-v3 and each DPO seed cut to 35% hire (reports/final/
+    # rate_decomposition.csv, scripts/rate_decomposition.py): the sets it repairs and the sets it
+    # breaks; the poster's table below the figure carries their rank-scale geometry.
+    dpo35 = [row for row in read("reports/final/rate_decomposition.csv")
+             if row["recipe"] == "DPO_V3_4880" and row["rate"] == "35"]
+    assert len(dpo35) == 3
+    fixed = [float(row["fixed"]) for row in dpo35]
+    broken = [float(row["broken"]) for row in dpo35]
+    sft_unstable = {round(float(row["sft_unstable"])) for row in dpo35}
+    assert len(sft_unstable) == 1
+    # The held-out check (docs/QUALIFICATION_CONTROL.md, C4): DPO's seed-mean excess over SFT-v3 at
+    # 30-35% hire on the 300 RJDB dev triples (reports/qualification_control/bands.csv).
+    held = [float(row["band_30_35_pp"]) for row in read("reports/qualification_control/bands.csv")
+            if row["label"].startswith("DPO_V3_4880 s")]
+    assert len(held) == 3
+    fig.text(.012, .03, f"At 35% hire, DPO repairs {min(fixed):.0f}\u2013{max(fixed):.0f} of SFT's "
+             f"{sft_unstable.pop()} unstable sets but introduces {min(broken):.0f}\u2013{max(broken):.0f} "
+             f"(table below); on 300 held-out CVs: {np.mean(held):+.1f} pp.",
+             ha="left", va="bottom", fontsize=20, color=MUTED)
     save(fig, "behaviour", preview_dir)
+
+
+def heldout(preview_dir: Path | None):
+    """The held-out check (docs/QUALIFICATION_CONTROL.md): every recipe seed against SFT-v3 on the
+    300 RJDB dev triples, two measures side by side, better to the right on both. Left: the
+    consistency gain, minus the change in unstable sets with the arm moved to SFT-v3's hire rate
+    (summary.csv, delta_common_pp). Right: the change in the qualification preference, the share
+    of triples whose matched CV out-scores its weakened version on the attribute-free prompt
+    (direction.csv, attr_free). Paired 95% intervals over candidates."""
+    summary = {row["label"]: row for row in read("reports/qualification_control/summary.csv")}
+    direction = {row["label"]: row for row in read("reports/qualification_control/direction.csv")
+                 if row["variants"] == "attr_free"}
+    fig = plt.figure(figsize=(WIDTH, 5.0))
+    left = fig.add_axes([.185, .30, .34, .52])
+    right = fig.add_axes([.635, .30, .335, .52])
+    rows_y, labels = [], []
+    y = 0
+    for group, (label, prefix, _, colour, _line) in enumerate(METHODS):
+        for seed in (42, 43, 44):
+            key = f"{prefix} s{seed}"
+            assert key in summary and key in direction, key
+            rows_y.append((y, key, colour, label if seed == 42 else "", seed))
+            y += 1
+        y += .6
+    top = y
+    for ax, title, getter in (
+        (left, "Consistency gain vs SFT (pp)", lambda k: tuple(-float(summary[k][c]) for c in
+                                                                ("delta_common_pp", "ci_common_high", "ci_common_low"))),
+        (right, "Qualification preference vs SFT (pp)", lambda k: tuple(float(direction[k][c]) for c in
+                                                                       ("diff_pp", "ci_low", "ci_high")))):
+        for yy, key, colour, _, seed in rows_y:
+            point, lo, hi = getter(key)
+            assert lo <= point <= hi, (key, point, lo, hi)
+            ax.errorbar(point, top - yy, xerr=[[point - lo], [hi - point]], color=colour, lw=3.2,
+                        capsize=5, capthick=2.2, fmt="o", markersize=11, mfc="white", mec=colour,
+                        mew=2.5, zorder=3)
+        ax.axvline(0, color="#6E818A", lw=1.8, ls=(0, (3, 3)), zorder=1)
+        ax.set_ylim(-0.2, top + 0.4)
+        ax.set_title(title, loc="left", pad=14, fontsize=26)
+        style(ax)
+    left.set_xlim(-2.2, 2.2); left.set_xticks([-2, -1, 0, 1, 2])
+    right.set_xlim(-8.5, 3.5); right.set_xticks([-8, -6, -4, -2, 0, 2])
+    # One label per method at its middle row; the seeds read top to bottom (caption).
+    mids = [(top - rows_y[i + 1][0], rows_y[i][3]) for i in range(0, len(rows_y), 3)]
+    left.set_yticks([m[0] for m in mids], [m[1] for m in mids])
+    left.tick_params(axis="y", length=0, pad=12)
+    right.set_yticks([top - yy for yy, *_ in rows_y], ["" for _ in rows_y])
+    right.tick_params(axis="y", length=0)
+    left.set_xlabel("\u2212\u0394 unstable sets at 36.9% hire (better \u2192)", labelpad=8, fontsize=24)
+    right.set_xlabel("\u0394 preference for the matched CV (better \u2192)", labelpad=8, fontsize=24)
+    # The validation's cost: docs/QUALIFICATION_CONTROL.md ledger, ten evaluate_arm jobs, allocated GPU-h.
+    fig.text(.012, .035, "300 held-out RJDB triples; seeds 42/43/44 top to bottom, development checkpoints; "
+             "pointwise paired 95% CIs; 10 jobs, 11.4 GPU\u00b7h.", ha="left", va="bottom", fontsize=20, color=MUTED)
+    save(fig, "heldout", preview_dir)
 
 
 def residual(preview_dir: Path | None):
@@ -215,4 +288,5 @@ if __name__ == "__main__":
     parser.add_argument("--preview-dir", type=Path)
     args = parser.parse_args()
     behaviour(args.preview_dir)
+    heldout(args.preview_dir)
     residual(args.preview_dir)

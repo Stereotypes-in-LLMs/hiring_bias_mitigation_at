@@ -1,0 +1,24 @@
+{
+  "C1_replication": "SFT-v3 better than Base",
+  "C2_selectivity": "keeps qualification sensitivity",
+  "C2_diff_pp": [
+    -0.67,
+    -3.0,
+    1.67
+  ],
+  "C3_DPO_V3_4880": "not better",
+  "C3_GRPO+decay R4": "not better",
+  "C3_Distill": "not better",
+  "C4_DPO_V3_4880_band_30_35_pp": [
+    -0.31,
+    "not as predicted"
+  ],
+  "C4_GRPO+decay R4_band_30_35_pp": [
+    -0.26,
+    "as predicted"
+  ],
+  "C4_Distill_band_30_35_pp": [
+    -0.14,
+    "as predicted"
+  ]
+}

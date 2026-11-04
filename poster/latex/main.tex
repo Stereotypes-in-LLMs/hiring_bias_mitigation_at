@@ -115,7 +115,72 @@ vllm,vLLM,64.668,64.379,64.957
 \newcommand{\ScaleControl}{exactly 0}
 \newcommand{\SFTTrainGPUh}{21.6}
 \newcommand{\BaseAgree}{78.8}
+\newcommand{\BaseTPR}{41.7}
+\newcommand{\SFTTPR}{57.7}
 \newcommand{\SFTAgree}{82.4}
+\newcommand{\BaseAgreeCommon}{82.0}
+\newcommand{\BaseTPRCommon}{56.7}
+\newcommand{\BaseFPRCommon}{5.4}
+\newcommand{\SFTAgreeCommon}{82.3}
+\newcommand{\SFTTPRCommon}{57.2}
+\newcommand{\SFTFPRCommon}{5.2}
+\newcommand{\BaseAgreeCommonCI}{\textminus{}2.2, +2.8}
+\newcommand{\BaseTPRCommonCI}{\textminus{}6.7, +7.6}
+\newcommand{\DPORankWidthBrokenThirtyFive}{6.5--7.5}
+\newcommand{\SFTRankWidthBrokenThirtyFive}{2.1--2.3}
+\newcommand{\DPORankToCutBrokenThirtyFive}{1.5--2.2}
+\newcommand{\SFTRankToCutBrokenThirtyFive}{7.8--43.9}
+\newcommand{\DPORankWidthBrokenCommon}{1.7--2.0}
+\newcommand{\SFTRankWidthBrokenCommon}{1.9--2.4}
+\newcommand{\DPORankToCutBrokenCommon}{0.4--0.5}
+\newcommand{\SFTRankToCutBrokenCommon}{2.0}
+\newcommand{\DPORankWidthStableThirtyFive}{3.1--3.9}
+\newcommand{\SFTRankWidthStableThirtyFive}{2.0}
+\newcommand{\DPOFixedCommon}{20--35}
+\newcommand{\SFTUnstableCommon}{49}
+\newcommand{\SFTUnstableThirtyFive}{52}
+\newcommand{\DPOFixedThirtyFive}{46--52}
+\newcommand{\DPOBrokenThirtyFive}{113--174}
+\newcommand{\DPOBrokenToCutThirtyFive}{0.1}
+\newcommand{\DPOBrokenCommon}{13--32}
+\newcommand{\DPOBrokenSpreadCommon}{18--25}
+\newcommand{\DPOBrokenBorderlineCommon}{69--84}
+\newcommand{\JacSetsLow}{25}
+\newcommand{\JacSetsHigh}{57}
+\newcommand{\QualTriples}{300}
+\newcommand{\QualCommonHire}{36.9}
+\newcommand{\QualBaseUnstable}{24.9}
+\newcommand{\QualSFTUnstable}{2.2}
+\newcommand{\QualSFTvsBase}{\textminus{}22.75 [\textminus{}24.86, \textminus{}20.61]}
+\newcommand{\QualDirBase}{96.3}
+\newcommand{\QualDirSFT}{95.7}
+\newcommand{\QualDirDiff}{\textminus{}0.67 [\textminus{}3.00, +1.67]}
+\newcommand{\QualDPOCommon}{\textminus{}0.39 to +0.33}
+\newcommand{\QualDPOCommonMean}{\textminus{}0.04}
+\newcommand{\QualDPODir}{91.0--94.0}
+\newcommand{\QualDPODirDiff}{\textminus{}4.67 to \textminus{}1.67}
+\newcommand{\QualDPODirBelow}{2}
+\newcommand{\QualGRPOCommon}{\textminus{}0.08 to +0.65}
+\newcommand{\QualGRPOCommonMean}{+0.24}
+\newcommand{\QualGRPODir}{91.7--95.7}
+\newcommand{\QualGRPODirDiff}{\textminus{}4.00 to 0.00}
+\newcommand{\QualGRPODirBelow}{2}
+\newcommand{\QualDistillCommon}{\textminus{}0.70 to \textminus{}0.23}
+\newcommand{\QualDistillCommonMean}{\textminus{}0.53}
+\newcommand{\QualDistillDir}{96.3--97.0}
+\newcommand{\QualDistillDirDiff}{+0.67 to +1.33}
+\newcommand{\QualDistillDirBelow}{0}
+\newcommand{\DevDPOAtThirtyFive}{+2.5 to +4.5}
+\newcommand{\HeldDPOAtThirtyFive}{\textminus{}1.1 to \textminus{}0.2}
+\newcommand{\DevDPOBand}{+1.3 to +2.6}
+\newcommand{\HeldDPOBand}{\textminus{}0.5 to \textminus{}0.1}
+\newcommand{\DevDPOGainAtThirtyFive}{\textminus{}4.5 to \textminus{}2.5}
+\newcommand{\HeldDPOGainAtThirtyFive}{+0.2 to +1.1}
+\newcommand{\DevDPOGainBand}{\textminus{}2.6 to \textminus{}1.3}
+\newcommand{\HeldDPOGainBand}{+0.1 to +0.5}
+\newcommand{\QualJobs}{10}
+\newcommand{\QualGPUh}{11.4}
+\newcommand{\QualWorstDirDrop}{4.7}
 \newcommand{\BaseAtSFT}{11.8}
 \newcommand{\SFTOwn}{1.8}
 \newcommand{\SFTvsBase}{\textminus{}9.95 [\textminus{}12.07, \textminus{}7.83]}
@@ -322,7 +387,7 @@ Gender / implicit,0.72,0.20,\textminus{}72\%
 \Rect{48}{155}{732}{365}{panel}
 \Section{48}{155}{732}{24}{1. Problem and benchmark}
 \Txt[text=ink]{64}{199}{316}{16}{\bfseries An LLM that screens CVs should not change its answer because of who the candidate is.}
-\Txt{64}{258}{316}{14.5}{We audit identity-cue sensitivity in hiring decisions [6]. What changes after SFT, in decisions and inside the model?}
+\Txt{64}{258}{316}{14.5}{We audit identity-cue sensitivity in hiring decisions [6, 11]. What changes after SFT, in decisions and inside the model?}
 \Txt[text=ink]{64}{315}{316}{14.5}{\bfseries \NCandidates{} CVs; 3 jobs per CV\\\NPairs{} pairs across 171 distinct jobs}
 \Txt{64}{354}{316}{14.5}{Military status, religion and gender; explicit or implicit cues.\\\textbf{\NSets{} sets; \NPrompts{} prompts.}}
 \Txt{64}{409}{316}{14}{\textbf{Set}: one CV--job pair and cue style, varying one attribute. \textbf{Unstable}: both hire and reject occur.}
@@ -373,9 +438,10 @@ Gender / implicit,0.72,0.20,\textminus{}72\%
 \Txt{1014}{360}{256}{12.7}{Match the frozen cue-free SFT teacher's decision probabilities.}
 % Contamination control: data/benchmark/holdout_ids.json, assert_no_leakage (data/PROVENANCE.md).
 % Checkpoint rules: reports/final/arms.csv (declared before the audit; ckpt 525 is marked exploratory).
-\Txt[text=ink]{820}{412}{450}{12.7}{\bfseries The \NCandidates{} CVs and their jobs appear in no training set.}
-\Txt{820}{436}{450}{12.7}{Three seeds per added stage; paired 95\% CIs, bootstrap over candidates; hire rates matched by thresholding the margin; checkpoints fixed in advance.}
-\Txt[text=greenDark]{820}{486}{450}{12}{\bfseries Contribution: rate-controlled, multi-seed evaluation of post-training gains, with mechanistic probes of selected checkpoints.}
+% Held-out check: docs/QUALIFICATION_CONTROL.md (RJDB dev triples, read once, after registration).
+\Txt[text=ink]{820}{412}{450}{12.7}{\bfseries The \NCandidates{} CVs and their jobs appear in no training set; \QualTriples{} RJDB CVs were reserved for a frozen final evaluation.}
+\Txt{820}{444}{450}{12.7}{Three seeds per added stage; paired 95\% CIs, bootstrap over candidates; hire rates matched by thresholding the margin; checkpoints fixed in advance.}
+\Txt[text=greenDark]{820}{491}{450}{12}{\bfseries Contribution: SFT's gain replicates on unseen CVs; no added consistency gain detected; some DPO/GRPO runs cost qualification preference.}
 
 \Txt[text=greenDark]{1290}{199}{720}{16}{\bfseries Inside the model: activation patching [5]; caveats [4]}
 \Txt[text=ink]{1290}{230}{210}{15}{\bfseries Swap one activation}
@@ -418,43 +484,48 @@ Gender / implicit,0.72,0.20,\textminus{}72\%
 \begin{scope}[shift={(0,8)}]
 \Rect{48}{527}{1968}{365}{panel}
 \Section{48}{527}{1968}{24}{3. Results and conclusion}
-\Rect[draw=greenDark,line width=1bp]{64}{571}{384}{117}{greenPale}
-\Txt[text=greenDark]{74}{578}{364}{16}{\bfseries A. SFT removes most of the instability}
-\Txt{74}{597}{364}{13.3}{Unstable sets at \CommonHire\% hire, Base \textrightarrow{} SFT}
+\Rect[draw=greenDark,line width=1bp]{64}{571}{384}{129}{greenPale}
+\Txt[text=greenDark]{74}{578}{364}{16}{\bfseries A. Development audit, \NCandidates{} CVs}
+\Txt{74}{597}{364}{12.7}{Unstable sets at matched \CommonHire\% hire, Base \textrightarrow{} SFT}
 \Txt[text=ink]{74}{612}{364}{30}{\bfseries \BaseAtSFT\% \textrightarrow{} \SFTOwn\%}
-\Txt{74}{648}{364}{13.3}{paired 95\% CI \SFTvsBase{} pp}
-\Txt[text=ink]{74}{666}{364}{14}{\bfseries GPT-4o agreement [7] at own rates: \BaseAgree\% \textrightarrow{} \SFTAgree\%}
-\Rect{64}{694}{384}{196}{greenPale}
-\Txt[text=greenDark]{74}{700}{364}{15}{\bfseries Conclusion}
-% Overlap numbers: reports/seed_overlap/overlap.csv (seeds 43/44: DPO 0.26, GRPO 0.28, distill 0.45;
-% SFT-v3 moved to the same hire rates: 0.83, 0.92, 0.86). Hub: \HubBase -> \HubSFT on the 64 combat-implicit pairs.
-% Own vs common point (final_table.csv via latex_data.py): \OwnBetterRuns of \PostRuns post-SFT runs
-% have the paired interval below 0 at their own hire rate, \CommonBetterRuns at the common point.
-\Txt[text=ink]{74}{722}{364}{12.7}{\textbf{Further training} can improve or worsen consistency, depending on hire rate: \OwnBetterRuns{} of \PostRuns{} post-SFT runs beat SFT at their own rate, \CommonBetterRuns{} at the common \CommonHire\%. Audit at the intended hire rate before deployment.}
-\Txt[text=ink]{74}{785}{364}{12.7}{\textbf{Seeds 43/44:} unstable sets overlap 26--45\% between seeds vs 83--92\% for SFT at the same rates; the contrast varies with seed pair and rate.}
-\Txt[text=ink]{74}{833}{364}{12.7}{\textbf{Inside:} cue-sensitive components stay detectable after SFT; the candidate hub's measured effect falls 5\texttimes{} on selected combat-implicit pairs.}
+\Txt{74}{648}{364}{12.7}{paired 95\% CI \SFTvsBase{} pp}
+% Quality at the same cut as the headline: Base and SFT-v3 both at the common hire count
+% (reports/final/common_point_quality.csv). TPR/FPR: hire rate where the GPT-4o reference hires/rejects.
+% Paired candidate-bootstrap interval of the base model against SFT-v3 (common_point_quality_ci.csv).
+\Txt[text=ink]{74}{665}{364}{12.7}{\bfseries Similar reference quality at \CommonHire\%: GPT-4o agreement [7] \BaseAgreeCommon{} \textrightarrow{} \SFTAgreeCommon\% (CI \BaseAgreeCommonCI{} pp); TPR \BaseTPRCommon{} \textrightarrow{} \SFTTPRCommon\%}
+% Card B: the held-out identity x qualification test (docs/QUALIFICATION_CONTROL.md): 300 RJDB dev triples
+% read once after registration; reports/qualification_control/{summary,direction}.csv via latex_data.py.
+\Rect[draw=greenDark,line width=1bp]{64}{706}{384}{128}{greenPale}
+\Txt[text=greenDark]{74}{713}{364}{15}{\bfseries B. Held-out validation, \QualTriples{} unseen RJDB CVs [13]}
+\Txt[text=ink]{74}{732}{364}{30}{\bfseries \QualBaseUnstable\% \textrightarrow{} \QualSFTUnstable\%}
+\Txt{74}{768}{364}{12.7}{Unstable sets at matched \QualCommonHire\% hire, Base \textrightarrow{} SFT; paired 95\% CI \QualSFTvsBase{} pp}
+\Txt[text=ink]{74}{800}{364}{12.7}{\bfseries Matched-over-weakened CV preference: \QualDirBase\% \textrightarrow{} \QualDirSFT\% (\QualDirDiff{} pp)}
+% (the recipes' held-out reading is panel C)
+\Rect{64}{839}{384}{51}{greenPale}
+\Txt[text=ink]{74}{843}{364}{12.3}{\bfseries Take-home: SFT's gain replicates, preference kept high; no added consistency gain detected, some DPO/GRPO runs lower preference; development peak not replicated.}
 
-\Txt[text=greenDark]{488}{569}{768}{15}{\bfseries B. Post-SFT effects depend on hire rate}
+\Txt[text=greenDark]{488}{569}{768}{13.3}{\bfseries C. Held-out check: no additional consistency gain detected; some DPO/GRPO runs lower the qualification preference}
 \node[anchor=north west,inner sep=0pt] at (472,588)
-  {\includegraphics[width=16.666667in,keepaspectratio]{figures/behaviour.pdf}};
-% Overlap of the unstable sets between two training seeds of one recipe, each at its own greedy
-% hire rate, against SFT-v3 moved to those two hire rates (reports/seed_overlap/overlap.csv).
+  {\includegraphics[width=16.666667in,keepaspectratio]{figures/heldout.pdf}};
 \Rect{488}{798}{768}{94}{greenPale}
-\Txt[text=ink]{496}{801}{300}{12.7}{\bfseries Jaccard, method vs SFT at the same hire rate}
-\Txt[text=ink]{800}{801}{220}{12.7}{\bfseries seeds 43/44, same hire rates}
-\Txt[text=ink]{1030}{801}{222}{12.7}{\bfseries with seed 42 (other rate)}
-\Txt{496}{822}{300}{12}{DPO}
-\Txt{800}{822}{220}{12}{0.26 vs SFT 0.83}
-\Txt{1030}{822}{222}{12}{0.14--0.15 vs SFT 0.19--0.22}
-\Txt{496}{845}{300}{12}{GRPO + lr decay}
-\Txt{800}{845}{220}{12}{0.28 vs SFT 0.92}
-\Txt{1030}{845}{222}{12}{0.09--0.14 vs SFT 0.09--0.10}
-\Txt{496}{868}{300}{12}{Self-distillation}
-\Txt{800}{868}{220}{12}{0.45 vs SFT 0.86}
-\Txt{1030}{868}{222}{12}{0.53--0.60 vs SFT 0.83--0.97}
+% Development benchmark against the held-out set, the same DPO seeds read the same way (latex_data.py:
+% reports/final/curves.csv, curve_bands.csv, final_table.csv; reports/qualification_control/*.csv).
+\Txt[text=ink]{496}{801}{300}{12.7}{\bfseries Development finding \textrightarrow{} held-out check}
+\Txt[text=ink]{800}{801}{210}{12.7}{\bfseries Development, \NCandidates{} CVs}
+\Txt[text=ink]{1020}{801}{230}{12.7}{\bfseries Held-out, \QualTriples{} CVs}
+\Txt{496}{820}{300}{12}{DPO vs SFT at 35\% hire, consistency gain, 3 seeds}
+\Txt{800}{820}{210}{12}{\DevDPOGainAtThirtyFive{} pp}
+\Txt{1020}{820}{230}{12}{\HeldDPOGainAtThirtyFive{} pp}
+\Txt{496}{838}{300}{12}{DPO vs SFT, 30--35\% band mean, consistency gain}
+\Txt{800}{838}{210}{12}{\DevDPOGainBand{} pp}
+\Txt{1020}{838}{230}{12}{\HeldDPOGainBand{} pp}
+\Txt{496}{856}{300}{12}{Runs with gain CI above 0: own rate / common point}
+\Txt{800}{856}{210}{12}{\OwnBetterRuns{} of \PostRuns{} / \CommonBetterRuns{} of \PostRuns{}}
+\Txt{1020}{856}{230}{12}{0 of 9 / 0 of 9}
+\Txt[text=muted]{496}{875}{760}{10.4}{Consistency gain = SFT instability \textminus{} model instability, positive = better; the development peak did not replicate; full curves: results site.}
 
 \Rect[draw=greenDark,line width=1bp]{1296}{571}{720}{164}{greenPale}
-\Txt[text=greenDark]{1310}{579}{500}{15}{\bfseries C. Inside: SFT shrinks the cue's effect on selected pairs}
+\Txt[text=greenDark]{1310}{579}{500}{15}{\bfseries D. Inside: SFT shrinks the cue's effect on selected pairs}
 \Rect{1844}{583}{10}{10}{gray}\Txt{1858}{580}{52}{14}{Base}
 \Rect{1908}{583}{10}{10}{ink}\Txt{1922}{580}{70}{14}{SFT}
 \Txt{1310}{601}{690}{14}{64 pairs per contrast, chosen for a large Base effect; same pairs for Base and SFT.}
@@ -480,8 +551,8 @@ Gender / implicit,0.72,0.20,\textminus{}72\%
 \Rect[draw=greenDark,line width=1.2bp]{1296}{742}{720}{56}{greenPale}
 \Txt[text=greenDark]{1310}{747}{690}{15}{\bfseries On all \NPairs{} pairs the gain is smaller}
 \Txt[text=ink]{1310}{769}{690}{14}{Gender / implicit: \GenderFullRemoval\% [95\% CI \GenderFullRemovalCI\%]; other three contrasts: \OtherFullRemoval\%.}
-\Txt{1310}{806}{690}{13.3}{One checkpoint per stage; 64 SFT-selected pairs per contrast (gender 45). Post-SFT component-effect profiles correlate with SFT's, r = 0.65--0.98. Full experimental controls and per-stage results: QR.}
-\Txt[text=muted]{1310}{868}{690}{12.7}{Development benchmark: it guided which methods to continue. GPT-4o agreement is a reference proxy.}
+\Txt{1310}{806}{690}{13.3}{One checkpoint per stage; 64 SFT-selected pairs per contrast (gender 45). Post-SFT component-effect profiles correlate with SFT's, r = 0.65--0.98. Keeping only the trained layers 15--20 updates [12] raises instability by \WindowKept{} pp vs the full adapter: the located window does not reproduce it. Full controls and per-stage results: QR.}
+\Txt[text=muted]{1310}{856}{690}{11.5}{The \NCandidates{}-CV benchmark guided method choices; the \QualTriples{}-CV set was reserved for a frozen final evaluation. GPT-4o agreement is a reference proxy.}
 
 \begin{scope}[shift={(0,12)}]
 % -------------------------- ROW C: 4. HARDWARE AND SOFTWARE -------------------
@@ -526,13 +597,16 @@ Gender / implicit,0.72,0.20,\textminus{}72\%
 \href{https://arxiv.org/abs/2305.18290}{[2] Rafailov et al., DPO (2023).}\quad
 \href{https://arxiv.org/abs/2402.03300}{[3] Shao et al., DeepSeekMath / GRPO (2024).}\\
 \href{https://arxiv.org/abs/2301.04213}{[4] Hase et al., Does Localization Inform Editing? (2023).}\quad
-\href{https://arxiv.org/abs/2309.16042}{[5] Zhang \& Nanda, Activation Patching Best Practices (2024).}}
+\href{https://arxiv.org/abs/2309.16042}{[5] Zhang \& Nanda, Activation Patching Best Practices (2024).}\quad
+\href{https://github.com/megagonlabs/rjdb}{[13] Megagon Labs, RJDB: resume--job-description triples.}}
 \Txt[text=body]{1040}{1041}{976}{10.4}{%
 \href{https://arxiv.org/abs/2406.10486}{[6] An et al., Hiring Discrimination (2024).}\quad
 \href{https://github.com/Stereotypes-in-LLMs/AIHiringBiasAnalysis-LLMs}{[7] Benchmark / reference.}\quad
-\href{https://huggingface.co/datasets/lang-uk/recruitment-dataset-candidate-profiles-english}{[8] Djinni Recruitment Dataset.}\\
+\href{https://huggingface.co/datasets/lang-uk/recruitment-dataset-candidate-profiles-english}{[8] Djinni Recruitment Dataset.}\quad
+\href{https://arxiv.org/abs/2506.10922}{[11] Karvonen \& Marks, LLM Fairness via Interpretability (2025).}\\
 \href{https://arxiv.org/abs/2309.06180}{[9] Kwon et al., PagedAttention / vLLM (2023).}\quad
 \href{https://huggingface.co/Qwen/Qwen3.5-9B}{[10] Qwen3.5-9B; PEFT / TRL.}\quad
+\href{https://arxiv.org/abs/2310.12611}{[12] Chintam et al., Gender-Bias Components (2023).}\quad
 \href{https://xinyangwuethz.github.io/hiring-audit-results/}{Full references and downloads: results website.}}
 \Txt[text=ink]{48}{1070}{1968}{10.4}{%
 \href{https://github.com/Stereotypes-in-LLMs/hiring_bias_mitigation_at}{Code: github.com/Stereotypes-in-LLMs/hiring\_bias\_mitigation\_at}\qquad

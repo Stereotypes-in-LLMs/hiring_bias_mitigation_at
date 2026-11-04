@@ -132,6 +132,160 @@ def followup_findings() -> dict:
     }
 
 
+def common_point_quality() -> dict[str, str]:
+    """Agreement, TPR and FPR against the GPT-4o reference with Base and SFT-v3 both cut to the
+    common hire rate (reports/final/common_point_quality.csv, scripts/common_point_quality.py)."""
+    q = {r["label"]: r for r in rows("reports/final/common_point_quality.csv")}
+    out = {}
+    for name, label in (("Base", "Base"), ("SFT", SFT_V3)):
+        for key, col in (("Agree", "agree_pct_common"), ("TPR", "tpr_pct_common"),
+                         ("FPR", "fpr_pct_common")):
+            out[f"{name}{key}Common"] = f"{float(q[label][col]):.1f}"
+    return out
+
+
+def rate_decomposition() -> dict[str, str]:
+    """DPO_V3_4880 against SFT-v3 at 35% hire and at the common point: the sets it fixes and
+    breaks over its three seeds, and the broken sets' geometry (reports/final/
+    rate_decomposition.csv, scripts/rate_decomposition.py)."""
+    table = [r for r in rows("reports/final/rate_decomposition.csv") if r["recipe"] == "DPO_V3_4880"]
+
+    def span(rate: str, col: str, fmt: str = ".0f") -> str:
+        vals = [float(r[col]) for r in table if r["rate"] == rate]
+        assert len(vals) == 3, (rate, col)
+        lo, hi = format(min(vals), fmt), format(max(vals), fmt)
+        return lo if lo == hi else f"{lo}--{hi}"
+
+    ranks = [r for r in rows("reports/final/rate_decomposition_ranks.csv") if r["recipe"] == "DPO_V3_4880"]
+
+    def rank_span(rate: str, group: str, arm: str, col: str) -> str:
+        vals = [float(r[col]) for r in ranks if r["rate"] == rate and r["group"] == group and r["arm"] == arm]
+        assert len(vals) == 3, (rate, group, arm, col)
+        lo, hi = f"{min(vals):.1f}", f"{max(vals):.1f}"
+        return lo if lo == hi else f"{lo}--{hi}"
+
+    # Quality at the common point: paired candidate-bootstrap intervals of the base model
+    # against SFT-v3 (reports/final/common_point_quality_ci.csv).
+    ci = {r["label"]: r for r in rows("reports/final/common_point_quality_ci.csv")}["Base"]
+
+    def signed1(x) -> str:
+        v = float(x)
+        return f"{'+' if v > 0 else '\\textminus{}' if v < 0 else ''}{abs(v):.1f}"
+
+    return {
+        # common_point_quality_ci.csv holds base - SFT-v3; the card reads base -> SFT-v3, so the
+        # interval is negated with its ends swapped.
+        "BaseAgreeCommonCI": f"{signed1(-float(ci['agree_ci_high']))}, {signed1(-float(ci['agree_ci_low']))}",
+        "BaseTPRCommonCI": f"{signed1(-float(ci['tpr_ci_high']))}, {signed1(-float(ci['tpr_ci_low']))}",
+        # Rank-scale geometry (percentile of the arm's prompts) of the sets DPO breaks: the set's
+        # interval over its cue variants and the interval centre's distance from the cut, DPO and
+        # SFT-v3 on the same sets; a monotone change of every margin leaves these unchanged.
+        "DPORankWidthBrokenThirtyFive": rank_span("35", "broken", "DPO_V3_4880", "rank_width_median_pp"),
+        "SFTRankWidthBrokenThirtyFive": rank_span("35", "broken", "sft", "rank_width_median_pp"),
+        "DPORankToCutBrokenThirtyFive": rank_span("35", "broken", "DPO_V3_4880", "rank_to_cut_median_pp"),
+        "SFTRankToCutBrokenThirtyFive": rank_span("35", "broken", "sft", "rank_to_cut_median_pp"),
+        "DPORankWidthBrokenCommon": rank_span("common", "broken", "DPO_V3_4880", "rank_width_median_pp"),
+        "SFTRankWidthBrokenCommon": rank_span("common", "broken", "sft", "rank_width_median_pp"),
+        "DPORankToCutBrokenCommon": rank_span("common", "broken", "DPO_V3_4880", "rank_to_cut_median_pp"),
+        "SFTRankToCutBrokenCommon": rank_span("common", "broken", "sft", "rank_to_cut_median_pp"),
+        "DPORankWidthStableThirtyFive": rank_span("35", "neither", "DPO_V3_4880", "rank_width_median_pp"),
+        "SFTRankWidthStableThirtyFive": rank_span("35", "neither", "sft", "rank_width_median_pp"),
+        "DPOFixedCommon": span("common", "fixed"),
+        "SFTUnstableCommon": span("common", "sft_unstable"),
+        "SFTUnstableThirtyFive": span("35", "sft_unstable"),
+        "DPOFixedThirtyFive": span("35", "fixed"),
+        "DPOBrokenThirtyFive": span("35", "broken"),
+        "DPOBrokenToCutThirtyFive": f"{max(float(r['to_cut_arm_broken']) for r in table if r['rate'] == '35'):.1f}",
+        "DPOBrokenCommon": span("common", "broken"),
+        "DPOBrokenSpreadCommon": span("common", "spread_arm_broken"),
+        "DPOBrokenBorderlineCommon": span("common", "broken_on_borderline_share", ".0%").replace("%", ""),
+    }
+
+
+def qualification_findings() -> dict[str, str]:
+    """The held-out identity x qualification test (docs/QUALIFICATION_CONTROL.md): SFT-v3 against
+    the base model on 300 RJDB dev triples, from reports/qualification_control/{summary,
+    direction}.csv (scripts/qualification_control.py). Recipe rows are added when present."""
+    summary = {r["label"]: r for r in rows("reports/qualification_control/summary.csv")}
+    direction = {(r["label"], r["variants"]): r for r in rows("reports/qualification_control/direction.csv")}
+    stats = json.loads((RAW.parents[1] / "artifacts/qualification_control/stats_rjdb_dev.json").read_text())
+    sft, base = summary["SFT-v3"], summary["Base"]
+
+    def tm(x: float | str) -> str:                   # as main()'s tm: a minus sign TeX can set
+        v = float(x)
+        return f"{'\\textminus{}' if v < 0 else '+' if v > 0 else ''}{abs(v):.2f}"
+    d = direction[("SFT-v3", "attr_free")]
+    out = {
+        "QualTriples": str(stats["sampled_triples"]),
+        "QualCommonHire": f"{float(sft['common_hire_rate_pct']):.1f}",
+        "QualBaseUnstable": f"{float(base['unstable_common_pct']):.1f}",
+        "QualSFTUnstable": f"{float(sft['unstable_common_pct']):.1f}",
+        "QualSFTvsBase": f"{tm(sft['delta_own_pp'])} [{tm(sft['ci_own_low'])}, {tm(sft['ci_own_high'])}]",
+        "QualDirBase": f"{float(base['direction_free_pct']):.1f}",
+        "QualDirSFT": f"{float(sft['direction_free_pct']):.1f}",
+        "QualDirDiff": f"{tm(d['diff_pp'])} [{tm(d['ci_low'])}, {tm(d['ci_high'])}]",
+    }
+    for recipe, key in (("DPO_V3_4880", "DPO"), ("GRPO+decay R4", "GRPO"), ("Distill", "Distill")):
+        labs = [f"{recipe} s{seed}" for seed in (42, 43, 44)]
+        if all(lab in summary for lab in labs):
+            common = [float(summary[lab]["delta_common_pp"]) for lab in labs]
+            dirs = [float(summary[lab]["direction_free_pct"]) for lab in labs]
+            out[f"Qual{key}Common"] = f"{tm(min(common))} to {tm(max(common))}"
+            out[f"Qual{key}CommonMean"] = tm(sum(common) / 3)
+            out[f"Qual{key}Dir"] = f"{min(dirs):.1f}--{max(dirs):.1f}"
+            # The paired change of the direction score against SFT-v3, per seed (direction.csv).
+            diffs = [float(direction[(lab, "attr_free")]["diff_pp"]) for lab in labs]
+            below = sum(float(direction[(lab, "attr_free")]["ci_high"]) < 0 for lab in labs)
+            out[f"Qual{key}DirDiff"] = f"{tm(min(diffs))} to {tm(max(diffs))}"
+            out[f"Qual{key}DirBelow"] = str(below)
+    # The development benchmark's DPO excess over SFT-v3 and the held-out set's, same seeds, read
+    # the same two ways: at the 35% point and as the 30-35% band mean (reports/final/curves.csv,
+    # curve_bands.csv; reports/qualification_control/curves.csv, bands.csv).
+    def excess_at(curves_path: str, ref_label: str, pct: float) -> list[float]:
+        pts = [r for r in rows(curves_path) if abs(float(r["hire_rate_pct"]) - pct) < 0.01]
+        ref = next(float(r["unstable_pct"]) for r in pts if r["label"] == ref_label)
+        return [float(r["unstable_pct"]) - ref for r in pts if r["label"].startswith("DPO_V3_4880 s")]
+
+    def band(bands_path: str) -> list[float]:
+        return [float(r["band_30_35_pp"]) for r in rows(bands_path) if r["label"].startswith("DPO_V3_4880 s")]
+
+    def tm1(v: float) -> str:
+        return f"{'\\textminus{}' if v < 0 else '+' if v > 0 else ''}{abs(v):.1f}"
+
+    def span1(vals: list[float]) -> str:
+        assert len(vals) == 3, vals
+        return f"{tm1(min(vals))} to {tm1(max(vals))}"
+
+    def gain(vals: list[float]) -> list[float]:      # consistency gain = SFT-v3 unstable - arm unstable
+        return [-v for v in vals]
+
+    out.update({
+        "DevDPOAtThirtyFive": span1(excess_at("reports/final/curves.csv", "SFT-v3", 35.0)),
+        "HeldDPOAtThirtyFive": span1(excess_at("reports/qualification_control/curves.csv", "SFT-v3", 35.0)),
+        "DevDPOBand": span1(band("reports/final/curve_bands.csv")),
+        "HeldDPOBand": span1(band("reports/qualification_control/bands.csv")),
+        "DevDPOGainAtThirtyFive": span1(gain(excess_at("reports/final/curves.csv", "SFT-v3", 35.0))),
+        "HeldDPOGainAtThirtyFive": span1(gain(excess_at("reports/qualification_control/curves.csv", "SFT-v3", 35.0))),
+        "DevDPOGainBand": span1(gain(band("reports/final/curve_bands.csv"))),
+        "HeldDPOGainBand": span1(gain(band("reports/qualification_control/bands.csv"))),
+        "QualJobs": "10", "QualGPUh": "11.4",   # docs/QUALIFICATION_CONTROL.md ledger (allocated)
+    })
+    # The largest drop of the direction score among the DPO and GRPO seeds (the poster's "up to").
+    drops = [float(r["diff_pp"]) for (lab, var), r in direction.items()
+             if var == "attr_free" and (lab.startswith("DPO_V3_4880") or lab.startswith("GRPO+decay R4"))]
+    if len(drops) == 6:
+        out["QualWorstDirDrop"] = f"{abs(min(drops)):.1f}"
+    return out
+
+
+def overlap_sizes() -> dict[str, str]:
+    """How many sets each seed leaves unstable, over the seed pairs of reports/seed_overlap/
+    overlap.csv: the Jaccard values there are ratios of sets this small."""
+    pairs = [r for r in rows("reports/seed_overlap/overlap.csv") if "/" in r["seeds"]]
+    sizes = [float(r[c]) for r in pairs for c in ("unstable_a", "unstable_b")]
+    return {"JacSetsLow": f"{min(sizes):.0f}", "JacSetsHigh": f"{max(sizes):.0f}"}
+
+
 def main() -> None:
     arms = {r["label"]: r["run"] for r in rows("reports/final/arms.csv")}
     table = {r["label"]: r for r in rows("reports/final/final_table.csv")}
@@ -364,7 +518,15 @@ def main() -> None:
         "ScaleControl": "exactly 0" if zero else "not 0",
         "SFTTrainGPUh": f"{sft_train:.1f}",
         "BaseAgree": f"{quality['Base']:.1f}",
+        # Hire rate on the prompts the GPT-4o reference hires (reports/reference_metrics.csv,
+        # the standard's TPR guardrail), Base and SFT-v3 at their own rates.
+        "BaseTPR": f"{float(refm[BASE_RUN]['tpr_vs_gpt4o_pct']):.1f}",
+        "SFTTPR": f"{float(refm[arms[SFT_V3]]['tpr_vs_gpt4o_pct']):.1f}",
         "SFTAgree": f"{quality['SFT']:.1f}",   # model_rows names the slot SFT
+        **common_point_quality(),
+        **rate_decomposition(),
+        **overlap_sizes(),
+        **qualification_findings(),
         # The take-home: Base moved to SFT-v3's hire rate against SFT-v3 (poster/base_compare.json,
         # operating_point_control.matched_comparison), and the three post-SFT means' span.
         "BaseAtSFT": f"{float(base_cmp['sft_v3']['base_unstable_pct']):.1f}",

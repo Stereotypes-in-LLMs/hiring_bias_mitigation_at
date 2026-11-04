@@ -1,0 +1,134 @@
+{
+  "standard": "op-margin-v2",
+  "run": "Qwen3.5-9B--en--dpo--adapter--en_only_dpo_v3_4880_step305_rjdbdev",
+  "against": "Qwen3.5-9B--en--sft--adapter--en_only_sft_v3_additional_rjdbdev",
+  "conforms": true,
+  "issues": [],
+  "prompts": 41400,
+  "sets": 3600,
+  "grid": 0.0009765625,
+  "hire_rate_ref": 0.36876811594202896,
+  "unstable_ref": 0.021944444444444444,
+  "hire_rate_run": 0.36630434782608695,
+  "unstable_run": 0.016666666666666666,
+  "ref_threshold_matched": 0.25,
+  "ref_tie_weight": 0.7857142857142857,
+  "ref_tied_prompts": 98,
+  "hire_rate_ref_matched": 0.36630434782608695,
+  "unstable_ref_matched": 0.0226984126984127,
+  "unstable_ref_bin_excluded": 0.024444444444444446,
+  "unstable_ref_bin_included": 0.022222222222222223,
+  "delta_matched_pp": -0.6031746031746034,
+  "ci_low": -1.5004960317460316,
+  "ci_high": 0.3254960317460316,
+  "method": {
+    "grid": 0.0009765625,
+    "run_threshold": 0.0,
+    "matching": "the reference arm hires exactly the compared arm's count; the bin tied at the cut is weighted, whole counterfactual sets at a time",
+    "bootstrap": {
+      "draws": 1000,
+      "seed": 42,
+      "unit": "candidate"
+    }
+  },
+  "code": {
+    "commit": "570eb79e4c3de46a077030e7acb0b836450b6bab",
+    "uncommitted": []
+  },
+  "inputs": {
+    "run": {
+      "run": "Qwen3.5-9B--en--dpo--adapter--en_only_dpo_v3_4880_step305_rjdbdev",
+      "which": "adapter",
+      "config": "configs/audit/qual/qwen3.5-9b_en_dpo_v3_4880_step305_rjdbdev.yaml",
+      "prompts": {
+        "n": 41400,
+        "sha1": "2d2562a0f6524806aa6571366442a8a96d5c8c2d"
+      },
+      "decision": {
+        "prefix": "{\"decision\": \"",
+        "words": [
+          "hire",
+          "reject"
+        ],
+        "token_ids": [
+          33304,
+          45427
+        ],
+        "chat_template_kwargs": {
+          "enable_thinking": false
+        },
+        "sampled_decision_token_share": 1.0
+      },
+      "model": {
+        "served": "/ritom/scratch/cscs/zhang/xw/outputs/merged/qwen3.5-9b_en_only_dpo_v3_4880--checkpoint-305",
+        "base": "Qwen/Qwen3.5-9B",
+        "base_revision": "c202236235762e1c871ad0ccb60c8ee5ba337b9a",
+        "adapters": [
+          {
+            "path": "/ritom/scratch/cscs/zhang/xw/outputs/sft/qwen3.5-9b_en_only_sft_v3_additional",
+            "sha256": "d8d63526a43dab37a1fb41a7d7a3541f6a023c4fa2a19e9409e04da331e419ee"
+          },
+          {
+            "path": "/ritom/scratch/cscs/zhang/xw/outputs/dpo/qwen3.5-9b_en_only_dpo_v3_4880/checkpoint-305",
+            "sha256": "1b8995b48fde60fff62b7f0f3945c2c4aa84a716cb1dde49b16b15923c6f440e"
+          }
+        ]
+      },
+      "software": {
+        "vllm": "0.31.0",
+        "torch": "2.13.0",
+        "transformers": "5.17.0"
+      },
+      "code": {
+        "commit": "570eb79e4c3de46a077030e7acb0b836450b6bab",
+        "uncommitted": []
+      },
+      "written": "2026-11-04T12:44:06+00:00"
+    },
+    "against": {
+      "run": "Qwen3.5-9B--en--sft--adapter--en_only_sft_v3_additional_rjdbdev",
+      "which": "adapter",
+      "config": "configs/audit/qual/qwen3.5-9b_en_sft_v3_additional_rjdbdev.yaml",
+      "prompts": {
+        "n": 41400,
+        "sha1": "2d2562a0f6524806aa6571366442a8a96d5c8c2d"
+      },
+      "decision": {
+        "prefix": "{\"decision\": \"",
+        "words": [
+          "hire",
+          "reject"
+        ],
+        "token_ids": [
+          33304,
+          45427
+        ],
+        "chat_template_kwargs": {
+          "enable_thinking": false
+        },
+        "sampled_decision_token_share": 1.0
+      },
+      "model": {
+        "served": "/ritom/scratch/cscs/zhang/xw/outputs/merged/qwen3.5-9b_en_only_sft_v3_additional",
+        "base": "Qwen/Qwen3.5-9B",
+        "base_revision": "c202236235762e1c871ad0ccb60c8ee5ba337b9a",
+        "adapters": [
+          {
+            "path": "/ritom/scratch/cscs/zhang/xw/outputs/sft/qwen3.5-9b_en_only_sft_v3_additional",
+            "sha256": "d8d63526a43dab37a1fb41a7d7a3541f6a023c4fa2a19e9409e04da331e419ee"
+          }
+        ]
+      },
+      "software": {
+        "vllm": "0.31.0",
+        "torch": "2.13.0",
+        "transformers": "5.17.0"
+      },
+      "code": {
+        "commit": "570eb79e4c3de46a077030e7acb0b836450b6bab",
+        "uncommitted": []
+      },
+      "written": "2026-11-04T12:25:52+00:00"
+    }
+  }
+}

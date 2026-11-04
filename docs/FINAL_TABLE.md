@@ -250,11 +250,92 @@ the poster's conclusion; computed by `poster/latex/latex_data.py` (macros `PostR
 The poster states the two counts and that the operating point decides the verdict. It is a
 description of this table, with no new audit, and changes no decision above.
 
+## Quality at the common point (read 2026-11-04)
+
+The poster's agreement with the GPT-4o reference (78.8% -> 82.4%) was read at each arm's own
+hire rate, its headline 11.8% -> 1.8% at the common point; a reviewer asked for both at one
+cut. `scripts/common_point_quality.py` reads agreement, TPR (hire rate where the reference
+hires) and FPR (where it rejects) from the op-margin-v2 margins for the base model, SFT-v3 and
+every arm of `arms.csv`, each cut to the common hire count exactly as the final table cuts
+(`matched_flags`); its TPR agrees with this table's `tpr_common_pct` to 0.01 for every arm.
+Output: `reports/final/common_point_quality.csv`. Descriptive, no intervals.
+
+| Cut to 22.51% hire | Base | SFT-v3 |
+|---|---|---|
+| Agreement with the reference | 82.0% | 82.3% |
+| TPR | 56.7% | 57.2% |
+| FPR | 5.4% | 5.2% |
+
+So the own-rate gain in agreement is the hire rate moving (the base model's margins hire
+14.4%; its greedy audit 78.8% agreement is from generated decisions, which match the margin
+sign on 98.8% of prompts). At the same cut SFT-v3's reference quality is similar to the base
+model's, with the unstable share 11.8% -> 1.8%. Paired candidate-bootstrap intervals (1,000
+draws, seed 42; `common_point_quality_ci.csv`, read 2026-11-04): Base - SFT-v3 agreement
+-0.30 pp [-2.82, +2.18], TPR -0.45 pp [-7.61, +6.70]. The intervals do not exclude a 2 pp
+drop either way, so "similar" is the claim, not "held" or "equivalent"; both are against the
+GPT-4o reference labels, not hiring outcomes. Every post-SFT arm sits within -0.9 to +1.8 pp
+of SFT-v3's agreement and TPR at the common point (DAPO+decay D1 s43 the highest on both,
+GRPO-v3-all final the lowest); every arm's agreement interval against SFT-v3 holds 0.
+
+## Where DPO's unstable sets come from at 35% hire (read 2026-11-04)
+
+The curve shows DPO_V3_4880 about 3.5 pp above SFT-v3 at 35% hire. `scripts/rate_decomposition.py`
+cuts SFT-v3 and each DPO seed to the same hire count and splits the sets: unstable under both,
+fixed (unstable for SFT-v3 only) and broken (unstable for the arm only), tie bins weighted as
+`matched_flags` weights them. For the broken sets it reads the spread of the set's attributed
+variants (max - min of the snapped margins) and the distance of the set's mean margin from the
+cut. Outputs: `reports/final/rate_decomposition.csv` and `rate_decomposition_cells.csv` (the
+same by cue group and wording). GRPO+decay R4 and Distill are in the files for comparison.
+
+| DPO_V3_4880, three seeds | at 22.51% | at 35% |
+|---|---|---|
+| SFT-v3 unstable sets (of 2,700) | 49 | 52 |
+| DPO unstable sets | 27 / 41 / 61 | 119 / 174 / 142 |
+| fixed (SFT-v3 only) | 35 / 35 / 20 | 46 / 52 / 47 |
+| broken (DPO only) | 13 / 27 / 32 | 113 / 174 / 137 |
+| broken sets' variant spread, median, DPO (SFT-v3 on the same sets 1.0-1.1 / 0.4-0.9) | 25 / 21 / 18 logits | 0.4 / 0.3 / 0.5 |
+| broken sets' mean margin to the cut, median, DPO | 4.6 / 3.6 / 4.3 | 0.10 / 0.09 / 0.12 |
+| broken weight on SFT-v3's borderline pairs | 69% / 70% / 84% | 3% / 11% / 7% |
+
+Per seed, DPO's unstable count is SFT-v3's minus the repaired plus the new, so the curve's
+gap at 35% is (new - repaired) / 2,700. The broken sets spread across all three cue groups
+(gender 21-22% of the broken weight against 17% of sets, the largest excess).
+
+**Rank scale (added 2026-11-04 after a review).** The logit-scale columns above mislead: at a
+matched hire rate any monotone change of every margin (a shift, a scaling, a squeeze of one
+region) leaves the selection unchanged, so "DPO's margins are larger and cluster" explains
+nothing by itself, and 18-25 logits of spread is the same ordering as 2 logits if the whole
+scale is stretched. `rate_decomposition_ranks.csv` reads the same sets on the rank scale: each
+prompt's margin as its percentile among the arm's 31,050 prompts, a set's interval as max -
+min over its cue variants (pp of prompts), and the interval centre's distance from the cut
+percentile. Medians over the sets of each group, DPO_V3_4880 against SFT-v3, three seeds:
+
+| group, three seeds | sets | rank interval, SFT-v3 | rank interval, DPO | centre to cut, SFT-v3 | centre to cut, DPO |
+|---|---|---|---|---|---|
+| 35%: new (DPO only) | 113-174 | 2.1-2.3 pp | 6.5-7.5 pp | 7.8-43.9 pp | 1.5-2.2 pp |
+| 35%: repaired (SFT-v3 only) | 46-52 | 2.0-2.1 | 7.8-12.0 | 0.5 | 22.8-38.0 |
+| 35%: stable under both | 2,474-2,535 | 2.0 | 3.1-3.9 | 24.7-25.8 | 26.5-26.8 |
+| 22.51%: new | 13-32 | 1.9-2.4 | 1.7-2.0 | 2.0 | 0.4-0.5 |
+| 22.51%: repaired | 20-35 | 1.8-2.0 | 1.5-2.0 | 0.5-0.6 | 1.6-2.0 |
+
+So, on the scale that decides the selection: at 35% DPO both widens the sets' rank intervals
+(the stable sets 2.0 -> 3.1-3.9 pp, the sets it breaks 2.2 -> 6.5-7.5 pp: the cue variants are
+ordered further apart) and moves the sets it breaks next to its cut (1.5-2.2 pp away, from
+8-44 under SFT-v3), while the sets it repairs are moved 23-38 pp away from the cut. Both
+changes act together. At 22.51% the sets DPO breaks are not wider in rank than under SFT-v3
+(1.7-2.0 against 1.9-2.4 pp): their 18-25 logits of spread is the stretched logit scale, and
+what breaks them is their position, at the cut (0.4-0.5 pp) where SFT-v3 had them 2.0 pp away.
+This is a description of the ranking two checkpoints give the same prompts, read at two cuts;
+it says where the curve's reversal comes from, not why training ordered the prompts so, and
+the two cuts select different sets of one model rather than two mechanisms.
+
 ## Reproducing
 
 ```bash
 source scripts/cscs/env.sh
 OPENBLAS_NUM_THREADS=1 ARROW_NUM_THREADS=1 $PY scripts/cost_report.py   # reports/cost/, sacct on the login node
 OPENBLAS_NUM_THREADS=1 ARROW_NUM_THREADS=1 $PY scripts/final_table.py   # reports/final/, CPU, ~20 s
+OPENBLAS_NUM_THREADS=1 ARROW_NUM_THREADS=1 $PY scripts/common_point_quality.py   # reports/final/common_point_quality.csv
+OPENBLAS_NUM_THREADS=1 ARROW_NUM_THREADS=1 $PY scripts/rate_decomposition.py      # reports/final/rate_decomposition*.csv
 $PY -m pytest tests/test_cost.py -q
 ```
