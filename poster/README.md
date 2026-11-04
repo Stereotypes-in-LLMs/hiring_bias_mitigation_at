@@ -1,5 +1,19 @@
 # GTC 2027 poster
 
+## Current PDF variants
+
+The current layout uses Problem and benchmark, Experiment setup, Results and
+conclusion, then GH200 hardware and software. Compile from `poster/latex/`:
+
+- `pdflatex main.tex` twice: display PDF, top/bottom margins about 0.55 inch.
+- `pdflatex main-print.tex` twice: print PDF, preserving the 1-inch margins.
+
+Both are 43 × 24 inches. The same content, font sizes and figure proportions
+are used in both; only vertical positions change. The QR links to
+https://xinyangwuethz.github.io/hiring-audit-results/.
+
+The notes below describe earlier layouts.
+
 Two versions. `latex/main.tex` is the approved v4 layout (43 x 24 in, the official GTC 2027
 format), one self-contained file: `latex/latex_data.py` (shared venv) writes the measured values
 into its GENERATED DATA block and checks every run against `reports/reference_metrics.csv`.

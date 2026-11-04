@@ -15,7 +15,9 @@ Overlap controls match hire counts rather than transferring numeric thresholds.
 The parameter-budget section retains the original served-checkpoint evaluation
 basis; it does not substitute later HF merge diagnostics.
 
-Keep `dist/poster.pdf` synchronized with the poster's compiled PDF. Update the
+Keep `dist/poster.pdf` synchronized with `../latex/main.pdf` (compact display
+layout), and `dist/poster-print.pdf` with `../latex/main-print.pdf` (1-inch print
+margins). Both versions are 43 × 24 inches. Update the
 CSV snapshots and regenerate `results.js` together. GitHub Pages publishes the main branch root of
 https://github.com/XinyangWuEthz/hiring-audit-results.
 This directory is the research repository source snapshot. Copy dist contents

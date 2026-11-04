@@ -1,5 +1,6 @@
 % !TeX program = pdflatex
-% Editable research poster. 43 x 24 inches; content stays within a 1-inch border.
+% Editable research poster. 43 x 24 inches; display top/bottom margins ~0.55 inch.
+% Compile main-print.tex for the original 1-inch print margins.
 % Design coordinates 2064 x 1152, with 1 unit = 1.5 bp.
 % Regenerate measured macros with latex_data.py; figures are vector PDFs.
 \documentclass{article}
@@ -291,9 +292,17 @@ Gender / implicit,0.72,0.20,\textminus{}72\%
 \def\textrightarrow{\ensuremath{\rightarrow}}
 \def\textdownarrow{\ensuremath{\downarrow}}
 \def\textuparrow{\ensuremath{\uparrow}}
+% Redistribute vertical positions without stretching text or included figures.
+% The print wrapper retains the original placement and one-inch border.
+\ifdefined\PosterPrintMargins
+  \def\PosterYScale{1}\def\PosterYShift{0}
+\else
+  \def\PosterYScale{1.045}\def\PosterYShift{-23.76}
+\fi
 \null
 \begin{tikzpicture}[remember picture,overlay,x=1.5bp,y=-1.5bp]
 \begin{scope}[shift={(current page.north west)}]
+\begin{scope}[shift={(0,\PosterYShift)},yscale=\PosterYScale]
 
 % Title block. Author order and affiliations remain to be finalised.
 \Txt[align=center,text=ink]{48}{52}{1760}{49}{\bfseries\PosterTitle}
@@ -523,6 +532,7 @@ Gender / implicit,0.72,0.20,\textminus{}72\%
 \href{https://github.com/Stereotypes-in-LLMs/hiring_bias_mitigation_at}{Code: github.com/Stereotypes-in-LLMs/hiring\_bias\_mitigation\_at}\qquad
 \href{https://huggingface.co/datasets/Stereotypes-in-LLMs/hiring-bias-mitigation-v3}{Data: huggingface.co/datasets/Stereotypes-in-LLMs/hiring-bias-mitigation-v3}}
 
+\end{scope}
 \end{scope}
 \end{scope}
 \end{scope}
