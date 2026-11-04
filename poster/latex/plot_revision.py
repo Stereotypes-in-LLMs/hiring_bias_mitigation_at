@@ -81,9 +81,9 @@ def behaviour(preview_dir: Path | None):
     reference = {float(row["hire_rate_pct"]): float(row["unstable_pct"])
                  for row in curves if row["label"] == "SFT-v3"}
     assert len(reference) == 51
-    fig = plt.figure(figsize=(WIDTH, 5.8))
-    forest = fig.add_axes([.185, .215, .17, .625])
-    curve = fig.add_axes([.465, .215, .52, .625])
+    fig = plt.figure(figsize=(WIDTH, 5.0))
+    forest = fig.add_axes([.185, .305, .17, .555])
+    curve = fig.add_axes([.465, .305, .52, .555])
     forest.set_title("At 22.51% hire rate", loc="left", pad=16, fontsize=26)
     forest.axvline(0, color="#6E818A", lw=1.8, ls=(0, (3, 3)), zorder=1)
     forest.set_xlim(-1.85, 1.3)
@@ -122,8 +122,8 @@ def behaviour(preview_dir: Path | None):
                    markerfacecolor="white", clip_on=False, zorder=4+group)
         if label == "DPO":
             endpoint = float(mean_delta[-1])
-            curve.annotate(f"+{endpoint:.1f} pp\nat {x[-1]:.0f}% hire",
-                           xy=(x[-1], endpoint), xytext=(25.0, 3.0),
+            curve.annotate(f"DPO: +{endpoint:.1f} pp more\nunstable at {x[-1]:.0f}% hire",
+                           xy=(x[-1], endpoint), xytext=(18.6, 3.3),
                            ha="left", va="center", fontsize=24, fontweight="bold",
                            color=colour,
                            arrowprops={"arrowstyle": "->", "color": colour,
@@ -144,6 +144,9 @@ def behaviour(preview_dir: Path | None):
                  borderaxespad=0, fontsize=26, handlelength=1.7, columnspacing=.8,
                  handletextpad=.6)
     style(curve, ygrid=True)
+    fig.text(.012, .035, "Paired 95% CIs over candidates, seeds 42/43/44 top to bottom; 1 of 9 excludes zero. "
+             "Thick curves: seed means; thin: single seeds.", ha="left", va="bottom", fontsize=20,
+             color=MUTED)
     save(fig, "behaviour", preview_dir)
 
 

@@ -1,0 +1,5 @@
+contrast,pairs,candidates,base_mean_abs_effect,sft_mean_abs_effect,removed_pct,ci_low,ci_high,scope
+mil_combat_civ_impl,450,150,1.0381657,0.4988868,51.94536,45.338170337677,58.226823043823245,"all aligned pairs, not effect-selected patching subset"
+mil_combat_civ_expl,450,150,1.0087554,0.34503174,65.796295,59.277943992614745,71.65079975128174,"all aligned pairs, not effect-selected patching subset"
+rel_atheist_christian_impl,450,150,1.0466353,0.40930858,60.892914,55.856119537353514,65.76075191497803,"all aligned pairs, not effect-selected patching subset"
+gen_male_female_impl,450,150,0.28453407,0.21240957,25.348282,11.963836169242859,36.72856321334839,"all aligned pairs, not effect-selected patching subset"
