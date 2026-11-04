@@ -299,6 +299,7 @@ def main() -> None:
     dseeds = [table[lab] for lab in labels_of("Distill")]
     dpo_seeds = [table[lab] for lab in labels_of("DPO_V3_4880")]
     all_seeds = [table[lab] for n in post for lab in labels_of(n)]
+    post_runs = [r for lab, r in table.items() if lab != SFT_V3]
     raw = pd.read_parquet(RAW / f"{arms[SFT_V3]}.parquet",
                           columns=[*SET, "protected_attr", "candidate_id", "job_id"])
     att = raw[raw["condition"] != "attr_free"]
@@ -333,6 +334,14 @@ def main() -> None:
         "GRPOMatched": tm(recipes["GRPO+decay R4"]["delta_common_pp"]),
         # Seeds whose common-point interval lies below 0, of the nine post-SFT seeds.
         "CommonCIBelow": str(sum(float(s["ci_common_high"]) < 0 for s in all_seeds)),
+        # Own point against the common point over every audited post-SFT run in final_table.csv
+        # (one row per seed; docs/FINAL_TABLE.md): runs whose paired interval lies below 0 at
+        # each point, and runs whose point estimate changes sign between the two points.
+        "PostRuns": str(len(post_runs)),
+        "OwnBetterRuns": str(sum(float(r["ci_own_high"]) < 0 for r in post_runs)),
+        "CommonBetterRuns": str(sum(float(r["ci_common_high"]) < 0 for r in post_runs)),
+        "OwnCommonSignFlips": str(sum((float(r["delta_own_pp"]) < 0) != (float(r["delta_common_pp"]) < 0)
+                                      for r in post_runs)),
         # DPO at its own point, the seed that read as a result and its replicates.
         "DPOSeedsOwn": " / ".join(tm(s["delta_own_pp"]) for s in dpo_seeds),
         "DPOBestOwn": tm(min(float(s["delta_own_pp"]) for s in dpo_seeds)),
@@ -355,7 +364,7 @@ def main() -> None:
         "ScaleControl": "exactly 0" if zero else "not 0",
         "SFTTrainGPUh": f"{sft_train:.1f}",
         "BaseAgree": f"{quality['Base']:.1f}",
-        "SFTAgree": f"{quality['SFT-v3']:.1f}",
+        "SFTAgree": f"{quality['SFT']:.1f}",   # model_rows names the slot SFT
         # The take-home: Base moved to SFT-v3's hire rate against SFT-v3 (poster/base_compare.json,
         # operating_point_control.matched_comparison), and the three post-SFT means' span.
         "BaseAtSFT": f"{float(base_cmp['sft_v3']['base_unstable_pct']):.1f}",

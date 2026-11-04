@@ -91,6 +91,10 @@ vllm,vLLM,64.668,64.379,64.957
 \newcommand{\DPOMatched}{\textminus{}0.22}
 \newcommand{\GRPOMatched}{\textminus{}0.16}
 \newcommand{\CommonCIBelow}{1}
+\newcommand{\PostRuns}{36}
+\newcommand{\OwnBetterRuns}{6}
+\newcommand{\CommonBetterRuns}{1}
+\newcommand{\OwnCommonSignFlips}{8}
 \newcommand{\DPOSeedsOwn}{\textminus{}1.03 / \textminus{}0.09 / +0.20}
 \newcommand{\DPOBestOwn}{\textminus{}1.03}
 \newcommand{\AgreeDPO}{\textminus{}0.16}
@@ -371,7 +375,7 @@ Gender / implicit,0.72,0.20,\textminus{}72\%
 % Checkpoint rules: reports/final/arms.csv (declared before the audit; ckpt 525 is marked exploratory).
 \Txt[text=ink]{820}{412}{450}{12.7}{\bfseries The \NCandidates{} CVs and their jobs appear in no training set.}
 \Txt{820}{436}{450}{12.7}{Three seeds per added stage; paired 95\% CIs, bootstrap over candidates; hire rates matched by thresholding the margin; checkpoints fixed in advance.}
-\Txt[text=greenDark]{820}{486}{450}{12}{\bfseries New: behaviour, rate control and mechanism probes on one benchmark.}
+\Txt[text=greenDark]{820}{486}{450}{12}{\bfseries Contribution: rate-controlled, multi-seed evaluation of post-training gains, with mechanistic probes of selected checkpoints.}
 
 \Txt[text=greenDark]{1290}{199}{720}{16}{\bfseries Inside the model: activation patching [5]; caveats [4]}
 \Txt[text=ink]{1290}{230}{210}{15}{\bfseries Swap one activation}
@@ -414,19 +418,21 @@ Gender / implicit,0.72,0.20,\textminus{}72\%
 \begin{scope}[shift={(0,8)}]
 \Rect{48}{527}{1968}{365}{panel}
 \Section{48}{527}{1968}{24}{3. Results and conclusion}
-\Rect[draw=greenDark,line width=1bp]{64}{571}{384}{133}{greenPale}
+\Rect[draw=greenDark,line width=1bp]{64}{571}{384}{117}{greenPale}
 \Txt[text=greenDark]{74}{578}{364}{16}{\bfseries A. SFT removes most of the instability}
-\Txt{74}{599}{364}{13.3}{Unstable sets at \CommonHire\% hire, Base \textrightarrow{} SFT}
-\Txt[text=ink]{74}{614}{364}{34}{\bfseries \BaseAtSFT\% \textrightarrow{} \SFTOwn\%}
-\Txt{74}{654}{364}{13.3}{paired 95\% CI \SFTvsBase{} pp}
-\Txt[text=ink]{74}{674}{364}{14}{\bfseries GPT-4o agreement [7] at own rates: \BaseAgree\% \textrightarrow{} \SFTAgree\%}
-\Rect{64}{710}{384}{180}{greenPale}
-\Txt[text=greenDark]{74}{716}{364}{15}{\bfseries Conclusion}
+\Txt{74}{597}{364}{13.3}{Unstable sets at \CommonHire\% hire, Base \textrightarrow{} SFT}
+\Txt[text=ink]{74}{612}{364}{30}{\bfseries \BaseAtSFT\% \textrightarrow{} \SFTOwn\%}
+\Txt{74}{648}{364}{13.3}{paired 95\% CI \SFTvsBase{} pp}
+\Txt[text=ink]{74}{666}{364}{14}{\bfseries GPT-4o agreement [7] at own rates: \BaseAgree\% \textrightarrow{} \SFTAgree\%}
+\Rect{64}{694}{384}{196}{greenPale}
+\Txt[text=greenDark]{74}{700}{364}{15}{\bfseries Conclusion}
 % Overlap numbers: reports/seed_overlap/overlap.csv (seeds 43/44: DPO 0.26, GRPO 0.28, distill 0.45;
 % SFT-v3 moved to the same hire rates: 0.83, 0.92, 0.86). Hub: \HubBase -> \HubSFT on the 64 combat-implicit pairs.
-\Txt[text=ink]{74}{738}{364}{13.3}{\textbf{Further training} can improve or worsen consistency, depending on hire rate (DPO: \CurveDPOMax{} pp at \CurveDPOMaxAt\%).}
-\Txt[text=ink]{74}{784}{364}{13.3}{\textbf{Training reshuffles} which sets stay unstable: seeds share 26--45\%, threshold-moved SFT 83--92\%.}
-\Txt[text=ink]{74}{830}{364}{13.3}{\textbf{Inside:} same pathway after SFT; the candidate hub's effect falls 5\texttimes{} on the selected combat-implicit pairs.}
+% Own vs common point (final_table.csv via latex_data.py): \OwnBetterRuns of \PostRuns post-SFT runs
+% have the paired interval below 0 at their own hire rate, \CommonBetterRuns at the common point.
+\Txt[text=ink]{74}{722}{364}{12.7}{\textbf{Further training} can improve or worsen consistency, depending on hire rate: \OwnBetterRuns{} of \PostRuns{} post-SFT runs beat SFT at their own rate, \CommonBetterRuns{} at the common \CommonHire\%. Audit at the intended hire rate before deployment.}
+\Txt[text=ink]{74}{785}{364}{12.7}{\textbf{Seeds 43/44:} unstable sets overlap 26--45\% between seeds vs 83--92\% for SFT at the same rates; the contrast varies with seed pair and rate.}
+\Txt[text=ink]{74}{833}{364}{12.7}{\textbf{Inside:} cue-sensitive components stay detectable after SFT; the candidate hub's measured effect falls 5\texttimes{} on selected combat-implicit pairs.}
 
 \Txt[text=greenDark]{488}{569}{768}{15}{\bfseries B. Post-SFT effects depend on hire rate}
 \node[anchor=north west,inner sep=0pt] at (472,588)
@@ -434,7 +440,7 @@ Gender / implicit,0.72,0.20,\textminus{}72\%
 % Overlap of the unstable sets between two training seeds of one recipe, each at its own greedy
 % hire rate, against SFT-v3 moved to those two hire rates (reports/seed_overlap/overlap.csv).
 \Rect{488}{798}{768}{94}{greenPale}
-\Txt[text=ink]{496}{801}{300}{12.7}{\bfseries Jaccard, method vs SFT (threshold moved)}
+\Txt[text=ink]{496}{801}{300}{12.7}{\bfseries Jaccard, method vs SFT at the same hire rate}
 \Txt[text=ink]{800}{801}{220}{12.7}{\bfseries seeds 43/44, same hire rates}
 \Txt[text=ink]{1030}{801}{222}{12.7}{\bfseries with seed 42 (other rate)}
 \Txt{496}{822}{300}{12}{DPO}
@@ -474,7 +480,7 @@ Gender / implicit,0.72,0.20,\textminus{}72\%
 \Rect[draw=greenDark,line width=1.2bp]{1296}{742}{720}{56}{greenPale}
 \Txt[text=greenDark]{1310}{747}{690}{15}{\bfseries On all \NPairs{} pairs the gain is smaller}
 \Txt[text=ink]{1310}{769}{690}{14}{Gender / implicit: \GenderFullRemoval\% [95\% CI \GenderFullRemovalCI\%]; other three contrasts: \OtherFullRemoval\%.}
-\Txt{1310}{806}{690}{13.3}{One checkpoint per stage; 64 SFT-selected pairs per contrast (gender 45). Later stages keep SFT's component profile, r = 0.65--0.98. Full experimental controls and per-stage results: QR.}
+\Txt{1310}{806}{690}{13.3}{One checkpoint per stage; 64 SFT-selected pairs per contrast (gender 45). Post-SFT component-effect profiles correlate with SFT's, r = 0.65--0.98. Full experimental controls and per-stage results: QR.}
 \Txt[text=muted]{1310}{868}{690}{12.7}{Development benchmark: it guided which methods to continue. GPT-4o agreement is a reference proxy.}
 
 \begin{scope}[shift={(0,12)}]
@@ -503,15 +509,15 @@ Gender / implicit,0.72,0.20,\textminus{}72\%
 \Txt{548}{1010}{450}{13}{Generation: \AuditReqPerS{} req/s. Energy: NVML GPU counters.}
 \draw[rule,line width=1.3bp] (1016,937) -- (1016,1023);
 \Txt[text=ink]{1032}{931}{450}{16}{\bfseries Training: 1 \textrightarrow{} 4 GH200}
-\Txt[text=greenDark]{1032}{954}{450}{26}{\bfseries \texttimes\DDPTrainingSpeedup{} wall, \DDPTrainingCostDelta\% GPU-h}
-\Txt{1032}{992}{450}{13}{Training loop; start-up excluded.}
-\Txt{1032}{1010}{450}{13}{Whole step \texttimes\DDPEndToEndSpeedup{}, \DDPCostDelta\% GPU-h; fixed global batch \DDPBatch{}; \DDPSteps{} steps.}
+\Txt[text=greenDark]{1032}{954}{450}{26}{\bfseries \texttimes\DDPTrainingSpeedup{} wall, \DDPTrainingCostDelta\% active GPU\textperiodcentered h}
+\Txt{1032}{992}{450}{13}{Training loop, start-up excluded; the whole step includes it.}
+\Txt{1032}{1010}{450}{13}{Whole step \texttimes\DDPEndToEndSpeedup{}, \DDPCostDelta\% used GPU\textperiodcentered h; fixed global batch \DDPBatch{}; \DDPSteps{} steps.}
 \draw[rule,line width=1.3bp] (1500,937) -- (1500,1023);
 \Txt[text=ink]{1516}{931}{484}{16}{\bfseries Mechanistic audit, one GH200}
 \Txt[text=greenDark]{1516}{954}{484}{26}{\bfseries \PatchPeakGiB{} GiB peak \textperiodcentered{} \PatchStepMin{} min per pass}
 % 194 real patches per pair (\PatchRealPerPair, a constant); head checks \PatchVerifyPerPair.
 \Txt{1516}{992}{484}{13}{Median of \PatchRunsSixtyFour{} runs \texttimes{} 64 pairs; 194 patches + \PatchVerifyPerPair{} head checks per pair.}
-\Txt{1516}{1010}{484}{13}{No offload; peak = max of sampled peaks. Margin pass: \MarginsPeakGiB{} GiB, \MarginsStepMin{} min.}
+\Txt{1516}{1010}{484}{13}{No offload; peak = sampled max. Margin pass, \NPrompts{} prompts: \MarginsPeakGiB{} GiB, \MarginsStepMin{} min.}
 
 % -------------------------- COMPACT REFERENCES AND LINKS ---------------------
 \draw[greenDark,line width=1bp] (48,1036) -- (2016,1036);

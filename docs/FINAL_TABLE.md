@@ -233,6 +233,23 @@ beating SFT-v3.
 - Measured GPU-h counts the GPUs a step's processes ran on. The allocation billed is higher by
   the idle share.
 
+## Own point against the common point (read 2026-11-04)
+
+A count over the table's 36 post-SFT rows (one per seed, every audited arm after SFT-v3), for
+the poster's conclusion; computed by `poster/latex/latex_data.py` (macros `PostRuns`,
+`OwnBetterRuns`, `CommonBetterRuns`, `OwnCommonSignFlips`) and checked once by hand with pandas.
+
+- **Paired interval below 0 at the arm's own hire rate: 6 rows** (DPO_V3_4880 s42, GRPO-v3-all
+  ckpt 525, Distill s43, Distill on DPO s42, Distill on GRPO R4 s43, Distill two epochs s43).
+  **At the common 22.51%: 1 row** (DPO_V3_4880 s42, −0.81 [−1.56, −0.15]).
+- **8 rows change sign** between the two points. Kendall's τ between the two columns is 0.52
+  (0.26 over the 20 headline rows, where the counts are 5 and 1).
+- The largest own-point gain, Distill on DPO s42 at −1.50, reads −0.72 at the common point;
+  GRPO-v3-all ckpt 525 goes from −1.02 (own, 19.05% hire) to −0.18.
+
+The poster states the two counts and that the operating point decides the verdict. It is a
+description of this table, with no new audit, and changes no decision above.
+
 ## Reproducing
 
 ```bash
