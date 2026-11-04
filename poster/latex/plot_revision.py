@@ -169,7 +169,7 @@ def behaviour(preview_dir: Path | None):
     save(fig, "behaviour", preview_dir)
 
 
-def heldout(preview_dir: Path | None):
+def heldout(preview_dir: Path | None, *, wide_axes: bool = False):
     """The held-out check (docs/QUALIFICATION_CONTROL.md): every recipe seed against SFT-v3 on the
     300 RJDB dev triples, two measures side by side, better to the right on both. Left: the
     consistency gain, minus the change in unstable sets with the arm moved to SFT-v3's hire rate
@@ -181,8 +181,14 @@ def heldout(preview_dir: Path | None):
                  if row["variants"] == "attr_free"}
     # 27% more plotting height at the same poster width; keep all nine seed CIs.
     fig = plt.figure(figsize=(WIDTH, 5.5))
-    left = fig.add_axes([.185, .27, .34, .60])
-    right = fig.add_axes([.635, .27, .335, .60])
+    if wide_axes:
+        # Three-column poster: wrap method names and reduce the inter-panel gap.
+        # The data, seed spacing and font sizes are identical to the standard plot.
+        left = fig.add_axes([.145, .27, .39, .60])
+        right = fig.add_axes([.590, .27, .39, .60])
+    else:
+        left = fig.add_axes([.185, .27, .34, .60])
+        right = fig.add_axes([.635, .27, .335, .60])
     rows_y, labels = [], []
     y = 0
     for group, (label, prefix, _, colour, _line) in enumerate(METHODS):
@@ -214,6 +220,9 @@ def heldout(preview_dir: Path | None):
     right.set_xlim(-8.5, 3.5); right.set_xticks([-8, -6, -4, -2, 0, 2])
     # One label per method at its middle row; the seeds read top to bottom (caption).
     mids = [(top - rows_y[i + 1][0], rows_y[i][3]) for i in range(0, len(rows_y), 3)]
+    if wide_axes:
+        labels = {"GRPO + lr decay": "GRPO +\nlr decay", "Self-distillation": "Self-\ndistillation"}
+        mids = [(yy, labels.get(label, label)) for yy, label in mids]
     left.set_yticks([m[0] for m in mids], [m[1] for m in mids])
     left.tick_params(axis="y", length=0, pad=12)
     right.set_yticks([top - yy for yy, *_ in rows_y], ["" for _ in rows_y])
@@ -224,7 +233,7 @@ def heldout(preview_dir: Path | None):
     fig.text(.012, .020, "300 held-out CVs; seeds 42/43/44 top to bottom  |  "
              "Paired 95% CIs (pointwise); common hire rate 36.9%; SFT = 0.",
              ha="left", va="bottom", fontsize=22, color=MUTED)
-    save(fig, "heldout", preview_dir)
+    save(fig, "heldout-columns" if wide_axes else "heldout", preview_dir)
 
 
 def residual(preview_dir: Path | None):
@@ -290,7 +299,12 @@ def residual(preview_dir: Path | None):
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--preview-dir", type=Path)
+    parser.add_argument("--heldout-columns", action="store_true",
+                        help="Generate only the wider-axis held-out figure for main-columns.tex")
     args = parser.parse_args()
-    behaviour(args.preview_dir)
-    heldout(args.preview_dir)
-    residual(args.preview_dir)
+    if args.heldout_columns:
+        heldout(args.preview_dir, wide_axes=True)
+    else:
+        behaviour(args.preview_dir)
+        heldout(args.preview_dir)
+        residual(args.preview_dir)
