@@ -47,9 +47,9 @@
   "primary_ci_low_pp": -1.2207912457912458,
   "primary_ci_high_pp": 0.3805555555555555,
   "primary_conforms": true,
-  "primary_other_comparisons": null,
+  "primary_other_comparisons": "Qwen3.5-9B--en--sft--adapter--en_only_decision_distill_l15_20_r163_seed42",
   "raw_sha256": "6b40b58aa55ef992",
-  "code_commit": "0e2833c",
+  "code_commit": "a9c0418",
   "code_uncommitted": false,
-  "computed_at": "2026-10-27T11:33:33Z"
+  "computed_at": "2026-11-02T16:54:17Z"
 }
