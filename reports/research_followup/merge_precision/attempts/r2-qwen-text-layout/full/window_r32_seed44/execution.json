@@ -1,0 +1,9 @@
+{
+  "device": "cuda:0",
+  "git": "0373f1a9c50d732c16c03bdc07cbdf40d8b6eff7",
+  "gpu": "NVIDIA GH200 120GB",
+  "gpu_total_bytes": 102005473280,
+  "identity_sha256": "c09e880a3bc8b19d1c6b6a5c27bb887642fd3a5556c4191f653552f87dd8fd3d",
+  "job": "5241379",
+  "started_unix": 1793647558.018301
+}

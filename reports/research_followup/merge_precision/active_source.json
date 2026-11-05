@@ -1,11 +1,15 @@
 {
   "source_root": "/ritom/scratch/cscs/zhang/xw/hiring_bias_mitigation_at/reports/research_followup/merge_precision/attempts/r2-qwen-text-layout",
   "pilot_job": "5241355",
-  "state": "full_submitted",
+  "state": "complete",
   "previous_job": "5241337",
   "full_jobs": {
     "43": "5241378",
     "44": "5241379",
     "42": "5241383"
-  }
+  },
+  "aggregate": "/ritom/scratch/cscs/zhang/xw/hiring_bias_mitigation_at/reports/research_followup/merge_precision/attempts/r2-qwen-text-layout/aggregate",
+  "verification": "/ritom/scratch/cscs/zhang/xw/hiring_bias_mitigation_at/reports/research_followup/merge_precision/attempts/r2-qwen-text-layout/full_verification.json",
+  "cost_summary": "/ritom/scratch/cscs/zhang/xw/hiring_bias_mitigation_at/reports/research_followup/merge_precision/attempts/r2-qwen-text-layout/cost_summary.json",
+  "completed_unix": 1793651445.0602176
 }
