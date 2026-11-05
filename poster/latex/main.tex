@@ -533,7 +533,7 @@ Gender / implicit,0.72,0.20,\textminus{}72\%
 \Rect[draw=greenDark,line width=1.2bp]{1168}{803}{832}{40}{greenPale}
 \Txt[text=greenDark]{1182}{807}{804}{15}{\bfseries On all \NPairs{} pairs the gain is smaller}
 \Txt{1182}{826}{804}{13.3}{Gender / implicit: \GenderFullRemoval\% [95\% CI \GenderFullRemovalCI\%]; other three contrasts: \OtherFullRemoval\%.}
-\Txt{1168}{850}{832}{12.7}{\textbf{Later stages keep SFT's component profile:} r = 0.65--0.98. Only layers 15--20 updates kept: \WindowKept{} pp instability vs full [12]. Controls: QR.}
+\Txt{1168}{850}{832}{12.7}{On selected pairs, \textbf{later-stage profiles correlate with SFT's} (r = 0.65--0.98; one checkpoint/stage). L15--20 only: \WindowKept{} pp instability vs full [12].}
 
 
 % -------------------------- SECTION 4: CONCLUSION AND GH200 --------------
@@ -545,13 +545,13 @@ Gender / implicit,0.72,0.20,\textminus{}72\%
 \Txt[text=greenDark]{64}{921.0}{14}{14}{\bfseries\textbullet}
 \Txt{82}{921.0}{592}{14}{\textbf{SFT is the gain that holds.} Unstable sets fall \mbox{\BaseAtSFT\% \textrightarrow{} \SFTOwn\%} on development and \mbox{\QualBaseUnstable\% \textrightarrow{} \QualSFTUnstable\%} on \QualTriples{} unseen CVs.}
 \Txt[text=greenDark]{64}{958.2}{14}{14}{\bfseries\textbullet}
-\Txt{82}{958.2}{592}{14}{\textbf{Decision quality holds.} GPT-4o agreement \mbox{\BaseAgreeCommon{} \textrightarrow{} \SFTAgreeCommon\%}; matched-over-weakened CV preference \mbox{\QualDirBase{} \textrightarrow{} \QualDirSFT\%}.}
+\Txt{82}{958.2}{592}{14}{\textbf{Similar reference agreement; high qualification preference.} Both stay close to Base after SFT; the preference interval does not exclude a 2 pp drop.}
 \Txt[text=greenDark]{712}{921.0}{14}{14}{\bfseries\textbullet}
-\Txt{730}{921.0}{592}{14}{\textbf{Further training adds no detected gain.} DPO, GRPO and self-distillation match SFT on held-out CVs; DPO's development drop at 35\% hire did not replicate.}
+\Txt{730}{921.0}{592}{14}{\textbf{Further training: no added consistency gain detected.} All nine held-out consistency-gain intervals include zero; DPO's development drop at 35\% hire did not replicate.}
 \Txt[text=greenDark]{712}{958.2}{14}{14}{\bfseries\textbullet}
-\Txt{730}{958.2}{592}{14}{\textbf{Some DPO/GRPO seeds weigh qualifications less.} Preference \QualDPODir\% (DPO) and \QualGRPODir\% (GRPO) vs SFT's \QualDirSFT\%; self-distillation keeps it.}
+\Txt{730}{958.2}{592}{14}{\textbf{Some DPO/GRPO runs lower qualification preference.} Self-distillation's point estimates sit slightly above SFT.}
 \Txt[text=greenDark]{1376}{921.0}{14}{14}{\bfseries\textbullet}
-\Txt{1394}{921.0}{592}{14}{\textbf{Inside, SFT weakens the cue's route.} On selected pairs the candidate hub L15.H11 carries \mbox{\HubBase{} \textrightarrow{} \HubSFT{}} logits; on all \NPairs{} pairs the gain is smaller.}
+\Txt{1394}{921.0}{592}{14}{\textbf{SFT reduces measured cue effects.} Clear on selected pairs and at the candidate hub; smaller on all \NPairs{} pairs.}
 \Txt[text=greenDark]{1376}{958.2}{14}{14}{\bfseries\textbullet}
 \Txt{1394}{958.2}{592}{14}{\textbf{Limits.} Consistency alone does not establish correctness; GPT-4o judgements [7] are a cue-free guardrail; development guided tuning, held-out was frozen.}
 \draw[rule,line width=1.3bp] (64,993) -- (2000,993);
