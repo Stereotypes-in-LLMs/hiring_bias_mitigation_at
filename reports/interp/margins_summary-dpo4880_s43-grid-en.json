@@ -1,0 +1,17 @@
+{
+  "spec": "dpo4880_s43",
+  "dataset": "grid-en",
+  "rows": 31050,
+  "hire_rate_pct": 21.394524959742352,
+  "audit": {
+    "audit_run": "Qwen3.5-9B--en--dpo--adapter--en_only_dpo_v3_4880_seed43_step305",
+    "available": true,
+    "rows_matched": 31050,
+    "agreement_pct": 99.74235104669887,
+    "hire_rate_hf_pct": 21.394524959742352,
+    "hire_rate_audit_pct": 21.607085346215783,
+    "unstable_sets_hf_pct": 3.0,
+    "unstable_sets_audit_pct": 3.0,
+    "margin_bf16_minus_fp32_abs_mean": 0.06248068809509277
+  }
+}
