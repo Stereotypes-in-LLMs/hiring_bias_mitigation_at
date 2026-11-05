@@ -151,6 +151,18 @@ def compute_data(root: Path, output_root: Path | None = None) -> tuple[dict, dic
         "ProjectGPUh": f"{stage.loc['total allocated', 'gpu_h']:.0f}",
         "ProjectKWh": f"{stage['gpu_energy_kwh'].sum():.0f}",
     }
+    # Allocated GPU-h by cost stage (reports/cost/by_stage.csv); idle = allocated but unused.
+    idle = stage[stage.index.str.startswith("idle")]
+    if len(idle) != 1:
+        raise ValueError("Expected one idle row in by_stage.csv")
+    findings.update({
+        "CostTrainGPUh": f"{stage.loc['train', 'gpu_h']:.0f}",
+        "CostDataGPUh": f"{stage.loc['datagen', 'gpu_h']:.0f}",
+        "CostEvalGPUh": f"{stage.loc['eval', 'gpu_h']:.0f}",
+        "CostPatchGPUh": f"{stage.loc['patching', 'gpu_h']:.0f}",
+        "CostOtherGPUh": f"{stage.loc['other', 'gpu_h']:.0f}",
+        "CostIdleGPUh": f"{idle['gpu_h'].iloc[0]:.0f}",
+    })
 
     cohort = patch_cost_cohort(steps, root, output_root)
     sixty_four = cohort[cohort["actual_pairs"] == 64]

@@ -19,6 +19,8 @@ ROOT = Path(__file__).resolve().parents[2]
 OUT = Path(__file__).resolve().parent / "figures"
 WIDTH = 19.375
 INK, MUTED, GRID = "#203C4A", "#526873", "#DCE4E7"
+# One colour per model across the poster (main.tex): Base grey, SFT green, further training ink.
+SFT_GREEN = "#426F20"
 METHODS = (
     ("DPO", "DPO_V3_4880", "dpo4880", "#203C4A", "-"),
     ("GRPO + lr decay", "GRPO+decay R4", "grpo_r4", "#708087", (0, (5, 2.5))),
@@ -195,8 +197,8 @@ def heldout(preview_dir: Path | None, *, wide_axes: bool = False):
         for seed in (42, 43, 44):
             key = f"{prefix} s{seed}"
             assert key in summary and key in direction, key
-            # A darker neutral remains distinct without adding another hue.
-            heldout_colour = "#5F737C" if prefix == "GRPO+decay R4" else colour
+            # Every further-training run in ink; the method is read from the row label.
+            heldout_colour = INK
             rows_y.append((y, key, heldout_colour, label if seed == 42 else "", seed))
             y += 1
         y += .6
@@ -212,7 +214,7 @@ def heldout(preview_dir: Path | None, *, wide_axes: bool = False):
             ax.errorbar(point, top - yy, xerr=[[point - lo], [hi - point]], color=colour, lw=3.2,
                         capsize=5, capthick=2.2, fmt="o", markersize=11, mfc="white", mec=colour,
                         mew=2.5, zorder=3)
-        ax.axvline(0, color="#6E818A", lw=1.8, ls=(0, (3, 3)), zorder=1)
+        ax.axvline(0, color=SFT_GREEN, lw=2.6, ls=(0, (4, 3)), zorder=1)  # SFT = 0
         ax.set_ylim(-0.2, top + 0.4)
         ax.set_title(title, loc="left", pad=14, fontsize=26)
         style(ax)
@@ -231,7 +233,7 @@ def heldout(preview_dir: Path | None, *, wide_axes: bool = False):
     right.set_xlabel("\u0394 matched-CV preference (better \u2192)", labelpad=8, fontsize=24)
     # The validation's cost: docs/QUALIFICATION_CONTROL.md ledger, ten evaluate_arm jobs, allocated GPU-h.
     fig.text(.012, .020, "300 held-out CVs; seeds 42/43/44 top to bottom  |  "
-             "Paired 95% CIs (pointwise); common hire rate 36.9%; SFT = 0.",
+             "Paired 95% CIs (pointwise); common hire rate 36.9%; green line: SFT.",
              ha="left", va="bottom", fontsize=22, color=MUTED)
     save(fig, "heldout-columns" if wide_axes else "heldout", preview_dir)
 

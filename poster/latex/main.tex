@@ -67,12 +67,6 @@ Self-distillation,dSFT,43,-0.407,-1.0,0.209,-0.285,\textminus{}0.285
 Self-distillation,dSFT,44,-0.328,-1.038,0.339,-0.285,\textminus{}0.285
 }\SeedData
 
-\pgfplotstableread[col sep=comma]{
-key,label,seconds,lo,hi
-hf8,HF batch 8,1090.938,1064.822,1117.053
-hf32,HF batch 32,469.87,460.062,479.677
-vllm,vLLM,64.668,64.379,64.957
-}\AuditBenchData
 
 \newcommand{\NPairs}{450}
 \newcommand{\NCandidates}{150}
@@ -225,6 +219,33 @@ vllm,vLLM,64.668,64.379,64.957
 \newcommand{\CaseUnstableTotal}{136}
 \newcommand{\CaseStableSFT}{129}
 \newcommand{\CaseStableDistill}{130}
+\newcommand{\NPatchContrasts}{4}
+\newcommand{\PatchEvalsPerPair}{280--292}
+\newcommand{\PatchRealPerPair}{194--194}
+\newcommand{\PatchVerifyPerPair}{86--98}
+\newcommand{\AtPHeads}{896}
+\newcommand{\AgreeHFvLLM}{99.6--99.8}
+\newcommand{\BackendUnstableMax}{0.22}
+\newcommand{\BackendDeltaShift}{0.33}
+\newcommand{\CurveDPOFrom}{31}
+\newcommand{\CurveDPOMax}{+3.5}
+\newcommand{\CurveDPOMaxAt}{35}
+\newcommand{\CurveGRPOMax}{+1.0}
+\newcommand{\CurveDistillLo}{\textminus{}0.8}
+\newcommand{\CurveDistillHi}{+0.4}
+\newcommand{\GenderFullRemoval}{25}
+\newcommand{\GenderFullRemovalCI}{12--37}
+\newcommand{\OtherFullRemoval}{52--66}
+\newcommand{\DPOLateTested}{46}
+\newcommand{\DPOLateRealEffect}{0.445}
+
+\pgfplotstableread[col sep=comma]{
+key,label,seconds,lo,hi
+hf8,HF batch 8,1090.938,1064.822,1117.053
+hf32,HF batch 32,469.87,460.062,479.677
+vllm,vLLM,64.668,64.379,64.957
+}\AuditBenchData
+
 \newcommand{\AuditWallS}{793}
 \newcommand{\AuditGenS}{680}
 \newcommand{\AuditReqPerS}{45.65}
@@ -232,18 +253,24 @@ vllm,vLLM,64.668,64.379,64.957
 \newcommand{\FullAuditPrompts}{31,050}
 \newcommand{\FullAuditRepeats}{4}
 \newcommand{\PrefixSpeedup}{1.10}
-\newcommand{\ProjectGPUh}{552}
-\newcommand{\ProjectKWh}{144}
-\newcommand{\PatchRunsSixtyFour}{22}
+\newcommand{\ProjectGPUh}{601}
+\newcommand{\ProjectKWh}{156}
+\newcommand{\CostTrainGPUh}{369}
+\newcommand{\CostDataGPUh}{58}
+\newcommand{\CostEvalGPUh}{80}
+\newcommand{\CostPatchGPUh}{24}
+\newcommand{\CostOtherGPUh}{2}
+\newcommand{\CostIdleGPUh}{69}
+\newcommand{\PatchRunsSixtyFour}{38}
 \newcommand{\PatchStepMin}{20}
 \newcommand{\PatchStepGPUh}{0.33}
-\newcommand{\PatchPeakGiB}{42}
+\newcommand{\PatchPeakGiB}{44}
 \newcommand{\PatchStepMinLow}{12.7}
 \newcommand{\PatchStepMinHigh}{21.7}
-\newcommand{\PatchStepsOK}{27}
-\newcommand{\MarginsStepMin}{32}
+\newcommand{\PatchStepsOK}{49}
+\newcommand{\MarginsStepMin}{30}
 \newcommand{\MarginsPeakGiB}{87}
-\newcommand{\PatchTotalGPUh}{14.4}
+\newcommand{\PatchTotalGPUh}{23.6}
 \newcommand{\AuditBenchPrompts}{3,105}
 \newcommand{\AuditBenchRepeats}{2}
 \newcommand{\AuditSpeedSmall}{16.9}
@@ -276,25 +303,6 @@ vllm,vLLM,64.668,64.379,64.957
 \newcommand{\DDPRepeatLateS}{50.1}
 \newcommand{\DDPFourEarlyS}{14.0}
 \newcommand{\DDPFourLateS}{13.7}
-\newcommand{\NPatchContrasts}{4}
-\newcommand{\PatchEvalsPerPair}{280--292}
-\newcommand{\PatchRealPerPair}{194--194}
-\newcommand{\PatchVerifyPerPair}{86--98}
-\newcommand{\AtPHeads}{896}
-\newcommand{\AgreeHFvLLM}{99.6--99.8}
-\newcommand{\BackendUnstableMax}{0.22}
-\newcommand{\BackendDeltaShift}{0.33}
-\newcommand{\CurveDPOFrom}{31}
-\newcommand{\CurveDPOMax}{+3.5}
-\newcommand{\CurveDPOMaxAt}{35}
-\newcommand{\CurveGRPOMax}{+1.0}
-\newcommand{\CurveDistillLo}{\textminus{}0.8}
-\newcommand{\CurveDistillHi}{+0.4}
-\newcommand{\GenderFullRemoval}{25}
-\newcommand{\GenderFullRemovalCI}{12--37}
-\newcommand{\OtherFullRemoval}{52--66}
-\newcommand{\DPOLateTested}{46}
-\newcommand{\DPOLateRealEffect}{0.445}
 % END GENERATED DATA
 \input{window_data.tex}
 
@@ -307,7 +315,7 @@ Religion / implicit,1.32,0.52,\textminus{}61\%
 Gender / implicit,0.72,0.20,\textminus{}72\%
 }\MechData
 \newcommand{\PosterTitle}{Same CV, Different Identity, Different Decision?}
-\newcommand{\PosterSubtitle}{What SFT fixes in LLM CV screening, what further training adds, and what changes inside the model}
+\newcommand{\PosterSubtitle}{SFT on cue-free reference decisions makes LLM CV screening far more consistent on unseen CVs; further training adds no detected gain}
 % Authors and affiliations: replace the placeholder before submission.
 % Hardware line (section 5): 96 GB HBM3 per GH200, from the Alps node specification.
 \newcommand{\PosterAuthors}{[Author names] \quad\textperiodcentered\quad [Affiliations]}
@@ -389,22 +397,23 @@ Gender / implicit,0.72,0.20,\textminus{}72\%
 \Rect{48}{155}{456}{717}{panel}
 \Rect{528}{155}{600}{717}{panel}
 \Rect{1152}{155}{864}{717}{panel}
-\Section{48}{155}{456}{24}{1. Problem and benchmark}
-\Section{528}{155}{600}{24}{2. Experiment setup}
+\Section{48}{155}{456}{24}{1. Problem and measurement}
+\Section{528}{155}{600}{24}{2. Training and mechanism}
 \Section{1152}{155}{864}{24}{3. Results}
 
-% -------------------------- COLUMN 1: PROBLEM AND BENCHMARK -----------------
+% -------------------------- COLUMN 1: PROBLEM AND MEASUREMENT ---------------
 \Txt[text=ink]{64}{207}{424}{17}{\bfseries An LLM that screens CVs should not change its answer because of who the candidate is.}
 \Txt{64}{256}{424}{14.5}{We audit identity-cue sensitivity in hiring decisions [6, 11]. What changes after SFT, in decisions and inside the model?}
 \Txt[text=ink]{64}{303}{424}{14.5}{\bfseries \NCandidates{} CVs; 3 jobs per CV\\\NPairs{} pairs across 171 distinct jobs}
 \Txt{64}{345}{424}{14.5}{Military status, religion and gender; explicit or implicit cues.\\\textbf{\NSets{} sets; \NPrompts{} prompts.}}
 \Txt{64}{387}{424}{14}{\textbf{Set}: one CV--job pair and cue style, varying one attribute. \textbf{Unstable}: both hire and reject occur.}
-\Txt{64}{430}{424}{14}{\textbf{Agreement}: match GPT-4o's cue-free decision [7]. CVs: anonymised Djinni profiles [8].}
-\Txt{64}{476}{424}{13.3}{\textbf{Qualification preference}: share of pairs where the matched CV scores above its weakened counterpart.}
-\Txt[text=ink]{64}{520}{424}{13.3}{\bfseries The \NCandidates{} CVs and their jobs appear in no training set; \QualTriples{} RJDB CVs were reserved for a frozen final evaluation.}
+\Txt{64}{430}{424}{14}{\textbf{Matched hire rate}: models are compared at the same share of hires, set by moving each model's decision threshold.}
+\Txt{64}{473}{424}{14}{\textbf{Agreement}: match GPT-4o's cue-free decision [7]. CVs: anonymised Djinni profiles [8].}
+\Txt{64}{516}{424}{13.3}{\textbf{Qualification preference}: share of pairs where the matched CV scores above its weakened counterpart.}
+\Txt[text=ink]{64}{558}{424}{13.3}{\bfseries The \NCandidates{} CVs and their jobs appear in no training set; \QualTriples{} RJDB CVs were reserved for a frozen final evaluation.}
 
 % One measured CV/job pair; same visual encoding and facts as the current layout.
-\begin{scope}[shift={(0,-20)}]
+\begin{scope}[shift={(0,10)}]
 \NodeBox{64}{591}{200}{48}{ink}{white}{14}{Same CV\\\CaseYears{} years in sales}
 \NodeBox{280}{591}{208}{48}{ink}{white}{14}{\CaseJob{}\\3+ years required}
 \draw[ink,line width=1.8bp] (164,639) -- (164,649) -- (384,649) -- (384,639);
@@ -413,40 +422,47 @@ Gender / implicit,0.72,0.20,\textminus{}72\%
 \Arrow[ink]{260}{658}{260}{669}
 \Arrow[ink]{416}{658}{416}{669}
 \Txt[text=ink]{64}{677}{110}{14}{\bfseries Identity\\cue}
-\NodeBox{190}{669}{140}{38}{greenDark}{greenPale}{14}{female\\she / her}
-\NodeBox{344}{669}{144}{38}{greenDark}{greenPale}{14}{male\\he / him}
+\NodeBox{190}{669}{140}{38}{ink}{white}{14}{female\\she / her}
+\NodeBox{344}{669}{144}{38}{ink}{white}{14}{male\\he / him}
 \draw[rule,line width=1.2bp] (64,713) -- (488,713);
-\Txt[text=ink]{64}{725}{110}{14.5}{\bfseries Base}
-\NodeBox{190}{719}{140}{30}{greenDark}{greenPale}{15}{Hire}
-\NodeBox{344}{719}{144}{30}{ink}{white}{15}{Reject}
-\Txt[text=ink]{64}{765}{110}{14.5}{\bfseries SFT}
-\NodeBox{190}{759}{140}{30}{greenDark}{greenPale}{15}{Hire}
-\NodeBox{344}{759}{144}{30}{greenDark}{greenPale}{15}{Hire}
+\Txt[text=ink]{64}{719}{120}{14.5}{\bfseries Base}
+\Txt[text=muted]{64}{737}{120}{13.3}{unstable set}
+\NodeBox{190}{719}{140}{30}{ink}{white}{15}{Hire}
+\NodeBox{344}{719}{144}{30}{white}{ink}{15}{Reject}
+\Txt[text=greenDark]{64}{759}{120}{14.5}{\bfseries SFT}
+\Txt[text=muted]{64}{777}{120}{13.3}{stable set}
+\NodeBox{190}{759}{140}{30}{ink}{white}{15}{Hire}
+\NodeBox{344}{759}{144}{30}{ink}{white}{15}{Hire}
 \pgfmathtruncatemacro{\CaseBaseHires}{\CaseVariants-\CaseBaseRejects}
-\Txt[text=ink]{64}{804}{424}{14.5}{\bfseries All \CaseVariants{} gender-cue variants}
+\Txt[text=ink]{64}{804}{424}{14.5}{\bfseries All \CaseVariants{} gender-cue variants of this pair, greedy}
 \Txt{64}{830}{220}{14}{\textbf{Base:} \CaseBaseHires{} hire / \CaseBaseRejects{} reject}
 \Txt[text=greenDark]{292}{830}{196}{14}{\textbf{SFT:} \CaseVariants{} hire / 0 reject}
-\Txt[text=muted]{64}{858}{424}{13.3}{One measured pair; greedy decoding.}
 \end{scope}
 
-% -------------------------- COLUMN 2: EXPERIMENT SETUP -----------------------
+% -------------------------- COLUMN 2: TRAINING AND MECHANISM -----------------
 \Txt[text=greenDark]{544}{207}{568}{16}{\bfseries Training stages: Qwen3.5-9B, LoRA rank 32 [1]}
-\NodeBox{548}{244}{70}{36}{ink}{white}{14}{Base}
+\NodeBox{548}{244}{70}{36}{ink}{rule}{14}{Base}
 \Arrow[ink]{622}{262}{640}{262}
 \NodeBox{644}{244}{110}{36}{greenDark}{greenPale}{14}{SFT}
-\Txt{772}{246}{340}{14}{\RelSFT{} cue-free reference decisions, one epoch; parent of all later stages.}
+\draw[greenDark,line width=1.6bp] (644,244) rectangle ++(110,36);
+\Txt{772}{246}{340}{14}{\RelSFT{} cue-free reference decisions, one epoch; one reference run, parent of every later stage.}
 \draw[gray,line width=1.8bp] (699,280) -- (699,292) -- (628,292) -- (628,424);
 \foreach \yy in {320,372,424}{\draw[gray,line width=1.8bp] (628,\yy) -- (644,\yy);}
 \NodeBox{644}{302}{110}{36}{ink}{white}{14}{DPO [2]}
+\draw[ink,line width=1.6bp] (644,302) rectangle ++(110,36);
 \NodeBox{644}{354}{110}{36}{ink}{white}{14}{GRPO [3]}
+\draw[ink,line width=1.6bp] (644,354) rectangle ++(110,36);
 \NodeBox{644}{406}{110}{36}{ink}{white}{14}{Self-distill.}
+\draw[ink,line width=1.6bp] (644,406) rectangle ++(110,36);
 \Txt{772}{304}{340}{14}{\RelDPO{} pairs: teacher-written chosen vs SFT-sampled rejected.}
 \Txt{772}{356}{340}{14}{4,154 prompts; reward: agree with the cue-free reference.}
 \Txt{772}{408}{340}{14}{Match the frozen cue-free SFT teacher's decision probabilities.}
-\Txt{544}{462}{568}{14}{Three seeds per stage; paired 95\% candidate-bootstrap CIs. Matched hire rates; checkpoints fixed before the held-out evaluation.}
+\Rect[draw=rule,line width=1.2bp]{544}{456}{568}{58.3}{white}
+\Txt{550}{461}{556}{14}{\textbf{Same audit for every model:} \NCandidates{} development CVs guide choices; \QualTriples{} held-out CVs are the frozen final test. Matched hire rates; paired 95\% CIs over candidates. SFT: one reference run; later stages: three seeds each, checkpoints fixed in advance.}
 
 % Marta's activation-patching diagram: repositioned, no change to its meaning.
-\Txt[text=greenDark]{544}{514}{568}{16}{\bfseries Inside the model: activation patching [5]; caveats [4]}
+\Txt[text=greenDark]{544}{526}{568}{16}{\bfseries Inside the model: does SFT's gain show up where the cue acts?}
+\begin{scope}[shift={(0,12)}]
 \Txt[text=ink]{544}{550}{160}{15}{\bfseries Swap one activation}
 \Txt[text=ink]{720}{550}{392}{15}{\bfseries Cue-sensitive components in the Base model}
 \NodeBox{548}{588}{64}{28}{ink}{white}{13.3}{Cue A}
@@ -481,25 +497,34 @@ Gender / implicit,0.72,0.20,\textminus{}72\%
   \draw[gray,line width=1.5bp] (\xx,733) -- (\xx,741);
   \Txt[align=center]{\xx-15}{747}{30}{13.3}{\L}}
 \Txt{720}{731}{50}{13.3}{layer}
-\Txt{544}{797}{568}{14}{Run the pair with cue A and with cue B, swap one internal activation, and measure how much of the decision difference disappears. Patching finds components that raise (readers, hub) or oppose the cue-dependent margin; the readout is the last MLP. Dashed arrows: a hypothesized flow. The hub is the strongest of 33--40 tested heads.}
+\end{scope}
+\Txt{544}{794}{568}{14}{Activation patching [5]: run the pair with cue A and cue B, swap one internal activation, and measure how much of the decision difference disappears. Dashed arrows: a hypothesized flow [4]. Training only layers 15--20 does not reproduce SFT's gain (\mbox{\WindowKept{} pp} instability vs full adapter [12]), so the located components are not a training recipe.}
 
 % -------------------------- COLUMN 3: RESULTS -------------------------------
 % A/B side by side. All measured values are shared with the existing poster.
 \Rect[draw=greenDark,line width=1bp]{1168}{202}{408}{140}{greenPale}
 \Rect[draw=greenDark,line width=1bp]{1592}{202}{408}{140}{greenPale}
-\Txt[text=greenDark]{1178}{210}{388}{15}{\bfseries A. Development audit, \NCandidates{} CVs}
+\Txt[text=greenDark]{1178}{210}{388}{15}{\bfseries A. Development: SFT cuts unstable sets}
+\Txt[text=ink]{1178}{232}{48}{14}{\bfseries Base}
+\Rect{1226}{235}{\BaseAtSFT*10}{13}{gray}
+\Txt[text=ink]{\BaseAtSFT*10+1232}{230}{80}{16}{\bfseries\BaseAtSFT\%}
+\Txt[text=greenDark]{1178}{253}{48}{14}{\bfseries SFT}
+\Rect{1226}{256}{\SFTOwn*10}{13}{greenDark}
+\Txt[text=greenDark]{\SFTOwn*10+1232}{251}{80}{16}{\bfseries\SFTOwn\%}
+\Txt{1178}{276}{388}{12.7}{Unstable sets at matched \CommonHire\% hire; \NCandidates{} CVs, \NSets{} sets.\\Paired difference \SFTvsBase{} pp.}
+\Txt{1178}{308.2}{388}{12.7}{\textbf{GPT-4o agreement [7]: \BaseAgreeCommon{} \textrightarrow{} \SFTAgreeCommon\%}, CI \BaseAgreeCommonCI{} pp.}
 \Txt[text=greenDark]{1602}{210}{388}{15}{\bfseries B. Held-out: SFT's gain replicates}
-\Txt[text=ink]{1178}{234}{388}{30}{\bfseries \BaseAtSFT\% \textrightarrow{} \SFTOwn\%}
-\Txt[text=ink]{1602}{234}{388}{30}{\bfseries \QualBaseUnstable\% \textrightarrow{} \QualSFTUnstable\%}
-\Txt{1178}{269}{388}{12.7}{Unstable sets; matched \CommonHire\% hire, Base \textrightarrow{} SFT}
-\Txt{1602}{269}{388}{12.7}{\QualTriples{} unseen RJDB CVs [13]; unstable sets, Base \textrightarrow{} SFT}
-\Txt{1178}{286}{388}{12.7}{Paired 95\% CI \SFTvsBase{} pp}
-\Txt{1602}{286}{388}{12.7}{\QualCommonHire\% matched hire; paired 95\% CI \QualSFTvsBase{} pp}
-\Txt{1178}{306}{388}{12.7}{\textbf{GPT-4o agreement [7]: \BaseAgreeCommon{} \textrightarrow{} \SFTAgreeCommon\%}\\CI \BaseAgreeCommonCI{} pp; TPR \BaseTPRCommon{} \textrightarrow{} \SFTTPRCommon\%}
-\Txt{1602}{306}{388}{12.7}{\textbf{Matched-over-weakened preference: \QualDirBase\% \textrightarrow{} \QualDirSFT\%}\\\QualDirDiff{} pp}
+\Txt[text=ink]{1602}{232}{48}{14}{\bfseries Base}
+\Rect{1650}{235}{\QualBaseUnstable*10}{13}{gray}
+\Txt[text=ink]{\QualBaseUnstable*10+1656}{230}{80}{16}{\bfseries\QualBaseUnstable\%}
+\Txt[text=greenDark]{1602}{253}{48}{14}{\bfseries SFT}
+\Rect{1650}{256}{\QualSFTUnstable*10}{13}{greenDark}
+\Txt[text=greenDark]{\QualSFTUnstable*10+1656}{251}{80}{16}{\bfseries\QualSFTUnstable\%}
+\Txt{1602}{276}{388}{12.7}{Unstable sets at matched \QualCommonHire\% hire; \QualTriples{} unseen RJDB CVs [13].\\Paired difference \QualSFTvsBase{} pp.}
+\Txt{1602}{308.2}{388}{12.7}{\textbf{Qualification preference: \QualDirBase\% \textrightarrow{} \QualDirSFT\%},\\\mbox{\QualDirDiff{} pp.}}
 
 \Txt[text=greenDark]{1168}{350}{832}{18}{\bfseries C. Held-out: no extra consistency gain detected}
-\Txt[text=ink]{1168}{372}{832}{13.7}{\bfseries Some DPO/GRPO seeds reduce qualification preference}
+\Txt[text=ink]{1168}{372}{832}{13.7}{\bfseries Some DPO/GRPO runs lower qualification preference}
 % Trim only empty top/bottom PDF margins; preserve the figure's scale and all data.
 \node[anchor=north west,inner sep=0pt] at (1168,391)
   {\includegraphics[width=17.333333in,trim=0bp 4bp 0bp 14bp,clip,keepaspectratio]{figures/heldout-columns.pdf}};
@@ -509,7 +534,7 @@ Gender / implicit,0.72,0.20,\textminus{}72\%
 \Rect[draw=greenDark,line width=1bp]{1168}{649}{832}{146}{greenPale}
 \Txt[text=greenDark]{1182}{657}{580}{15}{\bfseries D. Inside: SFT shrinks the cue's effect on selected pairs}
 \Rect{1828}{661}{10}{10}{gray}\Txt{1842}{658}{52}{14}{Base}
-\Rect{1892}{661}{10}{10}{ink}\Txt{1906}{658}{70}{14}{SFT}
+\Rect{1892}{661}{10}{10}{greenDark}\Txt{1906}{658}{70}{14}{SFT}
 \Txt{1182}{677}{804}{13.3}{64 pairs per contrast, chosen for a large Base effect; same pairs for Base and SFT.}
 \foreach \r in {0,1,2,3}{%
   \pgfplotstablegetelem{\r}{label}\of\MechData\let\MLabel\pgfplotsretval
@@ -519,21 +544,21 @@ Gender / implicit,0.72,0.20,\textminus{}72\%
   \pgfmathsetmacro{\yy}{699+19*\r}
   \Txt{1182}{\yy}{120}{13.3}{\MLabel}
   \Rect{1304}{\yy}{\MBase*95}{7}{gray}
-  \Rect{1304}{\yy+8}{\MSFT*95}{7}{ink}
+  \Rect{1304}{\yy+8}{\MSFT*95}{7}{greenDark}
   \Txt[text=ink]{\MBase*95+1310}{\yy}{55}{14}{\bfseries\MChange}}
 \Txt{1304}{779}{238}{13.3}{cue effect per pair (logits)}
 \Txt[text=ink]{1700}{701}{280}{14}{\bfseries The candidate hub carries far less}
 \draw[gray,line width=5bp] (1700,737) -- (1964,737);
-\draw[ink,line width=2bp] (1700,759) -- (1964,759);
+\draw[greenDark,line width=2bp] (1700,759) -- (1964,759);
 \NodeBox{1792}{729}{80}{38}{ink}{mist}{14}{L15.H11}
 \draw[ink,line width=1.8bp] (1792,729) rectangle ++(80,38);
 \Txt[text=gray]{1894}{715}{70}{14}{\bfseries\HubBase}
-\Txt[text=ink]{1894}{761}{70}{14}{\bfseries\HubSFT}
+\Txt[text=greenDark]{1894}{761}{70}{14}{\bfseries\HubSFT}
 \Txt{1700}{779}{280}{13.3}{logits per pair; combat / implicit}
 \Rect[draw=greenDark,line width=1.2bp]{1168}{803}{832}{40}{greenPale}
 \Txt[text=greenDark]{1182}{807}{804}{15}{\bfseries On all \NPairs{} pairs the gain is smaller}
 \Txt{1182}{826}{804}{13.3}{Gender / implicit: \GenderFullRemoval\% [95\% CI \GenderFullRemovalCI\%]; other three contrasts: \OtherFullRemoval\%.}
-\Txt{1168}{850}{832}{12.7}{On selected pairs, \textbf{later-stage profiles correlate with SFT's} (r = 0.65--0.98; one checkpoint/stage). L15--20 only: \WindowKept{} pp instability vs full [12].}
+\Txt{1168}{850}{832}{12.7}{On selected pairs, \textbf{later-stage profiles correlate with SFT's} (r = 0.65--0.98; one checkpoint per stage; GRPO from an earlier run).}
 
 
 % -------------------------- SECTION 4: CONCLUSION AND GH200 --------------
@@ -542,48 +567,51 @@ Gender / implicit,0.72,0.20,\textminus{}72\%
 \Rect{48}{883}{1968}{31}{green}
 \Txt[text=ink]{64}{888}{880}{22}{\bfseries 4. Conclusion and application of GH200 hardware}
 \Txt[text=ink,align=right]{948}{893}{1052}{12.5}{One node per job: 4 \texttimes{} NVIDIA GH200, 96 GB HBM3 each; vLLM 0.31 [9]; TRL 1.15 and PEFT [10]; PyTorch DDP (distributed data parallel), bf16}
-\Txt[text=greenDark]{64}{921.0}{14}{14}{\bfseries\textbullet}
-\Txt{82}{921.0}{592}{14}{\textbf{SFT is the gain that holds.} Unstable sets fall \mbox{\BaseAtSFT\% \textrightarrow{} \SFTOwn\%} on development and \mbox{\QualBaseUnstable\% \textrightarrow{} \QualSFTUnstable\%} on \QualTriples{} unseen CVs.}
-\Txt[text=greenDark]{64}{958.2}{14}{14}{\bfseries\textbullet}
-\Txt{82}{958.2}{592}{14}{\textbf{Similar reference agreement; high qualification preference.} Both stay close to Base after SFT; the preference interval does not exclude a 2 pp drop.}
-\Txt[text=greenDark]{712}{921.0}{14}{14}{\bfseries\textbullet}
-\Txt{730}{921.0}{592}{14}{\textbf{Further training: no added consistency gain detected.} All nine held-out consistency-gain intervals include zero; DPO's development drop at 35\% hire did not replicate.}
-\Txt[text=greenDark]{712}{958.2}{14}{14}{\bfseries\textbullet}
-\Txt{730}{958.2}{592}{14}{\textbf{Some DPO/GRPO runs lower qualification preference.} Self-distillation's point estimates sit slightly above SFT.}
-\Txt[text=greenDark]{1376}{921.0}{14}{14}{\bfseries\textbullet}
-\Txt{1394}{921.0}{592}{14}{\textbf{SFT reduces measured cue effects.} Clear on selected pairs and at the candidate hub; smaller on all \NPairs{} pairs.}
-\Txt[text=greenDark]{1376}{958.2}{14}{14}{\bfseries\textbullet}
-\Txt{1394}{958.2}{592}{14}{\textbf{Limits.} Consistency alone does not establish correctness; GPT-4o judgements [7] are a cue-free guardrail; development guided tuning, held-out was frozen.}
-\draw[rule,line width=1.3bp] (64,993) -- (2000,993);
-\Txt[text=ink]{64}{999}{450}{16}{\bfseries vLLM generation: \texttimes\AuditSpeedLarge{} vs HF batch 32}
-\Txt{64}{1018}{450}{13}{\AuditBenchPrompts{} prompts; one GH200 per run; same checkpoint, greedy; \AuditBenchRepeats{} repeats.}
-\Txt{64}{1036}{100}{13}{HF batch 8}
-\Txt{64}{1052}{100}{13}{HF batch 32}
-\Txt{64}{1068}{100}{13}{vLLM}
-\Rect{164}{1037}{210}{11}{gray}
+\Txt[text=greenDark]{64}{921}{14}{14}{\bfseries\textbullet}
+\Txt{82}{921}{592}{14}{\textbf{SFT's consistency gain replicates on unseen CVs.} Unstable sets fall \mbox{\QualBaseUnstable\% \textrightarrow{} \QualSFTUnstable\%}; reference agreement stays similar, qualification preference stays high, and measured cue effects shrink inside the model.}
+\Txt[text=greenDark]{712}{921}{14}{14}{\bfseries\textbullet}
+\Txt{730}{921}{592}{14}{\textbf{Further training adds no detected consistency gain.} All nine held-out intervals include zero; some DPO/GRPO runs lower qualification preference, and DPO's development peak did not replicate.}
+\Txt[text=greenDark]{1376}{921}{14}{14}{\bfseries\textbullet}
+\Txt{1394}{921}{592}{14}{\textbf{Scope and limits.} One 9B model, English CVs, three attributes with injected cues. Consistency alone is not correctness; GPT-4o judgements [7] serve only as a guardrail.}
+\draw[rule,line width=1.3bp] (64,976) -- (2000,976);
+\Txt[text=ink]{64}{983}{450}{16}{\bfseries vLLM generation: \texttimes\AuditSpeedLarge{} vs HF batch 32}
+\Txt{64}{1002}{450}{13}{\AuditBenchPrompts{} prompts; one GH200 per run; same checkpoint, greedy; \AuditBenchRepeats{} repeats.}
+\Txt{64}{1019}{100}{13}{HF batch 8}
+\Txt{64}{1035}{100}{13}{HF batch 32}
+\Txt{64}{1051}{100}{13}{vLLM}
+\Rect{164}{1020}{210}{11}{gray}
 \pgfmathsetmacro{\HFThirtyTwoWidth}{\AuditHFLargeSeconds/\AuditHFSmallSeconds*210}
 \pgfmathsetmacro{\VLLMWidth}{\AuditVLLMSeconds/\AuditHFSmallSeconds*210}
-\Rect{164}{1053}{\HFThirtyTwoWidth}{11}{mist}
-\Rect{164}{1069}{\VLLMWidth}{11}{greenDark}
-\Txt[text=ink]{390}{1034}{124}{14}{\AuditHFSmallSeconds{} s}
-\Txt[text=ink]{390}{1050}{124}{14}{\AuditHFLargeSeconds{} s}
-\Txt[text=ink]{390}{1066}{124}{14}{\AuditVLLMSeconds{} s}
-\draw[rule,line width=1.3bp] (532,1001) -- (532,1083);
-\Txt[text=ink]{548}{999}{450}{16}{\bfseries Audit generation, \FullAuditPrompts{} prompts}
-\Txt[text=greenDark]{548}{1018}{450}{22}{\bfseries \AuditWallS{} s \textperiodcentered{} \AuditKWh{} kWh}
-\Txt{548}{1050}{450}{13}{\FullAuditRepeats{}-run medians; wall includes load/write, excludes scoring.}
-\Txt{548}{1067}{450}{13}{Generation: \AuditReqPerS{} req/s. Energy: NVML GPU counters.}
-\draw[rule,line width=1.3bp] (1016,1001) -- (1016,1083);
-\Txt[text=ink]{1032}{999}{450}{16}{\bfseries Training: 1 \textrightarrow{} 4 GH200}
-\Txt[text=greenDark]{1032}{1018}{450}{22}{\bfseries \texttimes\DDPTrainingSpeedup{} wall, \DDPTrainingCostDelta\% active GPU\textperiodcentered h}
-\Txt{1032}{1050}{450}{13}{Training loop, start-up excluded; the whole step includes it.}
-\Txt{1032}{1067}{450}{13}{Whole step \texttimes\DDPEndToEndSpeedup{}, \DDPCostDelta\% used GPU\textperiodcentered h; fixed global batch \DDPBatch{}; \DDPSteps{} steps.}
-\draw[rule,line width=1.3bp] (1500,1001) -- (1500,1083);
-\Txt[text=ink]{1516}{999}{484}{16}{\bfseries Mechanistic audit, one GH200}
-\Txt[text=greenDark]{1516}{1018}{484}{22}{\bfseries \PatchPeakGiB{} GiB peak \textperiodcentered{} \PatchStepMin{} min per pass}
+\Rect{164}{1036}{\HFThirtyTwoWidth}{11}{mist}
+\Rect{164}{1052}{\VLLMWidth}{11}{ink}
+\Txt[text=ink]{390}{1017}{124}{14}{\AuditHFSmallSeconds{} s}
+\Txt[text=ink]{390}{1033}{124}{14}{\AuditHFLargeSeconds{} s}
+\Txt[text=ink]{390}{1049}{124}{14}{\AuditVLLMSeconds{} s}
+\Txt{64}{1069}{450}{13}{Full audit, \FullAuditPrompts{} prompts: \AuditWallS{} s, \AuditKWh{} kWh (median of \FullAuditRepeats{}).}
+\draw[rule,line width=1.3bp] (532,985) -- (532,1084);
+\Txt[text=ink]{548}{983}{450}{16}{\bfseries Compute, all project jobs}
+\Txt[text=greenDark]{548}{1002}{450}{22}{\bfseries \ProjectGPUh{} GPU\textperiodcentered h allocated}
+\pgfmathsetmacro{\CostSum}{\CostTrainGPUh+\CostDataGPUh+\CostEvalGPUh+\CostPatchGPUh+\CostOtherGPUh+\CostIdleGPUh}
+\pgfmathsetmacro{\CostX}{548}
+\pgfmathsetmacro{\CostW}{\CostTrainGPUh/\CostSum*450}\Rect{\CostX}{1033}{\CostW}{12}{ink}\pgfmathsetmacro{\CostX}{\CostX+\CostW}
+\pgfmathsetmacro{\CostW}{\CostDataGPUh/\CostSum*450}\Rect{\CostX}{1033}{\CostW}{12}{gray}\pgfmathsetmacro{\CostX}{\CostX+\CostW}
+\pgfmathsetmacro{\CostW}{\CostEvalGPUh/\CostSum*450}\Rect{\CostX}{1033}{\CostW}{12}{mist}\pgfmathsetmacro{\CostX}{\CostX+\CostW}
+\pgfmathsetmacro{\CostW}{\CostPatchGPUh/\CostSum*450}\Rect{\CostX}{1033}{\CostW}{12}{muted}\pgfmathsetmacro{\CostX}{\CostX+\CostW}
+\pgfmathsetmacro{\CostW}{\CostOtherGPUh/\CostSum*450}\Rect{\CostX}{1033}{\CostW}{12}{body}\pgfmathsetmacro{\CostX}{\CostX+\CostW}
+\pgfmathsetmacro{\CostW}{\CostIdleGPUh/\CostSum*450}\Rect{\CostX}{1033}{\CostW}{12}{rule}\pgfmathsetmacro{\CostX}{\CostX+\CostW}
+\Txt{548}{1049}{452}{13}{\textcolor{ink}{\rule{0.62em}{0.62em}}\,training \CostTrainGPUh\quad\textcolor{gray}{\rule{0.62em}{0.62em}}\,data \CostDataGPUh\quad\textcolor{mist}{\rule{0.62em}{0.62em}}\,evaluation \CostEvalGPUh\quad\textcolor{muted}{\rule{0.62em}{0.62em}}\,patching \CostPatchGPUh\quad\textcolor{rule}{\rule{0.62em}{0.62em}}\,idle \CostIdleGPUh}
+\Txt{548}{1067}{450}{13}{One margin pass per model serves all hire rates; patching: per checkpoint.}
+\draw[rule,line width=1.3bp] (1016,985) -- (1016,1084);
+\Txt[text=ink]{1032}{983}{450}{16}{\bfseries Training: 1 \textrightarrow{} 4 GH200}
+\Txt[text=greenDark]{1032}{1002}{450}{22}{\bfseries \texttimes\DDPTrainingSpeedup{} wall, \DDPTrainingCostDelta\% active GPU\textperiodcentered h}
+\Txt{1032}{1034}{450}{13}{Active GPU\textperiodcentered h: training loop only; used: whole job, start-up included.}
+\Txt{1032}{1051}{450}{13}{Whole step \texttimes\DDPEndToEndSpeedup{}, \DDPCostDelta\% used GPU\textperiodcentered h; fixed global batch \DDPBatch{}; \DDPSteps{} steps.}
+\draw[rule,line width=1.3bp] (1500,985) -- (1500,1084);
+\Txt[text=ink]{1516}{983}{484}{16}{\bfseries Mechanistic audit, one GH200}
+\Txt[text=greenDark]{1516}{1002}{484}{22}{\bfseries \PatchPeakGiB{} GiB peak \textperiodcentered{} \PatchStepMin{} min per pass}
 % 194 real patches per pair (\PatchRealPerPair, a constant); head checks \PatchVerifyPerPair.
-\Txt{1516}{1050}{484}{13}{Median of \PatchRunsSixtyFour{} runs \texttimes{} 64 pairs; 194 patches + \PatchVerifyPerPair{} head checks per pair.}
-\Txt{1516}{1067}{484}{13}{No offload: \MarginsPeakGiB{} GiB fits 96 GB HBM3; margin pass \NPrompts{} prompts, \MarginsStepMin{} min.}
+\Txt{1516}{1034}{484}{13}{Median of \PatchRunsSixtyFour{} runs \texttimes{} 64 pairs; 194 patches + \PatchVerifyPerPair{} head checks per pair.}
+\Txt{1516}{1051}{484}{13}{No offload: the \MarginsPeakGiB{} GiB margin pass (\NPrompts{} prompts, \MarginsStepMin{} min) fits 96 GB HBM3.}
 
 
 % -------------------------- COMPACT REFERENCES AND LINKS ---------------------
