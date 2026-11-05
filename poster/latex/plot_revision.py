@@ -19,7 +19,7 @@ ROOT = Path(__file__).resolve().parents[2]
 OUT = Path(__file__).resolve().parent / "figures"
 WIDTH = 19.375
 INK, MUTED, GRID = "#203C4A", "#526873", "#DCE4E7"
-# One colour per model across the poster (main.tex): Base grey, SFT green, further training ink.
+# SFT is green across the poster (main.tex); figure C colours the further-training methods.
 SFT_GREEN = "#426F20"
 METHODS = (
     ("DPO", "DPO_V3_4880", "dpo4880", "#203C4A", "-"),
@@ -171,71 +171,60 @@ def behaviour(preview_dir: Path | None):
     save(fig, "behaviour", preview_dir)
 
 
-def heldout(preview_dir: Path | None, *, wide_axes: bool = False):
-    """The held-out check (docs/QUALIFICATION_CONTROL.md): every recipe seed against SFT-v3 on the
-    300 RJDB dev triples, two measures side by side, better to the right on both. Left: the
-    consistency gain, minus the change in unstable sets with the arm moved to SFT-v3's hire rate
-    (summary.csv, delta_common_pp). Right: the change in the qualification preference, the share
-    of triples whose matched CV out-scores its weakened version on the attribute-free prompt
-    (direction.csv, attr_free). Paired 95% intervals over candidates."""
+def heldout(preview_dir: Path | None):
+    """Section C, the held-out check (docs/QUALIFICATION_CONTROL.md), as a grouped forest plot (chosen by
+    the user, 2026-11-05). Every recipe seed against SFT-v3 on the 300 RJDB dev triples, two measures,
+    better to the right on both. Left: the consistency gain, minus the change in unstable sets with the
+    arm moved to SFT-v3's hire rate (summary.csv, delta_common_pp). Right: the change in the
+    qualification preference, the share of triples whose matched CV out-scores its weakened version on
+    the attribute-free prompt (direction.csv, attr_free). Each method is one group; its three seeds keep their own point
+    estimate and paired 95% interval, offset slightly within the group (42/43/44 top to bottom).
+    No pooled summary is drawn. Colour marks the method: DPO ink, GRPO grey-blue, self-distillation
+    green (supervised on the SFT teacher, the same family as SFT, whose zero line is green)."""
     summary = {row["label"]: row for row in read("reports/qualification_control/summary.csv")}
     direction = {row["label"]: row for row in read("reports/qualification_control/direction.csv")
                  if row["variants"] == "attr_free"}
-    # 27% more plotting height at the same poster width; keep all nine seed CIs.
+    measures = (
+        ("Consistency gain vs SFT (pp)", "\u2212\u0394 unstable sets (better \u2192)",
+         lambda k: tuple(-float(summary[k][c]) for c in ("delta_common_pp", "ci_common_high", "ci_common_low")),
+         (-2.2, 2.2), [-2, -1, 0, 1, 2]),
+        ("Qualification preference vs SFT (pp)", "\u0394 matched-CV preference (better \u2192)",
+         lambda k: tuple(float(direction[k][c]) for c in ("diff_pp", "ci_low", "ci_high")),
+         (-8.5, 3.5), [-8, -6, -4, -2, 0, 2]),
+    )
+    groups = (("DPO", "DPO_V3_4880", INK), ("GRPO", "GRPO+decay R4", "#5F737C"),
+              ("Self-distill.", "Distill", "#547F2F"))
     fig = plt.figure(figsize=(WIDTH, 5.5))
-    if wide_axes:
-        # Three-column poster: wrap method names and reduce the inter-panel gap.
-        # The data, seed spacing and font sizes are identical to the standard plot.
-        left = fig.add_axes([.145, .27, .39, .60])
-        right = fig.add_axes([.590, .27, .39, .60])
-    else:
-        left = fig.add_axes([.185, .27, .34, .60])
-        right = fig.add_axes([.635, .27, .335, .60])
-    rows_y, labels = [], []
-    y = 0
-    for group, (label, prefix, _, colour, _line) in enumerate(METHODS):
-        for seed in (42, 43, 44):
-            key = f"{prefix} s{seed}"
-            assert key in summary and key in direction, key
-            # Every further-training run in ink; the method is read from the row label.
-            heldout_colour = INK
-            rows_y.append((y, key, heldout_colour, label if seed == 42 else "", seed))
-            y += 1
-        y += .6
-    top = y
-    for ax, title, getter in (
-        (left, "Consistency gain vs SFT (pp)", lambda k: tuple(-float(summary[k][c]) for c in
-                                                                ("delta_common_pp", "ci_common_high", "ci_common_low"))),
-        (right, "Qualification preference vs SFT (pp)", lambda k: tuple(float(direction[k][c]) for c in
-                                                                       ("diff_pp", "ci_low", "ci_high")))):
-        for yy, key, colour, _, seed in rows_y:
-            point, lo, hi = getter(key)
-            assert lo <= point <= hi, (key, point, lo, hi)
-            ax.errorbar(point, top - yy, xerr=[[point - lo], [hi - point]], color=colour, lw=3.2,
-                        capsize=5, capthick=2.2, fmt="o", markersize=11, mfc="white", mec=colour,
-                        mew=2.5, zorder=3)
-        ax.axvline(0, color=SFT_GREEN, lw=2.6, ls=(0, (4, 3)), zorder=1)  # SFT = 0
-        ax.set_ylim(-0.2, top + 0.4)
-        ax.set_title(title, loc="left", pad=14, fontsize=26)
-        style(ax)
-    left.set_xlim(-2.2, 2.2); left.set_xticks([-2, -1, 0, 1, 2])
-    right.set_xlim(-8.5, 3.5); right.set_xticks([-8, -6, -4, -2, 0, 2])
-    # One label per method at its middle row; the seeds read top to bottom (caption).
-    mids = [(top - rows_y[i + 1][0], rows_y[i][3]) for i in range(0, len(rows_y), 3)]
-    if wide_axes:
-        labels = {"GRPO + lr decay": "GRPO +\nlr decay", "Self-distillation": "Self-\ndistillation"}
-        mids = [(yy, labels.get(label, label)) for yy, label in mids]
-    left.set_yticks([m[0] for m in mids], [m[1] for m in mids])
-    left.tick_params(axis="y", length=0, pad=12)
-    right.set_yticks([top - yy for yy, *_ in rows_y], ["" for _ in rows_y])
-    right.tick_params(axis="y", length=0)
-    left.set_xlabel("\u2212\u0394 unstable sets (better \u2192)", labelpad=8, fontsize=24)
-    right.set_xlabel("\u0394 matched-CV preference (better \u2192)", labelpad=8, fontsize=24)
-    # The validation's cost: docs/QUALIFICATION_CONTROL.md ledger, ten evaluate_arm jobs, allocated GPU-h.
-    fig.text(.012, .020, "300 held-out CVs; seeds 42/43/44 top to bottom  |  "
-             "Paired 95% CIs (pointwise); common hire rate 36.9%; green line: SFT.",
+    axes = [fig.add_axes([.17, .315, .32, .545]), fig.add_axes([.665, .315, .315, .545])]
+    offsets = {42: .25, 43: 0.0, 44: -.25}
+    for ax, (title, xlabel, getter, xlim, xticks) in zip(axes, measures):
+        for row, (label, prefix, colour) in enumerate(groups):
+            y = len(groups) - 1 - row
+            ax.axhline(y, color=GRID, lw=1.4, zorder=0)
+            for seed in (42, 43, 44):
+                key = f"{prefix} s{seed}"
+                assert key in summary and key in direction, key
+                point, lo, hi = getter(key)
+                assert lo <= point <= hi, (key, point, lo, hi)
+                yy = y + offsets[seed]
+                ax.plot([lo, hi], [yy, yy], color=colour, lw=3.2, solid_capstyle="butt", zorder=2)
+                ax.plot(point, yy, "o", markersize=12, mfc="white", mec=colour, mew=2.8, zorder=3)
+        ax.axvline(0, color=SFT_GREEN, lw=2.4, ls=(0, (4, 3)), zorder=1)  # SFT = 0
+        ax.set_xlim(*xlim)
+        ax.set_xticks(xticks)
+        ax.set_ylim(-.55, len(groups) - .45)
+        ax.set_yticks(range(len(groups) - 1, -1, -1), [g[0] for g in groups])
+        ax.tick_params(axis="y", length=0, pad=12)
+        ax.set_title(title, loc="left", pad=12, fontsize=26)
+        ax.set_xlabel(xlabel, labelpad=6, fontsize=24)
+        ax.set_axisbelow(True)
+        ax.grid(axis="x", color=GRID, lw=.65)
+        ax.tick_params(axis="x", length=4.5, width=1.1, pad=7)
+    fig.text(.012, .074, "300 held-out CVs; seeds 42/43/44 top to bottom; paired 95% CIs; common hire rate 36.9%.",
              ha="left", va="bottom", fontsize=22, color=MUTED)
-    save(fig, "heldout-columns" if wide_axes else "heldout", preview_dir)
+    fig.text(.012, .010, "GRPO with lr decay; green dashed line: SFT.",
+             ha="left", va="bottom", fontsize=22, color=MUTED)
+    save(fig, "heldout", preview_dir)
 
 
 def residual(preview_dir: Path | None):
@@ -301,11 +290,11 @@ def residual(preview_dir: Path | None):
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--preview-dir", type=Path)
-    parser.add_argument("--heldout-columns", action="store_true",
-                        help="Generate only the wider-axis held-out figure for main-columns.tex")
+    parser.add_argument("--heldout", action="store_true",
+                        help="Generate only the per-method held-out figure (section C of main.tex)")
     args = parser.parse_args()
-    if args.heldout_columns:
-        heldout(args.preview_dir, wide_axes=True)
+    if args.heldout:
+        heldout(args.preview_dir)
     else:
         behaviour(args.preview_dir)
         heldout(args.preview_dir)

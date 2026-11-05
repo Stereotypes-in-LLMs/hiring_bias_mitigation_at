@@ -505,29 +505,21 @@ Gender / implicit,0.72,0.20,\textminus{}72\%
 \Rect[draw=greenDark,line width=1bp]{1168}{202}{408}{140}{greenPale}
 \Rect[draw=greenDark,line width=1bp]{1592}{202}{408}{140}{greenPale}
 \Txt[text=greenDark]{1178}{210}{388}{15}{\bfseries A. Development: SFT cuts unstable sets}
-\Txt[text=ink]{1178}{232}{48}{14}{\bfseries Base}
-\Rect{1226}{235}{\BaseAtSFT*10}{13}{gray}
-\Txt[text=ink]{\BaseAtSFT*10+1232}{230}{80}{16}{\bfseries\BaseAtSFT\%}
-\Txt[text=greenDark]{1178}{253}{48}{14}{\bfseries SFT}
-\Rect{1226}{256}{\SFTOwn*10}{13}{greenDark}
-\Txt[text=greenDark]{\SFTOwn*10+1232}{251}{80}{16}{\bfseries\SFTOwn\%}
-\Txt{1178}{276}{388}{12.7}{Unstable sets at matched \CommonHire\% hire; \NCandidates{} CVs, \NSets{} sets.\\Paired difference \SFTvsBase{} pp.}
-\Txt{1178}{308.2}{388}{12.7}{\textbf{GPT-4o agreement [7]: \BaseAgreeCommon{} \textrightarrow{} \SFTAgreeCommon\%}, CI \BaseAgreeCommonCI{} pp.}
 \Txt[text=greenDark]{1602}{210}{388}{15}{\bfseries B. Held-out: SFT's gain replicates}
-\Txt[text=ink]{1602}{232}{48}{14}{\bfseries Base}
-\Rect{1650}{235}{\QualBaseUnstable*10}{13}{gray}
-\Txt[text=ink]{\QualBaseUnstable*10+1656}{230}{80}{16}{\bfseries\QualBaseUnstable\%}
-\Txt[text=greenDark]{1602}{253}{48}{14}{\bfseries SFT}
-\Rect{1650}{256}{\QualSFTUnstable*10}{13}{greenDark}
-\Txt[text=greenDark]{\QualSFTUnstable*10+1656}{251}{80}{16}{\bfseries\QualSFTUnstable\%}
-\Txt{1602}{276}{388}{12.7}{Unstable sets at matched \QualCommonHire\% hire; \QualTriples{} unseen RJDB CVs [13].\\Paired difference \QualSFTvsBase{} pp.}
-\Txt{1602}{308.2}{388}{12.7}{\textbf{Qualification preference: \QualDirBase\% \textrightarrow{} \QualDirSFT\%},\\\mbox{\QualDirDiff{} pp.}}
+\Txt[text=ink]{1178}{234}{388}{30}{\bfseries \BaseAtSFT\% \textrightarrow{} \SFTOwn\%}
+\Txt[text=ink]{1602}{234}{388}{30}{\bfseries \QualBaseUnstable\% \textrightarrow{} \QualSFTUnstable\%}
+\Txt{1178}{269}{388}{12.7}{\NCandidates{} CVs; unstable sets, Base \textrightarrow{} SFT, at matched \CommonHire\% hire}
+\Txt{1602}{269}{388}{12.7}{\QualTriples{} unseen RJDB CVs [13]; unstable sets, Base \textrightarrow{} SFT}
+\Txt{1178}{286}{388}{12.7}{Paired 95\% CI \SFTvsBase{} pp}
+\Txt{1602}{286}{388}{12.7}{\QualCommonHire\% matched hire; paired 95\% CI \QualSFTvsBase{} pp}
+\Txt{1178}{306}{388}{12.7}{\textbf{GPT-4o agreement [7]: \BaseAgreeCommon{} \textrightarrow{} \SFTAgreeCommon\%}, CI \BaseAgreeCommonCI{} pp}
+\Txt{1602}{306}{388}{12.7}{\textbf{Qualification preference: \QualDirBase\% \textrightarrow{} \QualDirSFT\%}\\\QualDirDiff{} pp}
 
 \Txt[text=greenDark]{1168}{350}{832}{18}{\bfseries C. Held-out: no extra consistency gain detected}
 \Txt[text=ink]{1168}{372}{832}{13.7}{\bfseries Some DPO/GRPO runs lower qualification preference}
-% Trim only empty top/bottom PDF margins; preserve the figure's scale and all data.
+% One row per method (plot_revision.py heldout); trim only empty top/bottom margins.
 \node[anchor=north west,inner sep=0pt] at (1168,391)
-  {\includegraphics[width=17.333333in,trim=0bp 4bp 0bp 14bp,clip,keepaspectratio]{figures/heldout-columns.pdf}};
+  {\includegraphics[width=17.333333in,trim=0bp 4bp 0bp 14bp,clip,keepaspectratio]{figures/heldout.pdf}};
 \Rect{1168}{615}{832}{26}{greenPale}
 \Txt[text=ink]{1178}{621}{812}{13.3}{\textbf{DPO's drop at 35\% hire did not replicate:} gain \DevDPOGainAtThirtyFive{} pp on development, \HeldDPOGainAtThirtyFive{} pp held-out.}
 
