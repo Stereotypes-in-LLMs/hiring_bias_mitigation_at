@@ -18,6 +18,9 @@ decision_distill_grpo_r4_seed42,distill,Qwen/Qwen3.5-9B,32,64,down_proj+gate_pro
 decision_distill_grpo_r4_seed43,distill,Qwen/Qwen3.5-9B,32,64,down_proj+gate_proj+k_proj+o_proj+q_proj+up_proj+v_proj,58195968,9653104368,456010480,243290624,8953803264,0.65
 decision_distill_l0_20_seed43,distill,Qwen/Qwen3.5-9B,32,64,down_proj+gate_proj+k_proj+o_proj+q_proj+up_proj+v_proj,37945344,9653104368,456010480,243290624,8953803264,0.4238
 decision_distill_l0_20_smoke,distill,Qwen/Qwen3.5-9B,32,64,down_proj+gate_proj+k_proj+o_proj+q_proj+up_proj+v_proj,37945344,9653104368,456010480,243290624,8953803264,0.4238
+decision_distill_l15_20_r163_seed42,distill,Qwen/Qwen3.5-9B,163,326,down_proj+gate_proj+k_proj+o_proj+q_proj+up_proj+v_proj,58085376,9653104368,456010480,243290624,8953803264,0.6487
+decision_distill_l15_20_r163_seed43,distill,Qwen/Qwen3.5-9B,163,326,down_proj+gate_proj+k_proj+o_proj+q_proj+up_proj+v_proj,58085376,9653104368,456010480,243290624,8953803264,0.6487
+decision_distill_l15_20_r163_seed44,distill,Qwen/Qwen3.5-9B,163,326,down_proj+gate_proj+k_proj+o_proj+q_proj+up_proj+v_proj,58085376,9653104368,456010480,243290624,8953803264,0.6487
 decision_distill_l15_20_seed42,distill,Qwen/Qwen3.5-9B,32,64,down_proj+gate_proj+k_proj+o_proj+q_proj+up_proj+v_proj,11403264,9653104368,456010480,243290624,8953803264,0.1274
 decision_distill_l15_20_seed43,distill,Qwen/Qwen3.5-9B,32,64,down_proj+gate_proj+k_proj+o_proj+q_proj+up_proj+v_proj,11403264,9653104368,456010480,243290624,8953803264,0.1274
 decision_distill_l15_20_seed44,distill,Qwen/Qwen3.5-9B,32,64,down_proj+gate_proj+k_proj+o_proj+q_proj+up_proj+v_proj,11403264,9653104368,456010480,243290624,8953803264,0.1274
