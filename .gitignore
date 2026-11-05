@@ -18,3 +18,7 @@ data/benchmark/pairs_*.parquet
 
 # Personal notes (local only)
 note.md
+
+# Lock files written beside reports by concurrent jobs (uv.lock stays tracked).
+*.lock
+!uv.lock
